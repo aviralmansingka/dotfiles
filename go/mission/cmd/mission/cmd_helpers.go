@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
-func missionFromArgs(a args) (Mission, error) {
-	repo, slug, e := splitHandle(a.at(1))
+func missionFromArgs(a platform.Args) (mission.Mission, error) {
+	repo, slug, e := splitHandle(a.At(1))
 	if e != nil {
-		return Mission{}, e
+		return mission.Mission{}, e
 	}
-	m := Mission{Repo: repo, Slug: slug, Kind: fallback(a.get("kind"), "research"), Title: a.get("title"), Goal: a.get("goal")}
-	if a.has("from") {
-		b, e := os.ReadFile(a.get("from"))
+	m := mission.Mission{Repo: repo, Slug: slug, Kind: platform.Fallback(a.Get("kind"), "research"), Title: a.Get("title"), Goal: a.Get("goal")}
+	if a.Has("from") {
+		b, e := os.ReadFile(a.Get("from"))
 		if e != nil {
 			return m, e
 		}
@@ -24,19 +27,19 @@ func missionFromArgs(a args) (Mission, error) {
 		m.Repo = repo
 		m.Slug = slug
 		m.Body = body
-		normalizeMission(&m)
+		mission.NormalizeMission(&m)
 		return m, validateMission(m)
 	}
-	for _, title := range a.flags["step"] {
-		m.Steps = append(m.Steps, Step{Title: title, Agent: fallback(a.get("agent"), "any")})
+	for _, title := range a.Flags["step"] {
+		m.Steps = append(m.Steps, mission.Step{Title: title, Agent: platform.Fallback(a.Get("agent"), "any")})
 	}
-	for i, v := range a.flags["checkpoint"] {
+	for i, v := range a.Flags["checkpoint"] {
 		after, q, ok := strings.Cut(v, ":")
 		if !ok {
-			return m, problem("usage", "checkpoint format: S01:Question")
+			return m, mission.Problem("usage", "checkpoint format: S01:Question")
 		}
-		m.Checkpoints = append(m.Checkpoints, Checkpoint{ID: fmt.Sprintf("C%02d", i+1), After: after, Kind: "human", Question: q})
+		m.Checkpoints = append(m.Checkpoints, mission.Checkpoint{ID: fmt.Sprintf("C%02d", i+1), After: after, Kind: "human", Question: q})
 	}
-	normalizeMission(&m)
+	mission.NormalizeMission(&m)
 	return m, validateMission(m)
 }

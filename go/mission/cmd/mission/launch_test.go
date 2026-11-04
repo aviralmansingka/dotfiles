@@ -9,6 +9,9 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 // launchDesk is a desk whose requests land in a throwaway state dir.
@@ -132,7 +135,7 @@ func TestLaunchStateReachesTheFrame(t *testing.T) {
 
 func TestLaunchKeyRefusesAnOwnedMission(t *testing.T) {
 	m, dir := launchDesk(t)
-	m.records[m.selected].State.Runtime = &RuntimeBinding{Machine: machine(), SessionID: "owner-session"}
+	m.records[m.selected].State.Runtime = &mission.RuntimeBinding{Machine: platform.Machine(), SessionID: "owner-session"}
 	press(m, "L")
 	if !strings.Contains(m.notice, "Already owned") {
 		t.Fatalf("notice = %q", m.notice)

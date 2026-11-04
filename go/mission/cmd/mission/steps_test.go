@@ -3,6 +3,9 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 func TestTitleOnlyStepsGetSafeDefaults(t *testing.T) {
@@ -10,7 +13,7 @@ func TestTitleOnlyStepsGetSafeDefaults(t *testing.T) {
 	r, e := s.load("dotfiles/test-mission")
 	must(t, e)
 	r.Mission.Slug = "titles-only"
-	r.Mission.Steps = []Step{{Title: "Map events"}, {Title: "Propose the adapter"}}
+	r.Mission.Steps = []mission.Step{{Title: "Map events"}, {Title: "Propose the adapter"}}
 	r, e = s.create(r.Mission)
 	must(t, e)
 	steps, e := s.steps(r.Handle)
@@ -60,10 +63,10 @@ func TestStepEditRejectsFailedValidation(t *testing.T) {
 	must(t, e)
 	view, e := s.step(h, "S01")
 	must(t, e)
-	for name, mutate := range map[string]func(*Step){
-		"reserved output": func(st *Step) { st.Output = "brief.md" },
-		"unknown check":   func(st *Step) { st.Checks = []string{"nope"} },
-		"empty title":     func(st *Step) { st.Title = "" },
+	for name, mutate := range map[string]func(*mission.Step){
+		"reserved output": func(st *mission.Step) { st.Output = "brief.md" },
+		"unknown check":   func(st *mission.Step) { st.Checks = []string{"nope"} },
+		"empty title":     func(st *mission.Step) { st.Title = "" },
 	} {
 		st := view.Step
 		mutate(&st)
@@ -79,7 +82,7 @@ func TestStepEditRejectsFailedValidation(t *testing.T) {
 }
 
 func TestNewCommandRejectsNoninteractiveEmpty(t *testing.T) {
-	cmd, e := parseArgs([]string{"new"})
+	cmd, e := platform.ParseArgs([]string{"new"})
 	must(t, e)
 	s, _ := fixture(t)
 	if _, e := cmdNew(cmd, s); e == nil {

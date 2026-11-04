@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
 )
 
@@ -59,7 +60,7 @@ func emit(v any, e error) int {
 	code := 0
 	if e != nil {
 		key := "io_error"
-		if d, ok := e.(*DomainError); ok {
+		if d, ok := e.(*mission.DomainError); ok {
 			key = d.Code
 		}
 		out["error"] = map[string]string{"code": key, "message": e.Error()}
@@ -111,9 +112,9 @@ func execute(argv []string) int {
 			cmd = "list"
 		}
 	}
-	vault := fallback(a.Get("vault"), fallback(os.Getenv("MISSION_VAULT"), "~/vault"))
+	vault := platform.Fallback(a.Get("vault"), platform.Fallback(os.Getenv("MISSION_VAULT"), "~/vault"))
 	if cmd == "demo" && !a.Has("vault") {
-		return emit(nil, problem("usage", "demo requires an explicit --vault pointing to an isolated directory"))
+		return emit(nil, mission.Problem("usage", "demo requires an explicit --vault pointing to an isolated directory"))
 	}
 	s, e := openStore(vault)
 	if e != nil {
@@ -150,7 +151,7 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 	case "verify":
 		return cmdVerify(a, s)
 	case "next", "ready":
-		return s.ready(a.get("repo"))
+		return s.ready(a.Get("repo"))
 	case "claim":
 		return cmdClaim(a, s)
 	case "pickup":
@@ -180,5 +181,5 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 	case "demo":
 		return seedDemo(s)
 	}
-	return nil, problem("usage", "unknown command %q; run mission help", cmd)
+	return nil, mission.Problem("usage", "unknown command %q; run mission help", cmd)
 }

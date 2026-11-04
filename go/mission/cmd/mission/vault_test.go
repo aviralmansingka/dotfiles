@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"mission.local/prototype/internal/platform"
 )
 
 func TestRepoRegistryRoundTrip(t *testing.T) {
@@ -16,7 +18,7 @@ func TestRepoRegistryRoundTrip(t *testing.T) {
 	}
 	r, e := s.repo("dotfiles")
 	must(t, e)
-	if r.Bindings[machine()] == "" || r.ID != "repo-dotfiles" {
+	if r.Bindings[platform.Machine()] == "" || r.ID != "repo-dotfiles" {
 		t.Fatalf("missing machine binding: %+v", r)
 	}
 	// A second add for the same slug refreshes the binding instead of failing.

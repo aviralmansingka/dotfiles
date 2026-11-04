@@ -7,24 +7,27 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 type StepView struct {
-	Step         Step          `json:"step"`
-	Status       string        `json:"status"`
-	Attempt      string        `json:"last_attempt,omitempty"`
-	Verification *Verification `json:"verification,omitempty"`
+	Step         mission.Step          `json:"step"`
+	Status       string                `json:"status"`
+	Attempt      string                `json:"last_attempt,omitempty"`
+	Verification *mission.Verification `json:"verification,omitempty"`
 }
 
-func stepIndex(m Mission, id string) (int, error) {
+func stepIndex(m mission.Mission, id string) (int, error) {
 	for i, s := range m.Steps {
 		if s.ID == id {
 			return i, nil
 		}
 	}
-	return -1, problem("not_found", "step %s not found", id)
+	return -1, mission.Problem("not_found", "step %s not found", id)
 }
-func definitionHash(s Step) string { b, _ := json.Marshal(s); return digest(b) }
+func definitionHash(s mission.Step) string { b, _ := json.Marshal(s); return mission.Digest(b) }
 func (s *Store) steps(h string) ([]StepView, error) {
 	r, e := s.load(h)
 	if e != nil {
@@ -34,7 +37,7 @@ func (s *Store) steps(h string) ([]StepView, error) {
 	for _, st := range r.Mission.Steps {
 		ss := r.State.Steps[st.ID]
 		v := StepView{Step: st, Status: ss.Status, Attempt: ss.Attempt}
-		if a, e := findAttempt(&r.State, ss.Attempt); e == nil && len(a.Verifications) > 0 {
+		if a, e := mission.FindAttempt(&r.State, ss.Attempt); e == nil && len(a.Verifications) > 0 {
 			last := a.Verifications[len(a.Verifications)-1]
 			v.Verification = &last
 		}
@@ -52,32 +55,32 @@ func (s *Store) step(h, id string) (StepView, error) {
 			return st, nil
 		}
 	}
-	return StepView{}, problem("not_found", "step %s not found", id)
+	return StepView{}, mission.Problem("not_found", "step %s not found", id)
 }
 
 // A small write-ahead record makes the mission.md + state.md edit recoverable.
 // Readers refuse an interrupted edit until repair replays this exact transaction.
 type pendingEdit struct {
-	Handle       string  `yaml:"handle"`
-	Mission      Mission `yaml:"mission"`
-	Body         string  `yaml:"body"`
-	State        State   `yaml:"state"`
-	BaseRevision int     `yaml:"base_revision"`
-	BaseHash     string  `yaml:"base_hash"`
+	Handle       string          `yaml:"handle"`
+	Mission      mission.Mission `yaml:"mission"`
+	Body         string          `yaml:"body"`
+	State        mission.State   `yaml:"state"`
+	BaseRevision int             `yaml:"base_revision"`
+	BaseHash     string          `yaml:"base_hash"`
 }
 
-func (s *Store) editStep(h, id string, updated Step, revision int, reset bool) (Record, error) {
-	var result Record
+func (s *Store) editStep(h, id string, updated mission.Step, revision int, reset bool) (mission.Record, error) {
+	var result mission.Record
 	e := s.locked(func() error {
 		r, e := s.load(h)
 		if e != nil {
 			return e
 		}
 		if revision != r.State.Revision {
-			return problem("revision_conflict", "step changed since it was read; refresh and retry")
+			return mission.Problem("revision_conflict", "step changed since it was read; refresh and retry")
 		}
 		if r.State.Active != "" {
-			return problem("busy", "finish the active attempt before customizing steps")
+			return mission.Problem("busy", "finish the active attempt before customizing steps")
 		}
 		idx, e := stepIndex(r.Mission, id)
 		if e != nil {
@@ -85,7 +88,7 @@ func (s *Store) editStep(h, id string, updated Step, revision int, reset bool) (
 		}
 		before := r.Mission.Steps[idx]
 		if updated.ID != id {
-			return problem("invalid_step", "step IDs are stable; they cannot be edited")
+			return mission.Problem("invalid_step", "step IDs are stable; they cannot be edited")
 		}
 		started := false
 		for _, a := range r.State.Attempts {
@@ -94,7 +97,7 @@ func (s *Store) editStep(h, id string, updated Step, revision int, reset bool) (
 			}
 		}
 		if started && !reset {
-			return problem("step_started", "%s already has attempts; use --reset to invalidate this step and later progress while preserving history", id)
+			return mission.Problem("step_started", "%s already has attempts; use --reset to invalidate this step and later progress while preserving history", id)
 		}
 		d, e := s.dir(h)
 		if e != nil {
@@ -104,18 +107,18 @@ func (s *Store) editStep(h, id string, updated Step, revision int, reset bool) (
 		if e != nil {
 			return e
 		}
-		if digest(old) != r.State.SpecHash {
-			return problem("brief_changed", "mission.md changed outside the step editor; reconcile that change first")
+		if mission.Digest(old) != r.State.SpecHash {
+			return mission.Problem("brief_changed", "mission.md changed outside the step editor; reconcile that change first")
 		}
 		baseRevision, baseHash := r.State.Revision, r.State.SpecHash
 		r.Mission.Steps[idx] = updated
-		normalizeMission(&r.Mission)
+		mission.NormalizeMission(&r.Mission)
 		if e = validateMission(r.Mission); e != nil {
 			return e
 		}
 		if reset {
 			for _, st := range r.Mission.Steps[idx:] {
-				r.State.Steps[st.ID] = StepState{Status: "pending", Attempt: r.State.Steps[st.ID].Attempt}
+				r.State.Steps[st.ID] = mission.StepState{Status: "pending", Attempt: r.State.Steps[st.ID].Attempt}
 				for _, cp := range r.Mission.Checkpoints {
 					if cp.After == st.ID {
 						cs := r.State.Checkpoints[cp.ID]
@@ -134,12 +137,12 @@ func (s *Store) editStep(h, id string, updated Step, revision int, reset bool) (
 			}
 		}
 		r.State.Revision++
-		r.State.Edits = append(r.State.Edits, StepEdit{Step: id, At: now(), Before: before, After: r.Mission.Steps[idx], Reset: reset})
+		r.State.Edits = append(r.State.Edits, mission.StepEdit{Step: id, At: mission.Now(), Before: before, After: r.Mission.Steps[idx], Reset: reset})
 		b, e := markdown(r.Mission, r.Mission.Body)
 		if e != nil {
 			return e
 		}
-		r.State.SpecHash = digest(b)
+		r.State.SpecHash = mission.Digest(b)
 		tx := pendingEdit{Handle: h, Mission: r.Mission, Body: r.Mission.Body, State: r.State, BaseRevision: baseRevision, BaseHash: baseHash}
 		p, e := s.editPath(h)
 		if e != nil {
@@ -150,7 +153,7 @@ func (s *Store) editStep(h, id string, updated Step, revision int, reset bool) (
 			return e
 		}
 		if len(b) > 16<<20 {
-			return problem("too_large", "step edit exceeds the 16 MiB journal limit")
+			return mission.Problem("too_large", "step edit exceeds the 16 MiB journal limit")
 		}
 		if e = atomicWrite(p, b); e != nil {
 			return e
@@ -160,17 +163,17 @@ func (s *Store) editStep(h, id string, updated Step, revision int, reset bool) (
 	})
 	return result, e
 }
-func (s *Store) applyEdit(tx pendingEdit) (Record, error) {
-	r := Record{Handle: tx.Handle, Mission: tx.Mission, State: tx.State}
+func (s *Store) applyEdit(tx pendingEdit) (mission.Record, error) {
+	r := mission.Record{Handle: tx.Handle, Mission: tx.Mission, State: tx.State}
 	r.Mission.Body = tx.Body
 	if r.Handle != r.Mission.Repo+"/"+r.Mission.Slug {
-		return r, problem("identity_mismatch", "edit definition belongs to another mission")
+		return r, mission.Problem("identity_mismatch", "edit definition belongs to another mission")
 	}
 	if e := validateMission(r.Mission); e != nil {
 		return r, e
 	}
 	if r.State.Mission != r.Mission.ID {
-		return r, problem("identity_mismatch", "edit state belongs to a different mission")
+		return r, mission.Problem("identity_mismatch", "edit state belongs to a different mission")
 	}
 	d, e := s.dir(r.Handle)
 	if e != nil {
@@ -180,28 +183,28 @@ func (s *Store) applyEdit(tx pendingEdit) (Record, error) {
 	if e != nil {
 		return r, e
 	}
-	var st State
+	var st mission.State
 	if _, e = parseMarkdown(current, &st); e != nil {
 		return r, e
 	}
 	oldState := st.Revision == tx.BaseRevision && st.SpecHash == tx.BaseHash
 	newState := st.Revision == tx.State.Revision && st.SpecHash == tx.State.SpecHash
 	if st.Mission != tx.State.Mission || (!oldState && !newState) {
-		return r, problem("revision_conflict", "interrupted edit conflicts with current state; manual reconciliation required")
+		return r, mission.Problem("revision_conflict", "interrupted edit conflicts with current state; manual reconciliation required")
 	}
 	current, e = os.ReadFile(filepath.Join(d, "mission.md"))
 	if e != nil {
 		return r, e
 	}
-	if digest(current) != tx.BaseHash && digest(current) != tx.State.SpecHash {
-		return r, problem("brief_changed", "interrupted edit conflicts with mission.md; manual reconciliation required")
+	if mission.Digest(current) != tx.BaseHash && mission.Digest(current) != tx.State.SpecHash {
+		return r, mission.Problem("brief_changed", "interrupted edit conflicts with mission.md; manual reconciliation required")
 	}
 	b, e := markdown(r.Mission, r.Mission.Body)
 	if e != nil {
 		return r, e
 	}
-	if digest(b) != tx.State.SpecHash {
-		return r, problem("invalid_edit", "edit fingerprint does not match its definition")
+	if mission.Digest(b) != tx.State.SpecHash {
+		return r, mission.Problem("invalid_edit", "edit fingerprint does not match its definition")
 	}
 	if e = atomicWrite(filepath.Join(d, "mission.md"), b); e != nil {
 		return r, e
@@ -215,8 +218,8 @@ func (s *Store) applyEdit(tx pendingEdit) (Record, error) {
 	}
 	return r, os.Remove(p)
 }
-func (s *Store) repair(h string) (Record, error) {
-	var r Record
+func (s *Store) repair(h string) (mission.Record, error) {
+	var r mission.Record
 	e := s.locked(func() error {
 		p, e := s.editPath(h)
 		if e != nil {
@@ -225,14 +228,14 @@ func (s *Store) repair(h string) (Record, error) {
 		b, e := os.ReadFile(p)
 		if e == nil {
 			if len(b) > 16<<20 {
-				return problem("too_large", "edit journal exceeds 16 MiB")
+				return mission.Problem("too_large", "edit journal exceeds 16 MiB")
 			}
 			var tx pendingEdit
 			if e = yaml.Unmarshal(b, &tx); e != nil {
 				return e
 			}
 			if tx.Handle != h {
-				return problem("identity_mismatch", "edit journal belongs to another mission")
+				return mission.Problem("identity_mismatch", "edit journal belongs to another mission")
 			}
 			r, e = s.applyEdit(tx)
 			return e
@@ -249,6 +252,6 @@ func (s *Store) repair(h string) (Record, error) {
 	})
 	return r, e
 }
-func assignedBrief(m Mission, st Step) string {
-	return fmt.Sprintf("# Assigned step: %s — %s\n\n%s\n\n## Acceptance criteria\n%s\n\n## Required checks\n%s\n\nWrite the result to MISSION_ARTIFACT. Work only on this step.\n\n## Shared mission context\n%s\n", st.ID, st.Title, fallback(st.Instructions, st.Title), fallback(st.Acceptance, "Produce a useful result that satisfies this step and the mission goal."), strings.Join(stepChecks(st), ", "), m.Body)
+func assignedBrief(m mission.Mission, st mission.Step) string {
+	return fmt.Sprintf("# Assigned step: %s — %s\n\n%s\n\n## Acceptance criteria\n%s\n\n## Required checks\n%s\n\nWrite the result to MISSION_ARTIFACT. Work only on this step.\n\n## Shared mission context\n%s\n", st.ID, st.Title, platform.Fallback(st.Instructions, st.Title), platform.Fallback(st.Acceptance, "Produce a useful result that satisfies this step and the mission goal."), strings.Join(mission.StepChecks(st), ", "), m.Body)
 }

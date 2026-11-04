@@ -1,12 +1,16 @@
 package main
 
-import "testing"
+import (
+	"testing"
 
-func lastAttempt(t *testing.T, s *Store, h string) (*Record, *Attempt) {
+	"mission.local/prototype/internal/domain/mission"
+)
+
+func lastAttempt(t *testing.T, s *Store, h string) (*mission.Record, *mission.Attempt) {
 	t.Helper()
 	r, e := s.load(h)
 	must(t, e)
-	a, e := findAttempt(&r.State, r.State.Active)
+	a, e := mission.FindAttempt(&r.State, r.State.Active)
 	must(t, e)
 	return &r, a
 }
@@ -73,7 +77,7 @@ func TestVerifyRunsRegisteredChecksInOrder(t *testing.T) {
 	}
 }
 
-func lastVerification(t *testing.T, r Record) Verification {
+func lastVerification(t *testing.T, r mission.Record) mission.Verification {
 	t.Helper()
 	a := lastRun(t, r)
 	if len(a.Verifications) == 0 {
@@ -82,9 +86,9 @@ func lastVerification(t *testing.T, r Record) Verification {
 	return a.Verifications[len(a.Verifications)-1]
 }
 
-func lastRun(t *testing.T, r Record) *Attempt {
+func lastRun(t *testing.T, r mission.Record) *mission.Attempt {
 	t.Helper()
-	a, e := findAttempt(&r.State, r.State.Active)
+	a, e := mission.FindAttempt(&r.State, r.State.Active)
 	if e != nil {
 		t.Fatal(e)
 	}

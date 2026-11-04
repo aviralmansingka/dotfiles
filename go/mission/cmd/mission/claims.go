@@ -7,19 +7,22 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
-func (s *Store) ready(repo string) ([]Work, error) {
+func (s *Store) ready(repo string) ([]mission.Work, error) {
 	recs, e := s.list()
 	if e != nil {
 		return nil, e
 	}
-	out := []Work{}
+	out := []mission.Work{}
 	for _, r := range recs {
 		if repo != "" && r.Mission.Repo != repo {
 			continue
 		}
-		st, e := nextStep(r.Mission, r.State)
+		st, e := mission.NextStep(r.Mission, r.State)
 		if e != nil {
 			continue
 		}
@@ -27,34 +30,34 @@ func (s *Store) ready(repo string) ([]Work, error) {
 		if e != nil {
 			return nil, e
 		}
-		out = append(out, Work{Handle: r.Handle, Title: r.Mission.Title, Step: st, Goal: r.Mission.Goal, Cwd: rr.Bindings[machine()]})
+		out = append(out, mission.Work{Handle: r.Handle, Title: r.Mission.Title, Step: st, Goal: r.Mission.Goal, Cwd: rr.Bindings[platform.Machine()]})
 	}
 	return out, nil
 }
-func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAttachment) (Claim, error) {
-	var claim Claim
+func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*mission.PiAttachment) (mission.Claim, error) {
+	var claim mission.Claim
 	if agent == "" {
-		return claim, problem("agent_required", "--agent identifies the claiming agent")
+		return claim, mission.Problem("agent_required", "--agent identifies the claiming agent")
 	}
-	token := uid("claim-")
-	var attachment *PiAttachment
+	token := mission.UID("claim-")
+	var attachment *mission.PiAttachment
 	if len(pi) > 0 {
 		attachment = pi[0]
 		token = attachment.Token
 	}
-	r, e := s.mutate(h, func(r *Record) error {
-		st, e := nextStep(r.Mission, r.State)
+	r, e := s.mutate(h, func(r *mission.Record) error {
+		st, e := mission.NextStep(r.Mission, r.State)
 		if e != nil {
 			return e
 		}
 		if st.Agent != "any" && agent != st.Agent {
-			return problem("agent_mismatch", "%s expects agent %s", st.ID, st.Agent)
+			return mission.Problem("agent_mismatch", "%s expects agent %s", st.ID, st.Agent)
 		}
 		idx, _ := stepIndex(r.Mission, st.ID)
 		if idx > 0 {
 			prev := r.State.Steps[r.Mission.Steps[idx-1].ID]
-			if a, e := findAttempt(&r.State, prev.Attempt); e == nil && len(a.Verifications) > 0 && !s.verified(*r, *a) {
-				return problem("evidence_changed", "previous step's checked input or evidence changed; reset and rerun that step")
+			if a, e := mission.FindAttempt(&r.State, prev.Attempt); e == nil && len(a.Verifications) > 0 && !s.verified(*r, *a) {
+				return mission.Problem("evidence_changed", "previous step's checked input or evidence changed; reset and rerun that step")
 			}
 		}
 		d, _ := s.dir(h)
@@ -62,18 +65,18 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 		if e != nil {
 			return e
 		}
-		if digest(b) != r.State.SpecHash {
-			return problem("brief_changed", "mission brief changed; explicit reconciliation required")
+		if mission.Digest(b) != r.State.SpecHash {
+			return mission.Problem("brief_changed", "mission brief changed; explicit reconciliation required")
 		}
 		repo, e := s.repo(r.Mission.Repo)
 		if e != nil {
 			return e
 		}
 		if cwd == "" {
-			cwd = repo.Bindings[machine()]
+			cwd = repo.Bindings[platform.Machine()]
 		}
 		if cwd == "" {
-			return problem("no_checkout", "register a checkout binding on this machine")
+			return mission.Problem("no_checkout", "register a checkout binding on this machine")
 		}
 		cwd, e = filepath.Abs(cwd)
 		if e != nil {
@@ -84,36 +87,36 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 			return e
 		}
 		branch := ""
-		if r.State.Runtime != nil && r.State.Runtime.Machine != machine() {
-			return problem("wrong_machine", "mission worktree is bound on %s", r.State.Runtime.Machine)
+		if r.State.Runtime != nil && r.State.Runtime.Machine != platform.Machine() {
+			return mission.Problem("wrong_machine", "mission worktree is bound on %s", r.State.Runtime.Machine)
 		}
 		allBindings, e := s.list()
 		if e != nil {
 			return e
 		}
 		for _, other := range allBindings {
-			if other.Handle != h && other.State.Runtime != nil && other.State.Runtime.Machine == machine() && other.State.Runtime.Cwd == cwd {
-				return problem("worktree_busy", "worktree belongs to mission %s", other.Handle)
+			if other.Handle != h && other.State.Runtime != nil && other.State.Runtime.Machine == platform.Machine() && other.State.Runtime.Cwd == cwd {
+				return mission.Problem("worktree_busy", "worktree belongs to mission %s", other.Handle)
 			}
 		}
 		if r.State.Runtime != nil && r.State.Runtime.Cwd != cwd {
-			return problem("worktree_mismatch", "mission is bound to %s", r.State.Runtime.Cwd)
+			return mission.Problem("worktree_mismatch", "mission is bound to %s", r.State.Runtime.Cwd)
 		}
 		if r.State.Runtime != nil && r.State.Runtime.SessionID != "" && (attachment == nil || r.State.Runtime.SessionID != session) {
-			return problem("session_owned", "mission worktree already has a durable Pi owner")
+			return mission.Problem("session_owned", "mission worktree already has a durable Pi owner")
 		}
 		if r.Mission.Kind == "implementation" || attachment != nil {
 			if !managed {
-				return problem("managed_required", "writer missions require mission run so process exit is observed")
+				return mission.Problem("managed_required", "writer missions require mission run so process exit is observed")
 			}
-			binding := repo.Bindings[machine()]
+			binding := repo.Bindings[platform.Machine()]
 			a, e := gitCommon(binding)
 			if e != nil {
 				return e
 			}
 			b, e := gitCommon(cwd)
 			if e != nil || a != b {
-				return problem("wrong_repository", "writer cwd must belong to the registered repository")
+				return mission.Problem("wrong_repository", "writer cwd must belong to the registered repository")
 			}
 			o, e := exec.Command("git", "-C", cwd, "branch", "--show-current").Output()
 			if e != nil {
@@ -121,7 +124,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 			}
 			branch = strings.TrimSpace(string(o))
 			if branch == "" || branch == "main" || branch == "master" {
-				return problem("isolated_worktree_required", "writer missions require an existing non-main worktree")
+				return mission.Problem("isolated_worktree_required", "writer missions require an existing non-main worktree")
 			}
 			o, e = exec.Command("git", "-C", cwd, "rev-parse", "--absolute-git-dir").Output()
 			if e != nil {
@@ -132,7 +135,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 				return e
 			}
 			if gd == b {
-				return problem("isolated_worktree_required", "use a linked worktree; the primary checkout is reserved")
+				return mission.Problem("isolated_worktree_required", "use a linked worktree; the primary checkout is reserved")
 			}
 			o, e = exec.Command("git", "-C", cwd, "rev-parse", "--show-toplevel").Output()
 			if e != nil {
@@ -148,11 +151,11 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 			}
 			for _, other := range all {
 				if other.Handle != h && other.State.Runtime != nil && other.State.Runtime.Cwd == cwd {
-					return problem("worktree_busy", "worktree belongs to mission %s", other.Handle)
+					return mission.Problem("worktree_busy", "worktree belongs to mission %s", other.Handle)
 				}
 				for _, aa := range other.State.Attempts {
-					if active(aa) && aa.Cwd == cwd {
-						return problem("worktree_busy", "worktree already owned by active attempt %s", aa.ID)
+					if mission.Active(aa) && aa.Cwd == cwd {
+						return mission.Problem("worktree_busy", "worktree already owned by active attempt %s", aa.ID)
 					}
 				}
 			}
@@ -166,7 +169,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 		if e = atomicWrite(brief, []byte(assignedBrief(r.Mission, st))); e != nil {
 			return e
 		}
-		a := Attempt{ID: uid("attempt-"), Sequence: seq, Step: st.ID, Agent: agent, Status: "running", Started: now(), Updated: now(), Machine: machine(), SessionID: session, Cwd: cwd, Branch: branch, Managed: managed, TokenHash: digest([]byte(token)), SpecHash: r.State.SpecHash, Brief: r.Mission.Body, Artifact: artifact, Events: []Event{}}
+		a := mission.Attempt{ID: mission.UID("attempt-"), Sequence: seq, Step: st.ID, Agent: agent, Status: "running", Started: mission.Now(), Updated: mission.Now(), Machine: platform.Machine(), SessionID: session, Cwd: cwd, Branch: branch, Managed: managed, TokenHash: mission.Digest([]byte(token)), SpecHash: r.State.SpecHash, Brief: r.Mission.Body, Artifact: artifact, Events: []mission.Event{}}
 		if attachment != nil {
 			if e := s.attachBinding(r, *attachment, cwd, branch); e != nil {
 				return e
@@ -180,8 +183,8 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 		r.State.Active = a.ID
 		r.State.Current = st.ID
 		r.State.Status = "running"
-		r.State.Steps[st.ID] = StepState{Status: "running", Attempt: a.ID}
-		claim = Claim{Handle: h, Step: st, Attempt: a, Token: token, Environment: map[string]string{"MISSION_VAULT": s.Vault, "MISSION_HANDLE": h, "MISSION_ATTEMPT": a.ID, "MISSION_TOKEN": token, "MISSION_ARTIFACT": filepath.Join(d, filepath.FromSlash(artifact))}}
+		r.State.Steps[st.ID] = mission.StepState{Status: "running", Attempt: a.ID}
+		claim = mission.Claim{Handle: h, Step: st, Attempt: a, Token: token, Environment: map[string]string{"MISSION_VAULT": s.Vault, "MISSION_HANDLE": h, "MISSION_ATTEMPT": a.ID, "MISSION_TOKEN": token, "MISSION_ARTIFACT": filepath.Join(d, filepath.FromSlash(artifact))}}
 		claim.Environment["MISSION_BRIEF"] = brief
 		claim.Environment["MISSION_STEP"] = st.ID
 		exe, _ := os.Executable()
@@ -191,18 +194,18 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*PiAtta
 	_ = r
 	return claim, e
 }
-func (s *Store) pickup(repo, agent, session, cwd string) (Claim, error) {
+func (s *Store) pickup(repo, agent, session, cwd string) (mission.Claim, error) {
 	if agent == "" {
-		return Claim{}, problem("agent_required", "pickup requires --agent")
+		return mission.Claim{}, mission.Problem("agent_required", "pickup requires --agent")
 	}
 	work, e := s.ready(repo)
 	if e != nil {
-		return Claim{}, e
+		return mission.Claim{}, e
 	}
 	for _, w := range work {
 		r, e := s.load(w.Handle)
 		if e != nil {
-			return Claim{}, e
+			return mission.Claim{}, e
 		}
 		if r.Mission.Kind != "research" || (w.Step.Agent != "any" && w.Step.Agent != agent) {
 			continue
@@ -211,25 +214,25 @@ func (s *Store) pickup(repo, agent, session, cwd string) (Claim, error) {
 		if e == nil {
 			return c, nil
 		}
-		if d, ok := e.(*DomainError); !ok || (d.Code != "busy" && d.Code != "checkpoint_pending" && d.Code != "complete") {
+		if d, ok := e.(*mission.DomainError); !ok || (d.Code != "busy" && d.Code != "checkpoint_pending" && d.Code != "complete") {
 			return c, e
 		}
 	}
-	return Claim{}, problem("no_work", "no ready research work matches this agent; writer missions use run with a worktree")
+	return mission.Claim{}, mission.Problem("no_work", "no ready research work matches this agent; writer missions use run with a worktree")
 }
 func gitCommon(p string) (string, error) {
 	o, e := exec.Command("git", "-C", p, "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
 	if e != nil {
-		return "", problem("invalid_repository", "%s is not a git checkout", p)
+		return "", mission.Problem("invalid_repository", "%s is not a git checkout", p)
 	}
 	return filepath.EvalSymlinks(strings.TrimSpace(string(o)))
 }
-func authorize(a *Attempt, token string) error {
-	if token == "" || subtle.ConstantTimeCompare([]byte(a.TokenHash), []byte(digest([]byte(token)))) != 1 {
-		return problem("not_owner", "attempt token does not match; use the token returned by claim")
+func authorize(a *mission.Attempt, token string) error {
+	if token == "" || subtle.ConstantTimeCompare([]byte(a.TokenHash), []byte(mission.Digest([]byte(token)))) != 1 {
+		return mission.Problem("not_owner", "attempt token does not match; use the token returned by claim")
 	}
-	if a.Machine != machine() {
-		return problem("foreign_host", "this attempt belongs to another host")
+	if a.Machine != platform.Machine() {
+		return mission.Problem("foreign_host", "this attempt belongs to another host")
 	}
 	return nil
 }

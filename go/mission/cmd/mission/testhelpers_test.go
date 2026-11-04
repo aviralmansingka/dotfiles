@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
 // fixture builds a vault with one registered repository and one mission.
@@ -15,7 +17,7 @@ func fixture(t *testing.T) (*Store, string) {
 	must(t, e)
 	_, e = s.addRepo("dotfiles", t.TempDir(), "")
 	must(t, e)
-	m := Mission{Repo: "dotfiles", Slug: "test-mission", Title: "Test mission", Goal: "Preserve execution evidence", Kind: "research", Steps: []Step{{Title: "Inspect", Output: "result.md"}, {Title: "Propose", Output: "proposal.md"}}, Checkpoints: []Checkpoint{{"C01", "S01", "human", "Proceed?"}}}
+	m := mission.Mission{Repo: "dotfiles", Slug: "test-mission", Title: "Test mission", Goal: "Preserve execution evidence", Kind: "research", Steps: []mission.Step{{Title: "Inspect", Output: "result.md"}, {Title: "Propose", Output: "proposal.md"}}, Checkpoints: []mission.Checkpoint{{ID: "C01", After: "S01", Kind: "human", Question: "Proceed?"}}}
 	r, e := s.create(m)
 	must(t, e)
 	return s, r.Handle
@@ -30,27 +32,27 @@ func must(t *testing.T, e error) {
 
 func wantCode(t *testing.T, e error, code string) {
 	t.Helper()
-	d, ok := e.(*DomainError)
+	d, ok := e.(*mission.DomainError)
 	if !ok || d.Code != code {
 		t.Fatalf("want error %s, got %v", code, e)
 	}
 }
 
-func claimTest(t *testing.T, s *Store, h string) Claim {
+func claimTest(t *testing.T, s *Store, h string) mission.Claim {
 	t.Helper()
 	c, e := s.claim(h, "scout", "session-test", "", false)
 	must(t, e)
 	return c
 }
 
-func result(t *testing.T, s *Store, c Claim, text string) {
+func result(t *testing.T, s *Store, c mission.Claim, text string) {
 	t.Helper()
 	must(t, atomicWrite(artifactPath(s, c), []byte(text)))
 }
 
 // piFixture builds a real Git worktree for a mission and a session file whose
 // header matches it.
-func piFixture(t *testing.T) (*Store, string, PiAttachment) {
+func piFixture(t *testing.T) (*Store, string, mission.PiAttachment) {
 	t.Helper()
 	s, h := fixture(t)
 	root := t.TempDir()
@@ -62,13 +64,13 @@ func piFixture(t *testing.T) (*Store, string, PiAttachment) {
 	must(t, e)
 	r, e := s.workspace(h, "", "main", t.TempDir())
 	must(t, e)
-	p := PiAttachment{SessionID: "pi-session", Cwd: r.State.Runtime.Cwd, Workspace: "repo-workspace", Pane: "repo-workspace:p1", Token: strings.Repeat("private", 8), Agent: "scout"}
+	p := mission.PiAttachment{SessionID: "pi-session", Cwd: r.State.Runtime.Cwd, Workspace: "repo-workspace", Pane: "repo-workspace:p1", Token: strings.Repeat("private", 8), Agent: "scout"}
 	p.SessionFile = filepath.Join(t.TempDir(), "session.jsonl")
 	piHeader(t, p)
 	return s, h, p
 }
 
-func piHeader(t *testing.T, p PiAttachment) {
+func piHeader(t *testing.T, p mission.PiAttachment) {
 	t.Helper()
 	b, e := json.Marshal(map[string]string{"type": "session", "id": p.SessionID, "cwd": p.Cwd})
 	must(t, e)

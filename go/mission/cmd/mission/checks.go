@@ -10,9 +10,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
-func attemptDefinition(r Record, a Attempt) Step {
+func attemptDefinition(r mission.Record, a mission.Attempt) mission.Step {
 	if a.Definition != nil {
 		return *a.Definition
 	}
@@ -20,7 +22,7 @@ func attemptDefinition(r Record, a Attempt) Step {
 	if i >= 0 {
 		return r.Mission.Steps[i]
 	}
-	return Step{}
+	return mission.Step{}
 }
 
 type subjectSnapshot struct {
@@ -53,7 +55,7 @@ func boundedFile(p string, limit int64) ([]byte, error) {
 	}
 	return b, e
 }
-func (s *Store) subject(r Record, a Attempt, st Step) subjectSnapshot {
+func (s *Store) subject(r mission.Record, a mission.Attempt, st mission.Step) subjectSnapshot {
 	var snap subjectSnapshot
 	p, e := s.path(r.Mission.Repo, r.Mission.Slug, a.Artifact)
 	if e == nil {
@@ -62,13 +64,13 @@ func (s *Store) subject(r Record, a Attempt, st Step) subjectSnapshot {
 	snap.ArtifactErr = e
 	value := "missing"
 	if e == nil {
-		snap.ArtifactHash = digest(snap.Artifact)
+		snap.ArtifactHash = mission.Digest(snap.Artifact)
 		value = snap.ArtifactHash
 	} else {
 		value = "unavailable:" + e.Error()
 	}
 	values := []string{a.ID, definitionHash(st), value}
-	for _, name := range stepChecks(st) {
+	for _, name := range mission.StepChecks(st) {
 		if name == "go-test" {
 			h, e := repositoryHash(a.Cwd)
 			snap.RepoErr = e
@@ -78,7 +80,7 @@ func (s *Store) subject(r Record, a Attempt, st Step) subjectSnapshot {
 			values = append(values, h)
 		}
 	}
-	snap.Hash = digest([]byte(strings.Join(values, "\n")))
+	snap.Hash = mission.Digest([]byte(strings.Join(values, "\n")))
 	return snap
 }
 
@@ -181,22 +183,22 @@ func repositoryHash(cwd string) (string, error) {
 		if e != nil {
 			return "", e
 		}
-		fmt.Fprintf(&tree, "%s\x00%s\x00%s\n", name, st.Mode(), digest(b))
+		fmt.Fprintf(&tree, "%s\x00%s\x00%s\n", name, st.Mode(), mission.Digest(b))
 	}
-	return digest(tree.Bytes()), nil
+	return mission.Digest(tree.Bytes()), nil
 }
-func allPassed(v Verification, st Step) bool {
-	if v.Ended == "" || v.DefinitionHash != definitionHash(st) || len(v.Results) != len(stepChecks(st)) {
+func allPassed(v mission.Verification, st mission.Step) bool {
+	if v.Ended == "" || v.DefinitionHash != definitionHash(st) || len(v.Results) != len(mission.StepChecks(st)) {
 		return false
 	}
-	for i, c := range stepChecks(st) {
+	for i, c := range mission.StepChecks(st) {
 		if v.Results[i].Check != c || v.Results[i].Verdict != "passed" {
 			return false
 		}
 	}
 	return true
 }
-func (s *Store) verified(r Record, a Attempt) bool {
+func (s *Store) verified(r mission.Record, a mission.Attempt) bool {
 	if len(a.Verifications) == 0 {
 		return false
 	}
@@ -215,7 +217,7 @@ func (s *Store) verified(r Record, a Attempt) bool {
 				return false
 			}
 			b, e := boundedFile(p, 16<<20)
-			if e != nil || digest(b) != ev.Hash {
+			if e != nil || mission.Digest(b) != ev.Hash {
 				return false
 			}
 		}

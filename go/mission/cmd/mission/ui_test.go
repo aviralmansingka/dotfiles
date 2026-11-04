@@ -5,6 +5,8 @@ import (
 	lg "charm.land/lipgloss/v2"
 	"strings"
 	"testing"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
 // layoutSizes are the terminal sizes the desk must fill without clipping.
@@ -66,7 +68,7 @@ func TestNoticeKeepsTheLegendLast(t *testing.T) {
 		}
 	}
 	m.notice = ""
-	m.err = problem("demo", "A failed action keeps its error visible")
+	m.err = mission.Problem("demo", "A failed action keeps its error visible")
 	for _, size := range layoutSizes {
 		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		rows := strings.Split(stripANSI(m.render()), "\n")
@@ -277,7 +279,7 @@ func TestEmptyDeskNavigationDoesNotPanic(t *testing.T) {
 func TestListIndentSurvivesSelection(t *testing.T) {
 	s, _ := fixture(t)
 	for _, slug := range []string{"second-mission", "third-mission"} {
-		_, e := s.create(Mission{Repo: "dotfiles", Slug: slug, Title: "Mission " + slug, Goal: "Keep the list full", Kind: "research", Steps: []Step{{Title: "Inspect", Output: "result.md"}}})
+		_, e := s.create(mission.Mission{Repo: "dotfiles", Slug: slug, Title: "Mission " + slug, Goal: "Keep the list full", Kind: "research", Steps: []mission.Step{{Title: "Inspect", Output: "result.md"}}})
 		must(t, e)
 	}
 	m := newDesk(s)
@@ -344,7 +346,7 @@ func TestFloorFrameKeepsTheLegendLast(t *testing.T) {
 		m.refresh()
 		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		m.notice = "Checkpoint recorded; evidence and decision preserved."
-		m.err = problem("demo", "A failed action keeps its error visible")
+		m.err = mission.Problem("demo", "A failed action keeps its error visible")
 		out := m.render()
 		lines := strings.Split(out, "\n")
 		if len(lines) != size[1] {

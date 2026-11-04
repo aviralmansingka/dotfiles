@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
 func TestTitlesOnlyStepsAndCustomization(t *testing.T) {
@@ -16,7 +18,7 @@ func TestTitlesOnlyStepsAndCustomization(t *testing.T) {
 	r, e := s.load(h)
 	must(t, e)
 	r.Mission.Slug = "titles-only"
-	r.Mission.Steps = []Step{{Title: "Map events"}, {Title: "Propose the adapter"}}
+	r.Mission.Steps = []mission.Step{{Title: "Map events"}, {Title: "Propose the adapter"}}
 	r, e = s.create(r.Mission)
 	must(t, e)
 	steps, e := s.steps(r.Handle)
@@ -140,7 +142,7 @@ func TestInterruptedStepEditIsRepairable(t *testing.T) {
 	r.State.Revision++
 	b, e := markdown(r.Mission, r.Mission.Body)
 	must(t, e)
-	r.State.SpecHash = digest(b)
+	r.State.SpecHash = mission.Digest(b)
 	tx := pendingEdit{Handle: h, Mission: r.Mission, Body: r.Mission.Body, State: r.State, BaseRevision: baseRev, BaseHash: baseHash}
 	journal, e := yaml.Marshal(tx)
 	must(t, e)
@@ -203,7 +205,7 @@ func TestGoCheckAllowsOtherMissionsAndDetectsChangedSource(t *testing.T) {
 	c := claimTest(t, s, h)
 	result(t, s, c, "Implementation ready")
 	type answer struct {
-		r Record
+		r mission.Record
 		e error
 	}
 	done := make(chan answer, 1)
@@ -226,7 +228,7 @@ func TestGoCheckAllowsOtherMissionsAndDetectsChangedSource(t *testing.T) {
 	}
 	other := make(chan error, 1)
 	go func() {
-		_, e := s.create(Mission{Repo: "dotfiles", Slug: "other-mission", Title: "Other work", Goal: "Proceed during tests", Kind: "research", Steps: []Step{{Title: "Inspect"}}})
+		_, e := s.create(mission.Mission{Repo: "dotfiles", Slug: "other-mission", Title: "Other work", Goal: "Proceed during tests", Kind: "research", Steps: []mission.Step{{Title: "Inspect"}}})
 		other <- e
 	}()
 	select {
@@ -279,7 +281,7 @@ func TestFutureStepEditKeepsPendingCheckpointAndAttemptToken(t *testing.T) {
 	}
 	r, e = s.checkpoint(h, "C01", "accept", "Reviewed", "aviral", true, r.State.Revision)
 	must(t, e)
-	_, e = s.hook(h, c.Attempt.ID, c.Token, Event{Type: "note", Summary: "late metadata on prior attempt"})
+	_, e = s.hook(h, c.Attempt.ID, c.Token, mission.Event{Type: "note", Summary: "late metadata on prior attempt"})
 	must(t, e)
 	next, e := s.claim(h, "scout", "", "", false)
 	must(t, e)

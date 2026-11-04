@@ -10,6 +10,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	lg "charm.land/lipgloss/v2"
+
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 var (
@@ -220,7 +223,7 @@ type draft struct {
 }
 type desk struct {
 	store                        *Store
-	records                      []Record
+	records                      []mission.Record
 	selected, tab, width, height int
 	scroll                       int
 	err                          error
@@ -229,11 +232,11 @@ type desk struct {
 	formKind                     string
 	draft                        draft
 	decision, actor, note        string
-	review                       Record
+	review                       mission.Record
 	quitAfterForm                bool
 	selectedStep                 int
-	editing                      Record
-	stepDraft                    Step
+	editing                      mission.Record
+	stepDraft                    mission.Step
 	optionalChecks               []string
 	resetStep                    bool
 	launchDir                    string
@@ -276,7 +279,7 @@ func (m *desk) launchSelected() {
 	l, created, e := requestLaunch(m.launchDir, deskOwner("."), r.Handle, r.Mission.Repo, time.Now())
 	if e != nil {
 		m.notice = ""
-		m.err = problem("launch_failed", "cannot write the launch request: %v", e)
+		m.err = mission.Problem("launch_failed", "cannot write the launch request: %v", e)
 		return
 	}
 	m.launches[r.Handle] = l
@@ -558,9 +561,9 @@ func (m *desk) formSide() (string, string) {
 	case "step":
 		return "CHECKS FOLLOW THE ATTEMPT", heading("Always required") + "\nnonempty-artifact\n\n" + heading("Optional checks") + "\njson-valid · parse the result\ngo-test · test the Go module\n\n" + paint(muted, "Each run preserves") + "\nverdict + source fingerprint\nchecker version + evidence log\n\n" + paint(yellow, "Past evidence stays in the vault.") + "\nReset explicitly to revise a used step."
 	}
-	return "SAVED AS MARKDOWN", paint(muted, "6_missions/") + "\n  " + fallback(m.draft.Repo, "repository") + "/\n    " + fallback(m.draft.Slug, fallback(slugify(m.draft.Title), "mission-slug")) + "/\n      mission.md\n      state.md\n      attempts/\n      artifacts/\n\n" + heading("One mission · one repository") + "\n\nAgents claim the next step.\nEach attempt keeps its evidence.\nCheckpoints pause progression.\n\n" + paint(yellow, "No agent is launched by this form.")
+	return "SAVED AS MARKDOWN", paint(muted, "6_missions/") + "\n  " + platform.Fallback(m.draft.Repo, "repository") + "/\n    " + platform.Fallback(m.draft.Slug, platform.Fallback(mission.Slugify(m.draft.Title), "mission-slug")) + "/\n      mission.md\n      state.md\n      attempts/\n      artifacts/\n\n" + heading("One mission · one repository") + "\n\nAgents claim the next step.\nEach attempt keeps its evidence.\nCheckpoints pause progression.\n\n" + paint(yellow, "No agent is launched by this form.")
 }
-func (m *desk) detail(r Record, w int) string {
+func (m *desk) detail(r mission.Record, w int) string {
 	tabs := []string{"Overview", "Attempts", "Activity", "Steps"}
 	for i, t := range tabs {
 		tabs[i] = paint(muted, t)
@@ -584,7 +587,7 @@ func (m *desk) detail(r Record, w int) string {
 		}
 		for i := len(r.State.Attempts) - 1; i >= 0; i-- {
 			a := r.State.Attempts[i]
-			s += heading(fmt.Sprintf("%03d  %s  %s", a.Sequence, a.Step, a.Agent)) + "  " + status(a.Status) + "\n" + paint(muted, clip(a.ID, w)) + "\n" + "session  " + clip(fallback(a.SessionID, "awaiting session-start hook"), w-10) + "\n" + "worktree " + clip(a.Cwd, w-10) + "\n" + "output   " + a.Artifact + "\n"
+			s += heading(fmt.Sprintf("%03d  %s  %s", a.Sequence, a.Step, a.Agent)) + "  " + status(a.Status) + "\n" + paint(muted, clip(a.ID, w)) + "\n" + "session  " + clip(platform.Fallback(a.SessionID, "awaiting session-start hook"), w-10) + "\n" + "worktree " + clip(a.Cwd, w-10) + "\n" + "output   " + a.Artifact + "\n"
 			if a.Transcript != "" {
 				s += "session  " + a.Transcript + "\n"
 			}
@@ -603,7 +606,7 @@ func (m *desk) detail(r Record, w int) string {
 		return s
 	}
 	if m.tab == 2 {
-		var events []Event
+		var events []mission.Event
 		for _, a := range r.State.Attempts {
 			events = append(events, a.Events...)
 		}
@@ -644,11 +647,11 @@ func (m *desk) detail(r Record, w int) string {
 		}
 	}
 	if r.State.Active != "" {
-		a, _ := findAttempt(&r.State, r.State.Active)
-		s += "\n" + paint(aqua, "◉ ATTEMPT ") + heading(fmt.Sprintf("%03d  %s", a.Sequence, a.Agent)) + "\n" + paint(muted, "Session  ") + clip(fallback(a.SessionID, "awaiting hook"), w-10) + "\n" + paint(muted, "Events   ") + fmt.Sprint(len(a.Events)) + " recorded · " + fallback(a.Branch, "read-only research") + "\n"
+		a, _ := mission.FindAttempt(&r.State, r.State.Active)
+		s += "\n" + paint(aqua, "◉ ATTEMPT ") + heading(fmt.Sprintf("%03d  %s", a.Sequence, a.Agent)) + "\n" + paint(muted, "Session  ") + clip(platform.Fallback(a.SessionID, "awaiting hook"), w-10) + "\n" + paint(muted, "Events   ") + fmt.Sprint(len(a.Events)) + " recorded · " + platform.Fallback(a.Branch, "read-only research") + "\n"
 	}
-	if st, e := nextStep(r.Mission, r.State); e == nil {
-		s += "\n" + paint(green, "→ READY TO CLAIM  "+st.ID) + "\n" + paint(muted, "mission claim ") + r.Handle + " --agent " + fallback(st.Agent, "scout")
+	if st, e := mission.NextStep(r.Mission, r.State); e == nil {
+		s += "\n" + paint(green, "→ READY TO CLAIM  "+st.ID) + "\n" + paint(muted, "mission claim ") + r.Handle + " --agent " + platform.Fallback(st.Agent, "scout")
 	}
 	return s
 }
@@ -689,7 +692,7 @@ func (m *desk) prepareFormRender() {
 func (m *desk) startBuilder() {
 	repos, e := m.store.repos()
 	if e != nil || len(repos) == 0 {
-		m.err = problem("repo_not_registered", "Register a checkout first: mission repo add REPO --checkout PATH")
+		m.err = mission.Problem("repo_not_registered", "Register a checkout first: mission repo add REPO --checkout PATH")
 		return
 	}
 	m.draft = draft{Repo: repos[0].Slug, Kind: "research", First: true, Final: true}
@@ -760,15 +763,15 @@ func (m *desk) commitForm() {
 		}
 	} else {
 		d := m.draft
-		mnew := Mission{Repo: d.Repo, Slug: fallback(d.Slug, slugify(d.Title)), Title: d.Title, Goal: d.Goal, Kind: d.Kind}
+		mnew := mission.Mission{Repo: d.Repo, Slug: platform.Fallback(d.Slug, mission.Slugify(d.Title)), Title: d.Title, Goal: d.Goal, Kind: d.Kind}
 		for _, line := range strings.Split(d.Steps, "\n") {
 			line = strings.TrimSpace(line)
 			if line == "" {
 				continue
 			}
-			mnew.Steps = append(mnew.Steps, Step{Title: line})
+			mnew.Steps = append(mnew.Steps, mission.Step{Title: line})
 		}
-		normalizeMission(&mnew)
+		mission.NormalizeMission(&mnew)
 		if len(mnew.Steps) > 0 {
 			last := mnew.Steps[len(mnew.Steps)-1].ID
 			after := []string{}
@@ -779,10 +782,10 @@ func (m *desk) commitForm() {
 				after = append(after, last)
 			}
 			for i, st := range after {
-				mnew.Checkpoints = append(mnew.Checkpoints, Checkpoint{ID: fmt.Sprintf("C%02d", i+1), After: st, Kind: "human", Question: "Does this result meet the mission goal?"})
+				mnew.Checkpoints = append(mnew.Checkpoints, mission.Checkpoint{ID: fmt.Sprintf("C%02d", i+1), After: st, Kind: "human", Question: "Does this result meet the mission goal?"})
 			}
 		}
-		var r Record
+		var r mission.Record
 		r, m.err = m.store.create(mnew)
 		if m.err == nil {
 			m.notice = "Created " + r.Handle + ". Ready for an agent claim."

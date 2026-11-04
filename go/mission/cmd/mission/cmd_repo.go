@@ -1,14 +1,19 @@
 package main
 
-func cmdRepo(a args, s *Store) (any, error) {
-	switch a.at(1) {
+import (
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
+)
+
+func cmdRepo(a platform.Args, s *Store) (any, error) {
+	switch a.At(1) {
 	case "add":
-		if !a.has("checkout") {
-			return nil, problem("usage", "repo add requires --checkout")
+		if !a.Has("checkout") {
+			return nil, mission.Problem("usage", "repo add requires --checkout")
 		}
-		return s.addRepo(a.at(2), a.get("checkout"), a.get("remote"))
+		return s.addRepo(a.At(2), a.Get("checkout"), a.Get("remote"))
 	case "list":
 		return s.repos()
 	}
-	return nil, problem("usage", "use repo add or repo list")
+	return nil, mission.Problem("usage", "use repo add or repo list")
 }

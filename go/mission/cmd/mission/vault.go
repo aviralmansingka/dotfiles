@@ -9,6 +9,8 @@ import (
 	"syscall"
 
 	"go.yaml.in/yaml/v3"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
 type Store struct{ Vault string }
@@ -40,7 +42,7 @@ func (s *Store) path(parts ...string) (string, error) {
 	p := filepath.Join(append([]string{base}, parts...)...)
 	r, e := filepath.Rel(base, p)
 	if e != nil || r == ".." || strings.HasPrefix(r, ".."+string(os.PathSeparator)) {
-		return "", problem("invalid_path", "path escapes mission store")
+		return "", mission.Problem("invalid_path", "path escapes mission store")
 	}
 	// Reject symlink traversal, including the collection root. Reads and writes share this check.
 	cur := s.Vault
@@ -55,7 +57,7 @@ func (s *Store) path(parts ...string) (string, error) {
 			return "", e
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			return "", problem("invalid_path", "symlink refused: %s", cur)
+			return "", mission.Problem("invalid_path", "symlink refused: %s", cur)
 		}
 	}
 	return p, nil
@@ -63,7 +65,7 @@ func (s *Store) path(parts ...string) (string, error) {
 func splitHandle(h string) (string, string, error) {
 	p := strings.Split(h, "/")
 	if len(p) != 2 || !validSlug(p[0]) || !validSlug(p[1]) {
-		return "", "", problem("invalid_handle", "use a qualified handle such as dotfiles/vault-mission-store")
+		return "", "", mission.Problem("invalid_handle", "use a qualified handle such as dotfiles/vault-mission-store")
 	}
 	return p[0], p[1], nil
 }
@@ -108,14 +110,14 @@ func markdown(v any, body string) ([]byte, error) {
 }
 func parseMarkdown(b []byte, v any) (string, error) {
 	if len(b) > 16<<20 {
-		return "", problem("too_large", "note exceeds 16 MiB")
+		return "", mission.Problem("too_large", "note exceeds 16 MiB")
 	}
 	if !bytes.HasPrefix(b, []byte("---\n")) {
-		return "", problem("invalid_note", "missing YAML frontmatter")
+		return "", mission.Problem("invalid_note", "missing YAML frontmatter")
 	}
 	p := bytes.Index(b[4:], []byte("\n---\n"))
 	if p < 0 {
-		return "", problem("invalid_note", "unclosed YAML frontmatter")
+		return "", mission.Problem("invalid_note", "unclosed YAML frontmatter")
 	}
 	p += 4
 	if e := yaml.Unmarshal(b[4:p], v); e != nil {
@@ -129,7 +131,7 @@ func (s *Store) locked(fn func() error) error {
 	if e := os.MkdirAll(d, 0700); e != nil {
 		return e
 	}
-	p := filepath.Join(d, strings.TrimPrefix(digest([]byte(s.Vault)), "sha256:")+".lock")
+	p := filepath.Join(d, strings.TrimPrefix(mission.Digest([]byte(s.Vault)), "sha256:")+".lock")
 	f, e := os.OpenFile(p, os.O_CREATE|os.O_RDWR, 0600)
 	if e != nil {
 		return e

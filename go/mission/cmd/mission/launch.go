@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"mission.local/prototype/internal/platform"
 )
 
 // The desk cannot start a mission by itself. A mission starts inside Pi, through
@@ -157,7 +159,7 @@ func launchSummary(l Launch) (string, string) {
 		}
 		return "launch started", "the mission worktree has a session"
 	case launchFailed:
-		return "launch failed", clean(fallback(l.Error, "inspect the Pi session"))
+		return "launch failed", clean(platform.Fallback(l.Error, "inspect the Pi session"))
 	}
 	return "", ""
 }

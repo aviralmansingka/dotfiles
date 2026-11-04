@@ -12,6 +12,9 @@ import (
 	"syscall"
 	"time"
 	"unicode/utf8"
+
+	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 type cappedOutput struct {
@@ -57,40 +60,40 @@ func goTest(cwd string) (string, string, []byte) {
 	}
 	return "passed", summary, log.Bytes()
 }
-func (s *Store) verify(h, id, token string) (Record, error) {
-	var current Record
-	var attempt Attempt
-	var st Step
+func (s *Store) verify(h, id, token string) (mission.Record, error) {
+	var current mission.Record
+	var attempt mission.Attempt
+	var st mission.Step
 	var before subjectSnapshot
-	run := Verification{ID: uid("verify-"), Started: now(), Runner: "mission/checks@" + machine()}
-	_, e := s.mutate(h, func(r *Record) error {
-		a, e := findAttempt(&r.State, id)
+	run := mission.Verification{ID: mission.UID("verify-"), Started: mission.Now(), Runner: "mission/checks@" + platform.Machine()}
+	_, e := s.mutate(h, func(r *mission.Record) error {
+		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return e
 		}
 		if e = authorize(a, token); e != nil {
 			return e
 		}
-		if !active(*a) || r.State.Active != id {
-			return problem("stale_attempt", "only the active attempt can run checks")
+		if !mission.Active(*a) || r.State.Active != id {
+			return mission.Problem("stale_attempt", "only the active attempt can run checks")
 		}
 		if a.Verifying != "" {
-			return problem("verification_busy", "check run %s already owns verification; inspect an interrupted runner before recovery", a.Verifying)
+			return mission.Problem("verification_busy", "check run %s already owns verification; inspect an interrupted runner before recovery", a.Verifying)
 		}
 		d, _ := s.dir(h)
 		b, e := os.ReadFile(filepath.Join(d, "mission.md"))
 		if e != nil {
 			return e
 		}
-		if digest(b) != a.SpecHash {
-			return problem("brief_changed", "mission changed since this attempt started")
+		if mission.Digest(b) != a.SpecHash {
+			return mission.Problem("brief_changed", "mission changed since this attempt started")
 		}
 		st = attemptDefinition(*r, *a)
 		before = s.subject(*r, *a, st)
 		run.SubjectHash = before.Hash
 		run.DefinitionHash = definitionHash(st)
-		for _, name := range stepChecks(st) {
-			run.Results = append(run.Results, CheckResult{Check: name, Version: "1", Verdict: "not_run", At: run.Started, Summary: "Check has not run"})
+		for _, name := range mission.StepChecks(st) {
+			run.Results = append(run.Results, mission.CheckResult{Check: name, Version: "1", Verdict: "not_run", At: run.Started, Summary: "Check has not run"})
 		}
 		a.Verifying = run.ID
 		a.Verifications = append(a.Verifications, run)
@@ -106,7 +109,7 @@ func (s *Store) verify(h, id, token string) (Record, error) {
 	blocked := false
 	for i := range run.Results {
 		res := &run.Results[i]
-		res.At = now()
+		res.At = mission.Now()
 		if blocked {
 			res.Summary = "Earlier required check did not pass"
 			continue
@@ -145,8 +148,8 @@ func (s *Store) verify(h, id, token string) (Record, error) {
 			blocked = true
 		}
 	}
-	return s.mutate(h, func(r *Record) error {
-		a, e := findAttempt(&r.State, id)
+	return s.mutate(h, func(r *mission.Record) error {
+		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return e
 		}
@@ -154,7 +157,7 @@ func (s *Store) verify(h, id, token string) (Record, error) {
 			return e
 		}
 		if a.Verifying != run.ID || r.State.Active != id {
-			return problem("stale_attempt", "verification no longer owns this attempt")
+			return mission.Problem("stale_attempt", "verification no longer owns this attempt")
 		}
 		after := s.subject(*r, *a, st)
 		if after.Hash != before.Hash {
@@ -165,7 +168,7 @@ func (s *Store) verify(h, id, token string) (Record, error) {
 				}
 			}
 		}
-		run.Ended = now()
+		run.Ended = mission.Now()
 		for i := range run.Results {
 			res := &run.Results[i]
 			rel := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", a.Sequence), "checks", run.ID, res.Check+".log"))
@@ -178,9 +181,9 @@ func (s *Store) verify(h, id, token string) (Record, error) {
 			if e = atomicWrite(p, b); e != nil {
 				return e
 			}
-			res.Evidence = []Evidence{{Path: rel, Hash: digest(b)}}
+			res.Evidence = []mission.Evidence{{Path: rel, Hash: mission.Digest(b)}}
 			if before.ArtifactErr == nil {
-				res.Evidence = append(res.Evidence, Evidence{Path: a.Artifact, Hash: before.ArtifactHash})
+				res.Evidence = append(res.Evidence, mission.Evidence{Path: a.Artifact, Hash: before.ArtifactHash})
 			}
 		}
 		for i := range a.Verifications {
@@ -189,8 +192,8 @@ func (s *Store) verify(h, id, token string) (Record, error) {
 			}
 		}
 		a.Verifying = ""
-		a.Updated = now()
-		a.Events = append(a.Events, Event{ID: uid("event-"), Type: "checks-completed", At: now(), Summary: verificationSummary(run)})
+		a.Updated = mission.Now()
+		a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "checks-completed", At: mission.Now(), Summary: verificationSummary(run)})
 		return nil
 	})
 }

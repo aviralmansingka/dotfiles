@@ -6,24 +6,26 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
 func TestPiTurnDoesNotFinishWithoutReportAndQuietBoundary(t *testing.T) {
 	s, h, p := piFixture(t)
 	c, e := s.attach(h, p)
 	must(t, e)
-	quiet := Event{ID: "end-1", Type: "agent-settled", SessionID: p.SessionID, Quiescent: true}
+	quiet := mission.Event{ID: "end-1", Type: "agent-settled", SessionID: p.SessionID, Quiescent: true}
 	_, e = s.hook(h, c.Attempt.ID, p.Token, quiet)
 	must(t, e)
 	_, e = s.settle(h, c.Attempt.ID, p.Token, p.SessionID)
 	wantCode(t, e, "completion_required")
 	_, e = s.finish(h, c.Attempt.ID, p.Token, false, "ready", false, 0)
 	must(t, e)
-	_, e = s.hook(h, c.Attempt.ID, p.Token, Event{Type: "agent-end", SessionID: p.SessionID, Quiescent: true})
+	_, e = s.hook(h, c.Attempt.ID, p.Token, mission.Event{Type: "agent-end", SessionID: p.SessionID, Quiescent: true})
 	must(t, e)
 	_, e = s.settle(h, c.Attempt.ID, p.Token, p.SessionID)
 	wantCode(t, e, "runtime_busy")
-	_, e = s.hook(h, c.Attempt.ID, p.Token, Event{Type: "agent-start", SessionID: p.SessionID})
+	_, e = s.hook(h, c.Attempt.ID, p.Token, mission.Event{Type: "agent-start", SessionID: p.SessionID})
 	must(t, e)
 	_, e = s.settle(h, c.Attempt.ID, p.Token, p.SessionID)
 	wantCode(t, e, "runtime_busy")
@@ -59,7 +61,7 @@ func TestPiShutdownAndReloadPreserveOwnership(t *testing.T) {
 	s, h, p := piFixture(t)
 	c, e := s.attach(h, p)
 	must(t, e)
-	_, e = s.hook(h, c.Attempt.ID, p.Token, Event{Type: "session-end", SessionID: p.SessionID})
+	_, e = s.hook(h, c.Attempt.ID, p.Token, mission.Event{Type: "session-end", SessionID: p.SessionID})
 	must(t, e)
 	s2, e := openStore(s.Vault)
 	must(t, e)
@@ -80,12 +82,12 @@ func TestProgressIsStructuredHashedAndReplaySafe(t *testing.T) {
 	c, e := s.attach(h, p)
 	must(t, e)
 	result(t, s, c, "Evidence")
-	progress := Progress{ID: "report-1", Status: "blocked", Summary: "Need design review", Blocker: "Choose retention period", Next: "Implement retention"}
+	progress := mission.Progress{ID: "report-1", Status: "blocked", Summary: "Need design review", Blocker: "Choose retention period", Next: "Implement retention"}
 	r, e := s.progress(h, c.Attempt.ID, p.Token, progress, []string{c.Attempt.Artifact})
 	must(t, e)
 	r, e = s.progress(h, c.Attempt.ID, p.Token, progress, []string{c.Attempt.Artifact})
 	must(t, e)
-	if r.State.Status != "waiting" || len(r.State.Attempts[0].Progress) != 1 || r.State.Attempts[0].Progress[0].Evidence[0].Hash != digest([]byte("Evidence")) {
+	if r.State.Status != "waiting" || len(r.State.Attempts[0].Progress) != 1 || r.State.Attempts[0].Progress[0].Evidence[0].Hash != mission.Digest([]byte("Evidence")) {
 		t.Fatal("progress lost or duplicated")
 	}
 	progress.Summary = "different"
@@ -122,7 +124,7 @@ func TestMissionWorkspaceOwnsMissionSlugBranch(t *testing.T) {
 	git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "fixture")
 	_, e = s.addRepo("dotfiles", repo, "")
 	must(t, e)
-	m := Mission{Repo: "dotfiles", Slug: "worktree-branch", Title: "Mission worktree", Goal: "Launch as a Herdr worktree", Kind: "implementation", Steps: []Step{{Title: "Inspect", Output: "result.md"}}}
+	m := mission.Mission{Repo: "dotfiles", Slug: "worktree-branch", Title: "Mission worktree", Goal: "Launch as a Herdr worktree", Kind: "implementation", Steps: []mission.Step{{Title: "Inspect", Output: "result.md"}}}
 	r, e := s.create(m)
 	must(t, e)
 	w, e := s.workspace(r.Handle, "", "main", filepath.Join(root, "worktrees"))
@@ -179,7 +181,7 @@ func TestMissionWorkspaceRevivesDeletedCheckout(t *testing.T) {
 	git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "fixture")
 	_, e = s.addRepo("dotfiles", repo, "")
 	must(t, e)
-	m := Mission{Repo: "dotfiles", Slug: "revive-checkout", Title: "Revive a deleted checkout", Goal: "Recover the mission worktree", Kind: "implementation", Steps: []Step{{Title: "Inspect", Output: "result.md"}}}
+	m := mission.Mission{Repo: "dotfiles", Slug: "revive-checkout", Title: "Revive a deleted checkout", Goal: "Recover the mission worktree", Kind: "implementation", Steps: []mission.Step{{Title: "Inspect", Output: "result.md"}}}
 	r, e := s.create(m)
 	must(t, e)
 	worktrees := filepath.Join(root, "worktrees")
@@ -263,7 +265,7 @@ func gitFixture(t *testing.T, dir string, args ...string) string {
 
 func addMission(t *testing.T, s *Store, slug string) string {
 	t.Helper()
-	m := Mission{Repo: "dotfiles", Slug: slug, Title: "Adopt a checkout", Goal: "Reuse the existing mission checkout", Kind: "implementation", Steps: []Step{{Title: "Inspect", Output: "result.md"}}}
+	m := mission.Mission{Repo: "dotfiles", Slug: slug, Title: "Adopt a checkout", Goal: "Reuse the existing mission checkout", Kind: "implementation", Steps: []mission.Step{{Title: "Inspect", Output: "result.md"}}}
 	r, e := s.create(m)
 	must(t, e)
 	return r.Handle

@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
 func TestOwnershipAndIdempotentHooks(t *testing.T) {
 	s, h := fixture(t)
 	c := claimTest(t, s, h)
-	ev := Event{ID: "stable-hook", Type: "agent-end", Summary: "Turn finished"}
+	ev := mission.Event{ID: "stable-hook", Type: "agent-end", Summary: "Turn finished"}
 	_, e := s.hook(h, c.Attempt.ID, "wrong-token", ev)
 	wantCode(t, e, "not_owner")
 	_, e = s.hook(h, c.Attempt.ID, c.Token, ev)
@@ -26,7 +28,7 @@ func TestOwnershipAndIdempotentHooks(t *testing.T) {
 	ev.Summary = "different payload"
 	_, e = s.hook(h, c.Attempt.ID, c.Token, ev)
 	wantCode(t, e, "event_conflict")
-	_, e = s.hook(h, c.Attempt.ID, c.Token, Event{Type: "session-start", SessionID: "other"})
+	_, e = s.hook(h, c.Attempt.ID, c.Token, mission.Event{Type: "session-start", SessionID: "other"})
 	wantCode(t, e, "session_mismatch")
 }
 
@@ -97,9 +99,9 @@ func TestShutdownPreservesTranscriptAndInterrupts(t *testing.T) {
 	c := claimTest(t, s, h)
 	session := filepath.Join(t.TempDir(), "pi.jsonl")
 	must(t, os.WriteFile(session, []byte("{\"id\":\"session-test\"}\n"), 0600))
-	_, e := s.hook(h, c.Attempt.ID, c.Token, Event{Type: "session-start", SessionFile: session})
+	_, e := s.hook(h, c.Attempt.ID, c.Token, mission.Event{Type: "session-start", SessionFile: session})
 	must(t, e)
-	r, e := s.hook(h, c.Attempt.ID, c.Token, Event{Type: "session-end"})
+	r, e := s.hook(h, c.Attempt.ID, c.Token, mission.Event{Type: "session-end"})
 	must(t, e)
 	must(t, os.Remove(session))
 	a := r.State.Attempts[0]
@@ -129,11 +131,11 @@ func TestManagedFinishHoldsOwnership(t *testing.T) {
 	if r.State.Active != c.Attempt.ID || r.State.Attempts[0].Status != "reported" {
 		t.Fatal("writer ownership released before process exit")
 	}
-	_, e = s.hook(h, c.Attempt.ID, c.Token, Event{Type: "session-end"})
+	_, e = s.hook(h, c.Attempt.ID, c.Token, mission.Event{Type: "session-end"})
 	must(t, e)
 	_, e = s.claim(h, "worker", "", "", false)
 	wantCode(t, e, "busy")
-	_, e = s.hook(h, c.Attempt.ID, c.Token, Event{Type: "process-exit"})
+	_, e = s.hook(h, c.Attempt.ID, c.Token, mission.Event{Type: "process-exit"})
 	wantCode(t, e, "reserved_event")
 }
 
@@ -161,7 +163,7 @@ func TestRepairFromCanonicalState(t *testing.T) {
 	d, _ := s.dir(h)
 	p := filepath.Join(d, "attempts", "001.md")
 	must(t, os.Remove(p))
-	_, e := s.mutate(h, func(*Record) error { return nil })
+	_, e := s.mutate(h, func(*mission.Record) error { return nil })
 	must(t, e)
 	b, e := os.ReadFile(p)
 	must(t, e)
@@ -228,7 +230,7 @@ func TestWriterRequiresLinkedWorktree(t *testing.T) {
 	b, e := markdown(r.Mission, r.Mission.Body)
 	must(t, e)
 	must(t, atomicWrite(p, b))
-	_, e = s.mutate(h, func(r *Record) error { r.State.SpecHash = digest(b); return nil })
+	_, e = s.mutate(h, func(r *mission.Record) error { r.State.SpecHash = mission.Digest(b); return nil })
 	must(t, e)
 	_, e = s.claim(h, "worker", "", root, false)
 	wantCode(t, e, "managed_required")

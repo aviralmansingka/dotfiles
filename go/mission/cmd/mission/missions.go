@@ -8,53 +8,55 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"mission.local/prototype/internal/domain/mission"
 )
 
-func validateMission(m Mission) error {
+func validateMission(m mission.Mission) error {
 	if !validSlug(m.Repo) || !validSlug(m.Slug) {
-		return problem("invalid_slug", "repository and mission slugs must be 3–64 lowercase letters/digits/hyphens")
+		return mission.Problem("invalid_slug", "repository and mission slugs must be 3–64 lowercase letters/digits/hyphens")
 	}
 	if m.Title == "" || m.Goal == "" || len(m.Steps) == 0 {
-		return problem("invalid_mission", "title, goal and at least one step are required")
+		return mission.Problem("invalid_mission", "title, goal and at least one step are required")
 	}
 	if m.Kind != "research" && m.Kind != "implementation" {
-		return problem("invalid_mission", "kind must be research or implementation")
+		return mission.Problem("invalid_mission", "kind must be research or implementation")
 	}
 	ids := map[string]bool{}
 	for _, st := range m.Steps {
 		if !regexp.MustCompile(`^S[0-9]{2,}$`).MatchString(st.ID) || ids[st.ID] {
-			return problem("invalid_step", "step IDs must be unique S01-style IDs")
+			return mission.Problem("invalid_step", "step IDs must be unique S01-style IDs")
 		}
 		ids[st.ID] = true
 		if st.Title == "" || st.Agent == "" {
-			return problem("invalid_step", "step title and agent required")
+			return mission.Problem("invalid_step", "step title and agent required")
 		}
 		if st.Output == "" || filepath.Base(st.Output) != st.Output || strings.Contains(st.Output, "..") || st.Output == "session.jsonl" || st.Output == "session.log" || st.Output == "brief.md" {
-			return problem("invalid_output", "output must be a simple filename; session.jsonl, session.log and brief.md are reserved")
+			return mission.Problem("invalid_output", "output must be a simple filename; session.jsonl, session.log and brief.md are reserved")
 		}
-		for _, name := range stepChecks(st) {
+		for _, name := range mission.StepChecks(st) {
 			if !knownCheck(name) {
-				return problem("invalid_check", "unknown check %q; use mission checks to list presets", name)
+				return mission.Problem("invalid_check", "unknown check %q; use mission checks to list presets", name)
 			}
 		}
 		if len(st.Instructions) > 8000 || len(st.Acceptance) > 8000 {
-			return problem("too_large", "step instructions and acceptance criteria are limited to 8000 characters each")
+			return mission.Problem("too_large", "step instructions and acceptance criteria are limited to 8000 characters each")
 		}
 	}
 	cpids := map[string]bool{}
 	after := map[string]bool{}
 	for _, c := range m.Checkpoints {
 		if !ids[c.After] || cpids[c.ID] || after[c.After] || c.Kind != "human" || c.Question == "" || !regexp.MustCompile(`^C[0-9]{2,}$`).MatchString(c.ID) {
-			return problem("invalid_checkpoint", "unique C01 checkpoints must reference a step, kind human, and a question")
+			return mission.Problem("invalid_checkpoint", "unique C01 checkpoints must reference a step, kind human, and a question")
 		}
 		cpids[c.ID] = true
 		after[c.After] = true
 	}
 	return nil
 }
-func (s *Store) create(m Mission) (Record, error) {
-	var rec Record
-	normalizeMission(&m)
+func (s *Store) create(m mission.Mission) (mission.Record, error) {
+	var rec mission.Record
+	mission.NormalizeMission(&m)
 	if e := validateMission(m); e != nil {
 		return rec, e
 	}
@@ -68,11 +70,11 @@ func (s *Store) create(m Mission) (Record, error) {
 			return e
 		}
 		if _, e = os.Stat(filepath.Join(d, "mission.md")); e == nil {
-			return problem("exists", "mission %s already exists; inspect it instead of overwriting", h)
+			return mission.Problem("exists", "mission %s already exists; inspect it instead of overwriting", h)
 		}
-		m.ID = uid("mission-")
+		m.ID = mission.UID("mission-")
 		m.Schema = 1
-		m.Created = now()
+		m.Created = mission.Now()
 		if m.Body == "" {
 			m.Body = "# " + m.Title + "\n\n## Goal\n" + m.Goal + "\n\nStep instructions, acceptance criteria and checks are defined in frontmatter.\n"
 		}
@@ -80,8 +82,8 @@ func (s *Store) create(m Mission) (Record, error) {
 		if e != nil {
 			return e
 		}
-		st := stateFor(m, digest(b))
-		rec = Record{Handle: h, Mission: m, State: st}
+		st := mission.StateFor(m, mission.Digest(b))
+		rec = mission.Record{Handle: h, Mission: m, State: st}
 		stage, e := os.MkdirTemp(filepath.Dir(d), ".mission-create-")
 		if e != nil {
 			return e
@@ -101,14 +103,14 @@ func (s *Store) create(m Mission) (Record, error) {
 	})
 	return rec, err
 }
-func (s *Store) load(h string) (Record, error) {
-	var r Record
+func (s *Store) load(h string) (mission.Record, error) {
+	var r mission.Record
 	p, pe := s.editPath(h)
 	if pe != nil {
 		return r, pe
 	}
 	if _, pe = os.Stat(p); pe == nil {
-		return r, problem("edit_pending", "step edit was interrupted; run mission repair %s", h)
+		return r, mission.Problem("edit_pending", "step edit was interrupted; run mission repair %s", h)
 	} else if !os.IsNotExist(pe) {
 		return r, pe
 	}
@@ -118,21 +120,21 @@ func (s *Store) load(h string) (Record, error) {
 	}
 	b, e := os.ReadFile(filepath.Join(d, "mission.md"))
 	if e != nil {
-		return r, problem("not_found", "mission %s not found", h)
+		return r, mission.Problem("not_found", "mission %s not found", h)
 	}
 	body, e := parseMarkdown(b, &r.Mission)
 	if e != nil {
 		return r, e
 	}
 	r.Mission.Body = body
-	normalizeMission(&r.Mission)
+	mission.NormalizeMission(&r.Mission)
 	r.Handle = h
 	if e = validateMission(r.Mission); e != nil {
 		return r, e
 	}
 	repo, slug, _ := splitHandle(h)
 	if r.Mission.Repo != repo || r.Mission.Slug != slug {
-		return r, problem("identity_mismatch", "mission metadata does not match its directory")
+		return r, mission.Problem("identity_mismatch", "mission metadata does not match its directory")
 	}
 	b, e = os.ReadFile(filepath.Join(d, "state.md"))
 	if e != nil {
@@ -143,16 +145,16 @@ func (s *Store) load(h string) (Record, error) {
 		return r, e
 	}
 	if r.State.Mission != r.Mission.ID {
-		return r, problem("identity_mismatch", "state belongs to another mission")
+		return r, mission.Problem("identity_mismatch", "state belongs to another mission")
 	}
 	return r, nil
 }
-func (s *Store) list() ([]Record, error) {
+func (s *Store) list() ([]mission.Record, error) {
 	repos, e := s.repos()
 	if e != nil {
 		return nil, e
 	}
-	out := []Record{}
+	out := []mission.Record{}
 	for _, repo := range repos {
 		p, e := s.path(repo.Slug)
 		if e != nil {
@@ -175,7 +177,7 @@ func (s *Store) list() ([]Record, error) {
 	}
 	return out, nil
 }
-func (s *Store) save(r *Record) error {
+func (s *Store) save(r *mission.Record) error {
 	d, e := s.dir(r.Handle)
 	if e != nil {
 		return e
@@ -220,7 +222,7 @@ func (s *Store) save(r *Record) error {
 			return e
 		}
 		if e = atomicWrite(p, b); e != nil {
-			return problem("projection_failed", "state committed; attempt projection failed: %v; use mission repair", e)
+			return mission.Problem("projection_failed", "state committed; attempt projection failed: %v; use mission repair", e)
 		}
 		var events bytes.Buffer
 		enc := json.NewEncoder(&events)
@@ -234,12 +236,12 @@ func (s *Store) save(r *Record) error {
 			return e
 		}
 		if e = atomicWrite(ep, events.Bytes()); e != nil {
-			return problem("projection_failed", "state committed; event projection failed: %v", e)
+			return mission.Problem("projection_failed", "state committed; event projection failed: %v", e)
 		}
 	}
 	return nil
 }
-func stateBody(r Record) string {
+func stateBody(r mission.Record) string {
 	b := "# " + r.Mission.Title + "\n\n## Progress\n"
 	for _, st := range r.Mission.Steps {
 		ss := r.State.Steps[st.ID]
@@ -267,8 +269,8 @@ func stateBody(r Record) string {
 	}
 	return b + "\n## Brief\n[[./mission|Mission brief]]\n"
 }
-func (s *Store) mutate(h string, fn func(*Record) error) (Record, error) {
-	var r Record
+func (s *Store) mutate(h string, fn func(*mission.Record) error) (mission.Record, error) {
+	var r mission.Record
 	e := s.locked(func() error {
 		var e error
 		r, e = s.load(h)
@@ -301,7 +303,7 @@ func knownCheck(name string) bool {
 	}
 	return false
 }
-func verificationSummary(v Verification) string {
+func verificationSummary(v mission.Verification) string {
 	parts := []string{}
 	for _, r := range v.Results {
 		parts = append(parts, r.Check+": "+r.Verdict)
