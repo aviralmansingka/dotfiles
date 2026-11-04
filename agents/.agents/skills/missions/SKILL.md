@@ -93,9 +93,9 @@ If an owner session is recorded, resume it. If the step failed, run
 `mission retry`, then `next`.
 
 A started mission-worker receives a continuation prompt after each verified step
-when no checkpoint is pending. An attached existing session uses explicit `next`
-and does not automatically start more work. At a checkpoint, wait for the user to
-accept it and direct continuation.
+when no review is pending. An attached existing session uses explicit `next` and
+does not automatically start more work. At a review, wait for the user to decide
+and direct continuation.
 
 One repository owns one Herdr workspace, plus one linked worktree workspace per
 registered worktree; a mission's checkout owns its own. One mission owns one
@@ -139,12 +139,17 @@ completion through observed process exit. Do not use it to wrap an already
 running Pi session. For those agents, `mission progress` accepts status, summary,
 next, blocker, evidence, and event-id with the wrapper's MISSION_* context.
 
-## Checkpoints, interruption, and recovery
+## Reviews, interruption, and recovery
 
-Stop at human checkpoints. Show the user the result and check evidence. Only an
-explicit user decision authorizes `mission checkpoint --human --actor ...
---decision accept|revise --revision ...`. The flag records an attestation, not
-authentication. Never let an agent silently approve its own work.
+Stop at human reviews. Show the user the result and check evidence. Only an
+explicit user decision authorizes `mission checkpoint accept|revise REPO/SLUG
+[C01] --note TEXT`. `--actor` defaults to git user.name, and no revision is
+needed. The command records an attestation, not authentication. Never let an
+agent silently approve its own work.
+
+A waiting review never blocks your tools. It blocks the next step, `step edit`,
+and `finish`. Use the tools to investigate or fix your own result. `finish` fails
+with the review id and the exact command the user runs.
 
 On Pi reload, the extension replays unacknowledged hooks with their original IDs
 and restores the attempt. A session shutdown preserves its owner and transcript;

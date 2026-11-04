@@ -428,7 +428,7 @@ func (m *desk) headerLines(w int) []string {
 // footerKeys joins as many key hints as the footer row holds, most useful
 // first, so a narrow terminal loses a hint instead of clipping one.
 func (m *desk) footerKeys(w int) string {
-	hints := []string{"j/k select", "L launch", "q quit", "tab view", "s steps", "n new", "a checkpoint", "pgdn scroll"}
+	hints := []string{"j/k select", "L launch", "q quit", "tab view", "s steps", "n new", "a review", "pgdn scroll"}
 	switch {
 	case m.form != nil:
 		hints = []string{"tab next field", "enter continue", "esc cancel"}
@@ -529,7 +529,7 @@ func (m *desk) detailText(w, h int) string {
 func (m *desk) formHeading() (string, string) {
 	switch m.formKind {
 	case "review":
-		return "HUMAN CHECKPOINT", m.review.Handle + " · " + m.review.State.Pending + " · revision " + fmt.Sprint(m.review.State.Revision)
+		return "HUMAN REVIEW", m.review.Handle + " · " + m.review.State.Pending + " · revision " + fmt.Sprint(m.review.State.Revision)
 	case "step":
 		return "CUSTOMIZE STEP " + m.stepDraft.ID, m.editing.Handle + " · defaults first, details when needed"
 	}
@@ -561,7 +561,7 @@ func (m *desk) formSide() (string, string) {
 	case "step":
 		return "CHECKS FOLLOW THE ATTEMPT", heading("Always required") + "\nnonempty-artifact\n\n" + heading("Optional checks") + "\njson-valid · parse the result\ngo-test · test the Go module\n\n" + paint(muted, "Each run preserves") + "\nverdict + source fingerprint\nchecker version + evidence log\n\n" + paint(yellow, "Past evidence stays in the vault.") + "\nReset explicitly to revise a used step."
 	}
-	return "SAVED AS MARKDOWN", paint(muted, "6_missions/") + "\n  " + platform.Fallback(m.draft.Repo, "repository") + "/\n    " + platform.Fallback(m.draft.Slug, platform.Fallback(mission.Slugify(m.draft.Title), "mission-slug")) + "/\n      mission.md\n      state.md\n      attempts/\n      artifacts/\n\n" + heading("One mission · one repository") + "\n\nAgents claim the next step.\nEach attempt keeps its evidence.\nCheckpoints pause progression.\n\n" + paint(yellow, "No agent is launched by this form.")
+	return "SAVED AS MARKDOWN", paint(muted, "6_missions/") + "\n  " + platform.Fallback(m.draft.Repo, "repository") + "/\n    " + platform.Fallback(m.draft.Slug, platform.Fallback(mission.Slugify(m.draft.Title), "mission-slug")) + "/\n      mission.md\n      state.md\n      attempts/\n      artifacts/\n\n" + heading("One mission · one repository") + "\n\nAgents claim the next step.\nEach attempt keeps its evidence.\nReviews gate progression, never your tools.\n\n" + paint(yellow, "No agent is launched by this form.")
 }
 func (m *desk) detail(r mission.Record, w int) string {
 	tabs := []string{"Overview", "Attempts", "Activity", "Steps"}
@@ -635,7 +635,7 @@ func (m *desk) detail(r mission.Record, w int) string {
 		s += paint(aqua, st.ID) + "   " + icon + " " + status(ss.Status) + "  " + clip(st.Title, w-23) + "\n"
 		for _, cp := range r.Mission.Checkpoints {
 			if cp.After == st.ID {
-				s += "      └ " + paint(yellow, cp.ID+" human checkpoint") + paint(muted, " · "+r.State.Checkpoints[cp.ID].Status) + "\n"
+				s += "      └ " + paint(yellow, cp.ID+" human review") + paint(muted, " · "+r.State.Checkpoints[cp.ID].Status) + "\n"
 			}
 		}
 	}
@@ -726,7 +726,7 @@ func (m *desk) startReview() {
 	}
 	r := m.records[m.selected]
 	if r.State.Pending == "" {
-		m.notice = "This mission has no pending checkpoint."
+		m.notice = "This mission has no pending review."
 		return
 	}
 	m.review = r
@@ -757,9 +757,9 @@ func (m *desk) commitForm() {
 			m.notice = "Step saved. Next attempt will use this definition."
 		}
 	} else if m.formKind == "review" {
-		_, m.err = m.store.checkpoint(m.review.Handle, m.review.State.Pending, m.decision, m.note, m.actor, true, m.review.State.Revision)
+		_, m.err = m.store.decide(decisionRequest{Handle: m.review.Handle, ID: m.review.State.Pending, Decision: m.decision, Note: m.note, Actor: m.actor, Human: true})
 		if m.err == nil {
-			m.notice = "Checkpoint recorded; evidence and decision preserved."
+			m.notice = "Review recorded; evidence and decision preserved."
 		}
 	} else {
 		d := m.draft

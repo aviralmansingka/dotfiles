@@ -266,7 +266,7 @@ func TestGoCheckAllowsOtherMissionsAndDetectsChangedSource(t *testing.T) {
 	wantCode(t, e, "checks_failed")
 }
 
-func TestFutureStepEditKeepsPendingCheckpointAndAttemptToken(t *testing.T) {
+func TestFutureStepEditWaitsForReviewDecision(t *testing.T) {
 	s, h := fixture(t)
 	c := claimTest(t, s, h)
 	result(t, s, c, "Accepted input")
@@ -274,12 +274,16 @@ func TestFutureStepEditKeepsPendingCheckpointAndAttemptToken(t *testing.T) {
 	must(t, e)
 	st := r.Mission.Steps[1]
 	st.Instructions = "Use the reviewed map"
-	r, e = s.editStep(h, "S02", st, r.State.Revision, false)
-	must(t, e)
-	if r.State.Pending != "C01" {
-		t.Fatal("unrelated checkpoint cleared")
-	}
+	_, e = s.editStep(h, "S02", st, r.State.Revision, false)
+	wantCode(t, e, "review_pending")
 	r, e = s.checkpoint(h, "C01", "accept", "Reviewed", "aviral", true, r.State.Revision)
+	must(t, e)
+	if r.State.Pending != "" {
+		t.Fatal("decided review is still pending")
+	}
+	st = r.Mission.Steps[1]
+	st.Instructions = "Use the reviewed map"
+	r, e = s.editStep(h, "S02", st, r.State.Revision, false)
 	must(t, e)
 	_, e = s.hook(h, c.Attempt.ID, c.Token, mission.Event{Type: "note", Summary: "late metadata on prior attempt"})
 	must(t, e)

@@ -47,7 +47,7 @@ func TestPiTurnDoesNotFinishWithoutReportAndQuietBoundary(t *testing.T) {
 	_, e = s.settle(h, c.Attempt.ID, p.Token, p.SessionID)
 	must(t, e)
 	_, e = s.attach(h, p)
-	wantCode(t, e, "checkpoint_pending")
+	wantCode(t, e, "review_pending")
 	r, e = s.checkpoint(h, "C01", "accept", "Reviewed", "aviral", true, r.State.Revision)
 	must(t, e)
 	next, e := s.attach(h, p)

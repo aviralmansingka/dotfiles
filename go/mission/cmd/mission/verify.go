@@ -105,6 +105,24 @@ func (s *Store) verify(h, id, token string) (mission.Record, error) {
 		return current, e
 	}
 	// Check processes run without the vault lock so other missions can make progress.
+	logs := executeChecks(st, attempt.Cwd, before, &run)
+	return s.mutate(h, func(r *mission.Record) error {
+		a, e := mission.FindAttempt(&r.State, id)
+		if e != nil {
+			return e
+		}
+		if e = authorize(a, token); e != nil {
+			return e
+		}
+		if a.Verifying != run.ID || r.State.Active != id {
+			return mission.Problem("stale_attempt", "verification no longer owns this attempt")
+		}
+		return s.recordVerification(r, a, st, &run, before, logs)
+	})
+}
+
+// executeChecks runs the required checks on one frozen subject snapshot.
+func executeChecks(st mission.Step, cwd string, before subjectSnapshot, run *mission.Verification) [][]byte {
 	logs := make([][]byte, len(run.Results))
 	blocked := false
 	for i := range run.Results {
@@ -134,7 +152,7 @@ func (s *Store) verify(h, id, token string) (mission.Record, error) {
 				res.Summary = "Result parses as one JSON value"
 			}
 		case "go-test":
-			module, e := moduleRoot(attempt.Cwd)
+			module, e := moduleRoot(cwd)
 			if before.RepoErr != nil {
 				res.Verdict = "inconclusive"
 				res.Summary = before.RepoErr.Error()
@@ -148,54 +166,47 @@ func (s *Store) verify(h, id, token string) (mission.Record, error) {
 			blocked = true
 		}
 	}
-	return s.mutate(h, func(r *mission.Record) error {
-		a, e := mission.FindAttempt(&r.State, id)
+	return logs
+}
+
+// recordVerification finalizes one check run on an attempt.
+func (s *Store) recordVerification(r *mission.Record, a *mission.Attempt, st mission.Step, run *mission.Verification, before subjectSnapshot, logs [][]byte) error {
+	after := s.subject(*r, *a, st)
+	if after.Hash != before.Hash {
+		for i := range run.Results {
+			if run.Results[i].Verdict == "passed" {
+				run.Results[i].Verdict = "inconclusive"
+				run.Results[i].Summary = "Checked input changed during verification; rerun checks"
+			}
+		}
+	}
+	run.Ended = mission.Now()
+	for i := range run.Results {
+		res := &run.Results[i]
+		rel := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", a.Sequence), "checks", run.ID, res.Check+".log"))
+		p, e := s.path(r.Mission.Repo, r.Mission.Slug, rel)
 		if e != nil {
 			return e
 		}
-		if e = authorize(a, token); e != nil {
+		b := []byte(fmt.Sprintf("check: %s\nversion: %s\nverdict: %s\nsubject: %s\nrunner: %s\nsummary: %s\n\n", res.Check, res.Version, res.Verdict, run.SubjectHash, run.Runner, res.Summary))
+		b = append(b, logs[i]...)
+		if e = atomicWrite(p, b); e != nil {
 			return e
 		}
-		if a.Verifying != run.ID || r.State.Active != id {
-			return mission.Problem("stale_attempt", "verification no longer owns this attempt")
+		res.Evidence = []mission.Evidence{{Path: rel, Hash: mission.Digest(b)}}
+		if before.ArtifactErr == nil {
+			res.Evidence = append(res.Evidence, mission.Evidence{Path: a.Artifact, Hash: before.ArtifactHash})
 		}
-		after := s.subject(*r, *a, st)
-		if after.Hash != before.Hash {
-			for i := range run.Results {
-				if run.Results[i].Verdict == "passed" {
-					run.Results[i].Verdict = "inconclusive"
-					run.Results[i].Summary = "Checked input changed during verification; rerun checks"
-				}
-			}
+	}
+	for i := range a.Verifications {
+		if a.Verifications[i].ID == run.ID {
+			a.Verifications[i] = *run
 		}
-		run.Ended = mission.Now()
-		for i := range run.Results {
-			res := &run.Results[i]
-			rel := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", a.Sequence), "checks", run.ID, res.Check+".log"))
-			p, e := s.path(r.Mission.Repo, r.Mission.Slug, rel)
-			if e != nil {
-				return e
-			}
-			b := []byte(fmt.Sprintf("check: %s\nversion: %s\nverdict: %s\nsubject: %s\nrunner: %s\nsummary: %s\n\n", res.Check, res.Version, res.Verdict, run.SubjectHash, run.Runner, res.Summary))
-			b = append(b, logs[i]...)
-			if e = atomicWrite(p, b); e != nil {
-				return e
-			}
-			res.Evidence = []mission.Evidence{{Path: rel, Hash: mission.Digest(b)}}
-			if before.ArtifactErr == nil {
-				res.Evidence = append(res.Evidence, mission.Evidence{Path: a.Artifact, Hash: before.ArtifactHash})
-			}
-		}
-		for i := range a.Verifications {
-			if a.Verifications[i].ID == run.ID {
-				a.Verifications[i] = run
-			}
-		}
-		a.Verifying = ""
-		a.Updated = mission.Now()
-		a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "checks-completed", At: mission.Now(), Summary: verificationSummary(run)})
-		return nil
-	})
+	}
+	a.Verifying = ""
+	a.Updated = mission.Now()
+	a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "checks-completed", At: mission.Now(), Summary: verificationSummary(*run)})
+	return nil
 }
 
 func (b *cappedOutput) Write(p []byte) (int, error) {
