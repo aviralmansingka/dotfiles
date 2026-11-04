@@ -47,8 +47,13 @@ type Row = {
   timer?: ReturnType<typeof setInterval>;
 };
 type Background = { result: Result; done: boolean };
+type LiveProgress = { count: number; tail: string; fresh: number };
 const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
+// What the running output-tool row last reported, keyed by toolCallId. Keeping
+// the delta here means a redraw with unchanged output repeats the previous
+// line instead of resetting the count to zero on every width or clock tick.
+const liveProgress = new Map<string, LiveProgress>();
 // Intent titles the harness requested from the session model for title-less
 // output-tool calls, keyed by toolCallId. tool_result persists them into the
 // stored details as intentTitle, so reloaded sessions restore them without
@@ -984,6 +989,48 @@ function statusBanner(theme: Theme, result: Result, row: Row): string {
   return ` ${theme.fg("borderMuted", "└─")} ${mark}${theme.fg("dim", ` · ${plural(count, "line")}${elapsed}`)}`;
 }
 
+const PROGRESS_TAIL = 60;
+
+/**
+ * Newest non-empty output line, whitespace-collapsed and clipped: the whole
+ * point of the row is one glanceable line, so a wrapped or overlong tail must
+ * never push it over a single transcript row.
+ */
+function outputTail(text: string): string {
+  const last = [...clean(text.split("\n").filter((line) => line.trim()).at(-1))];
+  return last.length <= PROGRESS_TAIL ? last.join("")
+    : `${last.slice(0, PROGRESS_TAIL - 1).join("")}…`;
+}
+
+/**
+ * One dim line summarising a still-running output-tool call: elapsed time, the
+ * lines that arrived since the previous draw, and the newest output line. The
+ * caller recomputes it on every render, so it updates in place. Settled rows
+ * drop it — their exit banner and line count already tell the final story.
+ */
+function liveProgressLine(result: Result, row: Row, theme: Theme, toolCallId: string): string | undefined {
+  const text = textContent(result).replace(/\n$/, "");
+  const count = text ? text.split("\n").length : 0;
+  const tail = count ? outputTail(text) : "";
+  const cached = liveProgress.get(toolCallId);
+  const state: LiveProgress = cached && cached.count === count && cached.tail === tail
+    ? cached
+    : { count, tail, fresh: Math.max(0, count - (cached?.count ?? 0)) };
+  liveProgress.set(toolCallId, state);
+  const elapsedValue = !row.restored && finiteNumber(row.startedAt)
+    ? formatElapsed(Math.max(0, (row.completedAt ?? Date.now()) - row.startedAt)) : "";
+  // The ellipsis carries the "still arriving" sense before the first second
+  // of elapsed time is worth printing.
+  const parts = [elapsedValue ? `…${elapsedValue}` : "…"];
+  if (!count) parts.push("waiting for output");
+  else {
+    if (state.fresh > 0) parts.push(plural(state.fresh, "new line"));
+    if (state.tail) parts.push(`last: ${state.tail}`);
+  }
+  if (parts.length < 2) return undefined;
+  return ` ${theme.fg("borderMuted", "│")} ${theme.fg("dim", parts.join(" · "))}`;
+}
+
 function expandedOutput(tool: string, result: Result, theme: Theme, context: RenderContext, width = 200): string[] {
   const details = asRecord(result.details);
   const text = textContent(result);
@@ -1400,6 +1447,7 @@ function disposeState(): void {
   for (const row of rows.values()) stop(row);
   rows.clear();
   background.clear();
+  liveProgress.clear();
   repoRoots.clear();
   generatedTitles.clear();
   pendingTitles.clear();
@@ -1875,6 +1923,15 @@ export default function (pi: ExtensionAPI) {
               ? statusBanner(theme, effective, row)
               : ` ${theme.fg("borderMuted", "└─")} ${collapsedSummary()}`];
           if (expanded) lines.push(...expandedOutput(toolName, effective, theme, context, width));
+          // A running output tool appends exactly one line saying what is new;
+          // settling clears the cache so the next launch starts from zero again.
+          if (OUTPUT_TOOLS.has(toolName)) {
+            if (row.settled) liveProgress.delete(context.toolCallId);
+            else {
+              const progress = liveProgressLine(effective, row, theme, context.toolCallId);
+              if (progress) lines.push(progress);
+            }
+          }
           return lines;
         };
         // Settle clocks immediately even if pi hasn't rendered the component yet.
