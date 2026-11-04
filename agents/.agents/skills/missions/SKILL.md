@@ -71,8 +71,10 @@ Discover the deferred `mission` tool through `tool_search`. Humans can use
 
 - `mission {action:"start", handle:"REPO/SLUG"}` reserves a launch, creates or
   reuses the mission's `mission/<slug>` worktree, registers it as a Herdr worktree
-  workspace (linked under the repository), and launches the durable mission-worker
-  through interactive-subagents in that workspace.
+  workspace (linked under the repository), and starts the worker as a full Pi
+  agent in that workspace (`herdr agent start`, then one `herdr agent prompt`).
+  The worker is not a subagent: it has no subagent identity, loadout, timer, or
+  watchdog.
 - `mission {action:"attach", handle:"REPO/SLUG"}` adopts the current existing Pi
   session. It must already run at the root of an unowned non-main linked worktree,
   inside the mission's worktree workspace or, for missions bound before worktree
@@ -92,7 +94,7 @@ duplicated.
 If an owner session is recorded, resume it. If the step failed, run
 `mission retry`, then `next`.
 
-A started mission-worker receives a continuation prompt after each verified step
+A started worker receives a continuation prompt after each verified step
 when no review is pending. An attached existing session uses explicit `next` and
 does not automatically start more work. At a review, wait for the user to decide
 and direct continuation.
@@ -101,13 +103,14 @@ One repository owns one Herdr workspace, plus one linked worktree workspace per
 registered worktree; a mission's checkout owns its own. One mission owns one
 persistent linked worktree and one durable Pi owner. Attempts belong to steps, not
 to new worktrees.
-Do not remove a worktree after a step. Never bypass a pending launch by spawning
-again: a crash may have launched the first session. Inspect its recorded session
+Do not remove a worktree after a step. Never bypass a pending launch by launching
+again: a crash may have started the first session. Inspect its recorded session
 file and Herdr pane, then attach that session using the pending launch_id.
 A launch that fails with no worker in its pane releases its launch intent, so the
-next launch reserves again. Herdr agent names are unique for the server: a stale
-session keeps its name until the launch renames it, and a working session keeps
-its name. Read the error: it names the pane that holds the name.
+next launch reserves again. Herdr agent names are unique for the server. A launch
+names the worker `mission-<slug>`; when another session holds that name, the
+launch takes a short handle hash once. If that name is taken too, the error names
+the pane that holds it. The launch never renames another session's agent.
 
 ## Work and report
 
