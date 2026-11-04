@@ -9,6 +9,38 @@ const exec = promisify(execFile);
 const hash = text => createHash("sha256").update(text).digest("hex");
 export const slug = title => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64).replace(/-$/, "");
 const active = a => a && ["running", "reported"].includes(a.status);
+
+/** Herdr agent names are unique for the whole server. The launch path does not
+ *  choose the name: the client that starts the agent takes the agent kind
+ *  ("pi"). Only these statuses prove that a session ended, so only these
+ *  release a name. Every other status keeps the name, and the launch reports
+ *  its pane. */
+export const STALE_AGENT_STATUSES = new Set(["idle", "done"]);
+
+/** The agent name that an `agent_name_taken` failure names, or null. */
+export function takenAgentName(message) {
+  const text = String(message ?? "");
+  if (!text.includes("agent_name_taken")) return null;
+  return /agent name ([\w-]+) is already used/.exec(text)?.[1] ?? null;
+}
+
+/** A parked name records which mission reclaimed the name. It stays inside the
+ *  Herdr name limits: 32 characters of [a-z0-9_-], starting with a letter. */
+export function parkedAgentName(name, handle, holder) {
+  const bare = String(name || "pi").replace(/[^a-z0-9_-]+/g, "-").replace(/^[^a-z]+/, "") || "pi";
+  const tail = slug(String(handle || "").split("/").pop() || "mission").slice(0, 16) || "mission";
+  const mark = hash(String(holder?.pane_id || "")).slice(0, 4);
+  return `${bare}-${tail}-${mark}`.slice(0, 32).replace(/-+$/, "");
+}
+
+/** One message a human can act on: the name, the pane that holds it, and the
+ *  next step. */
+export function agentCollisionReport(name, holder, action) {
+  const pane = holder?.pane_id || "an unknown pane";
+  const status = holder?.agent_status || "unknown";
+  const cwd = holder?.foreground_cwd || holder?.cwd || "unknown";
+  return `Herdr agent name "${name}" is held by pane ${pane} (status ${status}, cwd ${cwd}). ${action}`;
+}
 /** Every Herdr workspace that belongs to this repository lineage: the primary
  * checkout's workspace plus one linked-worktree workspace per worktree Herdr
  * has open (missions register their own mission/<slug> checkout). */
@@ -128,6 +160,39 @@ export class MissionBridge {
     return pane;
   }
   async common(cwd) { return realpathSync((await this.run("git", ["-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"])).trim()); }
+  /** The Herdr agent that holds one name, or null. Herdr lists a name only for
+   *  an agent it started; a detected agent carries none. */
+  async agentNamed(name) {
+    const agents = (await this.herdr(["agent", "list"])).agents || [];
+    return agents.find(a => a.name === name) || null;
+  }
+  /** Free a name that no live agent holds, so the launch can start again. A
+   *  working agent keeps its name: the message names its pane instead. */
+  async reclaimAgentName(name, handle) {
+    const holder = await this.agentNamed(name);
+    if (!holder) return null;
+    if (!STALE_AGENT_STATUSES.has(String(holder.agent_status)))
+      throw new Error(agentCollisionReport(name, holder,
+        `That session may still run, so the launch leaves it alone (agent_name_taken). Finish it, or run \`herdr agent rename ${holder.pane_id} <new name>\`, then launch again.`));
+    const parked = parkedAgentName(name, handle, holder);
+    await this.herdr(["agent", "rename", holder.pane_id, parked]);
+    return parked;
+  }
+  /** The agent a pane hosts, "unknown" when Herdr cannot answer, or null when
+   *  the pane holds no agent. */
+  async paneAgent(pane) {
+    try { return (await this.herdr(["pane", "get", pane])).pane?.agent || null; }
+    catch { return "unknown"; }
+  }
+  /** A failed launch stays retryable: it releases the intent it reserved, but
+   *  only when no worker can own it. A pane that hosts an agent, an
+   *  unanswered Herdr call, or a recorded session keeps the intent. */
+  async releaseLaunch(handle, launchID, pane) {
+    if (!launchID) return false;
+    if (pane == null || await this.paneAgent(pane)) return false;
+    try { await this.call(["launch", handle, "--release", "--launch-id", launchID]); return true; }
+    catch { return false; }
+  }
   async assertSurface(ctx) {
     const common = await this.common(ctx.cwd), cwd = realpathSync(ctx.cwd);
     const workspaces = repositoryWorkspaces((await this.herdr(["workspace", "list"])).workspaces, common);
@@ -248,29 +313,47 @@ export class MissionBridge {
     const reservation = await this.call(["launch", handle]);
     if (!reservation.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of spawning again.", runtime: reservation.runtime };
     const launchID = reservation.runtime.launch_id;
-    // The CLI created the mission/<slug> checkout; Herdr registers it as the
-    // repository's linked worktree workspace (idempotent: a relaunch reuses the
-    // same workspace). Anchored on the primary checkout, because Herdr refuses
-    // create/open from inside a linked worktree.
-    const worktree = await this.herdr(["worktree", "open", "--cwd", checkout, "--path", cwd, "--no-focus"]);
-    const workspace = worktree.workspace?.workspace_id;
-    if (!workspace) throw new Error("Herdr did not return the mission worktree workspace; launch intent retained for inspection.");
-    // A fresh workspace's first tab hosts the worker. A workspace that was
-    // already open may be parked on the mission's previous session, so a
-    // relaunch gets its own tab there instead of taking over that pane.
-    const holder = worktree.already_open
-      ? await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus"])
-      : worktree;
-    const pane = holder.root_pane?.pane_id;
-    if (!pane || holder.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
-    const result = await spawn({ agent: "mission-worker", name: "mission-" + hash(handle).slice(0, 20), cwd, pane,
-      missionContext: { vault: this.vault, binary: this.binary, stateDir: this.cacheDir },
-      task: `Work on mission ${handle}. Before reading or editing repository files, call mission with action=attach, handle=${handle}, launch_id=${launchID}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.` }, ctx);
-    const details = result?.details;
-    if (details?.status !== "started" || !details.sessionFile || details.error)
-      throw new Error("Mission launch was not acknowledged; intent and tab retained. Inspect the existing session before retrying.");
-    await this.call(["launch", handle, "--launch-id", launchID, "--session-file", details.sessionFile]);
-    return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: details.sessionFile, pane, workspace };
+    // A failed launch must stay retryable: the reservation is released unless a
+    // worker can own it. A launch that half-succeeded keeps it for inspection.
+    let pane = null;
+    try {
+      // The CLI created the mission/<slug> checkout; Herdr registers it as the
+      // repository's linked worktree workspace (idempotent: a relaunch reuses the
+      // same workspace). Anchored on the primary checkout, because Herdr refuses
+      // create/open from inside a linked worktree.
+      const worktree = await this.herdr(["worktree", "open", "--cwd", checkout, "--path", cwd, "--no-focus"]);
+      const workspace = worktree.workspace?.workspace_id;
+      if (!workspace) throw new Error("Herdr did not return the mission worktree workspace; launch intent retained for inspection.");
+      // A fresh workspace's first tab hosts the worker. A workspace that was
+      // already open may be parked on the mission's previous session, so a
+      // relaunch gets its own tab there instead of taking over that pane.
+      const holder = worktree.already_open
+        ? await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus"])
+        : worktree;
+      pane = holder.root_pane?.pane_id;
+      if (!pane || holder.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
+      const spawnWorker = () => spawn({ agent: "mission-worker", name: "mission-" + hash(handle).slice(0, 20), cwd, pane,
+        missionContext: { vault: this.vault, binary: this.binary, stateDir: this.cacheDir },
+        task: `Work on mission ${handle}. Before reading or editing repository files, call mission with action=attach, handle=${handle}, launch_id=${launchID}. Then follow the returned step brief and the missions skill. Report structured progress. Write the required artifact and call finish when the step is ready. Stop at checkpoints; keep this session and worktree for later steps.` }, ctx);
+      let result;
+      try { result = await spawnWorker(); }
+      catch (e) {
+        // Herdr agent names are global. A finished session of this worktree can
+        // still hold the name, so free it once and retry the same spawn.
+        const taken = takenAgentName(e.message);
+        if (!taken) throw e;
+        await this.reclaimAgentName(taken, handle);
+        result = await spawnWorker();
+      }
+      const details = result?.details;
+      if (details?.status !== "started" || !details.sessionFile || details.error)
+        throw new Error("Mission launch was not acknowledged; the launch tab is retained for inspection.");
+      await this.call(["launch", handle, "--launch-id", launchID, "--session-file", details.sessionFile]);
+      return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: details.sessionFile, pane, workspace };
+    } catch (e) {
+      if (!(await this.releaseLaunch(handle, launchID, pane))) throw e;
+      throw new Error(`${e.message} The launch intent is released; launch again when the cause is clear.`);
+    }
   }
   /** Launch requests the desk left behind. The desk cannot start a mission: it
    *  writes one file per handle, this session claims it, and start() stays the

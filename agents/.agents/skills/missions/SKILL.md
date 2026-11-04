@@ -104,6 +104,10 @@ to new worktrees.
 Do not remove a worktree after a step. Never bypass a pending launch by spawning
 again: a crash may have launched the first session. Inspect its recorded session
 file and Herdr pane, then attach that session using the pending launch_id.
+A launch that fails with no worker in its pane releases its launch intent, so the
+next launch reserves again. Herdr agent names are unique for the server: a stale
+session keeps its name until the launch renames it, and a working session keeps
+its name. Read the error: it names the pane that holds the name.
 
 ## Work and report
 

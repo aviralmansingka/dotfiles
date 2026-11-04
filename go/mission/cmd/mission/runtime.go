@@ -505,6 +505,33 @@ func (s *Store) piClaim(r mission.Record, a mission.Attempt, token string) missi
 	}}
 }
 
+// release drops one launch intent that its adapter could not use, so a later
+// launch may reserve again. A recorded session or session file keeps the
+// intent: a live owner is never taken over, and an intent this call did not
+// reserve is never released.
+func (s *Store) release(h, launchID string) (map[string]any, error) {
+	released := false
+	r, e := s.mutate(h, func(r *mission.Record) error {
+		b := r.State.Runtime
+		if b == nil {
+			return mission.Problem("worktree_required", "prepare a mission workspace first")
+		}
+		if launchID == "" {
+			return mission.Problem("usage", "release needs the launch id of the failed intent")
+		}
+		if b.SessionID != "" || b.SessionFile != "" {
+			return mission.Problem("session_owned", "mission already records a session; resume it instead of launching again")
+		}
+		if b.LaunchID == "" || b.LaunchID != launchID {
+			return mission.Problem("launch_mismatch", "launch intent does not match the reservation")
+		}
+		b.LaunchID = ""
+		released = true
+		return nil
+	})
+	return map[string]any{"released": released, "runtime": r.State.Runtime}, e
+}
+
 func (s *Store) launch(h, file, launchID string) (map[string]any, error) {
 	if file != "" {
 		p, e := filepath.Abs(file)

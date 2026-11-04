@@ -416,3 +416,48 @@ func TestMissionWorkspaceAdoptsUnmarkedCheckout(t *testing.T) {
 		t.Fatalf("foreign path was touched: %q %v", got, e)
 	}
 }
+
+// A failed launch must stay retryable. The adapter releases the intent it
+// reserved, and the next launch reserves again without a hand edit.
+func TestFailedLaunchIntentIsReleased(t *testing.T) {
+	s, h, _ := piFixture(t)
+	got, e := s.launch(h, "", "")
+	must(t, e)
+	if got["acquired"] != true {
+		t.Fatal("the first launch did not reserve an intent")
+	}
+	id := got["runtime"].(*mission.RuntimeBinding).LaunchID
+	if id == "" {
+		t.Fatal("the reservation records no launch id")
+	}
+	// Only the intent this call reserved can be released.
+	_, e = s.release(h, "launch-other")
+	wantCode(t, e, "launch_mismatch")
+	_, e = s.release(h, "")
+	wantCode(t, e, "usage")
+	r, e := s.release(h, id)
+	must(t, e)
+	if r["released"] != true {
+		t.Fatal("release did not free the intent")
+	}
+	if left := r["runtime"].(*mission.RuntimeBinding).LaunchID; left != "" {
+		t.Fatalf("launch id survived the release: %q", left)
+	}
+	again, e := s.launch(h, "", "")
+	must(t, e)
+	if again["acquired"] != true {
+		t.Fatal("a released launch intent must be reservable again")
+	}
+}
+
+// A live owner keeps its intent. Release never frees a recorded session.
+func TestReleaseRefusesARecordedSession(t *testing.T) {
+	s, h, p := piFixture(t)
+	got, e := s.launch(h, "", "")
+	must(t, e)
+	id := got["runtime"].(*mission.RuntimeBinding).LaunchID
+	_, e = s.launch(h, p.SessionFile, id)
+	must(t, e)
+	_, e = s.release(h, id)
+	wantCode(t, e, "session_owned")
+}
