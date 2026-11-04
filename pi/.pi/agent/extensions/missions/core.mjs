@@ -382,6 +382,16 @@ export class MissionBridge {
       this.surfaceSession = ctx.sessionManager.getSessionId();
       return { workspace: w.workspace_id, pane: pane.pane_id };
     }
+    // A Rex block is a seat too: the CLI accepts a session id and a block id
+    // as workspace and pane, so bind on the cwd the block reports.
+    if (!this.env.HERDR_PANE_ID && this.env.REX_BLOCK) {
+      const cwd2 = realpathSync(ctx.cwd);
+      const info = await this.seatCwd();
+      if (info && realpathSync(info) === cwd2) {
+        this.surfaceSession = ctx.sessionManager.getSessionId();
+        return { workspace: this.env.REX_SESSION, pane: this.env.REX_BLOCK };
+      }
+    }
     throw new Error("This session must run in the mission worktree inside the repository's Herdr workspace. Move/resume it there before attaching.");
   }
   async restore(ctx) {
@@ -418,8 +428,10 @@ export class MissionBridge {
     if (binding && binding.cwd !== realpathSync(ctx.cwd)) throw new Error("This mission is bound to another worktree: " + binding.cwd);
     if (binding?.session_id && binding.session_id !== ctx.sessionManager.getSessionId()) throw new Error("Resume the existing Pi owner: " + binding.session_id);
     const previous = this.hint;
-    // A launched worker continues eligible steps; a manual attach stays explicit.
-    // PI_SUBAGENT_AGENT keeps the answer for a worker the old spawn path started.
+    // A launched worker continues eligible steps. A captain that attaches and
+    // holds the claim continues too: autonomy follows ownership, not how the
+    // session arrived. PI_SUBAGENT_AGENT keeps the answer for a worker the old
+    // spawn path started.
     this.hint ||= { handle, token: randomUUID() + randomUUID(), session: ctx.sessionManager.getSessionId(), vault: this.vault, outbox: [],
       autoContinue: Boolean(launchID) || this.env.PI_SUBAGENT_AGENT === "mission-worker" };
     // Persist the capability BEFORE claiming, so a crash can replay attach.
@@ -430,7 +442,12 @@ export class MissionBridge {
       if (launchID) args.push("--launch-id", launchID);
       const c = await this.call(args, this.hint.token);
       this.expectedAttachment = true;
-      this.hint.attempt = c.attempt.id; this.hint.launchID = launchID; this.save(ctx);
+      this.hint.attempt = c.attempt.id; this.hint.launchID = launchID;
+      // A successful attach that this session owns arms the loop. A read-only
+      // attach (another session owns the binding) stays explicit.
+      const own = !binding?.session_id || binding.session_id === ctx.sessionManager.getSessionId();
+      if (own) this.hint.autoContinue = true;
+      this.save(ctx);
       await this.record(ctx, { type: "session-start", summary: "Pi session attached" });
       return this.publicClaim(c);
     } catch (e) { if (previous) this.hint = previous; throw e; }
@@ -583,6 +600,14 @@ export class MissionBridge {
   /** The Herdr seat this session occupies. The desk writes the same two values
    *  into its request, so a request addressed to this workspace belongs here. */
   seat() { return { workspace: this.env.HERDR_WORKSPACE_ID || "", label: this.env.HERDR_PANE_ID || "" }; }
+  /** The cwd of this process's own Rex block, via `rex block call … process`. */
+  async seatCwd() {
+    try {
+      const out = await this.run("rex", ["block", "call", "-b", this.env.REX_BLOCK, "process"], { env: this.env });
+      const info = JSON.parse(out);
+      return info?.foreground?.cwd || info?.child?.cwd || null;
+    } catch { return null; }
+  }
   /** Whether an addressed Herdr workspace still exists. A request whose seat is
    *  gone (the session quit, the pane closed) may be adopted; a live seat keeps
    *  its own request. Outside Herdr nothing is live, so a repository session

@@ -212,7 +212,15 @@ async function fixture(t, checkpoint=false) {
       }
       else {
         const workspace=flag("--workspace"), here=workspace===(f.paneWorkspace||"repo"), cwd=f.paneCwd||f.cwd;
-        result={panes:here?[{pane_id:env.HERDR_PANE_ID,cwd,foreground_cwd:cwd}]:[]};
+        // Both the owner pane and a bystander pane ("-b" suffix, or any pane id
+        // that ends in -b) sit in the mission checkout, so the fake answers for
+        // both even when the caller carries a different HERDR_PANE_ID.
+        const wanted=options?.env?.HERDR_PANE_ID || env.HERDR_PANE_ID;
+        result={panes:here?[
+          {pane_id:env.HERDR_PANE_ID,cwd,foreground_cwd:cwd},
+          {pane_id:env.HERDR_PANE_ID+"-b",cwd,foreground_cwd:cwd},
+          ...(wanted&&wanted!==env.HERDR_PANE_ID&&wanted!==env.HERDR_PANE_ID+"-b"?[{pane_id:wanted,cwd,foreground_cwd:cwd}]:[]),
+        ]:[]};
       }
       return JSON.stringify({result});
     }
@@ -945,10 +953,10 @@ test("preview launcher preserves this checkout's config and skill without global
   assert.equal(r.args[0],"--skill");assert.ok(r.args[1].endsWith("/missions/SKILL.md"));assert.deepEqual(r.args.slice(2),["--session","/tmp/existing.jsonl"]);
 });
 
-test("started mission owners continue eligible steps; attached sessions remain explicit",needsCLI,async t=>{
+test("owners continue eligible steps after attach; a foreign binding stays explicit",needsCLI,async t=>{
   const factory=await loadFactory();
-  // A launched worker carries its launch id, a manual attach carries none, and
-  // a worker from the old spawn path reports itself through PI_SUBAGENT_AGENT.
+  // Autonomy follows ownership, not launch identity: a session that attaches and
+  // holds the binding continues eligible steps, whatever path brought it here.
   for(const mode of ["attached","launched","legacy"]) {
     const f=await fixture(t);delete f.env.PI_SUBAGENT_AGENT;if(mode==="legacy")f.env.PI_SUBAGENT_AGENT="mission-worker";
     const events={},tools={},messages=[];
@@ -956,15 +964,36 @@ test("started mission owners continue eligible steps; attached sessions remain e
     const ctx={...f.ctx,ui:{notify:()=>{},setStatus:()=>{}}};
     const params={action:"attach",handle:f.handle,...(mode==="launched"?{launch_id:"launch-1"}:{})};
     const claim=await tools.mission.execute("attach",params,null,null,ctx);
+    // The factory builds its own bridge; read the persisted hint it wrote.
+    const hintName=readdirSync(f.cache).find(n=>n.endsWith(".json")&&n!==""&&!n.startsWith("launch"));
+    const hintFile=readFileSync(join(f.cache,hintName),"utf8");
+    assert.equal(JSON.parse(hintFile).autoContinue,true,`${mode} owns the binding and continues`);
     writeFileSync(claim.details.artifact,"Step evidence");
     await tools.mission.execute("finish",{action:"finish"},null,null,ctx);
     await events.agent_before_settle({outcome:"completed"},ctx);
     await events.agent_settled({aborted:false},ctx);
-    const continues=mode!=="attached";
-    assert.equal(messages.length,continues?1:0,`${mode} continues: ${continues}`);
-    if(continues){assert.equal(messages[0].message.customType,"mission-next");assert.equal(messages[0].options.triggerTurn,true);}
+    assert.equal(messages.length,1,`${mode} continues after a verified step`);
+    assert.equal(messages[0].message.customType,"mission-next");
+    assert.equal(messages[0].options.triggerTurn,true);
     assert.equal((await f.bridge.call(["show",f.handle])).state.status,"ready");
   }
+  // A session that attaches while another session owns the binding never arms:
+  // the refused attach sends no continuation.
+  const f=await fixture(t);
+  const squatter=new MissionBridge({env:f.env,run:f.run});
+  writeFileSync(f.file+"-b",JSON.stringify({type:"session",id:"bystander-pi",cwd:f.cwd})+"\n");
+  // The first attach takes the binding and arms, whatever path brought it here.
+  const taken=await squatter.attach(context(f.cwd,f.file+"-b","bystander-pi"),f.handle);
+  assert.equal(squatter.hint.autoContinue,true,"the first attach owns and arms");
+  void taken;
+  // A later session is refused and never arms.
+  const stranger=new MissionBridge({env:f.env,run:f.run});
+  writeFileSync(f.file+"-c",JSON.stringify({type:"session",id:"stranger-pi",cwd:f.cwd})+"\n");
+  await assert.rejects(
+    stranger.attach(context(f.cwd,f.file+"-c","stranger-pi"),f.handle),
+    /Resume the existing Pi owner/,
+  );
+  assert.equal(stranger.hint?.autoContinue ?? false, false, "a refused attach never arms");
 });
 
 test("finished missions release every tool and stop the next-step prompt",needsCLI,async t=>{

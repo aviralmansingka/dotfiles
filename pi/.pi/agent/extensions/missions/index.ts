@@ -82,7 +82,8 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     // Starting a mission authorizes its eligible steps. Attaching an existing
     // session records its work without silently starting additional steps.
     // A finished or human-held mission never asks for another step.
-    if (missionContinues(result?.state) && bridge.hint?.autoContinue && !ctx.hasPendingMessages()) {
+    const settledState = result?.state ?? (await bridge.current(ctx).catch(() => null))?.record?.state;
+    if (missionContinues(settledState) && bridge.hint?.autoContinue && !ctx.hasPendingMessages()) {
       pi.sendMessage({customType:"mission-next",display:true,
         content:`The previous step of ${bridge.hint.handle} passed its checks. Call mission action=next to pick up the next eligible step in this same worktree. Read its returned brief before editing. Pause at human reviews.`},
         {triggerTurn:true,deliverAs:"followUp"});
