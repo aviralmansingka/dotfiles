@@ -330,7 +330,11 @@ export function sendLongCommand(
   scriptParts.push(command);
 
   writeFileSync(scriptPath, scriptParts.join("\n") + "\n", { mode: 0o755 });
-  sendCommand(surface, `bash ${shellEscape(scriptPath)}`);
+  // An interactive bash gives the script's foreground job its own process group
+  // and the terminal's foreground slot, so Rex names the block's program as pi
+  // (the pi glyph) instead of bash. Sourcing keeps the script's trailing done
+  // sentinel running.
+  sendCommand(surface, `bash --norc --noprofile -i -c ${shellEscape(`. ${scriptPath}`)}`);
   return scriptPath;
 }
 
