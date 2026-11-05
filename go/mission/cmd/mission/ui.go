@@ -622,7 +622,11 @@ func (m *desk) render() string {
 	head := m.headerLines(w)
 	foot := m.footerLines(w)
 	bodyH := m.bodyHeight()
-	frame := strings.Join(head, "\n") + "\n\n" + m.body(w, bodyH) + "\n\n" + strings.Join(foot, "\n")
+	separator := "\n\n"
+	if m.nav != nil && m.form == nil {
+		separator = "\n" + paint(edge, strings.Repeat("─", w)) + "\n"
+	}
+	frame := strings.Join(head, "\n") + separator + m.body(w, bodyH) + separator + strings.Join(foot, "\n")
 	return lg.NewStyle().Background(bg).Foreground(ink).Padding(0, 2).
 		Width(fw).Height(fh).MaxWidth(fw).MaxHeight(fh).Render(frame)
 }
@@ -902,19 +906,26 @@ func (m *desk) formSide() (string, string) {
 }
 func (m *desk) detail(r mission.Record, w int) string {
 	tabs := []string{"Overview", "Troopers", "Attempts", "Activity", "Steps"}
+	nested := m.nav != nil && m.depth() == 1
 	for i, t := range tabs {
 		tabs[i] = paint(muted, t)
 		if i == m.tab {
 			tabs[i] = paint(aqua, "● "+t)
+			if nested {
+				tabs[i] = deskBar(" "+t, len(t)+2, ink)
+			}
 		}
 	}
-	s := heading(r.Mission.Title) + "  " + status(r.State.Status) + "\n" + paint(muted, r.Handle+"  ·  "+r.Mission.Kind+"  ·  rev "+fmt.Sprint(r.State.Revision)) + "\n"
+	s := ""
+	if !nested {
+		s = heading(r.Mission.Title) + "  " + status(r.State.Status) + "\n" + paint(muted, r.Handle+"  ·  "+r.Mission.Kind+"  ·  rev "+fmt.Sprint(r.State.Revision)) + "\n"
+	}
 	if l, ok := m.launches[r.Handle]; ok {
 		if label, why := launchSummary(l); label != "" {
 			s += paint(launchColor(l.State), strings.ToUpper(label)) + "  " + paint(muted, why) + "\n"
 		}
 	}
-	s += "\n" + strings.Join(tabs, "     ") + paint(muted, "     [ ]") + "\n\n"
+	s += strings.Join(tabs, "     ") + "\n\n"
 	if m.tab == detailTabs-1 {
 		return s + m.stepsDetail(r, w)
 	}
@@ -962,25 +973,33 @@ func (m *desk) detail(r mission.Record, w int) string {
 		}
 		return s
 	}
-	s += clean(r.Mission.Goal) + "\n\n" + paint(muted, "STEP  RESULT     WORK") + "\n"
+	columns := "STEP  RESULT     WORK"
+	if nested {
+		columns = deskBar("  STEP  RESULT       WORK", w, ink)
+	}
+	s += clean(r.Mission.Goal) + "\n\n" + columns + "\n"
+	passed := 0
 	for i, st := range r.Mission.Steps {
 		ss := r.State.Steps[st.ID]
 		icon := "○"
 		if ss.Status == "passed" {
 			icon = "✓"
+			passed++
 		}
 		if ss.Status == "running" {
 			icon = "◉"
 		}
 		prefix := ""
-		if m.nav != nil && m.depth() == 1 {
+		if nested {
 			prefix = "  "
 			if i == m.selectedStep {
 				prefix = paint(yellow, "▌ ")
 			}
 		}
-		line := prefix + paint(aqua, st.ID) + "   " + icon + " " + status(ss.Status) + "  " + clip(st.Title, w-23)
+		result := lg.NewStyle().Width(10).Render(status(ss.Status))
+		line := prefix + paint(aqua, st.ID) + "   " + icon + " " + result + " " + clip(st.Title, w-23)
 		if prefix != "" && i == m.selectedStep {
+			line = deskRight(line, paint(yellow, "Enter Open step"), w)
 			line = deskHighlight(line, w)
 		}
 		s += line + "\n"
@@ -990,7 +1009,14 @@ func (m *desk) detail(r mission.Record, w int) string {
 			}
 		}
 	}
-	if r.State.Pending != "" {
+	if nested {
+		s += "\n" + paint(green, fmt.Sprintf("%d of %d steps passed", passed, len(r.Mission.Steps)))
+		if r.State.Pending != "" {
+			s += paint(yellow, "    ·    Handoff waits for "+clean(r.State.Pending))
+		}
+		s += "\n"
+	}
+	if !nested && r.State.Pending != "" {
 		for _, cp := range r.Mission.Checkpoints {
 			if cp.ID == r.State.Pending {
 				s += "\n" + paint(yellow, "◆ YOUR DECISION  "+cp.ID) + "\n" + clean(cp.Question) + "\n" + paint(muted, "Evidence: "+r.State.Checkpoints[cp.ID].Evidence) + "\n" + paint(aqua, "Press a to accept or request revision.") + "\n"

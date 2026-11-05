@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -257,6 +258,9 @@ func (m *desk) refreshNavigationList(handle string) {
 		}
 		m.view = append(m.view, r)
 	}
+	if m.inboxOnly() && slices.ContainsFunc(m.view, func(r mission.Record) bool { return m.inboxLane(r) < inboxQueue }) {
+		m.view = slices.DeleteFunc(m.view, func(r mission.Record) bool { return m.inboxLane(r) >= inboxQueue })
+	}
 	sort.SliceStable(m.view, func(i, j int) bool {
 		a, b := m.view[i], m.view[j]
 		if n.mode == 2 && a.Mission.Repo != b.Mission.Repo {
@@ -281,6 +285,10 @@ func (m *desk) refreshNavigationList(handle string) {
 	}
 }
 
+func (m *desk) inboxOnly() bool {
+	return m.nav.mode == 0 && m.filter < 0 && m.nav.query == ""
+}
+
 func lastMissionUpdate(r mission.Record) string {
 	if a, e := mission.FindAttempt(&r.State, r.State.Active); e == nil {
 		return a.Updated
@@ -291,41 +299,96 @@ func lastMissionUpdate(r mission.Record) string {
 	return r.Mission.Created
 }
 
-var inboxLabels = []string{"◆ NEEDS YOU", "✓ READY FOR PR REVIEW", "◉ WORKING", "○ READY TO START", "· HISTORY"}
+const (
+	inboxAttention = iota
+	inboxHandoff
+	inboxWorking
+	inboxQueue
+	inboxHistory
+)
+
+var inboxLabels = [...]string{"◆ NEEDS YOU", "✓ READY FOR PR REVIEW", "◉ WORKING", "○ READY TO START", "· HISTORY"}
 var inboxColors = []color.Color{yellow, green, lg.Color("#83a598"), muted, muted}
 
 func (m *desk) inboxLane(r mission.Record) int {
 	switch r.State.Status {
 	case "review", "waiting", "failed":
-		return 0
+		return inboxAttention
 	case closedStatus:
-		return 4
+		return inboxHistory
 	}
-	if pr := m.nav.prs[r.Handle]; pr.Number > 0 && !pr.Draft {
-		return 1
+	pr, known := m.nav.prs[r.Handle]
+	if r.Mission.Kind == "implementation" && r.State.Status == "done" && known &&
+		(pr.Number == 0 || pr.State == "CLOSED" || pr.Draft && pr.open()) {
+		return inboxAttention
+	}
+	if r.State.Status == "done" && pr.open() && !pr.Draft && pr.checksPassed() {
+		return inboxHandoff
 	}
 	switch r.State.Status {
 	case "running":
-		return 2
+		return inboxWorking
 	case "ready":
-		return 3
+		return inboxQueue
+	case "done":
+		if pr.open() && pr.Failed > 0 {
+			return inboxAttention
+		}
+		if pr.open() {
+			return inboxWorking
+		}
 	default:
-		return 4
 	}
+	return inboxHistory
 }
 
-func (m *desk) listHint(r mission.Record) string {
+func (m *desk) listAction(r mission.Record) (string, string) {
 	if p := reviewOf(r); p != nil {
-		return p.ID + " · " + p.Question
+		return "◆ DECISION", p.ID + " · " + p.Question
+	}
+	if launch, ok := m.launches[r.Handle]; ok && r.State.Status == "ready" {
+		if label, why := launchSummary(launch); label != "" {
+			return strings.ToUpper(label), why
+		}
+	}
+	pr, known := m.nav.prs[r.Handle]
+	if m.inboxLane(r) == inboxHandoff {
+		return "✓ PR REVIEW", stripANSI(pr.badge())
+	}
+	if r.State.Status == "done" {
+		switch {
+		case pr.open() && pr.Failed > 0:
+			return "× CI FAILED", stripANSI(pr.badge())
+		case pr.open() && pr.Draft:
+			return "○ DRAFT PR", stripANSI(pr.badge())
+		case r.Mission.Kind == "implementation" && known && pr.Number == 0:
+			return "! NO PR", "Worker handoff still needs a PR"
+		case r.Mission.Kind == "implementation" && pr.State == "CLOSED":
+			return "! PR CLOSED", stripANSI(pr.label())
+		case pr.open():
+			return "○ PR OPEN", stripANSI(pr.badge())
+		}
 	}
 	if a, e := mission.FindAttempt(&r.State, r.State.Active); e == nil && len(a.Progress) > 0 {
 		p := a.Progress[len(a.Progress)-1]
-		return platform.Fallback(p.Blocker, platform.Fallback(p.Next, p.Summary))
+		if p.Status == "blocked" || p.Status == "needs-input" {
+			return "! BLOCKED", p.Blocker
+		}
+		return "◉ WORKING", platform.Fallback(p.Next, p.Summary)
+	}
+	if r.State.Status == "failed" {
+		return "× STOPPED", "Inspect the failed attempt"
+	}
+	if r.State.Status == "waiting" {
+		return "! BLOCKED", "Inspect the waiting attempt"
+	}
+	if pr.Number > 0 {
+		return strings.ToUpper(r.State.Status), stripANSI(pr.badge())
 	}
 	if i, e := stepIndex(r.Mission, r.State.Current); e == nil {
-		return r.State.Current + " · " + r.Mission.Steps[i].Title
+		return strings.ToUpper(r.State.Status), r.State.Current + " · " + r.Mission.Steps[i].Title
 	}
-	return r.Mission.Repo
+	return strings.ToUpper(r.State.Status), ""
 }
 
 type deskRow struct {
@@ -353,11 +416,28 @@ func navWindow(rows []deskRow, height int) string {
 func (m *desk) navigationList(w, h int) string {
 	n := m.nav
 	tabs := []string{"1 " + navigationViews[0], "2 " + navigationViews[1], "3 " + navigationViews[2]}
-	tabs[n.mode] = paint(yellow, tabs[n.mode])
-	out := strings.Join(tabs, "   ") + paint(muted, fmt.Sprintf("   ·   %d missions", len(m.view))) + "\n"
+	tabs[n.mode] = deskBar(tabs[n.mode], len(tabs[n.mode])+2, ink)
+	out := strings.Join(tabs, "    ") + "\n"
+	summary := ""
 	if n.mode == 0 {
-		out += paint(muted, "Decisions and handoffs first") + "\n"
-		h--
+		count := len(m.view)
+		if m.inboxOnly() && len(m.view) < len(m.records) {
+			count = len(m.records)
+			queued, history := 0, 0
+			for _, r := range m.records {
+				switch m.inboxLane(r) {
+				case inboxQueue:
+					queued++
+				case inboxHistory:
+					history++
+				}
+			}
+			summary = "\n\n" + deskRight(paint(muted, fmt.Sprintf("%d queued · %d in history", queued, history)), paint(aqua, "2 View all missions"), w)
+			h -= 3
+		}
+		out += "\n" + deskRight(heading("Mission inbox"), paint(muted, fmt.Sprintf("%d missions", count)), w) + "\n" +
+			paint(muted, "Decisions and handoffs first") + "\n"
+		h -= 3
 	}
 	if n.mode == 1 || n.searching || n.query != "" {
 		q := platform.Fallback(n.query, "Search title, slug or repository")
@@ -386,6 +466,15 @@ func (m *desk) navigationList(w, h int) string {
 	}
 	rows := []deskRow{}
 	section := ""
+	var totals [len(inboxLabels)]int
+	if n.mode == 0 {
+		for _, r := range m.view {
+			totals[m.inboxLane(r)]++
+		}
+	}
+	const statusWidth = 23
+	nameWidth := max(24, w/4)
+	wideInbox := w >= 92
 	for i, r := range m.view {
 		lane := m.inboxLane(r)
 		title := clean(r.Mission.Title)
@@ -393,7 +482,6 @@ func (m *desk) navigationList(w, h int) string {
 		selected := i == m.selected
 		if selected {
 			prefix = paint(yellow, "▌ ")
-			title = heading(title)
 		}
 		pr := m.nav.prs[r.Handle]
 		if n.mode != 1 {
@@ -410,26 +498,37 @@ func (m *desk) navigationList(w, h int) string {
 				if n.mode == 2 {
 					fg = aqua
 				}
-				rows = append(rows, deskRow{text: deskBar(group, w, fg)})
+				label := group
+				if n.mode == 0 {
+					label = fmt.Sprintf("%s  %02d", group, totals[lane])
+					if wideInbox && lane == inboxAttention {
+						label = deskRight(deskColumn(label, statusWidth)+deskColumn("MISSION", nameWidth)+"NEXT ACTION", "UPDATED", w-2)
+					}
+				}
+				rows = append(rows, deskRow{text: deskBar("  "+label, w, fg)})
 			}
 		}
 		line := prefix + title
 		switch n.mode {
 		case 0:
-			if w >= 76 {
-				nameW := max(30, w/2)
-				hint := m.listHint(r)
-				if pr.Number > 0 && lane == 1 {
-					hint = stripANSI(pr.label()) + " · " + pr.checks()
+			label, action := m.listAction(r)
+			if wideInbox {
+				fg := inboxColors[lane]
+				if strings.HasPrefix(label, "×") {
+					fg = orange
 				}
-				age := reportAge(lastMissionUpdate(r))
-				line = lg.NewStyle().Width(nameW).MaxWidth(nameW).Render(line) + "  " +
-					paint(inboxColors[lane], deskColumn(hint, w-nameW-lg.Width(age)-4)) + "  " + paint(muted, age)
-			} else if selected {
-				line += "\n" + paint(muted, "  "+clean(m.listHint(r)))
+				left := prefix + paint(fg, deskColumn(label, statusWidth)) + deskColumn(title, nameWidth)
+				age := paint(muted, reportAge(lastMissionUpdate(r)))
+				line = deskRight(left+paint(inboxColors[lane], clean(action)), age, w)
+			} else if lane == inboxAttention || selected {
+				line += "\n" + paint(inboxColors[lane], "  "+label+" · "+clean(action))
 			}
-			if pr.Number > 0 && (w < 76 || lane != 1) {
-				line += "  " + pr.label()
+			if wideInbox {
+				meta := clean(r.Mission.Repo)
+				if pr.open() && lane != inboxHandoff {
+					meta += " · " + stripANSI(pr.badge())
+				}
+				line += "\n" + strings.Repeat(" ", statusWidth+2) + paint(muted, meta)
 			}
 		case 1:
 			nameW := max(20, w-29)
@@ -440,7 +539,7 @@ func (m *desk) navigationList(w, h int) string {
 		case 2:
 			line = prefix + paint(muted, "├─ ") + title + "  " + status(r.State.Status)
 		}
-		if l, ok := m.launches[r.Handle]; ok {
+		if l, ok := m.launches[r.Handle]; ok && n.mode != 0 {
 			if label, _ := launchSummary(l); label != "" {
 				line += "  " + paint(launchColor(l.State), label)
 			}
@@ -460,7 +559,7 @@ func (m *desk) navigationList(w, h int) string {
 		sort.Strings(names)
 		rows = append(rows, deskRow{text: paint(muted, "▸ "+strings.Join(names, ", ")+" · l Expand")})
 	}
-	return out + "\n" + navWindow(rows, h-2)
+	return out + "\n" + navWindow(rows, h-2) + summary
 }
 
 func deskHighlight(line string, w int) string {
@@ -473,8 +572,20 @@ func deskColumn(text string, w int) string {
 	return lg.NewStyle().Width(w).MaxWidth(w).Render(clip(text, w))
 }
 
+func deskRight(left, right string, w int) string {
+	if right == "" || lg.Width(right)+4 > w {
+		return fitLines(left, w)
+	}
+	lw := w - lg.Width(right) - 2
+	return lg.NewStyle().Width(lw).MaxWidth(lw).Render(left) + "  " + right
+}
+
 func deskBar(text string, w int, fg color.Color) string {
 	return lg.NewStyle().Background(lg.Color("#3c3836")).Foreground(fg).Width(w).MaxWidth(w).Render(text)
+}
+
+func deskCard(text string, w int) string {
+	return lg.NewStyle().Background(lg.Color("#282828")).Width(w).MaxWidth(w).Render(text)
 }
 
 func (m *desk) breadcrumb(r mission.Record) string {
@@ -489,25 +600,34 @@ func (m *desk) breadcrumb(r mission.Record) string {
 }
 
 func (m *desk) missionContext(r mission.Record, w int) string {
-	text := ""
+	var decision, badge string
 	if pr := reviewOf(r); pr != nil {
-		text = paint(yellow, "◆ "+pr.ID) + "  " + clean(pr.Question)
+		decision = paint(yellow, "◆ "+pr.ID) + "  " + clean(pr.Question)
 	}
-	if pr := m.nav.prs[r.Handle]; pr.Number > 0 {
-		badge := pr.label() + paint(muted, "  ·  "+pr.checks())
-		if room := w - lg.Width(text) - lg.Width(badge); text != "" {
-			if room >= 4 {
-				text += strings.Repeat(" ", room)
-			} else {
-				text += "\n"
+	pr, known := m.nav.prs[r.Handle]
+	badge = pr.badge()
+	if badge == "" && r.Mission.Kind == "implementation" && (r.State.Runtime != nil || r.State.Status == "done") {
+		badge = paint(muted, "PR status unavailable")
+		if known {
+			badge = paint(muted, "No PR found")
+			if r.State.Status == "done" {
+				badge = paint(yellow, "No PR found")
 			}
 		}
-		text += badge
 	}
-	if text != "" {
-		return text + "\n\n"
+	if decision == "" && badge == "" {
+		return ""
 	}
-	return ""
+	if decision != "" && badge != "" && lg.Width(decision)+lg.Width(badge)+4 > w {
+		return deskCard(" "+decision, w) + "\n" + deskCard(" "+badge, w) + "\n\n"
+	}
+	line := " " + decision
+	if decision == "" {
+		line += badge
+	} else if badge != "" {
+		line = deskRight(line, badge, w-1)
+	}
+	return deskCard(line, w) + "\n\n"
 }
 
 func (m *desk) navigationBody(w, h int) string {
@@ -526,7 +646,20 @@ func (m *desk) navigationBody(w, h int) string {
 		if !ok {
 			content = "This mission is unavailable. Press esc to return."
 		} else {
-			content = m.missionContext(r, w)
+			switch m.depth() {
+			case 1:
+				label := status(r.State.Status)
+				if reviewOf(r) != nil {
+					label = paint(yellow, "AWAITING REVIEW")
+				}
+				content = deskRight(heading(clean(r.Mission.Title)), label, w) + "\n" +
+					paint(muted, clean(r.Handle)+" · "+clean(r.Mission.Kind)) + "\n\n"
+			case 2:
+				content = m.stepHeading(r, w)
+			case 3:
+				content = m.callHeading(w)
+			}
+			content += m.missionContext(r, w)
 			height := max(1, h-strings.Count(content, "\n"))
 			switch m.depth() {
 			case 1:
@@ -534,7 +667,7 @@ func (m *desk) navigationBody(w, h int) string {
 			case 2:
 				content += m.navigationStep(r, w, height)
 			case 3:
-				content += m.navigationOutput(w, height)
+				content += m.navigationOutput(r, w, height)
 			}
 		}
 	}
@@ -560,12 +693,7 @@ func (m *desk) navigationHeader(w int) []string {
 		}
 		return out
 	}
-	count := [5]int{}
-	for _, r := range m.records {
-		count[m.inboxLane(r)]++
-	}
-	summary := paint(yellow, fmt.Sprintf("%d need you", count[0])) + "   ·   " + paint(green, fmt.Sprintf("%d PRs ready", count[1])) + "   ·   " + paint(aqua, fmt.Sprintf("%d working", count[2]))
-	return []string{label, fitLines(summary, w)}
+	return []string{label}
 }
 
 func (m *desk) navigationHints() []string {
@@ -590,8 +718,8 @@ func (m *desk) navigationHints() []string {
 		}
 		return hints
 	case 2:
-		return []string{"esc mission", "enter expand call", "j/k select", "f follow", "pgdn more"}
+		return []string{"esc mission", "enter expand call", "j/k select", "f follow", "a review", "pgdn more"}
 	default:
-		return []string{"esc " + m.nav.step, "j/k scroll", "pgup/pgdn page"}
+		return []string{"esc " + m.nav.step, "j/k scroll", "pgup/pgdn page", "a review"}
 	}
 }

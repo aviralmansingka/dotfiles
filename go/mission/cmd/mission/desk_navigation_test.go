@@ -42,6 +42,9 @@ func TestMissionDeskNavigationRetainsSelectionAndContext(t *testing.T) {
 		a := &r.State.Attempts[0]
 		a.SessionID, a.SessionFile, a.Cwd = "parent", session, cwd
 		a.Started, a.Ended = "2026-01-02T00:00:00Z", "2026-01-02T00:01:00Z"
+		a.Verifications = append(a.Verifications, mission.Verification{Results: []mission.CheckResult{
+			{Check: "go-test", Verdict: "passed", Summary: "go test ./... passed"},
+		}})
 		return nil
 	})
 	must(t, err)
@@ -70,6 +73,12 @@ func TestMissionDeskNavigationRetainsSelectionAndContext(t *testing.T) {
 	if len(m.nav.calls) != 2 || m.nav.calls[0].agent != "scout" || m.nav.calls[1].state != "Done · 1.4s" {
 		t.Fatalf("unexpected step feed: %+v", m.nav.calls)
 	}
+	stepFrame := stripANSI(m.render())
+	for _, want := range []string{"TOOL CALLS", "STEP EVIDENCE", "Direct check · go-test", "go test ./... passed", "Recorded feed"} {
+		if !strings.Contains(stepFrame, want) {
+			t.Fatalf("step frame missing %q", want)
+		}
+	}
 	key('f')
 	key(tea.KeyEnter)
 	write(session, parent+call("later", "write", "2026-01-02T00:00:04Z"))
@@ -94,6 +103,9 @@ func TestMissionDeskNavigationRetainsSelectionAndContext(t *testing.T) {
 		}
 		if strings.Contains(out, "52;c;test") {
 			t.Fatal("terminal control sequence leaked into output")
+		}
+		if strings.Index(out, "C01") > strings.Index(out, "TOOL OUTPUT") {
+			t.Fatal("checkpoint must appear above scrollable output")
 		}
 	}
 	key(tea.KeyEscape)
@@ -122,12 +134,77 @@ func TestMissionDeskPRsMatchTheMissionBranch(t *testing.T) {
 	bin := t.TempDir()
 	gh := `#!/bin/sh
 [ "$4" = example/mission ] || exit 1
-printf '%s' '[{"number":12,"headRefName":"mission/test","statusCheckRollup":[{"status":"COMPLETED","conclusion":"SUCCESS"},{"status":"COMPLETED","conclusion":"FAILURE"},{"status":"IN_PROGRESS"}]},{"number":13,"headRefName":"mission/test","isCrossRepository":true},{"number":14,"headRefName":"another-branch"}]'
+	printf '%s' '[{"number":12,"headRefName":"mission/test","state":"OPEN","statusCheckRollup":[{"status":"COMPLETED","conclusion":"SUCCESS"},{"status":"COMPLETED","conclusion":"FAILURE"},{"status":"IN_PROGRESS"}]},{"number":13,"headRefName":"mission/test","isCrossRepository":true},{"number":14,"headRefName":"another-branch"},{"number":15,"headRefName":"mission/test","state":"CLOSED"}]'
 `
 	must(t, os.WriteFile(filepath.Join(bin, "gh"), []byte(gh), 0700))
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	prs := readDeskPRs(s, []mission.Record{r})().(deskPRs)
-	if got := prs[handle]; got != (deskPR{Number: 12, Passed: 1, Failed: 1, Total: 3}) {
+	missing := r
+	missing.Handle = "origin/no-pr"
+	missing.State.Runtime = &mission.RuntimeBinding{Branch: "mission/no-pr"}
+	unavailable := missing
+	unavailable.Handle = "dotfiles/no-lookup"
+	unavailable.Mission.Repo = "dotfiles"
+	prs := readDeskPRs(s, []mission.Record{r, missing, unavailable})().(deskPRs)
+	if got := prs[handle]; got != (deskPR{Number: 12, State: "OPEN", Passed: 1, Failed: 1, Total: 3}) {
 		t.Fatalf("unexpected PR status: %+v", got)
+	}
+	if got, known := prs[missing.Handle]; !known || got.Number != 0 {
+		t.Fatalf("missing PR must be known: %+v", prs)
+	}
+	if _, known := prs[unavailable.Handle]; known {
+		t.Fatal("unavailable lookup must not look like a missing PR")
+	}
+}
+
+func TestMissionDeskHandoffAttention(t *testing.T) {
+	s, handle := fixture(t)
+	m := newNavigationDesk(s)
+	r, err := s.load(handle)
+	must(t, err)
+	r.Mission.Kind = "implementation"
+	r.State.Status = "done"
+	for _, tc := range []struct {
+		name  string
+		prs   deskPRs
+		lane  int
+		badge string
+	}{
+		{"missing", deskPRs{handle: {}}, inboxAttention, "No PR found"},
+		{"unavailable", nil, inboxHistory, "PR status unavailable"},
+		{"draft", deskPRs{handle: {Number: 42, Draft: true}}, inboxAttention, "Draft #42"},
+		{"failed", deskPRs{handle: {Number: 42, Failed: 1, Total: 1}}, inboxAttention, "1 failed"},
+		{"ready", deskPRs{handle: {Number: 42, Passed: 1, Total: 1}}, inboxHandoff, "CI 1/1 passed"},
+		{"pending", deskPRs{handle: {Number: 42, Passed: 1, Total: 2}}, inboxWorking, "pending"},
+		{"no checks", deskPRs{handle: {Number: 42}}, inboxWorking, "No CI checks reported"},
+		{"merged", deskPRs{handle: {Number: 42, State: "MERGED"}}, inboxHistory, "PR #42 merged"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m.nav.prs = tc.prs
+			if got := m.inboxLane(r); got != tc.lane {
+				t.Fatalf("lane = %d, want %d", got, tc.lane)
+			}
+			if out := stripANSI(m.missionContext(r, 80)); !strings.Contains(out, tc.badge) {
+				t.Fatalf("badge missing %q: %s", tc.badge, out)
+			}
+		})
+	}
+}
+
+func TestMissionDeskInboxSummarizesBackgroundWork(t *testing.T) {
+	s, handle := fixture(t)
+	r, err := s.load(handle)
+	must(t, err)
+	r.State.Status = "running"
+	queued := r
+	queued.Handle, queued.Mission.Title, queued.State.Status = "dotfiles/queued", "Queued example", "ready"
+	m := newNavigationDesk(s)
+	m.records = []mission.Record{r, queued}
+	m.refreshNavigationList("")
+	if out := stripANSI(m.render()); len(m.view) != 1 || !strings.Contains(out, "1 queued") || strings.Contains(out, "Queued example") {
+		t.Fatal("default Inbox should summarize queued work")
+	}
+	m.Update(tea.KeyPressMsg{Code: '2'})
+	if out := stripANSI(m.render()); len(m.view) != 2 || !strings.Contains(out, "Queued example") {
+		t.Fatal("Table should expose the queued work")
 	}
 }

@@ -281,8 +281,13 @@ func (m *desk) pollNavigationCalls() tea.Cmd {
 
 func (m *desk) applyNavigationCalls(out []deskCall) {
 	// Keep an open output readable if its source vanishes on cleanup.
-	if i := m.selectedCall(); i >= 0 && m.depth() == 3 && !slices.ContainsFunc(out, func(c deskCall) bool { return c.id == m.nav.call }) {
-		out = append(out, m.nav.calls[i])
+	if i := m.selectedCall(); i >= 0 && m.depth() == 3 {
+		j := slices.IndexFunc(out, func(c deskCall) bool { return c.id == m.nav.call })
+		if j < 0 {
+			out = append(out, m.nav.calls[i])
+		} else if out[j].output == "" && m.nav.calls[i].output != "" {
+			out[j] = m.nav.calls[i]
+		}
 	}
 	m.nav.calls = out
 	if len(out) > 0 {
@@ -298,31 +303,77 @@ func (m *desk) selectedCall() int {
 	return slices.IndexFunc(m.nav.calls, func(c deskCall) bool { return c.id == m.nav.call })
 }
 
-func (m *desk) navigationStep(r mission.Record, w, h int) string {
+func (m *desk) stepHeading(r mission.Record, w int) string {
 	i, e := stepIndex(r.Mission, m.nav.step)
 	if e != nil {
-		return "This step is unavailable."
+		return "This step is unavailable.\n\n"
 	}
 	st := r.Mission.Steps[i]
 	state := r.State.Steps[st.ID]
-	out := heading(st.ID+" · "+clean(st.Title)) + "  " + status(state.Status) + "\n"
-	if state.Evidence != "" {
-		out += paint(muted, "Evidence: "+clean(state.Evidence)) + "\n"
-		h--
-	}
-	if len(m.nav.calls) == 0 {
-		if m.nav.loadingCalls {
-			return out + "\n" + paint(muted, "Reading Pi tool calls…")
+	out := deskRight(heading(st.ID+" · "+clean(st.Title)), status(state.Status), w) + "\n"
+	if a, err := mission.FindAttempt(&r.State, state.Attempt); err == nil {
+		meta := fmt.Sprintf("Attempt %03d · %s", a.Sequence, clean(a.Agent))
+		if start := stamp(a.Started); !start.IsZero() {
+			meta += " · " + start.Local().Format("15:04:05")
+			if end := stamp(a.Ended); !end.IsZero() {
+				meta += "–" + end.Local().Format("15:04:05")
+			}
 		}
-		return out + "\n" + paint(muted, "No tool calls recorded for this step.")
+		out += paint(muted, meta) + "\n"
 	}
-	out += "\n" + heading("TOOL CALLS") + paint(muted, fmt.Sprintf("  ·  %d recorded", len(m.nav.calls)))
+	return out + "\n"
+}
+
+func deskStepEvidence(r mission.Record, step string, w int) string {
+	state := r.State.Steps[step]
+	var lines []string
+	if state.Evidence != "" {
+		lines = append(lines, paint(ink, clean(state.Evidence)))
+	}
+	if a, err := mission.FindAttempt(&r.State, state.Attempt); err == nil && len(a.Verifications) > 0 {
+		v := a.Verifications[len(a.Verifications)-1]
+		for _, result := range v.Results {
+			verdict := status(result.Verdict)
+			lines = append(lines, deskRight("Direct check · "+clean(result.Check)+" · "+clean(result.Summary), verdict, w-2))
+		}
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	out := "\n\n" + deskBar(" STEP EVIDENCE", w, muted)
+	for _, line := range lines {
+		out += "\n" + deskCard(" "+line, w)
+	}
+	return out
+}
+
+func (m *desk) feedStatus(r mission.Record) string {
+	if a, err := mission.FindAttempt(&r.State, r.State.Active); err == nil &&
+		a.Step == m.nav.step && mission.Active(*a) && a.SessionFile != "" {
+		return paint(green, "● Feed live")
+	}
+	return paint(muted, "Recorded feed")
+}
+
+func (m *desk) navigationStep(r mission.Record, w, h int) string {
+	evidence := deskStepEvidence(r, m.nav.step, w)
+	if h-strings.Count(evidence, "\n") < 4 {
+		evidence = ""
+	}
+	title := heading("TOOL CALLS") + paint(muted, fmt.Sprintf("  ·  %d recorded", len(m.nav.calls)))
 	if m.nav.follow {
-		out += paint(green, "  ·  Following latest")
+		title += paint(green, "  ·  Following latest")
 	}
-	out += "\n"
+	out := deskRight(title, m.feedStatus(r), w) + "\n"
+	if len(m.nav.calls) == 0 {
+		message := "No tool calls recorded for this step."
+		if m.nav.loadingCalls {
+			message = "Reading Pi tool calls…"
+		}
+		return out + paint(muted, message) + evidence
+	}
 	if w >= 80 {
-		out += deskBar("  TIME      AGENT             TOOL          CALL", w, ink) + "\n"
+		out += deskBar(deskRight("  TIME      AGENT             TOOL          CALL", "RESULT", w-1), w, ink) + "\n"
 		h--
 	}
 	var rows []deskRow
@@ -336,44 +387,63 @@ func (m *desk) navigationStep(r mission.Record, w, h int) string {
 			when = "--:--:--"
 		}
 		label := prefix + paint(muted, when) + "  "
-		summary := clean(c.summary)
 		if w >= 80 {
 			label += paint(muted, deskColumn(c.agent, 16)) + "  "
 		}
 		label += paint(aqua, deskColumn(c.tool, 12)) + "  "
-		end := "  " + deskCallStatus(c.state)
-		line := label + clip(summary, max(1, w-lg.Width(label)-lg.Width(end))) + end
+		end := deskCallStatus(c.state)
+		line := deskRight(label+clean(c.summary), end, w)
 		if c.id == m.nav.call {
 			line = deskHighlight(line, w)
 		}
 		rows = append(rows, deskRow{line, c.id == m.nav.call})
 	}
-	return out + navWindow(rows, h-3)
+	return out + navWindow(rows, h-1-strings.Count(evidence, "\n")) + evidence
 }
 
-func (m *desk) navigationOutput(w, h int) string {
+func (m *desk) callHeading(w int) string {
 	i := m.selectedCall()
 	if i < 0 {
-		return "This tool call is unavailable."
+		return "This tool call is unavailable.\n\n"
 	}
 	c := m.nav.calls[i]
-	head := heading(clean(c.tool)) + "  " + deskCallStatus(c.state) + "  " + paint(muted, fmt.Sprintf("Attempt %03d · %s", c.attempt, clean(c.agent)))
+	head := clean(c.tool) + " · " + clean(c.summary)
+	meta := fmt.Sprintf("%s · Attempt %03d · %s", m.nav.step, c.attempt, clean(c.agent))
+	if !c.at.IsZero() {
+		meta += " · " + c.at.Local().Format("15:04:05")
+	}
+	return deskRight(heading(head), deskCallStatus(c.state), w) + "\n" + paint(muted, meta) + "\n\n"
+}
+
+func (m *desk) navigationOutput(r mission.Record, w, h int) string {
+	i := m.selectedCall()
+	if i < 0 {
+		return ""
+	}
+	c := m.nav.calls[i]
 	out := c.output
 	if out == "" {
 		out = "No text output recorded for this call."
 	}
+	if (c.tool == "bash" || c.tool == "shell") && c.summary != "" {
+		out = "$ " + clean(c.summary) + "\n\n" + out
+	}
 	var lines []string
 	for _, line := range strings.Split(out, "\n") {
-		lines = append(lines, strings.Split(lg.Wrap(line, max(8, w), ""), "\n")...)
+		lines = append(lines, strings.Split(lg.Wrap(line, max(8, w-2), ""), "\n")...)
 	}
-	height := max(1, h-5)
+	height := max(1, h-3)
 	m.scroll = min(m.scroll, max(0, len(lines)-height))
-	foot := paint(muted, fmt.Sprintf("Call %d/%d · Selection held", i+1, len(m.nav.calls)))
+	left := paint(muted, fmt.Sprintf("Selection held · Call %d/%d", i+1, len(m.nav.calls)))
+	right := m.feedStatus(r)
 	if added := len(m.nav.calls) - m.nav.outputCount; added > 0 {
-		foot += paint(green, fmt.Sprintf("  ·  %d new", added))
+		right += paint(green, fmt.Sprintf("  ·  %d new", added))
 	}
-	return head + "\n" + clean(c.summary) + "\n\n" + deskBar(" TOOL OUTPUT", w, ink) + "\n" +
-		strings.Join(lines[m.scroll:min(len(lines), m.scroll+height)], "\n") + "\n" + foot
+	box := deskBar(" TOOL OUTPUT", w, ink)
+	for _, line := range lines[m.scroll:min(len(lines), m.scroll+height)] {
+		box += "\n" + deskCard(" "+line, w)
+	}
+	return box + "\n\n" + deskRight(left, right, w)
 }
 
 func deskCallStatus(state string) string {

@@ -50,6 +50,9 @@ func cmdRender(a platform.Args, s *Store) int {
 		m.refreshNavigationList("")
 	}
 	if a.Has("handle") {
+		if m.inboxOnly() {
+			m.view = m.records
+		}
 		found := false
 		for i, r := range m.view {
 			if r.Handle == a.Get("handle") {

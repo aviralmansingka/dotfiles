@@ -268,15 +268,21 @@ mission; Escape exits 0 and changes neither the vault nor Rex.
 `mission ui` opens a full-width Inbox. It puts decisions, blocked work, and PRs
 ready for review ahead of background work. Press `1`, `2`, or `3` to switch
 between Inbox, Table, and Repos. Use `/` to search, `[` / `]` to filter, and
-`v` for a side preview on wide terminals.
+`v` for a side preview on wide terminals. When there is active work, the
+default Inbox summarizes queued and historical missions. Table shows them all.
 
 Press `Enter` to open the selected mission, step, or tool call. `Esc` returns to
 the previous view with its selection. In a mission, `[` / `]` switch detail
 tabs. In a step, `f` follows the latest call. Opening a call holds the selection
 while the feed updates. Scroll its text with `j` / `k` or Page Up / Page Down.
 
-The checkpoint and any known open PR stay visible while inspecting a call.
-The desk reads PR and CI status from GitHub through an authenticated `gh`.
+The checkpoint and known PR and CI status stay visible while inspecting a call.
+The desk reads GitHub through an authenticated `gh` and distinguishes a missing
+PR from an unavailable lookup. A draft or a completed implementation with a
+confirmed missing PR still needs a handoff. The Step Evidence card shows the
+latest recorded direct check results for that step's attempt. The Inbox shows
+a PR as ready for review after the mission's steps are done and reported CI
+checks pass.
 The step feed reads saved Pi calls and results, including registered subagent
 sessions it can still access. When a transcript is unavailable, the feed uses
 the recorded lifecycle metadata. To capture a frame, use
