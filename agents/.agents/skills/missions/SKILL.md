@@ -64,6 +64,17 @@ directly. Print `mission --json steps` and stop. Do not call `start` until the
 human accepts the steps: a brief the agent wrote alone is not groomed. Reread
 `steps` after any `mission step edit`, before a launch.
 
+## Seat a captain
+
+Start a captain under the login shell (`zsh -l`, or `sh -l`), so `pi`, `rex`,
+and `mission` resolve on its `PATH`. A non-login shell has none of them: the
+subagent gate fails on `rex`, and lifecycle calls fail with `spawn mission
+ENOENT`. Verify a seat with `command -v pi rex mission` in the captain's own
+block. A captain moved between multiplexers keeps its transcript but not its
+binding, so re-attach after the move; without it every call warns `Restore the
+mission's Herdr attachment before continuing`. Full contract:
+`docs/pi-missions.md` § Seating a captain.
+
 ## Launch or attach in Pi
 
 Discover the deferred `mission` tool through `tool_search`. Humans can use
