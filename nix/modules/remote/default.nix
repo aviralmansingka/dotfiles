@@ -18,7 +18,13 @@ in
     ../../services
   ];
 
-  home.packages = lib.attrValues ownedTools;
+  # Owner batch two (S06): the headless browser and the tailscale CLI come
+  # from the profile. The tailscaled daemon stays with apt (root service);
+  # the CLI talks to it over the local socket.
+  home.packages = lib.attrValues ownedTools ++ [
+    pkgs.google-chrome
+    pkgs.tailscale
+  ];
 
   # `fleet.ownedTools` gives the store path of every one of the 23 apt names the
   # remote profile took over. A host check compares these with `command -v`.
