@@ -194,12 +194,16 @@ local function vault_items()
 end
 
 function M.insert(kind, item)
-  local glyph = GLYPHS[kind]
   local text
   if kind == "vault" then
-    text = ("[[%s|%s %s]]"):format(item.target, glyph, (item.title:gsub("|", "\\|")))
+    local title = item.title:gsub("|", "\\|")
+    if item.target == title then
+      text = "[[" .. title .. "]]"
+    else
+      text = ("[[%s|%s]]"):format(item.target, title)
+    end
   else
-    text = ("[%s %s](%s)"):format(glyph, (item.title:gsub("%]", "\\]")), item.url)
+    text = ("[%s](%s)"):format(item.title:gsub("%]", "\\]"), item.url)
   end
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))

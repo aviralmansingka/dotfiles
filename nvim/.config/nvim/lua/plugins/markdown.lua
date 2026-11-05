@@ -688,6 +688,9 @@ return {
         },
         custom = {
           web = { pattern = "^http", icon = "󰖟 " },
+          notion = { pattern = "notion%.", icon = " " },
+          drive = { pattern = "drive%.google%.com", icon = "󰊶 " },
+          docs = { pattern = "docs%.google%.com", icon = "󰊶 " },
           discord = { pattern = "discord%.com", icon = "󰙯 " },
           github = { pattern = "github%.com", icon = "󰊤 " },
           gitlab = { pattern = "gitlab%.com", icon = "󰮠 " },
