@@ -76,11 +76,19 @@ sentinel_for() { # $1 package -> sentinel target (empty when absent)
 # file order as "<flags>|<pkg>" (flags: N = --no-folding, R = restow,
 # "-" = none).
 extract_plan() {
-  awk '/^[[:space:]]*stow /{
-    flags=""; pkg=$NF;
-    for (i=2; i<NF; i++) { if ($i=="--no-folding") flags=flags"N"; if ($i=="-R") flags=flags"R" }
-    print (flags == "" ? "-" : flags) "|" pkg
-  }' "$INSTALL"
+  # install.sh loops over scripts/stow-packages (plus the darwin file), so the
+  # plan is read from those lists. A literal `stow ... <pkg>` line would mean
+  # the script and the list had drifted apart again.
+  local f
+  for f in "$REPO/scripts/stow-packages" "$REPO/scripts/stow-packages-darwin"; do
+    [ -f "$f" ] || continue
+    grep -vE '^[[:space:]]*(#|$)' "$f" | while read -r pkg; do
+      printf -- '-|%s\n' "$pkg"
+    done
+  done
+  if grep -qE '^[[:space:]]*stow -d "[^"]*" -t "[^"]*" [a-z]' "$INSTALL"; then
+    echo "DRIFT literal-stow-line" # surfaced by the plan/coverage gate below
+  fi
 }
 
 PLAN_FILE="$(newtmp)/plan"
@@ -171,6 +179,14 @@ phase_plan() {
 #   the file-deployment half only.
 # On any failure it unstows the packages it already placed (no half-stowed
 # tree) and exits non-zero. Usage: run_deploy <dotfiles> <fakehome> <stubdir>
+stow_from_list() { # $1 repo, $2 home
+  local pkg
+  grep -vE '^[[:space:]]*(#|$)' "$1/scripts/stow-packages" | while read -r pkg; do
+    printf 'STOW %s\n' "$pkg"
+    stow -d "$1" -t "$2" "$pkg" 2>/dev/null || true
+  done
+}
+
 run_deploy() {
   local dep_d="$1" dep_h="$2" dep_stub="${3:-}"
   (
@@ -369,7 +385,13 @@ phase_guards() {
     if [ -n "$gn" ]; then pass "guards/$1" "guarded by $2"
     else fail "guards/$1" "no $2 guard within ${3:-3} lines above (set -e abort risk)"; fi
   }
-  guard_line 'stow .* launchd$' 'uname -s.*Darwin'
+  # launchd is Darwin-only; install.sh guards it with an uname check around the
+  # darwin list loop, so look for that guard instead of a literal stow line.
+  if grep -q 'uname -s.*Darwin' "$INSTALL" && grep -q 'stow-packages-darwin' "$INSTALL"; then
+    pass "guards/launchd" "guarded by the uname check around the darwin list"
+  else
+    fail "guards/launchd" "no Darwin guard around the launchd stow"
+  fi
 
   # The owner rule: installs belong to the flake. Only the Nix bootstrap may
   # fetch an installer; brew bundle, npm/cargo/go installs, git clones and

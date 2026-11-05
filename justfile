@@ -9,6 +9,7 @@
 #
 #   just sandbox                      # Ubuntu box, best-latency region, 30 min
 #   just sandbox --nix                # the same, with Nix bootstrapped
+#   just sandbox --files              # Nix plus the dotfiles stowed
 #   just sandbox list
 #   just sandbox down --all
 

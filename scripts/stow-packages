@@ -1,0 +1,22 @@
+# The stow file packages, in link order, one per line.
+#
+# One list, three readers: install.sh (bootstrap), scripts/nix-deploy (the file
+# half of a deploy) and the smoke test. Order matters twice:
+#   - `agents` before `pi`: pi's settings materialize between them
+#     (scripts/pi-settings-sync), because Pi has no user-local overlay
+#   - `git` last: its url.insteadOf rewrites HTTPS to SSH, and an early rewrite
+#     breaks the installer-style fetches a fresh host may still need
+# The systemd units are NOT here: the flake ships them (S05).
+zsh
+tmux
+nvim
+starship
+ghostty
+aerospace
+rex
+gh-dash
+tuicr
+agents
+pi
+herdr
+git

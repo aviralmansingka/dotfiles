@@ -98,38 +98,44 @@ echo "==> Removing conflicting files"
 rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
 
 echo "==> Deploying dotfiles via stow"
-stow -d "$DOTFILES_DIR" -t "$HOME" zsh
-stow -d "$DOTFILES_DIR" -t "$HOME" tmux
-stow -d "$DOTFILES_DIR" -t "$HOME" nvim
-stow -d "$DOTFILES_DIR" -t "$HOME" starship
-stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
-stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
-stow -d "$DOTFILES_DIR" -t "$HOME" rex
-stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
-stow -d "$DOTFILES_DIR" -t "$HOME" tuicr
-stow -d "$DOTFILES_DIR" -t "$HOME" agents
+# The list lives in scripts/stow-packages so the deploy script links the same
+# set. `agents` must precede `pi` (settings materialize between them) and `git`
+# must come last.
+stow_list() {
+    local f
+    for f in $@; do
+        grep -vE '^\s*(#|$)' "$f" | while read -r pkg; do
+            printf '%s\n' "$pkg"
+        done
+    done
+}
 
-# Pi has no user-local overlay, so its settings are materialized from the repo
-# base plus the live local preferences. This is file deployment, not an install:
-# it runs between the two stow calls that own ~/.pi.
-if [[ -x "$DOTFILES_DIR/scripts/pi-settings-sync" ]]; then
-    "$DOTFILES_DIR/scripts/pi-settings-sync"
-fi
-
-stow -d "$DOTFILES_DIR" -t "$HOME" pi
-stow -d "$DOTFILES_DIR" -t "$HOME" herdr
+for pkg in $(stow_list "$DOTFILES_DIR/scripts/stow-packages"); do
+    case "$pkg" in
+    pi)
+        # Pi has no user-local overlay, so its settings are materialized from
+        # the repo base plus the live local preferences.
+        if [[ -x "$DOTFILES_DIR/scripts/pi-settings-sync" ]]; then
+            "$DOTFILES_DIR/scripts/pi-settings-sync"
+        fi
+        stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg"
+        ;;
+    git)
+        # Deferred to the end: git's url.insteadOf rewrites HTTPS to SSH, and an
+        # early rewrite breaks the installer-style fetches a fresh host may
+        # still need.
+        echo "==> Deploying git config"
+        stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg"
+        ;;
+    *) stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg" ;;
+    esac
+done
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    stow -d "$DOTFILES_DIR" -t "$HOME" launchd
+    for pkg in $(stow_list "$DOTFILES_DIR/scripts/stow-packages-darwin"); do
+        stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg"
+    done
 fi
-
-# The user units left stow in S05: the flake ships them as systemd.user
-# units, so there is nothing for stow to link here any more.
-
-# Deferred to the end: git's url.insteadOf rewrites HTTPS to SSH, and an early
-# rewrite breaks the installer-style fetches that a fresh host may still need.
-echo "==> Deploying git config"
-stow -d "$DOTFILES_DIR" -t "$HOME" git
 
 echo "==> Bootstrap complete"
 echo "    Applications, casks and fonts: brew bundle --file \"$DOTFILES_DIR/Brewfile\""

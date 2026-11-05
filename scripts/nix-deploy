@@ -38,9 +38,14 @@ USAGE
   exit 2
 }
 
+DEPLOY_FILES=1
+CHECKOUT="${FLEET_CHECKOUT:-dotfiles}"
+REPO_URL="${FLEET_REPO:-https://github.com/aviralmansingka/dotfiles.git}"
+
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
+    --no-files) DEPLOY_FILES=0 ;;
     -h | --help) usage ;;
     -*) echo "nix-deploy: unknown flag $arg" >&2; usage ;;
     *)
@@ -243,10 +248,56 @@ run_switch() { # $1 flake dir, $2 attr
   fi
 }
 
+# The file half: clone the checkout if it is missing, then stow the list the
+# repo ships (scripts/stow-packages, plus the darwin file). Written as a shell
+# snippet so a local switch and a remote one run exactly the same commands.
+files_command() { # -> shell snippet, with the list from the deploy tree
+  # The checkout on the target may be older than this branch, so the package
+  # list travels with the deploy rather than being read from the checkout.
+  local linux_list darwin_list
+  linux_list="$(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/stow-packages" 2>/dev/null | tr '\n' ' ')"
+  darwin_list="$(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/stow-packages-darwin" 2>/dev/null | tr '\n' ' ')"
+  cat <<SNIPPET
+set -e
+checkout="\$HOME/${CHECKOUT}"
+if [ -d "\$checkout/.git" ]; then
+  echo "checkout: existing at \$checkout"
+  git -C "\$checkout" fetch -q origin || true
+else
+  echo "checkout: cloning into \$checkout"
+  git clone -q "${REPO_URL}" "\$checkout"
+fi
+echo "checkout: \$(git -C "\$checkout" log --oneline -1)"
+rm -f "\$HOME/.bashrc" "\$HOME/.bash_logout" "\$HOME/.profile"
+for pkg in ${linux_list}; do
+  echo "stow: \$pkg"
+  stow -d "\$checkout" -t "\$HOME" "\$pkg"
+done
+if [ "\$(uname -s)" = "Darwin" ]; then
+  for pkg in ${darwin_list}; do
+    echo "stow: \$pkg"
+    stow -d "\$checkout" -t "\$HOME" "\$pkg"
+  done
+fi
+SNIPPET
+}
+
+# What a fresh host still lacks once the profile and the files are down. Printed
+# so a deploy never reads as "fully equivalent" when it is not.
+files_report() {
+  cat <<'REPORT'
+files: still outside the deploy (by design)
+  secrets    ~/.config/*.env, SSH keys - not in the repo, not in the store
+  data       ~/vault, ~/projects/whatsapp-mcp
+  venvs      ~/.local/share/pi-*/.venv (uv, host state)
+REPORT
+}
+
 # The deploy tree is the flake plus the recipe and this script. Nothing else
 # travels: the checkout stays where stow already reads it.
 deploy_tree() {
-  printf '%s\n' flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo
+  printf '%s\n' flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo \
+    scripts/stow-packages scripts/stow-packages-darwin
 }
 
 plan() {
@@ -260,6 +311,9 @@ plan() {
     echo "mode    : remote switch over $SSH_CMD"
     echo "stage   : $SSH_TARGET:$STAGE_ROOT/$PROFILE-$ATTR"
     echo "copies  : $(deploy_tree | tr '\n' ' ')"
+  fi
+  if [ "$DEPLOY_FILES" = 1 ]; then
+    echo "files   : clone the checkout if missing, then stow scripts/stow-packages"
   fi
 }
 
@@ -321,6 +375,15 @@ if [ "$IS_LOCAL" = 1 ]; then
       exit 5
     fi
     echo "==> switch complete"
+    if [ "$DEPLOY_FILES" = 1 ]; then
+      echo "==> files: stowing the checkout on $HOST"
+      if ! bash -c "$(files_command)"; then
+        echo "nix-deploy: the file half failed; the profile is switched" >&2
+        files_report
+        exit 6
+      fi
+      files_report
+    fi
     exit 0
   fi
   echo "==> $PROFILE on $HOST: local switch"
@@ -330,6 +393,15 @@ if [ "$IS_LOCAL" = 1 ]; then
     exit 5
   fi
   echo "==> switch complete"
+  if [ "$DEPLOY_FILES" = 1 ]; then
+    echo "==> files: stowing the checkout on $HOST"
+    if ! bash -c "$(files_command)"; then
+      echo "nix-deploy: the file half failed; the profile is switched" >&2
+      files_report
+      exit 6
+    fi
+    files_report
+  fi
   exit 0
 fi
 
@@ -390,3 +462,13 @@ if ! $SSH_CMD "$SSH_TARGET" "$REMOTE_CMD"; then
 fi
 
 echo "==> switch complete on $HOST"
+
+if [ "$DEPLOY_FILES" = 1 ]; then
+  echo "==> files: stowing the checkout on $HOST"
+  if ! $SSH_CMD "$SSH_TARGET" "$(files_command)"; then
+    echo "nix-deploy: the file half failed; the profile is switched" >&2
+    files_report
+    exit 6
+  fi
+  files_report
+fi

@@ -253,6 +253,52 @@ VOLATILE = {
 }
 
 
+# Domains whose contents change on their own: window geometry, space ids,
+# per-app counters. Comparing them reports drift every few seconds, which hides
+# the drift that matters. They stay out of the module and out of --check.
+VOLATILE_DOMAINS = frozenset(
+    {
+        "com.apple.spaces",
+        "com.apple.ActivityMonitor",
+        "com.apple.WindowManager",
+    }
+)
+
+
+def report_drift(payloads: dict[str, dict], committed: Path) -> int:
+    """Diff the live payloads against the module the repo ships."""
+    import difflib
+    import tempfile
+
+    if not committed.exists():
+        print(f"capture-macos-defaults: no module at {committed}", file=sys.stderr)
+        return 1
+    stable = {d: v for d, v in payloads.items() if d not in VOLATILE_DOMAINS}
+    with tempfile.TemporaryDirectory() as tmp:
+        live_path = Path(tmp) / "live.nix"
+        emit_nix_module(live_path, stable, [])
+        live = live_path.read_text().splitlines()
+
+    def body(lines: list[str]) -> list[str]:
+        # The header carries a capture date, which is not drift.
+        return [line for line in lines if not line.startswith("#")]
+
+    committed_body, live_body = body(committed.read_text().splitlines()), body(live)
+    if committed_body == live_body:
+        print(f"no drift: live defaults match {committed}")
+        return 0
+    print(f"drift: live defaults differ from {committed}", file=sys.stderr)
+    diff = difflib.unified_diff(committed_body, live_body, "committed", "live", lineterm="", n=1)
+    for line in diff:
+        print(line, file=sys.stderr)
+    print(
+        "Re-run scripts/capture-macos-defaults.py to adopt the live values, or revert "
+        "the change on the machine.",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def run(cmd: list[str]) -> tuple[int, bytes, str]:
     """Run a command and return its exit code, stdout bytes, and stderr text."""
     proc = subprocess.run(cmd, capture_output=True, check=False)
@@ -349,6 +395,11 @@ def main() -> int:
         help="capture every domain instead of the curated set (large; mostly for documentation)",
     )
     parser.add_argument("--quiet", action="store_true", help="print the summary only")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="compare the live defaults against the committed module; exit 1 on drift",
+    )
     args = parser.parse_args()
 
     if sys.platform != "darwin":
@@ -365,7 +416,14 @@ def main() -> int:
         print("capture-macos-defaults: defaults reports no domains", file=sys.stderr)
         return 1
 
-    out = Path(args.out).expanduser().resolve()
+    if args.check:
+        # A drift check must not write plists or a module: capture into a
+        # throwaway directory and compare the rendered body.
+        import tempfile
+
+        out = Path(tempfile.mkdtemp(prefix="macos-defaults-check-"))
+    else:
+        out = Path(args.out).expanduser().resolve()
     if args.dry_run:
         for domain in domains:
             print(domain)
@@ -442,9 +500,14 @@ def main() -> int:
         if not args.quiet:
             print(f"  {domain}: {len(blob)} bytes, {len(hits)} redactions")
 
+    if args.check:
+        default = Path(__file__).resolve().parent.parent / "nix" / "darwin" / "system-defaults.nix"
+        return report_drift(payloads, Path(args.nix_out).expanduser() if args.nix_out else default)
+
     nix_skipped: list[tuple[str, str, str]] = []
     nix_path = Path(args.nix_out).expanduser() if args.nix_out else out / "nix" / "system-defaults.nix"
-    user_keys, system_keys = emit_nix_module(nix_path.resolve(), payloads, nix_skipped)
+    stable = {d: v for d, v in payloads.items() if d not in VOLATILE_DOMAINS}
+    user_keys, system_keys = emit_nix_module(nix_path.resolve(), stable, nix_skipped)
 
     # nix-darwin inlines system.defaults into the activation script, which Nix
     # passes in the builder's environment. macOS caps that at ARG_MAX (1 MB), so

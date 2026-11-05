@@ -1,0 +1,3 @@
+# The macOS additions to scripts/stow-packages: launchd agents belong to the
+# system layer, and only Darwin has them.
+launchd

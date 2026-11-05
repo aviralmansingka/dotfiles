@@ -19,7 +19,10 @@ MINUTES="${SANDBOX_MINUTES:-30}"
 TYPE="${SANDBOX_TYPE:-t3.micro}"
 DISK_GB="${SANDBOX_DISK_GB:-30}"
 TAG_KEY="nix-fleet-sandbox"
+REPO="${SANDBOX_REPO:-https://github.com/aviralmansingka/dotfiles.git}"
 BOOTSTRAP_NIX=0
+DEPLOY_FILES=0
+NIX_WAIT="${SANDBOX_NIX_WAIT:-420}"
 
 die() {
   printf 'sandbox: %s\n' "$*" >&2
@@ -139,6 +142,10 @@ if [ "$2" = 1 ]; then
   grep -q "^experimental-features" /etc/nix/nix.conf 2>/dev/null || \
     echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
   systemctl restart nix-daemon 2>/dev/null || true
+  # A marker the client can wait on: `nix` exists long before the daemon does,
+  # and a switch against a daemonless store fails on /nix/var/nix/db/big-lock.
+  systemctl is-active nix-daemon >/var/log/sandbox-nix.state 2>&1 || true
+  touch /var/log/sandbox-nix.ready
 fi
 # Hard stop: the instance terminates itself, whatever the client does.
 shutdown -P +$1
@@ -237,8 +244,22 @@ sandbox is up. It is the fleet's probe host: ssh alias probe, hostname probe.
   terminate early: scripts/sandbox down $id
 EOF
   if [ "$BOOTSTRAP_NIX" = 1 ]; then
-    printf '  nix       bootstrapping in the background (about 3 minutes)\n'
-    printf '  then      just deploy remote probe\n'
+    printf '  nix       waiting for the daemon (up to %s s)\n' "$NIX_WAIT"
+    waited=0
+    until ssh -i "$key_path" -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
+      -o ConnectTimeout=8 "$alias" 'test -e /var/log/sandbox-nix.ready' 2>/dev/null; do
+      sleep 10
+      waited=$((waited + 10))
+      if [ "$waited" -ge "$NIX_WAIT" ]; then
+        printf '  nix       not ready after %s s; check /var/log/sandbox-nix.log on the box\n' "$NIX_WAIT" >&2
+        break
+      fi
+    done
+    if ssh -i "$key_path" -o BatchMode=yes -o ConnectTimeout=8 "$alias" \
+      'systemctl is-active nix-daemon' 2>/dev/null | grep -qx active; then
+      printf '  nix       ready after %s s (nix-daemon active)\n' "$waited"
+      printf '  next      just deploy remote probe\n'
+    fi
   fi
 }
 
@@ -280,6 +301,7 @@ up)
     --minutes) MINUTES="$2"; shift 2 ;;
     --type) TYPE="$2"; shift 2 ;;
     --nix) BOOTSTRAP_NIX=1; shift ;;
+    --files) DEPLOY_FILES=1; BOOTSTRAP_NIX=1; shift ;;
     *) die "unknown flag: $1" ;;
     esac
   done
