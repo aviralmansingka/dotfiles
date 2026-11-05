@@ -10,7 +10,6 @@
     go
     nodejs_22
     bun
-    herdr
   ];
 
   home.sessionVariables = {
