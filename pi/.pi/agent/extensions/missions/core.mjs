@@ -488,31 +488,36 @@ export class MissionBridge {
     catch { return false; }
   }
   async assertSurface(ctx) {
-    const common = await this.common(ctx.cwd), cwd = realpathSync(ctx.cwd);
-    const workspaces = repositoryWorkspaces((await this.herdr(["workspace", "list"])).workspaces, common);
-    if (!workspaces.length) throw new Error("Open the repository's Herdr workspace first; missions register their worktree from it.");
-    // A mission session lives in its own worktree workspace. Missions bound
-    // before worktree workspaces existed still sit in the primary workspace, so
-    // accept any workspace of this repository whose pane sits in the mission
-    // checkout — the pane cwd, not the workspace count, is the binding.
-    for (const w of workspaces) {
-      const result = await this.herdr(["pane", "list", "--workspace", w.workspace_id]);
-      const pane = result.panes?.find(p => p.pane_id === this.env.HERDR_PANE_ID);
-      if (!pane || realpathSync(pane.foreground_cwd || pane.cwd) !== cwd) continue;
-      this.surfaceSession = ctx.sessionManager.getSessionId();
-      return { workspace: w.workspace_id, pane: pane.pane_id };
+    const cwd = realpathSync(ctx.cwd);
+    // Only a session that carries a Herdr pane can ask Herdr about it: `herdr()`
+    // refuses for every other session, so the Rex seat below must be reachable
+    // without it.
+    if (this.env.HERDR_ENV === "1" && this.env.HERDR_PANE_ID) {
+      const common = await this.common(ctx.cwd);
+      const workspaces = repositoryWorkspaces((await this.herdr(["workspace", "list"])).workspaces, common);
+      if (!workspaces.length) throw new Error("Open the repository's Herdr workspace first; missions register their worktree from it.");
+      // A mission session lives in its own worktree workspace. Missions bound
+      // before worktree workspaces existed still sit in the primary workspace, so
+      // accept any workspace of this repository whose pane sits in the mission
+      // checkout — the pane cwd, not the workspace count, is the binding.
+      for (const w of workspaces) {
+        const result = await this.herdr(["pane", "list", "--workspace", w.workspace_id]);
+        const pane = result.panes?.find(p => p.pane_id === this.env.HERDR_PANE_ID);
+        if (!pane || realpathSync(pane.foreground_cwd || pane.cwd) !== cwd) continue;
+        this.surfaceSession = ctx.sessionManager.getSessionId();
+        return { workspace: w.workspace_id, pane: pane.pane_id };
+      }
     }
     // A Rex block is a seat too: the CLI accepts a session id and a block id
     // as workspace and pane, so bind on the cwd the block reports.
     if (!this.env.HERDR_PANE_ID && this.env.REX_BLOCK) {
-      const cwd2 = realpathSync(ctx.cwd);
       const info = await this.seatCwd();
-      if (info && realpathSync(info) === cwd2) {
+      if (info && realpathSync(info) === cwd) {
         this.surfaceSession = ctx.sessionManager.getSessionId();
         return { workspace: this.env.REX_SESSION, pane: this.env.REX_BLOCK };
       }
     }
-    throw new Error("This session must run in the mission worktree inside the repository's Herdr workspace. Move/resume it there before attaching.");
+    throw new Error("Missions need a Herdr pane or a Rex block, running in the mission worktree. Move or resume this session there before attaching.");
   }
   async restore(ctx) {
     this.hint = null; this.error = null; this.surfaceSession = null; this.expectedAttachment = false;
