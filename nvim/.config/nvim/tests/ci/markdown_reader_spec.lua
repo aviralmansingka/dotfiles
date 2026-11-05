@@ -2,7 +2,8 @@
 -- Guards the centered reader column:
 --   * the eligibility rules (herdr scrollback, octo, non-prose buftypes);
 --   * the column arithmetic (the 'textwidth' the prose wraps at, window - 8,
---     auto wherever it fits; a buffer without 'textwidth' falls back to 100);
+--     auto wherever it fits; a buffer without 'textwidth' falls back to 100,
+--     and a wider table or diagram line sets the column on its midpoint);
 --   * enable/close leaves a symmetric two-filler layout, restores wrap and
 --     linebreak, and maps q/<Esc> only while the column is open;
 --   * the auto rule (a window too narrow for a 40-cell column stays alone,
@@ -29,7 +30,7 @@ local function prose_buf(lines, ft)
   vim.bo[buf].buftype = ""
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines or { "# Title", "", "Some prose in a column." })
   vim.bo[buf].filetype = ft or "markdown"
-  vim.bo[buf].textwidth = 80 -- what after/ftplugin/markdown.lua sets
+  vim.bo[buf].textwidth = 99 -- what after/ftplugin/markdown.lua sets
   return buf
 end
 
@@ -71,19 +72,29 @@ H.run("markdown_reader_spec", function()
 
   -- ── column arithmetic ───────────────────────────────────────────────────
   local md_tw = prose_buf()
-  H.eq(reader.text_width(md_tw), 80, "the column follows the buffer 'textwidth'")
+  H.eq(reader.text_width(md_tw), 99, "the column follows the buffer 'textwidth'")
   local no_tw = prose_buf()
   vim.bo[no_tw].textwidth = 0
   H.eq(reader.text_width(no_tw), 100, "a buffer without 'textwidth' falls back to 100")
-  H.eq(reader.column_width(159, 80), 80, "a wide window caps the column at 'textwidth'")
-  H.eq(reader.column_width(120, 80), 80, "'textwidth' fits unchanged in 120 cells")
-  H.eq(reader.column_width(80, 80), 72, "a narrow window keeps 8 cells for the margins")
+  H.eq(reader.column_width(159, 99), 99, "a wide window caps the column at 'textwidth'")
+  H.eq(reader.column_width(120, 99), 99, "'textwidth' fits unchanged in 120 cells")
+  H.eq(reader.column_width(80, 99), 72, "a narrow window keeps 8 cells for the margins")
   H.eq(reader.column_width(159), 100, "no wanted width keeps the 100-cell fallback")
-  H.eq(reader.should_auto(47, 80), false, "47 columns leaves the column too narrow")
-  H.eq(reader.should_auto(48, 80), true, "48 columns holds the narrowest 40-cell column")
-  H.eq(reader.should_auto(80, 80), true, "an 80-cell window auto-enables")
-  H.eq(reader.should_auto(110, 80), true, "110 columns auto-enables")
-  H.eq(reader.should_auto(159, 80), true, "a wide window auto-enables")
+  H.eq(reader.should_auto(47, 99), false, "47 columns leaves the column too narrow")
+  H.eq(reader.should_auto(48, 99), true, "48 columns holds the narrowest 40-cell column")
+  H.eq(reader.should_auto(80, 99), true, "an 80-cell window auto-enables")
+  H.eq(reader.should_auto(110, 99), true, "110 columns auto-enables")
+  H.eq(reader.should_auto(159, 99), true, "a wide window auto-enables")
+
+  -- a line that cannot wrap (a table, a diagram) sets the column on its own
+  local table_line = "|" .. string.rep(" cell |", 20)
+  local wide = prose_buf({ "# Title", "", table_line })
+  H.eq(reader.content_width(wide), #table_line, "the widest line sets the content width")
+  H.eq(reader.wanted_width(wide), #table_line, "a wide table wins over 'textwidth'")
+  H.eq(reader.wanted_width(md), 99, "prose keeps the 'textwidth' column")
+  local empty = prose_buf({ "" })
+  vim.bo[empty].textwidth = 0
+  H.eq(reader.wanted_width(empty), 100, "an empty buffer keeps the fallback column")
 
   -- ── enable / close ──────────────────────────────────────────────────────
   vim.o.columns, vim.o.lines = 120, 40
@@ -102,7 +113,7 @@ H.run("markdown_reader_spec", function()
   local text_width = info.width - info.textoff
   local left_blank = (info.wincol - 1) + info.textoff
   local right_blank = vim.o.columns - (left_blank + text_width)
-  H.eq(text_width, 80, "the text sits in an 80-cell column")
+  H.eq(text_width, 99, "the text sits in a 99-cell column")
   H.eq(math.abs(left_blank - right_blank) <= 1, true,
     string.format("the column is centered (left %d, right %d)", left_blank, right_blank))
   H.eq(vim.wo[win].wrap, true, "the column wraps prose")
@@ -221,7 +232,7 @@ H.run("markdown_reader_spec", function()
   local resized = target_info(vim.api.nvim_get_current_win())
   local w = resized.width - resized.textoff
   local l = (resized.wincol - 1) + resized.textoff
-  H.eq(w, 80, "the resize keeps the 80-cell column")
+  H.eq(w, 99, "the resize keeps the 99-cell column")
   H.eq(centered(), true,
     string.format("the resize keeps the column centered (left %d, right %d)", l, vim.o.columns - (l + w)))
 
@@ -244,4 +255,22 @@ H.run("markdown_reader_spec", function()
     return win_count() == 1
   end, 10)
   H.eq(win_count(), 1, "closing the editing window drops the fillers")
+
+  -- ── a table wider than the prose keeps its own column ───────────────────
+  vim.o.columns = 200
+  local table_buf = prose_buf({ "# Title", "", table_line })
+  vim.api.nvim_set_current_buf(table_buf)
+  reader.maybe_auto(vim.api.nvim_get_current_win())
+  vim.wait(1000, function()
+    return win_count() == 3
+  end, 10)
+  H.eq(win_count(), 3, "a table buffer gets the column")
+  local wide_info = target_info(vim.api.nvim_get_current_win())
+  local wide_width = wide_info.width - wide_info.textoff
+  local wide_left = (wide_info.wincol - 1) + wide_info.textoff
+  local wide_right = vim.o.columns - (wide_left + wide_width)
+  H.eq(wide_width, #table_line, "the column grows to the table width")
+  H.eq(math.abs(wide_left - wide_right) <= 1, true,
+    string.format("the table column is centered (left %d, right %d)", wide_left, wide_right))
+  reader.close()
 end)

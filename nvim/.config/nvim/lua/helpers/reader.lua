@@ -11,7 +11,7 @@
 
 local M = {}
 
-local COLUMN = 100 -- fallback when the buffer wraps at no set width
+local COLUMN = 100 -- hard limit; prose wraps at 99, so no line reaches it
 local MIN_COLUMN = 40 -- a column below this width gains nothing
 local MARGIN = 8 -- cells kept free for the two filler windows
 
@@ -30,6 +30,26 @@ function M.text_width(buf)
     return tw
   end
   return COLUMN
+end
+
+--- The widest line in `buf`, in display cells. Tables and diagrams never
+--- wrap, so a long one sets the column on its own midpoint.
+function M.content_width(buf)
+  buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
+  local width = 0
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+    local cells = vim.fn.strdisplaywidth(line)
+    if cells > width then
+      width = cells
+    end
+  end
+  return width
+end
+
+--- The column the buffer asks for: the prose width, or a wider line when the
+--- buffer holds one.
+function M.wanted_width(buf)
+  return math.max(M.text_width(buf), M.content_width(buf))
 end
 
 --- Wanted text width for a window that offers `width` cells.
@@ -107,7 +127,7 @@ end
 -- window: 'statuscolumn' and the sign column stay in the left margin.
 local function metrics(win, avail)
   local off = text_offset(win)
-  local column = M.column_width(avail, M.text_width(vim.api.nvim_win_get_buf(win)))
+  local column = M.column_width(avail, M.wanted_width(vim.api.nvim_win_get_buf(win)))
   if column < MIN_COLUMN then
     return nil
   end
@@ -256,7 +276,7 @@ function M.maybe_auto(win)
   if not M.eligible(vim.api.nvim_win_get_buf(win)) then
     return
   end
-  if M.should_auto(vim.api.nvim_win_get_width(win), M.text_width(vim.api.nvim_win_get_buf(win))) then
+  if M.should_auto(vim.api.nvim_win_get_width(win), M.wanted_width(vim.api.nvim_win_get_buf(win))) then
     M.enable(win)
   end
 end

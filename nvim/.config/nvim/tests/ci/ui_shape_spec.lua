@@ -348,8 +348,8 @@ run("markdown ftplugin settings", function()
   vim.wo.colorcolumn = ""
   vim.wo.wrap = false
   vim.bo[buf].filetype = "markdown" -- fires the real FileType autocmd
-  H.eq(vim.bo[buf].textwidth, 80, "markdown wraps at column 80 (buffer-local)")
-  H.eq(vim.wo.colorcolumn, "80", "markdown shows the guide at column 80 (window-local)")
+  H.eq(vim.bo[buf].textwidth, 99, "markdown wraps at column 99 (buffer-local)")
+  H.eq(vim.wo.colorcolumn, "100", "markdown shows the guide at column 100 (window-local)")
   H.eq(vim.wo.wrap, true, "markdown wraps soft lines (window-local)")
 end)
 

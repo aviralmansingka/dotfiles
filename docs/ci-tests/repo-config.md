@@ -21,9 +21,9 @@ runs offline, never changes `$HOME`, and never uses the network.
   crashes gh-dash on `PrNumber` (#199). Keys stay unique and template
   fields exist. Every command word names a repository helper or a
   Brewfile pin, and the tuicr binding stays on key `C`.
-- **X12 markdownlint.** `AV001` wraps at 80 columns and matches the nvim
+- **X12 markdownlint.** `AV001` wraps at 99 columns and matches the nvim
   wrap guide (#238). When the `markdownlint-cli2` binary exists, the
-  suite fixes a fixture: every line shows at most 80 visible columns,
+  suite fixes a fixture: every line shows at most 99 visible columns,
   and long link destinations stay untouched. Without the binary, the
   suite prints SKIP and passes.
 - **X13 config invariants.** `pi/.pi/agent/settings.json` holds valid
