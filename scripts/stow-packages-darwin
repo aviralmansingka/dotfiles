@@ -1,3 +1,8 @@
-# The macOS additions to scripts/stow-packages: launchd agents belong to the
-# system layer, and only Darwin has them.
-launchd
+# The macOS additions to scripts/stow-packages.
+#
+# Empty on purpose: the per-user launch agents are owned by nix-darwin now
+# (nix/services/launchd.nix renders them into nix-darwin's
+# launchd.user.agents, which writes real plists into ~/Library/LaunchAgents).
+# The two com.aviral.*-auto-sync plists were the last stowed files here, and a
+# stow symlink at that path would block the activation that wants to write the
+# file. install.sh still loops over this list — it just reads no package.
