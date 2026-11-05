@@ -28,7 +28,6 @@
     "tools": {
       "description": "Command-line utilities and productivity tools",
       "packages": [
-        "gh",
         "tree",
         "tig",
         "tuicr",

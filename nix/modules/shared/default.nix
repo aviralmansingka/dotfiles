@@ -34,6 +34,11 @@ in
       with pkgs;
       [
         stow
+        # gh is a profile tool on both platforms: the remote profile already
+        # rendered it from nix/lib/owned-tools.nix, and the Mac used to get it
+        # from Homebrew. One package here covers both, and the `ghd` alias
+        # below assumes it is on PATH.
+        gh
         git
         jq
         yq-go
