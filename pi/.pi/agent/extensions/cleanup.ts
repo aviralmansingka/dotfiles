@@ -198,7 +198,7 @@ export function rexContext(
 /**
  * The Rex session label this worktree's mission owns, from its handle:
  * `dotfiles/cleanup-rex-sessions` → `mission-cleanup-rex-sessions`. That is the
- * label a mission launch gives the session (`workerAgentName`), and the worktree
+ * label the mission plan gives the session (`seatLabel`), and the worktree
  * directory carries the same string. A handle that names nothing gives null.
  */
 export function missionSessionLabel(handle: string): string | null {
