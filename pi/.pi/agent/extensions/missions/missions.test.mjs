@@ -887,7 +887,14 @@ test("mission launch registers a Herdr worktree and adopts its workspace",needsC
   // still refused when its cwd is not the mission checkout.
   f.paneWorkspace="w-mission";
   assert.deepEqual(await f.bridge.assertSurface(f.ctx),{workspace:"w-mission",pane:f.env.HERDR_PANE_ID});
-  await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),/mission worktree/);
+  // A Herdr seat in another checkout is refused by its own name and paths, so
+  // a Herdr refusal never reads as a Rex one.
+  await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),(e)=>{
+    assert.match(e.message,/Herdr pane repo:p2/);
+    assert.match(e.message,/mission worktree/);
+    assert.ok(e.message.includes(f.repo)&&e.message.includes(f.cwd),`names both paths: ${e.message}`);
+    return true;
+  });
   f.paneWorkspace="repo";
   const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(f.started.length,1);
 });
@@ -905,16 +912,36 @@ test("a Rex block is a mission seat when it runs in the mission checkout", async
   assert.equal(bridge.surfaceSession,"rex-pi");assert.deepEqual(calls,[]);
 });
 
-test("a Rex block outside the mission checkout is refused", async t => {
+test("a Rex block outside the mission checkout is refused with both paths", async t => {
   const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-")));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
   const mission=join(root,"mission"),other=join(root,"other");mkdirSync(mission);mkdirSync(other);
+  // A captain was refused in 57 ms and one sentence covered three causes; the
+  // refusal now names the block, the directory it reports, and the session's.
   const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},
-    run:async()=>{throw Error("no live session in a test")}});
-  bridge.seatCwd=async()=>other;
-  await assert.rejects(bridge.assertSurface(context(mission,join(mission,"session.jsonl"))),
-    /Missions need a Herdr pane or a Rex block, running in the mission worktree/);
+    run:async binary=>{
+      if(binary==="rex") return JSON.stringify({pwd:"file://host"+other});
+      throw Error(`a reported pwd needs no ${binary}`);
+    }});
+  await assert.rejects(bridge.assertSurface(context(mission,join(mission,"session.jsonl"))),(e)=>{
+    assert.match(e.message,/Rex block block-1 reports/);
+    assert.ok(e.message.includes(other),`names the block's directory: ${e.message}`);
+    assert.ok(e.message.includes(mission),`names the session cwd: ${e.message}`);
+    return true;
+  });
   assert.equal(bridge.surfaceSession,null);
+});
+
+test("a session in no seat names both missing inputs and asks nothing", async () => {
+  const calls=[];
+  const bridge=new MissionBridge({env:{},run:async binary=>{calls.push(binary);throw Error("no seat to ask")}});
+  await assert.rejects(bridge.assertSurface(context("/tmp",null)),(e)=>{
+    assert.match(e.message,/no Herdr pane \(HERDR_PANE_ID empty\)/);
+    assert.match(e.message,/no Rex block \(REX_BLOCK empty\)/);
+    return true;
+  });
+  // Neither seat exists, so no probe runs: the environment is the whole answer.
+  assert.deepEqual(calls,[]);
 });
 
 test("a Rex seat behind the login wrapper reads the cwd of the process it starts", async t => {
@@ -926,7 +953,12 @@ test("a Rex seat behind the login wrapper reads the cwd of the process it starts
   // the process the wrapper starts, and only a process probe can name it.
   const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary,args)=>{
     calls.push([binary,...args]);
-    if(binary==="rex") return JSON.stringify({foreground:{pid:34975,user:"root",name:"login",path:"/usr/bin/login"},child:{pid:34975,user:"root",name:"login",path:"/usr/bin/login"},home:"/Users/aviral"});
+    // An older Rex, a dead block, or a block that refuses pwd: the process
+    // probe is still the answer, and this one is behind the login wrapper.
+    if(binary==="rex") {
+      if(args.at(-1)==="pwd") throw Error("block call pwd refused");
+      return JSON.stringify({foreground:{pid:34975,user:"root",name:"login",path:"/usr/bin/login"},child:{pid:34975,user:"root",name:"login",path:"/usr/bin/login"},home:"/Users/aviral"});
+    }
     if(binary==="pgrep") return "34977\n";
     if(binary==="lsof") return `p34977\nfcwd\nn${root}\n`;
     if(binary==="readlink") return root+"\n";
@@ -935,10 +967,11 @@ test("a Rex seat behind the login wrapper reads the cwd of the process it starts
   assert.equal(await bridge.seatCwd(),root);
   assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"rex-pi")),{workspace:"rex-session",pane:"block-1"});
   assert.equal(bridge.surfaceSession,"rex-pi");
-  // The probe asks Rex for the block, then walks one level down to the process
-  // the login wrapper started: nothing else is needed to bind the seat.
+  // The probe asks the block for its pwd, then walks one level down to the
+  // process the login wrapper started: nothing else is needed to bind the seat.
   assert.deepEqual([...new Set(calls.map(c=>JSON.stringify(c)))].sort(), [
     JSON.stringify(["pgrep","-P","34975"]),
+    JSON.stringify(["rex","block","call","-b","block-1","pwd"]),
     JSON.stringify(["rex","block","call","-b","block-1","process"]),
     JSON.stringify(process.platform==="darwin"
       ? ["lsof","-a","-p","34977","-d","cwd","-Fn"]
@@ -958,21 +991,41 @@ test("a login wrapper with no readable child cwd leaves the Rex seat unbound", a
   }});
   assert.equal(await bridge.seatCwd(),null);
   await assert.rejects(bridge.assertSurface(context(root,join(root,"session.jsonl"))),
-    /Missions need a Herdr pane or a Rex block, running in the mission worktree/);
+    /Rex block block-1 reports no cwd, and this session runs in /);
   assert.equal(bridge.surfaceSession,null);
 });
 
-test("a block that reports its cwd costs one Rex call and no process probe", async t => {
-  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-plain-")));
+test("a block's own pwd answers the seat cwd and needs no process probe", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-pwd-")));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
   const calls=[];
-  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary)=>{
-    calls.push(binary);
-    if(binary==="rex") return JSON.stringify({foreground:{pid:75520,name:"node",cwd:root}});
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary,args)=>{
+    calls.push([binary,...args]);
+    // Rex reports the path on the block's own host, never a bare path.
+    if(binary==="rex") return JSON.stringify({pwd:"file://captain-mac.local"+root});
+    throw Error(`a reported pwd needs no ${binary} probe`);
+  }});
+  assert.equal(await bridge.seatCwd(),root);
+  // One call, no `process`, no pgrep, no lsof: the block answered for itself.
+  assert.deepEqual(calls,[["rex","block","call","-b","block-1","pwd"]]);
+  assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"rex-pi")),{workspace:"rex-session",pane:"block-1"});
+});
+
+test("a block whose pwd fails still binds through the process probe", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-pwd-fail-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const calls=[];
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary,args)=>{
+    calls.push([binary,...args]);
+    if(binary==="rex") {
+      if(args.at(-1)==="pwd") throw Error("block call pwd failed");
+      return JSON.stringify({foreground:{pid:75520,name:"node",cwd:root}});
+    }
     throw Error(`a reported cwd needs no ${binary}`);
   }});
   assert.equal(await bridge.seatCwd(),root);
-  assert.deepEqual(calls,["rex"]);
+  assert.deepEqual(calls,[["rex","block","call","-b","block-1","pwd"],["rex","block","call","-b","block-1","process"]]);
+  assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"rex-pi")),{workspace:"rex-session",pane:"block-1"});
 });
 
 test("a seat cwd reads lsof on macOS and /proc on Linux, never both", async () => {
@@ -980,7 +1033,11 @@ test("a seat cwd reads lsof on macOS and /proc on Linux, never both", async () =
   const darwin=process.platform==="darwin",seen=[];
   const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary,args)=>{
     seen.push(binary);
-    if(binary==="rex") return JSON.stringify({foreground:{pid:10,name:"login"}});
+    if(binary==="rex") {
+      // This stub predates `pwd`: it answers every Rex call with the process
+      // report, which names no pwd, so the walk below is what reads the seat.
+      return JSON.stringify({foreground:{pid:10,name:"login"}});
+    }
     if(binary==="pgrep") return "11\n";
     if(binary==="lsof") { assert.deepEqual(args,["-a","-p","11","-d","cwd","-Fn"]); return `p11\nfcwd\nn${root}\n`; }
     if(binary==="readlink") { assert.deepEqual(args,["/proc/11/cwd"]); return root+"\n"; }
@@ -1007,6 +1064,28 @@ test("a Herdr pane still binds by pane cwd and never asks Rex", async t => {
   bridge.seatCwd=async()=>{throw Error("a Herdr seat never asks Rex")};
   assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"herdr-pi")),{workspace:"w-mission",pane:"repo:p2"});
   assert.equal(bridge.surfaceSession,"herdr-pi");assert.equal(calls.includes("rex"),false);
+});
+
+test("a Herdr pane outside the mission checkout is refused by its own seat", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-herdr-other-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const mission=join(root,"mission"),repo=join(root,"repo");mkdirSync(mission);mkdirSync(repo);
+  const bridge=new MissionBridge({env:{HERDR_ENV:"1",HERDR_PANE_ID:"repo:p2",REX_BLOCK:"block-1"},run:async(binary,args)=>{
+    if(binary!=="herdr") throw Error(`unexpected ${binary} in a Herdr seat`);
+    const result=args[0]==="workspace"
+      ? {workspaces:[{workspace_id:"w-mission",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}]}
+      : {panes:[{pane_id:"repo:p2",cwd:repo,foreground_cwd:repo}]};
+    return JSON.stringify({result});
+  }});
+  bridge.common=async()=>"/git/repo";
+  bridge.seatCwd=async()=>{throw Error("a Herdr seat never asks Rex")};
+  await assert.rejects(bridge.assertSurface(context(mission,join(mission,"session.jsonl"))),(e)=>{
+    assert.match(e.message,/Herdr pane repo:p2 reports/);
+    assert.ok(e.message.includes(repo)&&e.message.includes(mission),`names both paths: ${e.message}`);
+    assert.doesNotMatch(e.message,/Rex block/,`a Herdr refusal never reads as a Rex one: ${e.message}`);
+    return true;
+  });
+  assert.equal(bridge.surfaceSession,null);
 });
 
 /** The seat one hook event reports, recorded without the CLI. */
