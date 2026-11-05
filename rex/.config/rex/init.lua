@@ -2,6 +2,9 @@
 -- C-a prefix, vim-style hjkl pane navigation, | and - splits.
 -- Reload after edits: rex config reload
 
+-- Missions: read the ground and steer its seats (rex/missions.lua)
+require("missions")
+
 -- Focus panes, vim-style (tmux: bind -r h/j/k/l select-pane)
 rex.bind("ctrl+a>h", "pane.focus.left")
 rex.bind("ctrl+a>j", "pane.focus.down")
