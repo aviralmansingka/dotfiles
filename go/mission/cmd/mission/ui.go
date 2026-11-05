@@ -289,7 +289,6 @@ type draft struct {
 }
 type desk struct {
 	store                        *Store
-	nav                          *deskNavigation
 	records                      []mission.Record
 	view                         []mission.Record // records that pass the filter
 	selected, tab, width, height int
@@ -319,14 +318,6 @@ func newDesk(s *Store) *desk {
 
 // current is the selected mission inside the active filter.
 func (m *desk) current() (mission.Record, bool) {
-	if m.nav != nil && m.nav.handle != "" {
-		for _, r := range m.records {
-			if r.Handle == m.nav.handle {
-				return r, true
-			}
-		}
-		return mission.Record{}, false
-	}
 	if m.selected < 0 || m.selected >= len(m.view) {
 		return mission.Record{}, false
 	}
@@ -355,11 +346,6 @@ func (m *desk) refresh() {
 		h = r.Handle
 	}
 	m.records, m.err = m.store.list()
-	m.launches = launches(m.launchDir)
-	if m.nav != nil {
-		m.refreshNavigationList(h)
-		return
-	}
 	m.view = filterRecords(m.records, m.filter)
 	m.selected = 0
 	for i, r := range m.view {
@@ -368,6 +354,7 @@ func (m *desk) refresh() {
 		}
 	}
 	m.selected = max(0, min(m.selected, len(m.view)-1))
+	m.launches = launches(m.launchDir)
 }
 
 // filterLane is the one-row state filter, the list pane's tab strip. The active
@@ -501,7 +488,7 @@ func (m *desk) Init() tea.Cmd {
 	if m.form != nil {
 		return tea.Batch(m.form.Init(), tick())
 	}
-	return tea.Batch(tick(), m.pollNavigationPRs())
+	return tick()
 }
 func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
@@ -510,20 +497,7 @@ func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sizeForm()
 	case pulse:
 		m.refresh()
-		return m, tea.Batch(tick(), m.pollNavigationPRs(), m.pollNavigationCalls())
-	case deskCallsUpdate:
-		if m.nav != nil && m.nav.callRequest == v.request {
-			m.nav.loadingCalls = false
-			m.applyNavigationCalls(v.calls)
-		}
-		return m, nil
-	case deskPRs:
-		if m.nav != nil {
-			h, _ := m.current()
-			m.nav.prs = v
-			m.refreshNavigationList(h.Handle)
-		}
-		return m, nil
+		return m, tick()
 	case tea.KeyPressMsg:
 		if v.String() == "ctrl+c" {
 			return m, tea.Quit
@@ -537,15 +511,6 @@ func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		} else {
-			if m.nav != nil {
-				depth := m.depth()
-				if m.navigationKey(v) {
-					if depth == 1 && m.depth() == 2 {
-						return m, m.pollNavigationCalls()
-					}
-					return m, nil
-				}
-			}
 			switch v.String() {
 			case "q":
 				return m, tea.Quit
@@ -622,19 +587,12 @@ func (m *desk) render() string {
 	head := m.headerLines(w)
 	foot := m.footerLines(w)
 	bodyH := m.bodyHeight()
-	separator := "\n\n"
-	if m.nav != nil && m.form == nil {
-		separator = "\n" + paint(edge, strings.Repeat("─", w)) + "\n"
-	}
-	frame := strings.Join(head, "\n") + separator + m.body(w, bodyH) + separator + strings.Join(foot, "\n")
+	frame := strings.Join(head, "\n") + "\n\n" + m.body(w, bodyH) + "\n\n" + strings.Join(foot, "\n")
 	return lg.NewStyle().Background(bg).Foreground(ink).Padding(0, 2).
 		Width(fw).Height(fh).MaxWidth(fw).MaxHeight(fh).Render(frame)
 }
 
 func (m *desk) headerLines(w int) []string {
-	if m.nav != nil {
-		return m.navigationHeader(w)
-	}
 	title := lg.NewStyle().Background(aqua).Foreground(bg).Bold(true).Padding(0, 1).Render(" m ") + "  " + heading("MISSION")
 	sub := "  /  work that survives the agent"
 	if w-lg.Width(title) >= lg.Width(sub) {
@@ -735,22 +693,16 @@ func (m *desk) footerKeys(w int) string {
 	switch {
 	case m.form != nil:
 		hints = []string{"tab next field", "enter continue", "esc cancel"}
-	case m.nav != nil:
-		hints = m.navigationHints()
 	case m.focus == 1 && m.tab == detailTabs-1:
 		hints = []string{"j/k step", "[/] view", "q quit", "tab missions", "e customize", "pgdn scroll"}
 	case m.focus == 1:
 		hints = []string{"j/k scroll", "[/] view", "q quit", "tab missions", "pgdn scroll"}
 	}
 	out := ""
-	for i, hint := range hints {
+	for _, hint := range hints {
 		next := hint
-		if m.nav != nil && i == 0 {
-			key, action, _ := strings.Cut(hint, " ")
-			next = lg.NewStyle().Background(edge).Foreground(ink).Render(key) + " " + action
-		}
 		if out != "" {
-			next = "   " + next
+			next = "   " + hint
 		}
 		if lg.Width(out)+lg.Width(next) > w {
 			break
@@ -774,9 +726,6 @@ func (m *desk) footerLines(w int) []string {
 func (m *desk) body(w, h int) string {
 	if m.form != nil {
 		return m.formBody(w, h)
-	}
-	if m.nav != nil {
-		return m.navigationBody(w, h)
 	}
 	return m.deskBody(w, h)
 }
@@ -848,17 +797,6 @@ func (m *desk) detailText(w, h int) string {
 	detail := m.detail(r, max(16, w))
 	lines := strings.Split(detail, "\n")
 	limit := max(1, h)
-	if m.nav != nil && m.nav.revealStep {
-		m.nav.revealStep = false
-		if len(lines) > limit {
-			for i, line := range lines {
-				if strings.HasPrefix(stripANSI(line), "▌ ") {
-					m.scroll = max(i-max(0, limit-2), min(m.scroll, i))
-					break
-				}
-			}
-		}
-	}
 	m.scroll = min(m.scroll, max(0, len(lines)-limit))
 	if len(lines) > limit {
 		end := min(len(lines), m.scroll+limit-1)
@@ -906,26 +844,19 @@ func (m *desk) formSide() (string, string) {
 }
 func (m *desk) detail(r mission.Record, w int) string {
 	tabs := []string{"Overview", "Troopers", "Attempts", "Activity", "Steps"}
-	nested := m.nav != nil && m.depth() == 1
 	for i, t := range tabs {
 		tabs[i] = paint(muted, t)
 		if i == m.tab {
 			tabs[i] = paint(aqua, "● "+t)
-			if nested {
-				tabs[i] = deskBar(" "+t, len(t)+2, ink)
-			}
 		}
 	}
-	s := ""
-	if !nested {
-		s = heading(r.Mission.Title) + "  " + status(r.State.Status) + "\n" + paint(muted, r.Handle+"  ·  "+r.Mission.Kind+"  ·  rev "+fmt.Sprint(r.State.Revision)) + "\n"
-	}
+	s := heading(r.Mission.Title) + "  " + status(r.State.Status) + "\n" + paint(muted, r.Handle+"  ·  "+r.Mission.Kind+"  ·  rev "+fmt.Sprint(r.State.Revision)) + "\n"
 	if l, ok := m.launches[r.Handle]; ok {
 		if label, why := launchSummary(l); label != "" {
 			s += paint(launchColor(l.State), strings.ToUpper(label)) + "  " + paint(muted, why) + "\n"
 		}
 	}
-	s += strings.Join(tabs, "     ") + "\n\n"
+	s += "\n" + strings.Join(tabs, "     ") + paint(muted, "     [ ]") + "\n\n"
 	if m.tab == detailTabs-1 {
 		return s + m.stepsDetail(r, w)
 	}
@@ -973,50 +904,24 @@ func (m *desk) detail(r mission.Record, w int) string {
 		}
 		return s
 	}
-	columns := "STEP  RESULT     WORK"
-	if nested {
-		columns = deskBar("  STEP  RESULT       WORK", w, ink)
-	}
-	s += clean(r.Mission.Goal) + "\n\n" + columns + "\n"
-	passed := 0
-	for i, st := range r.Mission.Steps {
+	s += clean(r.Mission.Goal) + "\n\n" + paint(muted, "STEP  RESULT     WORK") + "\n"
+	for _, st := range r.Mission.Steps {
 		ss := r.State.Steps[st.ID]
 		icon := "○"
 		if ss.Status == "passed" {
 			icon = "✓"
-			passed++
 		}
 		if ss.Status == "running" {
 			icon = "◉"
 		}
-		prefix := ""
-		if nested {
-			prefix = "  "
-			if i == m.selectedStep {
-				prefix = paint(yellow, "▌ ")
-			}
-		}
-		result := lg.NewStyle().Width(10).Render(status(ss.Status))
-		line := prefix + paint(aqua, st.ID) + "   " + icon + " " + result + " " + clip(st.Title, w-23)
-		if prefix != "" && i == m.selectedStep {
-			line = deskRight(line, paint(yellow, "Enter Open step"), w)
-			line = deskHighlight(line, w)
-		}
-		s += line + "\n"
+		s += paint(aqua, st.ID) + "   " + icon + " " + status(ss.Status) + "  " + clip(st.Title, w-23) + "\n"
 		for _, cp := range r.Mission.Checkpoints {
 			if cp.After == st.ID {
 				s += "      └ " + paint(yellow, cp.ID+" human review") + paint(muted, " · "+r.State.Checkpoints[cp.ID].Status) + "\n"
 			}
 		}
 	}
-	if nested {
-		s += "\n" + paint(green, fmt.Sprintf("%d of %d steps passed", passed, len(r.Mission.Steps)))
-		if r.State.Pending != "" {
-			s += paint(yellow, "    ·    Handoff waits for "+clean(r.State.Pending))
-		}
-		s += "\n"
-	}
-	if !nested && r.State.Pending != "" {
+	if r.State.Pending != "" {
 		for _, cp := range r.Mission.Checkpoints {
 			if cp.ID == r.State.Pending {
 				s += "\n" + paint(yellow, "◆ YOUR DECISION  "+cp.ID) + "\n" + clean(cp.Question) + "\n" + paint(muted, "Evidence: "+r.State.Checkpoints[cp.ID].Evidence) + "\n" + paint(aqua, "Press a to accept or request revision.") + "\n"
@@ -1250,7 +1155,7 @@ func (m *desk) commitForm() {
 		m.err = formErr
 	}
 }
-func runUI(s *Store) error { _, e := tea.NewProgram(newNavigationDesk(s)).Run(); return e }
+func runUI(s *Store) error { _, e := tea.NewProgram(newDesk(s)).Run(); return e }
 func runUIBuilder(s *Store) error {
 	m := newDesk(s)
 	m.startBuilder()
