@@ -27,6 +27,33 @@ export function workerAgentName(handle, tag = "") {
   return `mission-${tail}${mark ? "-" + mark : ""}`.slice(0, 32).replace(/-+$/, "");
 }
 
+/** The identity a launched seat records. A launch sends the captain brief and
+ *  runs the captain allowlist, so the seat it starts is a captain; a session
+ *  that attaches on its own, with no launch intent to answer, is a trooper. */
+export const CAPTAIN_AGENT = "mission-captain";
+export const WORKER_AGENT = "mission-worker";
+
+/** The agent arguments of a plan's captain argv: everything after the
+ *  executable. `herdr agent start <name> --kind pi --pane <id> [-- AGENT_ARG...]`
+ *  starts the binary itself and passes this tail to it, and `pi` has no profile
+ *  flag, so the argv tail is the only place a plan's tool allowlist can reach a
+ *  launched seat. A plan with no argv passes nothing and the seat keeps the
+ *  defaults it would have had. */
+export function seatArgs(argv) {
+  return (Array.isArray(argv) ? argv : []).map(arg => String(arg ?? "")).filter(Boolean).slice(1);
+}
+
+/** Whether a `mission plan` answer carries anything a launch can use: the
+ *  captain contract, the seat's argv tail, or the subagent session. A failed
+ *  call, an empty object, and a CLI that predates `plan` all answer nothing
+ *  usable, so one degradation rule covers all three. */
+export function usablePlan(plan) {
+  if (!plan || typeof plan !== "object") return false;
+  if (typeof plan.captain_brief === "string" && plan.captain_brief !== "") return true;
+  if (Array.isArray(plan.captain_argv) && plan.captain_argv.length > 0) return true;
+  return typeof plan.subagent_session === "string" && plan.subagent_session !== "";
+}
+
 /** How long a launch waits for its new agent to reach the prompt. */
 export const AGENT_READY_TIMEOUT_MS = 60000;
 
@@ -323,28 +350,32 @@ export class MissionBridge {
     const agents = (await this.herdr(["agent", "list"])).agents || [];
     return agents.find(a => a.name === name) || null;
   }
-  /** Start the mission worker as a full Pi agent in the mission pane. The name
+  /** Start the mission seat as a full Pi agent in the mission pane. The name
    *  comes from the mission. A name that another session holds takes a short
-   *  handle hash once; the launch never renames another session's agent. */
+   *  handle hash once; the launch never renames another session's agent.
+   *  `args` is the plan's captain argv tail, passed through Herdr's AGENT_ARG
+   *  slot so the seat runs the allowlist the plan emits. */
   /** Start the mission worker once its pane is a free shell. A tab that Herdr
    *  just created can still be bringing its shell up, and `agent start` refuses
    *  a pane that is not an available shell yet; that refusal is retried, not
    *  fatal. Every other failure keeps its own handling. */
-  async startWorker(handle, pane) {
+  async startWorker(handle, pane, args = []) {
     for (let attempt = 0; ; attempt++) {
-      try { return await this.startWorkerOnce(handle, pane); }
+      try { return await this.startWorkerOnce(handle, pane, args); }
       catch (e) {
         if (!String(e.message).includes("agent_pane_busy") || attempt >= AGENT_PANE_READY_RETRIES) throw e;
         await new Promise(r => setTimeout(r, AGENT_PANE_READY_DELAY_MS));
       }
     }
   }
-  async startWorkerOnce(handle, pane) {
+  async startWorkerOnce(handle, pane, args = []) {
+    const start = name => this.herdr(["agent", "start", name, "--kind", "pi", "--pane", pane,
+      ...(args.length ? ["--", ...args] : [])]);
     const name = workerAgentName(handle);
-    try { await this.herdr(["agent", "start", name, "--kind", "pi", "--pane", pane]); return name; }
+    try { await start(name); return name; }
     catch (e) { if (!takenAgentName(e.message)) throw e; }
     const retry = workerAgentName(handle, hash(handle));
-    try { await this.herdr(["agent", "start", retry, "--kind", "pi", "--pane", pane]); return retry; }
+    try { await start(retry); return retry; }
     catch (e) {
       const taken = takenAgentName(e.message);
       if (!taken) throw e;
@@ -426,7 +457,8 @@ export class MissionBridge {
     this.save(ctx);
     try {
       const args = ["attach", handle, "--session-id", ctx.sessionManager.getSessionId(), "--session-file", ctx.sessionManager.getSessionFile() || "",
-        "--cwd", ctx.cwd, "--workspace", surface.workspace, "--pane", surface.pane, "--agent", agent || "mission-worker"];
+        "--cwd", ctx.cwd, "--workspace", surface.workspace, "--pane", surface.pane,
+        "--agent", agent || (launchID ? CAPTAIN_AGENT : WORKER_AGENT)];
       if (launchID) args.push("--launch-id", launchID);
       const c = await this.call(args, this.hint.token);
       this.expectedAttachment = true;
@@ -491,6 +523,23 @@ export class MissionBridge {
     const reservation = await this.call(["launch", handle]);
     if (!reservation.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of launching again.", runtime: reservation.runtime };
     const launchID = reservation.runtime.launch_id;
+    // The launch description has one owner: the CLI renders it in `mission
+    // plan`, and plan writes nothing, so reading it here costs no state. Read it
+    // BEFORE any seat exists, because the tab's environment and the seat's argv
+    // are both taken from it, and Herdr fixes a tab's environment at creation.
+    // This launch already reserved its intent, so the brief names that id.
+    //
+    // A plan enriches a launch; it never gates one. A CLI that predates
+    // `mission plan`, a call that fails, and an answer with nothing usable are
+    // one case: the launch degrades to #441's driver contract and #441's default
+    // seat, which is exactly what a launch had before the plan existed. The
+    // degradation is reported on the result, never swallowed. A plan that
+    // answers still wins every field it answers.
+    let planError = null;
+    const planned = await this.call(["plan", handle, "--launch-id", launchID])
+      .catch(e => { planError = e.message; return null; });
+    const plan = usablePlan(planned) ? planned : null;
+    if (!plan) planError ||= "mission plan answered nothing usable";
     // A failed launch must stay retryable: the reservation is released unless a
     // worker can own it. A launch that half-succeeded keeps it for inspection.
     let pane = null;
@@ -502,11 +551,16 @@ export class MissionBridge {
       const worktree = await this.herdr(["worktree", "open", "--cwd", checkout, "--path", cwd, "--no-focus"]);
       const workspace = worktree.workspace?.workspace_id;
       if (!workspace) throw new Error("Herdr did not return the mission worktree workspace; launch intent retained for inspection.");
-      // The driver pane must inherit the launcher's configuration: Herdr sets a
+      // The captain pane must inherit the launcher's configuration: Herdr sets a
       // tab's environment at creation and `worktree open` has no env flag, so the
       // launch always creates its own tab with that environment and then closes a
       // fresh workspace's empty root tab. The workspace keeps exactly one tab.
-      const env = driverEnv(this.env).flatMap(([key, value]) => ["--env", `${key}=${value}`]);
+      // The plan's subagent session rides in the same environment
+      // (`PI_SUBAGENT_SESSION`, rex.ts reads it as a label or an id), so every
+      // trooper the captain deploys lands in mission-<slug> instead of army
+      // without the captain having to repeat the name in each call.
+      const env = [...driverEnv(this.env), ...(plan?.subagent_session ? [["PI_SUBAGENT_SESSION", plan.subagent_session]] : [])]
+        .flatMap(([key, value]) => ["--env", `${key}=${value}`]);
       const tab = await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus", ...env]);
       pane = tab.root_pane?.pane_id;
       if (!pane || tab.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
@@ -517,19 +571,27 @@ export class MissionBridge {
         try { await this.herdr(["pane", "close", empty]); }
         catch { /* a leftover empty tab stays visible; it is never silent */ }
       }
-      // The worker is a full Pi agent in this pane, not a subagent: it carries
-      // no subagent env, loadout file, timer, or watchdog. Pi loads the
-      // repository configuration and the missions skill in that worktree.
-      const agent = await this.startWorker(handle, pane);
+      // The seat is a full Pi agent in this pane, not a subagent: it carries no
+      // subagent env, loadout file, timer, or watchdog. Pi loads the repository
+      // configuration and the missions skill in that worktree. Its reach is the
+      // plan's argv, because Herdr starts the binary itself and Pi has no
+      // profile flag: `seatArgs` is the only channel a profile can travel.
+      const agent = await this.startWorker(handle, pane, seatArgs(plan?.captain_argv));
       try { await this.herdr(["agent", "wait", pane, "--until", "idle", "--timeout", String(AGENT_READY_TIMEOUT_MS)]); }
       catch (e) { throw new Error(`Herdr agent ${agent} did not become ready: ${herdrError(e.message)}`); }
-      // The launched agent is the driver: it holds the claim and sends every
-      // step to a work subagent and every verification to a judge subagent.
-      await this.herdr(["agent", "prompt", pane, driverTask(handle, launchID)]);
+      // The captain contract is the plan's, so this session starts from the text
+      // the plan rendered for the intent this launch reserved. A plan that names
+      // no brief (or no plan at all) keeps the capability layer's own driver
+      // task, which answers the same launch id this reservation holds.
+      await this.herdr(["agent", "prompt", pane, plan?.captain_brief || driverTask(handle, launchID)]);
       const sessionFile = (await this.herdr(["agent", "get", pane])).agent?.agent_session?.value;
       if (!sessionFile) throw new Error("Herdr reported no session for the mission agent; launch intent retained for inspection.");
       await this.call(["launch", handle, "--launch-id", launchID, "--session-file", sessionFile]);
-      return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: sessionFile, pane, workspace };
+      // The intent this launch acquired before the plan read is the one it
+      // acks: a degraded plan changes the seat's argv and prompt, never the
+      // reservation, so the ack rules are the same for both paths.
+      return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: sessionFile, pane, workspace,
+        ...(planError ? { plan_degraded: planError } : {}) };
     } catch (e) {
       if (!(await this.releaseLaunch(handle, launchID, pane))) throw e;
       throw new Error(`${e.message} The launch intent is released; launch again when the cause is clear.`);
@@ -632,6 +694,7 @@ export class MissionBridge {
         const result = await this.start(ctx, request.handle);
         const launched = result?.launched === true;
         this.settleLaunch(request, { state: launched ? "started" : "failed", launch_id: result?.runtime?.launch_id,
+          ...(result?.plan_degraded ? { plan_degraded: result.plan_degraded } : {}),
           ...(launched ? { workspace: result?.workspace, pane: result?.pane, session_file: result?.session_file }
             : { error: result?.reason || "the launch was not acknowledged" }) });
       } catch (e) {
