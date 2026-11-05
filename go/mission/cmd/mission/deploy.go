@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -135,17 +136,11 @@ func (s *Store) deploy(h, mux string) (Deployment, error) {
 			}
 			d.SubagentCreated = true
 		}
-		v, e := rexAPI("session.new_window", map[string]any{
-			"session_id":   army,
-			"window_label": p.CaptainWindow,
-			"layout":       captainLayout(p),
-		})
+		id, e := seatCaptain(p, army)
 		if e != nil {
-			return d, rexProblem("session.new_window", e)
+			return d, e
 		}
-		if d.CaptainWindowID = text(v["window_id"]); d.CaptainWindowID == "" {
-			return d, mission.Problem("rex_error", "rex created window %q without returning its id", p.CaptainWindow)
-		}
+		d.CaptainWindowID = id
 	}
 	ack, e := s.ack(h)
 	if e != nil {
@@ -328,16 +323,109 @@ func shellLayout(cwd string) map[string]any {
 	return map[string]any{"block": map[string]any{"flavor": terminalFlavor, "options": options}}
 }
 
-// captainLayout seats a captain: the plan's argv, then the brief as its first
-// message, in the mission worktree. No shell reads the brief, so its quotes and
-// spaces reach pi unchanged.
+// captainLayout opens the captain's window on a shell that waits. A block's id
+// does not exist until the window is created, so the captain cannot receive its
+// own REX_BLOCK in a spawn environment. The window therefore starts a shell
+// reading commands from its terminal, and seatCaptain writes the exec line that
+// replaces that shell with pi once the id is known.
 func captainLayout(p Plan) map[string]any {
-	argv := append(append([]string{}, p.CaptainArgv...), p.CaptainBrief)
 	return map[string]any{"block": map[string]any{
 		"flavor":  terminalFlavor,
 		"label":   p.CaptainWindow,
-		"options": map[string]any{"command": argv, "cwd": p.Cwd, "shell": "none"},
+		"options": map[string]any{"command": []string{"/bin/sh", "-s"}, "cwd": p.Cwd, "shell": "none"},
 	}}
+}
+
+// seatCaptain creates the captain's window, reads the block id Rex assigned it,
+// then writes the exec line that turns that block into the captain. Two phases
+// are the only shape that works: the id arrives in the window-creation result,
+// so no process started with the window can already own it. The exec line keeps
+// the plan's argv and the brief, so pi starts exactly as it would have.
+func seatCaptain(p Plan, sessionID string) (string, error) {
+	v, e := rexAPI("session.new_window", map[string]any{
+		"session_id":   sessionID,
+		"window_label": p.CaptainWindow,
+		"layout":       captainLayout(p),
+	})
+	if e != nil {
+		return "", rexProblem("session.new_window", e)
+	}
+	window := text(v["window_id"])
+	if window == "" {
+		return "", mission.Problem("rex_error", "rex created window %q without returning its id", p.CaptainWindow)
+	}
+	block := seatedBlock(v)
+	if block == "" {
+		return "", mission.Problem("rex_error", "rex created window %q without returning its block id", p.CaptainWindow)
+	}
+	if _, e := rexAPI("block.method", map[string]any{
+		"session_id": sessionID,
+		"block_id":   block,
+		"method":     "write",
+		"args":       map[string]any{"data": captainExecLine(p, block) + "\n"},
+	}); e != nil {
+		return "", rexProblem("block.method", e)
+	}
+	return window, nil
+}
+
+// seatedBlock is the block id in a window-creation result. Rex answers with
+// block_ids in layout order, so the first is the block the captain layout seated;
+// a shaped view that nests layers is read the same way.
+func seatedBlock(v map[string]any) string {
+	if ids, ok := v["block_ids"].([]any); ok && len(ids) > 0 {
+		if id := text(ids[0]); id != "" {
+			return id
+		}
+	}
+	return rootBlock(v)
+}
+
+// captainExecLine is the one line that replaces the waiting shell with the
+// captain: the plan's argv (the brief last, as its first message) and the seat's
+// own identity in its environment. PATH carries the directory of rex, because
+// the captain deploys its troopers through rex and inherits this PATH.
+func captainExecLine(p Plan, block string) string {
+	argv := append(append([]string{}, p.CaptainArgv...), p.CaptainBrief)
+	parts := []string{"exec", "env",
+		shellQuote("REX_SESSION=" + p.Session),
+		shellQuote("REX_BLOCK=" + block),
+		shellQuote("PATH=" + captainPATH()),
+		shellQuote("PI_SUBAGENT_SESSION=" + p.SubagentSession),
+		shellQuote("PI_SUBAGENT_CWD=" + p.Cwd),
+	}
+	for _, a := range argv {
+		parts = append(parts, shellQuote(a))
+	}
+	return strings.Join(parts, " ")
+}
+
+// captainPATH is this process's PATH with the directory that holds rex in front
+// of it. A captain whose PATH cannot find rex cannot deploy a trooper, so the
+// seat guarantees it even when the mission binary was started from a short PATH.
+func captainPATH() string {
+	path := os.Getenv("PATH")
+	rex, e := exec.LookPath("rex")
+	if e != nil {
+		return path
+	}
+	dir := filepath.Dir(rex)
+	for _, d := range filepath.SplitList(path) {
+		if d == dir {
+			return path
+		}
+	}
+	if path == "" {
+		return dir + string(os.PathListSeparator) + "/usr/bin:/bin"
+	}
+	return dir + string(os.PathListSeparator) + path
+}
+
+// shellQuote makes one argument safe inside the shell line the seat writes. The
+// brief carries spaces and punctuation, so every argument is quoted, and a
+// single quote inside an argument is closed, escaped, and reopened.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
 // text reads a string from a Rex result, and "" from anything else.
