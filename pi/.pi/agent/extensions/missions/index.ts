@@ -82,7 +82,8 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     // Starting a mission authorizes its eligible steps. Attaching an existing
     // session records its work without silently starting additional steps.
     // A finished or human-held mission never asks for another step.
-    if (missionContinues(result?.state) && bridge.hint?.autoContinue && !ctx.hasPendingMessages()) {
+    const settledState = result?.state ?? (await bridge.current(ctx).catch(() => null))?.record?.state;
+    if (missionContinues(settledState) && bridge.hint?.autoContinue && !ctx.hasPendingMessages()) {
       pi.sendMessage({customType:"mission-next",display:true,
         content:`The previous step of ${bridge.hint.handle} passed its checks. Call mission action=next to pick up the next eligible step in this same worktree. Read its returned brief before editing. Pause at human reviews.`},
         {triggerTurn:true,deliverAs:"followUp"});
@@ -90,6 +91,13 @@ export default function missions(pi: ExtensionAPI, options = {}) {
   }));
   pi.on("tool_execution_start", guarded(async (e: any, ctx: any) => { await bridge.record(ctx, { type: "tool-start", tool: e.toolName, summary: "Tool call " + e.toolCallId }); }));
   pi.on("tool_execution_end", guarded(async (e: any, ctx: any) => { await bridge.record(ctx, { type: "tool-end", tool: e.toolName, summary: "Tool call " + e.toolCallId + (e.isError ? " failed" : " ended") }); }));
+  // A finished subagent is a trooper on the ground. The interactive subagents
+  // extension delivers every completion as a `subagent_result` message (spawn,
+  // adoption, and orphan finalize), so one report leaves the parent for each
+  // finished subagent — named by the subagent itself, so a judge step records
+  // the judge. The report rides the same outbox as the lifecycle hooks, so a
+  // reload replays it under one ID instead of appending a second copy.
+  pi.on("message_end", guarded(async (event: any, ctx: any) => { await bridge.report(ctx, event?.message); }));
 
   pi.registerTool({
     name: "mission", label: "Mission", exposure: "deferred",
@@ -103,6 +111,7 @@ export default function missions(pi: ExtensionAPI, options = {}) {
       revision: Type.Optional(Type.Integer()),
       status: Type.Optional(Type.Union(["working", "blocked", "needs-input", "ready"].map(v => Type.Literal(v)))),
       summary: Type.Optional(Type.String()), next: Type.Optional(Type.String()), blocker: Type.Optional(Type.String()),
+      actor: Type.Optional(Type.String()),
       evidence: Type.Optional(Type.Array(Type.String())), event_id: Type.Optional(Type.String()),
     }),
     async execute(id, p, _signal, _update, ctx) {

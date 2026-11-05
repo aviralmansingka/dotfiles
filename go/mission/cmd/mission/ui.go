@@ -407,7 +407,7 @@ func (m *desk) laneChips(w int) (string, int) {
 
 // nextTab moves the tab of the pane that owns the keys: the mission list on
 // the pane's first focus tab walks the state filters, the details walk their
-// four views. The other pane keeps its own tab untouched.
+// five views. The other pane keeps its own tab untouched.
 func (m *desk) nextTab(step int) {
 	if m.focus == 0 {
 		m.cycleFilter(step)
@@ -417,15 +417,16 @@ func (m *desk) nextTab(step int) {
 	m.scroll = 0
 }
 
-// detailTabs is the number of views the detail pane holds.
-const detailTabs = 4
+// detailTabs is the number of views the detail pane holds: Overview, Troopers,
+// Attempts, Activity, Steps. The Steps view is always the last one.
+const detailTabs = 5
 
 // moveDown and moveUp apply the arrow keys to whichever pane owns them: the
 // mission list moves its selection, the step list moves its step, and any other
 // detail view scrolls one line.
 func (m *desk) moveDown() {
 	switch {
-	case m.focus == 1 && m.tab == 3:
+	case m.focus == 1 && m.tab == detailTabs-1:
 		if r, ok := m.current(); ok {
 			m.selectedStep = max(0, min(len(r.Mission.Steps)-1, m.selectedStep+1))
 		}
@@ -442,7 +443,7 @@ func (m *desk) moveDown() {
 
 func (m *desk) moveUp() {
 	switch {
-	case m.focus == 1 && m.tab == 3:
+	case m.focus == 1 && m.tab == detailTabs-1:
 		m.selectedStep = max(0, m.selectedStep-1)
 	case m.focus == 1:
 		m.scroll = max(0, m.scroll-1)
@@ -537,7 +538,7 @@ func (m *desk) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, m.form.Init()
 				}
 			case "s":
-				m.tab = 3
+				m.tab = detailTabs - 1
 				m.focus = 1
 				m.scroll = 0
 			case "esc":
@@ -603,7 +604,85 @@ func (m *desk) headerLines(w int) []string {
 		counts[r.State.Status]++
 	}
 	bar := paint(aqua, fmt.Sprintf("%02d active", counts["running"])) + paint(muted, "   ·   ") + paint(yellow, fmt.Sprintf("%02d need you", counts["waiting"]+counts["review"])) + paint(muted, "   ·   ") + paint(green, fmt.Sprintf("%02d ready", counts["ready"]))
-	return []string{fitLines(title, w), paint(muted, "VAULT  ") + clip(m.store.Vault, max(8, w-8)), "", fitLines(bar, w)}
+	out := []string{fitLines(title, w), paint(muted, "VAULT  ") + clip(m.store.Vault, max(8, w-8)), "", fitLines(bar, w)}
+	// The trooper line is a header row only when a report exists; bodyHeight
+	// spends rows from len(headerLines), so the quiet header gives the rows
+	// back to the panels instead of holding a placeholder.
+	if line := m.trooperHeader(w); line != "" {
+		out = append(out, fitLines(line, w))
+	}
+	return out
+}
+
+// trooperHeader renders the selected mission's newest trooper report as one
+// header row, so the human reads the ground without opening the Troopers tab.
+// It carries the state glyph, the trooper's name, the age, and the summary.
+// A blocked or needs-input trooper rides reportGlyph's yellow diamond while a
+// working one pulses aqua and a finished one ticks green, so trouble reads at
+// a glance even in a one-line header. No report anywhere means no line at
+// all: no placeholder, no empty brackets — the header keeps its four quiet
+// rows. The row is clipped to the same pane width every other header row uses.
+func (m *desk) trooperHeader(w int) string {
+	r, ok := m.current()
+	if !ok {
+		return ""
+	}
+	rep := newestReport(r)
+	if rep == nil {
+		return ""
+	}
+	head := paint(muted, "TROOPER  ") + reportGlyph(rep.Status) + " "
+	used := lg.Width(stripANSI(head))
+	name := clip(rep.Trooper, 24)
+	age := paint(muted, "  ·  "+reportAge(rep.At))
+	ageW := lg.Width(stripANSI(age))
+	// Budget the row by hand so the head never reaches the pane edge: the name
+	// shrinks from its tab budget of 24 first, the age is dropped next, and
+	// only the summary is left for fitLines to clip. A wide pane fits all of
+	// it; a narrow one keeps the name and loses the summary tail.
+	if w-used-ageW-lg.Width(stripANSI(name)) < 2 {
+		if narrow := w - used - ageW - 2; narrow >= 3 {
+			name = clip(rep.Trooper, narrow)
+		} else {
+			age, ageW = "", 0
+			name = clip(rep.Trooper, max(1, min(24, w-used-2)))
+		}
+	}
+	line := head + name + age
+	if rest := w - lg.Width(stripANSI(line)) - 2; rest > 1 {
+		line += "  " + clip(rep.Summary, rest)
+	}
+	return line
+}
+
+// newestReport picks the newest report from the attempt reportAttempt chooses
+// (the same active-first, else newest-with-reports source the Troopers tab
+// reads — one source, not a second one). Reports are keyed by trooper name and
+// replaced in place, so list order is insertion order, not time order: the
+// winner is the report with the latest At stamp. A stamp that will not parse
+// sorts oldest, so a broken clock can never promote itself; an exact tie goes
+// to the later list slot, which is the row a replace-in-place update just
+// rewrote.
+func newestReport(r mission.Record) *mission.Report {
+	a := reportAttempt(r)
+	if a == nil {
+		return nil
+	}
+	best := -1
+	var bestAt time.Time
+	for i := range a.Reports {
+		at, e := time.Parse(time.RFC3339Nano, a.Reports[i].At)
+		if e != nil {
+			at = time.Time{}
+		}
+		if best < 0 || at.After(bestAt) || (at.Equal(bestAt) && i > best) {
+			best, bestAt = i, at
+		}
+	}
+	if best < 0 {
+		return nil
+	}
+	return &a.Reports[best]
 }
 
 // footerKeys joins as many key hints as the footer row holds, most useful
@@ -615,7 +694,7 @@ func (m *desk) footerKeys(w int) string {
 	switch {
 	case m.form != nil:
 		hints = []string{"tab next field", "enter continue", "esc cancel"}
-	case m.focus == 1 && m.tab == 3:
+	case m.focus == 1 && m.tab == detailTabs-1:
 		hints = []string{"j/k step", "[/] view", "q quit", "tab missions", "e customize", "pgdn scroll"}
 	case m.focus == 1:
 		hints = []string{"j/k scroll", "[/] view", "q quit", "tab missions", "pgdn scroll"}
@@ -765,7 +844,7 @@ func (m *desk) formSide() (string, string) {
 	return "SAVED AS MARKDOWN", paint(muted, "6_missions/") + "\n  " + platform.Fallback(m.draft.Repo, "repository") + "/\n    " + platform.Fallback(m.draft.Slug, platform.Fallback(mission.Slugify(m.draft.Title), "mission-slug")) + "/\n      mission.md\n      state.md\n      attempts/\n      artifacts/\n\n" + heading("One mission · one repository") + "\n\nAgents claim the next step.\nEach attempt keeps its evidence.\nReviews gate progression, never your tools.\n\n" + paint(yellow, "No agent is launched by this form.")
 }
 func (m *desk) detail(r mission.Record, w int) string {
-	tabs := []string{"Overview", "Attempts", "Activity", "Steps"}
+	tabs := []string{"Overview", "Troopers", "Attempts", "Activity", "Steps"}
 	for i, t := range tabs {
 		tabs[i] = paint(muted, t)
 		if i == m.tab {
@@ -779,10 +858,13 @@ func (m *desk) detail(r mission.Record, w int) string {
 		}
 	}
 	s += "\n" + strings.Join(tabs, "     ") + paint(muted, "     [ ]") + "\n\n"
-	if m.tab == 3 {
+	if m.tab == detailTabs-1 {
 		return s + m.stepsDetail(r, w)
 	}
 	if m.tab == 1 {
+		return s + m.troopersDetail(r, w)
+	}
+	if m.tab == 2 {
 		if len(r.State.Attempts) == 0 {
 			return s + paint(muted, "No attempts. A claim creates the first record.")
 		}
@@ -806,7 +888,7 @@ func (m *desk) detail(r mission.Record, w int) string {
 		}
 		return s
 	}
-	if m.tab == 2 {
+	if m.tab == 3 {
 		var events []mission.Event
 		for _, a := range r.State.Attempts {
 			events = append(events, a.Events...)
@@ -856,6 +938,80 @@ func (m *desk) detail(r mission.Record, w int) string {
 	}
 	return s
 }
+// troopersDetail renders the Troopers tab: one row per report from the attempt
+// the operator cares about right now. reportGlyph paints the state, then the
+// trooper, its age, and the summary clipped to one line, so a narrow pane loses
+// the tail of a summary and never a row.
+func (m *desk) troopersDetail(r mission.Record, w int) string {
+	a := reportAttempt(r)
+	if a == nil {
+		return paint(muted, "No trooper reports yet. A progress call with --actor records one.")
+	}
+	s := ""
+	for _, rep := range a.Reports {
+		head := reportGlyph(rep.Status) + " " + clip(rep.Trooper, 24) + paint(muted, "  ·  "+reportAge(rep.At))
+		rest := max(0, w-lg.Width(stripANSI(head))-3)
+		line := head
+		if rest > 1 {
+			line += "  " + clip(rep.Summary, rest)
+		}
+		s += line + "\n"
+	}
+	return s
+}
+
+// reportAttempt picks the attempt whose reports the Troopers tab shows: the
+// active attempt when it already carries reports, else the newest attempt with
+// a nonempty list — a finished attempt's reports outlive its active slot, so
+// the operator still reads who did what after the attempt closes.
+func reportAttempt(r mission.Record) *mission.Attempt {
+	if r.State.Active != "" {
+		if a, e := mission.FindAttempt(&r.State, r.State.Active); e == nil && len(a.Reports) > 0 {
+			return a
+		}
+	}
+	for i := len(r.State.Attempts) - 1; i >= 0; i-- {
+		if len(r.State.Attempts[i].Reports) > 0 {
+			return &r.State.Attempts[i]
+		}
+	}
+	return nil
+}
+
+// reportGlyph paints the one-character state for a trooper report, matching the
+// step icons: a finished report ticks green, work in progress pulses aqua, and
+// a blocker stays yellow until it clears.
+func reportGlyph(status string) string {
+	switch status {
+	case "ready":
+		return paint(green, "✓")
+	case "working":
+		return paint(aqua, "◉")
+	case "blocked", "needs-input":
+		return paint(yellow, "◆")
+	}
+	return paint(muted, "○")
+}
+
+// reportAge renders a report stamp as a short relative age; a stamp that will
+// not parse falls back to its raw text, so the record is never hidden.
+func reportAge(at string) string {
+	t, e := time.Parse(time.RFC3339Nano, at)
+	if e != nil {
+		return clip(at, 20)
+	}
+	switch d := time.Since(t); {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds ago", max(0, int(d.Seconds())))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	}
+	d := time.Since(t)
+	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+}
+
 func formTheme() huh.Theme {
 	return huh.ThemeFunc(func(bool) *huh.Styles {
 		t := huh.ThemeBase(true)

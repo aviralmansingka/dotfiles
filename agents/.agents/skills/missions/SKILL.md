@@ -96,9 +96,11 @@ If an owner session is recorded, resume it. If the step failed, run
 `mission retry`, then `next`.
 
 A started worker receives a continuation prompt after each verified step
-when no review is pending. An attached existing session uses explicit `next` and
-does not automatically start more work. At a review, wait for the user to decide
-and direct continuation.
+when no review is pending. A session that attaches and holds the claim runs
+autonomously the same way: after each verified step it picks up the next
+eligible step without a human message, and stops only at checkpoints, reviews,
+`waiting`, and `done`. An attached session that does not own the binding stays
+explicit. At a review, wait for the user to decide and direct continuation.
 
 One repository owns one Herdr workspace, plus one linked worktree workspace per
 registered worktree; a mission's checkout owns its own. One mission owns one
@@ -129,6 +131,13 @@ inside the current attempt, for example `artifacts/001/step-01.md`. The CLI hash
 them. Reuse an event_id when retrying the same report; change it for a new report.
 The extension records lifecycle metadata and snapshots the transcript separately.
 It does not interpret tool counts, elapsed time, or assistant prose as completion.
+
+Add `"actor": "<name>"` to record a trooper report: the attempt then also lists
+who reported, so the sitrep can name the agent that finished the work. One
+report per trooper stands: a later report from the same name replaces the row,
+so a resumed run leaves its final state. The extension already does this for
+every subagent it sees finish, so an agent only names itself when it reports for
+another.
 
 The step's work subagent writes the required artifact to the exact path returned by
 attach; the session that holds the claim sends that write out and never makes it
