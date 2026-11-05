@@ -1,2 +1,5 @@
 --ignore=node_modules
 --ignore=__pycache__
+# Finder drops .DS_Store into any folder it shows, including inside a stow
+# package, where stow would map it onto $HOME and abort the whole file phase.
+--ignore=\.DS_Store
