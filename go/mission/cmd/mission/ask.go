@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 // askKinds is the closed vocabulary of a captain's question. A blocked ask
@@ -63,7 +64,7 @@ type askInput struct {
 // ask writes one ask file under the mission record. It needs no token and no
 // lock: a captain holds no credential, and two asks never share a filename, so
 // the write cannot collide with the ledger or with another ask.
-func (s *Store) ask(h string, in askInput) (askFile, error) {
+func (s *App) ask(h string, in askInput) (askFile, error) {
 	text := strings.TrimSpace(in.Text)
 	if text == "" {
 		return askFile{}, mission.Problem("usage", "mission ask needs one question:\n  mission ask %s --text QUESTION [--step S01] [--kind blocked|question|decision]", h)
@@ -92,7 +93,7 @@ func (s *Store) ask(h string, in askInput) (askFile, error) {
 	// The filename carries a fixed-width UTC stamp, so readdir order is oldest
 	// first and a captain's questions reach the commander in the order it asked.
 	name := now.Format("20060102T150405.000000000Z") + "-" + ask.ID + ".json"
-	p, e := s.path(r.Mission.Repo, r.Mission.Slug, "asks", name)
+	p, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, "asks", name)
 	if e != nil {
 		return askFile{}, e
 	}
@@ -100,7 +101,7 @@ func (s *Store) ask(h string, in askInput) (askFile, error) {
 	if e != nil {
 		return askFile{}, e
 	}
-	if e = atomicWrite(p, append(b, '\n')); e != nil {
+	if e = platform.AtomicWrite(p, append(b, '\n')); e != nil {
 		return askFile{}, e
 	}
 	return askFile{Ask: ask, Path: p}, nil
@@ -108,12 +109,12 @@ func (s *Store) ask(h string, in askInput) (askFile, error) {
 
 // asks reads every ask of one mission. A missing asks directory is an empty
 // answer, not an error: most missions never ask anything.
-func (s *Store) asks(h string) (askListing, error) {
+func (s *App) asks(h string) (askListing, error) {
 	r, e := s.load(h)
 	if e != nil {
 		return askListing{}, e
 	}
-	d, e := s.path(r.Mission.Repo, r.Mission.Slug, "asks")
+	d, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, "asks")
 	if e != nil {
 		return askListing{}, e
 	}

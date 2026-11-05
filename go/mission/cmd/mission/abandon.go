@@ -68,7 +68,7 @@ type abandonedView struct {
 // process, and it refuses an attempt whose process this host cannot inspect:
 // ending a live trooper's work on a guess is worse than leaving the record for
 // repair. It never edits mission.md and never replays an edit journal.
-func (s *Store) abandon(h, id, note string) (abandonedView, error) {
+func (s *App) abandon(h, id, note string) (abandonedView, error) {
 	var out abandonedView
 	if h == "" || id == "" {
 		return out, mission.Problem("usage", "abandon needs a mission and an attempt: mission abandon REPO/SLUG --attempt ATTEMPT --note TEXT")
@@ -76,12 +76,8 @@ func (s *Store) abandon(h, id, note string) (abandonedView, error) {
 	if note = trimNote(note); note == "" {
 		return out, mission.Problem("usage", "abandon needs --note TEXT: the record keeps why the attempt ended")
 	}
-	e := s.locked(func() error {
-		r, e := s.load(h)
-		if e != nil {
-			return e
-		}
-		if e = requireOpen(r); e != nil {
+	_, e := s.update(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
 			return e
 		}
 		a, e := mission.FindAttempt(&r.State, id)
@@ -94,7 +90,7 @@ func (s *Store) abandon(h, id, note string) (abandonedView, error) {
 				// A repeat abandon reports the earlier release; the record is
 				// untouched, so a retried command cannot write twice.
 				out.Already = true
-				return nil
+				return mission.ErrNoWrite
 			}
 			return mission.Problem("attempt_terminal", "attempt %s is already %s; nothing to abandon", a.ID, a.Status)
 		}
@@ -121,8 +117,7 @@ func (s *Store) abandon(h, id, note string) (abandonedView, error) {
 			r.State.Status = "failed"
 		}
 		out.Status, out.EndedAt = a.Status, a.Ended
-		r.State.Revision++
-		return s.save(&r)
+		return nil
 	})
 	return out, e
 }

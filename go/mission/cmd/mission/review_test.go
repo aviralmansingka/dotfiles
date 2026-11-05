@@ -9,7 +9,7 @@ import (
 )
 
 // pendingFixture finishes S01 so review C01 waits on the owner.
-func pendingFixture(t *testing.T) (*Store, string, mission.Claim, mission.Record) {
+func pendingFixture(t *testing.T) (*App, string, mission.Claim, mission.Record) {
 	t.Helper()
 	s, h := fixture(t)
 	c := claimTest(t, s, h)

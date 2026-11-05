@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"go.yaml.in/yaml/v3"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"go.yaml.in/yaml/v3"
+
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 func TestTitlesOnlyStepsAndCustomization(t *testing.T) {
@@ -121,7 +123,7 @@ func TestStepResetKeepsOldAttemptsAndDecisions(t *testing.T) {
 	if r.State.Attempts[0].Definition.Acceptance == st.Acceptance {
 		t.Fatal("old attempt definition was rewritten")
 	}
-	b, e := os.ReadFile(artifactPath(s, c))
+	b, e := os.ReadFile(s.Artifacts(c))
 	must(t, e)
 	if string(b) != "Original evidence" {
 		t.Fatal("old evidence changed")
@@ -140,7 +142,7 @@ func TestInterruptedStepEditIsRepairable(t *testing.T) {
 	baseRev, baseHash := r.State.Revision, r.State.SpecHash
 	r.Mission.Steps[0].Instructions = "Recovered customization"
 	r.State.Revision++
-	b, e := markdown(r.Mission, r.Mission.Body)
+	b, e := platform.Markdown(r.Mission, r.Mission.Body)
 	must(t, e)
 	r.State.SpecHash = mission.Digest(b)
 	tx := pendingEdit{Handle: h, Mission: r.Mission, Body: r.Mission.Body, State: r.State, BaseRevision: baseRev, BaseHash: baseHash}
@@ -148,9 +150,9 @@ func TestInterruptedStepEditIsRepairable(t *testing.T) {
 	must(t, e)
 	p, e := s.editPath(h)
 	must(t, e)
-	must(t, atomicWrite(p, journal))
+	must(t, platform.AtomicWrite(p, journal))
 	d, _ := s.dir(h)
-	must(t, atomicWrite(filepath.Join(d, "mission.md"), b))
+	must(t, platform.AtomicWrite(filepath.Join(d, "mission.md"), b))
 	_, e = s.load(h)
 	wantCode(t, e, "edit_pending")
 	r, e = s.repair(h)

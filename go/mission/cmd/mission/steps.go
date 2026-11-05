@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"go.yaml.in/yaml/v3"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"go.yaml.in/yaml/v3"
 
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -30,7 +31,7 @@ func stepIndex(m mission.Mission, id string) (int, error) {
 	return -1, mission.Problem("not_found", "step %s not found", id)
 }
 func definitionHash(s mission.Step) string { b, _ := json.Marshal(s); return mission.Digest(b) }
-func (s *Store) steps(h string) ([]StepView, error) {
+func (s *App) steps(h string) ([]StepView, error) {
 	r, e := s.load(h)
 	if e != nil {
 		return nil, e
@@ -47,7 +48,7 @@ func (s *Store) steps(h string) ([]StepView, error) {
 	}
 	return out, nil
 }
-func (s *Store) step(h, id string) (StepView, error) {
+func (s *App) step(h, id string) (StepView, error) {
 	v, e := s.steps(h)
 	if e != nil {
 		return StepView{}, e
@@ -71,13 +72,9 @@ type pendingEdit struct {
 	BaseHash     string          `yaml:"base_hash"`
 }
 
-func (s *Store) editStep(h, id string, updated mission.Step, revision int, reset bool) (mission.Record, error) {
-	var result mission.Record
-	e := s.locked(func() error {
-		r, e := s.load(h)
-		if e != nil {
-			return e
-		}
+func (s *App) editStep(h, id string, updated mission.Step, revision int, reset bool) (mission.Record, error) {
+	var tx pendingEdit
+	r, e := s.update(h, func(r *mission.Record) error {
 		if revision != r.State.Revision {
 			return mission.Problem("revision_conflict", "step changed since it was read; refresh and retry")
 		}
@@ -104,7 +101,7 @@ func (s *Store) editStep(h, id string, updated mission.Step, revision int, reset
 		if started && !reset {
 			return mission.Problem("step_started", "%s already has attempts; use --reset to invalidate this step and later progress while preserving history", id)
 		}
-		d, e := s.dir(h)
+		d, e := s.Repo.Dir(h)
 		if e != nil {
 			return e
 		}
@@ -118,7 +115,7 @@ func (s *Store) editStep(h, id string, updated mission.Step, revision int, reset
 		baseRevision, baseHash := r.State.Revision, r.State.SpecHash
 		r.Mission.Steps[idx] = updated
 		mission.NormalizeMission(&r.Mission)
-		if e = validateMission(r.Mission); e != nil {
+		if e = mission.Validate(r.Mission); e != nil {
 			return e
 		}
 		if reset {
@@ -141,156 +138,180 @@ func (s *Store) editStep(h, id string, updated mission.Step, revision int, reset
 				r.State.Status = "waiting"
 			}
 		}
-		r.State.Revision++
 		r.State.Edits = append(r.State.Edits, mission.StepEdit{Step: id, At: mission.Now(), Before: before, After: r.Mission.Steps[idx], Reset: reset})
-		b, e := markdown(r.Mission, r.Mission.Body)
+		b, e := platform.Markdown(r.Mission, r.Mission.Body)
 		if e != nil {
 			return e
 		}
 		r.State.SpecHash = mission.Digest(b)
-		tx := pendingEdit{Handle: h, Mission: r.Mission, Body: r.Mission.Body, State: r.State, BaseRevision: baseRevision, BaseHash: baseHash}
-		p, e := s.editPath(h)
+		// The journal carries the state this edit commits, one revision on, so
+		// repair replays exactly this transaction.
+		next := r.State
+		next.Revision = baseRevision + 1
+		tx = pendingEdit{Handle: h, Mission: r.Mission, Body: r.Mission.Body, State: next, BaseRevision: baseRevision, BaseHash: baseHash}
+		p, e := s.Repo.EditPath(h)
 		if e != nil {
 			return e
 		}
-		b, e = yaml.Marshal(tx)
+		jb, e := yaml.Marshal(tx)
 		if e != nil {
 			return e
 		}
-		if len(b) > 16<<20 {
+		if len(jb) > 16<<20 {
 			return mission.Problem("too_large", "step edit exceeds the 16 MiB journal limit")
 		}
-		if e = atomicWrite(p, b); e != nil {
+		if e = platform.AtomicWrite(p, jb); e != nil {
 			return e
 		}
-		result, e = s.applyEdit(tx)
-		return e
+		// The brief is written before the state it is paired with: a crash
+		// between the two leaves the journal for repair to replay.
+		return platform.AtomicWrite(filepath.Join(d, "mission.md"), b)
 	})
-	return result, e
-}
-func (s *Store) applyEdit(tx pendingEdit) (mission.Record, error) {
-	r := mission.Record{Handle: tx.Handle, Mission: tx.Mission, State: tx.State}
-	r.Mission.Body = tx.Body
-	if r.Handle != r.Mission.Repo+"/"+r.Mission.Slug {
-		return r, mission.Problem("identity_mismatch", "edit definition belongs to another mission")
-	}
-	if e := validateMission(r.Mission); e != nil {
-		return r, e
-	}
-	if r.State.Mission != r.Mission.ID {
-		return r, mission.Problem("identity_mismatch", "edit state belongs to a different mission")
-	}
-	d, e := s.dir(r.Handle)
 	if e != nil {
 		return r, e
 	}
-	current, e := os.ReadFile(filepath.Join(d, "state.md"))
-	if e != nil {
-		return r, e
-	}
-	var st mission.State
-	if _, e = parseMarkdown(current, &st); e != nil {
-		return r, e
-	}
-	oldState := st.Revision == tx.BaseRevision && st.SpecHash == tx.BaseHash
-	newState := st.Revision == tx.State.Revision && st.SpecHash == tx.State.SpecHash
-	if st.Mission != tx.State.Mission || (!oldState && !newState) {
-		return r, mission.Problem("revision_conflict", "interrupted edit conflicts with current state; manual reconciliation required")
-	}
-	current, e = os.ReadFile(filepath.Join(d, "mission.md"))
-	if e != nil {
-		return r, e
-	}
-	if mission.Digest(current) != tx.BaseHash && mission.Digest(current) != tx.State.SpecHash {
-		return r, mission.Problem("brief_changed", "interrupted edit conflicts with mission.md; manual reconciliation required")
-	}
-	b, e := markdown(r.Mission, r.Mission.Body)
-	if e != nil {
-		return r, e
-	}
-	if mission.Digest(b) != tx.State.SpecHash {
-		return r, mission.Problem("invalid_edit", "edit fingerprint does not match its definition")
-	}
-	if e = atomicWrite(filepath.Join(d, "mission.md"), b); e != nil {
-		return r, e
-	}
-	// A replay that meets its own new revision has nothing left to write.
-	if !newState {
-		if e = s.save(&r); e != nil {
-			return r, e
-		}
-	}
-	p, e := s.editPath(r.Handle)
+	// The state this journal describes is committed, so the journal can go.
+	p, e := s.Repo.EditPath(h)
 	if e != nil {
 		return r, e
 	}
 	return r, os.Remove(p)
 }
 
+// replayEdit applies one interrupted step edit inside a write transaction. The
+// store read through the journal, so the check below is against the state on
+// disk: a transaction that meets neither its base nor its own result is a
+// conflict, not a replay.
+func (s *App) replayEdit(r *mission.Record, tx pendingEdit) error {
+	rec := mission.Record{Handle: tx.Handle, Mission: tx.Mission, State: tx.State}
+	rec.Mission.Body = tx.Body
+	if rec.Handle != rec.Mission.Repo+"/"+rec.Mission.Slug {
+		return mission.Problem("identity_mismatch", "edit definition belongs to another mission")
+	}
+	if e := mission.Validate(rec.Mission); e != nil {
+		return e
+	}
+	if rec.State.Mission != rec.Mission.ID {
+		return mission.Problem("identity_mismatch", "edit state belongs to a different mission")
+	}
+	d, e := s.Repo.Dir(rec.Handle)
+	if e != nil {
+		return e
+	}
+	current, e := os.ReadFile(filepath.Join(d, "state.md"))
+	if e != nil {
+		return e
+	}
+	var st mission.State
+	if _, e = platform.ParseMarkdown(current, &st); e != nil {
+		return e
+	}
+	oldState := st.Revision == tx.BaseRevision && st.SpecHash == tx.BaseHash
+	newState := st.Revision == tx.State.Revision && st.SpecHash == tx.State.SpecHash
+	if st.Mission != tx.State.Mission || (!oldState && !newState) {
+		return mission.Problem("revision_conflict", "interrupted edit conflicts with current state; manual reconciliation required")
+	}
+	current, e = os.ReadFile(filepath.Join(d, "mission.md"))
+	if e != nil {
+		return e
+	}
+	if mission.Digest(current) != tx.BaseHash && mission.Digest(current) != tx.State.SpecHash {
+		return mission.Problem("brief_changed", "interrupted edit conflicts with mission.md; manual reconciliation required")
+	}
+	b, e := platform.Markdown(rec.Mission, rec.Mission.Body)
+	if e != nil {
+		return e
+	}
+	if mission.Digest(b) != tx.State.SpecHash {
+		return mission.Problem("invalid_edit", "edit fingerprint does not match its definition")
+	}
+	if e = platform.AtomicWrite(filepath.Join(d, "mission.md"), b); e != nil {
+		return e
+	}
+	// The transaction writes the revision after the base, which is the one the
+	// interrupted edit meant to write itself. A replay that meets its own new
+	// revision has nothing left to write: the transaction commits it and only
+	// removes the journal.
+	if newState {
+		*r = rec
+		return mission.ErrNoWrite
+	}
+	rec.State.Revision = tx.BaseRevision
+	*r = rec
+	return nil
+}
+
 // repair replays an interrupted step edit, re-admits attempt projections the
 // ledger lost, reconciles an active attempt whose process is gone, and rewrites
 // the commit point.
-func (s *Store) repair(h string) (mission.Record, error) {
+func (s *App) repair(h string) (mission.Record, error) {
 	var r mission.Record
-	e := s.locked(func() error {
-		p, e := s.editPath(h)
+	p, e := s.Repo.EditPath(h)
+	if e != nil {
+		return r, e
+	}
+	b, e := os.ReadFile(p)
+	switch {
+	case e == nil:
+		if len(b) > 16<<20 {
+			return r, mission.Problem("too_large", "edit journal exceeds 16 MiB")
+		}
+		var tx pendingEdit
+		if e = yaml.Unmarshal(b, &tx); e != nil {
+			return r, e
+		}
+		if tx.Handle != h {
+			return r, mission.Problem("identity_mismatch", "edit journal belongs to another mission")
+		}
+		// A retired mission never replays an edit, even an interrupted one.
+		if e = requireOpen(mission.Record{Handle: h, Mission: tx.Mission, State: tx.State}); e != nil {
+			return r, e
+		}
+		if r, e = s.updateThroughEdit(h, func(rec *mission.Record) error { return s.replayEdit(rec, tx) }); e != nil {
+			return r, e
+		}
+		// The journal goes only after the state it describes is committed.
+		if e = os.Remove(p); e != nil {
+			return r, e
+		}
+	case os.IsNotExist(e):
+		if r, e = s.load(h); e != nil {
+			return r, e
+		}
+		if e = requireOpen(r); e != nil {
+			return r, e
+		}
+	default:
+		return r, e
+	}
+	// A dead attempt keeps its step unclosable until something ends it, so
+	// repair reconciles one whose process is gone and whose stream is quiet. A
+	// live process is never touched. Nothing to re-admit and nothing to
+	// reconcile leaves the record exactly as repair found it.
+	rec, e := s.update(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
+		adopted, e := s.adoptOrphans(r)
 		if e != nil {
 			return e
 		}
-		b, e := os.ReadFile(p)
-		if e == nil {
-			if len(b) > 16<<20 {
-				return mission.Problem("too_large", "edit journal exceeds 16 MiB")
-			}
-			var tx pendingEdit
-			if e = yaml.Unmarshal(b, &tx); e != nil {
-				return e
-			}
-			if tx.Handle != h {
-				return mission.Problem("identity_mismatch", "edit journal belongs to another mission")
-			}
-			// A retired mission never replays an edit, even an interrupted one.
-			if e = requireOpen(mission.Record{Handle: h, Mission: tx.Mission, State: tx.State}); e != nil {
-				return e
-			}
-			if r, e = s.applyEdit(tx); e != nil {
-				return e
-			}
-		} else if os.IsNotExist(e) {
-			if r, e = s.load(h); e != nil {
-				return e
-			}
-			if e = requireOpen(r); e != nil {
-				return e
-			}
-		} else {
-			return e
+		if adopted == 0 && s.reconcileAttempts(r) == 0 {
+			return mission.ErrNoWrite
 		}
-		adopted, e := s.adoptOrphans(&r)
-		if e != nil {
-			return e
-		}
-		// A dead attempt keeps its step unclosable until something ends it, so
-		// repair reconciles one whose process is gone and whose stream is
-		// quiet. A live process is never touched.
-		reconciled := s.reconcileAttempts(&r)
-		// Nothing to re-admit and nothing to reconcile: repair leaves the
-		// record exactly as it found it. A replayed edit already saved itself,
-		// so this is also the path that keeps repair to a single write.
-		if adopted == 0 && reconciled == 0 {
-			return nil
-		}
-		r.State.Revision++
-		return s.save(&r)
+		return nil
 	})
-	return r, e
+	if e != nil {
+		return r, e
+	}
+	return rec, nil
 }
 
 // adoptOrphans re-admits attempt projections that the ledger no longer lists.
 // A claim saves state.md before its projection, so a projection without a
 // ledger entry is an attempt that a stale writer dropped.
-func (s *Store) adoptOrphans(r *mission.Record) (int, error) {
-	d, e := s.dir(r.Handle)
+func (s *App) adoptOrphans(r *mission.Record) (int, error) {
+	d, e := s.Repo.Dir(r.Handle)
 	if e != nil {
 		return 0, e
 	}
@@ -320,7 +341,7 @@ func (s *Store) adoptOrphans(r *mission.Record) (int, error) {
 			return adopted, e
 		}
 		var a mission.Attempt
-		if _, e = parseMarkdown(b, &a); e != nil {
+		if _, e = platform.ParseMarkdown(b, &a); e != nil {
 			return adopted, mission.Problem("invalid_note", "attempt projection %s cannot be read: %v", name, e)
 		}
 		if a.Sequence != seq || a.ID == "" {

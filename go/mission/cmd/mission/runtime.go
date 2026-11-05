@@ -37,8 +37,8 @@ func readBounded(path string, max int64) ([]byte, error) {
 	return b, nil
 }
 
-func (s *Store) checkBinding(r mission.Record, cwd, branch string) (string, error) {
-	repo, e := s.repo(r.Mission.Repo)
+func (s *App) checkBinding(r mission.Record, cwd, branch string) (string, error) {
+	repo, e := s.Repo.Repo(r.Mission.Repo)
 	if e != nil {
 		return "", e
 	}
@@ -238,12 +238,12 @@ func ensureWorktree(checkout, cwd, branch string) error {
 
 // A mission keeps its worktree across steps, retries, and checkpoint revisions.
 // Existing sessions can adopt their current linked worktree with --cwd.
-func (s *Store) workspace(h, cwd, base, root string) (mission.Record, error) {
-	return s.mutate(h, func(r *mission.Record) error {
+func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
+	return s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}
-		repo, e := s.repo(r.Mission.Repo)
+		repo, e := s.Repo.Repo(r.Mission.Repo)
 		if e != nil {
 			return e
 		}
@@ -305,7 +305,7 @@ func (s *Store) workspace(h, cwd, base, root string) (mission.Record, error) {
 				return e
 			}
 			cwd = filepath.Join(root, "mission-"+r.Mission.Slug)
-			owner := s.Vault + ":" + h
+			owner := s.Repo.VaultPath() + ":" + h
 			key := "branch." + branch + ".missionOwner"
 			claim := false // the branch is ours but its marker still needs writing
 			if _, exists := gitText(checkout, "rev-parse", "--verify", "refs/heads/"+branch); exists == nil {
@@ -382,7 +382,7 @@ func (s *Store) workspace(h, cwd, base, root string) (mission.Record, error) {
 	})
 }
 
-func (s *Store) attachBinding(r *mission.Record, p mission.PiAttachment, cwd, branch string) error {
+func (s *App) attachBinding(r *mission.Record, p mission.PiAttachment, cwd, branch string) error {
 	common, e := s.checkBinding(*r, cwd, branch)
 	if e != nil {
 		return e
@@ -457,7 +457,7 @@ func validatePiSession(p *mission.PiAttachment) error {
 	return nil
 }
 
-func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) {
+func (s *App) attach(h string, p mission.PiAttachment) (mission.Claim, error) {
 	if r, e := s.load(h); e != nil {
 		return mission.Claim{}, e
 	} else if e = requireOpen(r); e != nil {
@@ -469,16 +469,12 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 	// Replaying an attach recovers the same attempt, never a second writer.
 	var c mission.Claim
 	var found bool
-	e := s.locked(func() error {
-		r, e := s.load(h)
-		if e != nil {
-			return e
-		}
-		if e = requireOpen(r); e != nil {
+	_, e := s.update(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
 			return e
 		}
 		if r.State.Active == "" {
-			return nil
+			return mission.ErrNoWrite
 		}
 		a, e := mission.FindAttempt(&r.State, r.State.Active)
 		if e != nil {
@@ -490,14 +486,10 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 		if e = authorize(a, p.Token); e != nil {
 			return e
 		}
-		if e = s.attachBinding(&r, p, p.Cwd, a.Branch); e != nil {
+		if e = s.attachBinding(r, p, p.Cwd, a.Branch); e != nil {
 			return e
 		}
-		r.State.Revision++
-		if e = s.save(&r); e != nil {
-			return e
-		}
-		c, e = s.emitClaim(r, *a, p.Token)
+		c, e = s.emitClaim(*r, *a, p.Token)
 		if e != nil {
 			return e
 		}
@@ -514,9 +506,9 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 // launch may reserve again. A recorded session or session file keeps the
 // intent: a live owner is never taken over, and an intent this call did not
 // reserve is never released.
-func (s *Store) release(h, launchID string) (map[string]any, error) {
+func (s *App) release(h, launchID string) (map[string]any, error) {
 	released := false
-	r, e := s.mutate(h, func(r *mission.Record) error {
+	r, e := s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}
@@ -545,9 +537,9 @@ func (s *Store) release(h, launchID string) (map[string]any, error) {
 // record; it is never written as the launch intent, because the intent is the
 // reservation a captain consumes, not a value a plan can derive. A second ack
 // writes nothing and says so, so a repeated deploy is harmless.
-func (s *Store) ack(h string) (map[string]any, error) {
+func (s *App) ack(h string) (map[string]any, error) {
 	acknowledged, token := false, ""
-	r, e := s.mutate(h, func(r *mission.Record) error {
+	r, e := s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}
@@ -555,7 +547,7 @@ func (s *Store) ack(h string) (map[string]any, error) {
 		if b == nil {
 			return mission.Problem("worktree_required", "prepare a mission workspace first")
 		}
-		token = ackToken(s.Vault, h, b.Branch)
+		token = ackToken(s.Repo.VaultPath(), h, b.Branch)
 		if b.LaunchAck == "" {
 			acknowledged = true
 			b.LaunchAck = token
@@ -569,7 +561,7 @@ func (s *Store) ack(h string) (map[string]any, error) {
 }
 
 // launch reserves one launch intent, or records the session file an adapter got.
-func (s *Store) launch(h, file, launchID string) (map[string]any, error) {
+func (s *App) launch(h, file, launchID string) (map[string]any, error) {
 	if file != "" {
 		p, e := filepath.Abs(file)
 		if e != nil {
@@ -582,7 +574,7 @@ func (s *Store) launch(h, file, launchID string) (map[string]any, error) {
 		file = filepath.Join(parent, filepath.Base(p))
 	}
 	acquired := false
-	r, e := s.mutate(h, func(r *mission.Record) error {
+	r, e := s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}

@@ -12,7 +12,7 @@ import (
 
 // asksOf reads the ask files of one mission straight from disk, so a test proves
 // the durable format instead of trusting the reader that lists it.
-func asksOf(t *testing.T, s *Store, h string) []Ask {
+func asksOf(t *testing.T, s *App, h string) []Ask {
 	t.Helper()
 	d, e := s.dir(h)
 	must(t, e)
@@ -33,7 +33,7 @@ func asksOf(t *testing.T, s *Store, h string) []Ask {
 }
 
 // askCmd runs one `mission ask` line the way a captain types it.
-func askCmd(t *testing.T, s *Store, argv ...string) (any, error) {
+func askCmd(t *testing.T, s *App, argv ...string) (any, error) {
 	t.Helper()
 	a, e := platform.ParseArgs(append([]string{"ask"}, argv...))
 	must(t, e)
@@ -139,7 +139,7 @@ func TestAskListShowsPendingThenDelivered(t *testing.T) {
 	ask.DeliveredAt, ask.DeliveredTo = "2026-11-05T19:20:00Z", "commander-session"
 	b, e := json.Marshal(ask)
 	must(t, e)
-	must(t, atomicWrite(list.Pending[0].Path, append(b, '\n')))
+	must(t, platform.AtomicWrite(list.Pending[0].Path, append(b, '\n')))
 	v, e = askCmd(t, s, "--list", h, "--json")
 	must(t, e)
 	list = v.(askListing)

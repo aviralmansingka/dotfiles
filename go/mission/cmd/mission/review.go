@@ -73,7 +73,7 @@ func viewOf(r mission.Record) recordView {
 }
 
 // listViews gives every mission row the same derived fields as show.
-func (s *Store) listViews() ([]recordView, error) {
+func (s *App) listViews() ([]recordView, error) {
 	recs, e := s.list()
 	if e != nil {
 		return nil, e
@@ -186,7 +186,7 @@ func reviewTarget(r mission.Record, given string, decision string) (string, erro
 
 // decide records one owner decision. Revision is a legacy conflict check, not
 // a target: the review id and the evidence hash already pin the reviewed work.
-func (s *Store) decide(req decisionRequest) (decisionOutcome, error) {
+func (s *App) decide(req decisionRequest) (decisionOutcome, error) {
 	var out decisionOutcome
 	if req.Decision != "accept" && req.Decision != "revise" {
 		return out, mission.Problem("invalid_decision", "decision must be accept or revise")
@@ -195,12 +195,8 @@ func (s *Store) decide(req decisionRequest) (decisionOutcome, error) {
 		return out, mission.Problem("human_required", "the flag form records a human attestation; add --human or use:\n  %s",
 			decisionLine(req.Handle, req.ID, req.Decision, req.Note))
 	}
-	e := s.locked(func() error {
-		r, e := s.load(req.Handle)
-		if e != nil {
-			return e
-		}
-		id, e := reviewTarget(r, req.ID, req.Decision)
+	rec, e := s.update(req.Handle, func(r *mission.Record) error {
+		id, e := reviewTarget(*r, req.ID, req.Decision)
 		if e != nil {
 			// A repeat of the recorded decision is idempotent, not an error.
 			id = req.ID
@@ -211,9 +207,9 @@ func (s *Store) decide(req decisionRequest) (decisionOutcome, error) {
 			if actor == "" {
 				actor = defaultActor()
 			}
-			if id != "" && decidedAlready(r, id, req.Decision, actor, strings.TrimSpace(req.Note)) {
-				out = decisionOutcome{Record: r, Already: true}
-				return nil
+			if id != "" && decidedAlready(*r, id, req.Decision, actor, strings.TrimSpace(req.Note)) {
+				out = decisionOutcome{Already: true}
+				return mission.ErrNoWrite
 			}
 			return e
 		}
@@ -237,16 +233,16 @@ func (s *Store) decide(req decisionRequest) (decisionOutcome, error) {
 		}
 		cs := r.State.Checkpoints[id]
 		if !(cs.Status == "pending" && (r.State.Pending == id || r.State.Pending == "")) {
-			if decidedAlready(r, id, req.Decision, actor, note) {
-				out = decisionOutcome{Record: r, Already: true}
-				return nil
+			if decidedAlready(*r, id, req.Decision, actor, note) {
+				out = decisionOutcome{Already: true}
+				return mission.ErrNoWrite
 			}
 			return mission.Problem("review_not_pending", "review %s is no longer pending; inspect the mission with:\n  mission show %s", id, r.Handle)
 		}
 		if req.Revision > 0 && r.State.Revision != req.Revision {
 			return mission.Problem("revision_conflict", "expected revision %d, current %d", req.Revision, r.State.Revision)
 		}
-		d, _ := s.dir(req.Handle)
+		d, _ := s.Repo.Dir(req.Handle)
 		b, e := os.ReadFile(filepath.Join(d, "mission.md"))
 		if e != nil {
 			return e
@@ -254,7 +250,7 @@ func (s *Store) decide(req decisionRequest) (decisionOutcome, error) {
 		if mission.Digest(b) != r.State.SpecHash {
 			return mission.Problem("brief_changed", "the mission brief changed after the review opened; inspect it with:\n  mission show %s", r.Handle)
 		}
-		p, e := s.path(r.Mission.Repo, r.Mission.Slug, cs.Evidence)
+		p, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, cs.Evidence)
 		if e != nil {
 			return e
 		}
@@ -263,7 +259,7 @@ func (s *Store) decide(req decisionRequest) (decisionOutcome, error) {
 			return mission.Problem("evidence_changed", "the reviewed evidence changed; refresh the review with:\n  mission review reopen %s %s --note \"Refreshed after the worker fix\"", r.Handle, id)
 		}
 		if req.Decision == "accept" {
-			if a, e := mission.FindAttempt(&r.State, cs.Attempt); e == nil && len(a.Verifications) > 0 && !s.verified(r, *a) {
+			if a, e := mission.FindAttempt(&r.State, cs.Attempt); e == nil && len(a.Verifications) > 0 && !s.verified(*r, *a) {
 				return mission.Problem("evidence_changed", "checked input or verification evidence changed since this result; refresh the review with:\n  mission review reopen %s %s --note \"Refreshed after the worker fix\"", r.Handle, id)
 			}
 		}
@@ -305,14 +301,13 @@ func (s *Store) decide(req decisionRequest) (decisionOutcome, error) {
 				}
 			}
 		}
-		r.State.Revision++
-		if e = s.save(&r); e != nil {
-			return e
-		}
-		out = decisionOutcome{Record: r}
 		return nil
 	})
-	return out, e
+	if e != nil {
+		return out, e
+	}
+	out.Record = rec
+	return out, nil
 }
 
 // decidedAlready reports the same decision already recorded, so a repeated
@@ -327,7 +322,7 @@ func decidedAlready(r mission.Record, id, decision, actor, note string) bool {
 }
 
 // decideRetry drops one stale legacy revision and retries once.
-func (s *Store) decideRetry(req decisionRequest) (decisionOutcome, error) {
+func (s *App) decideRetry(req decisionRequest) (decisionOutcome, error) {
 	out, e := s.decide(req)
 	if d, ok := e.(*mission.DomainError); ok && d.Code == "revision_conflict" && req.Revision > 0 {
 		req.Revision = 0
@@ -337,7 +332,7 @@ func (s *Store) decideRetry(req decisionRequest) (decisionOutcome, error) {
 }
 
 // checkpoint keeps the pre-review API for the existing callers and tests.
-func (s *Store) checkpoint(h, id, decision, note, actor string, human bool, revision int) (mission.Record, error) {
+func (s *App) checkpoint(h, id, decision, note, actor string, human bool, revision int) (mission.Record, error) {
 	out, e := s.decide(decisionRequest{Handle: h, ID: id, Decision: decision, Note: note, Actor: actor, Human: human, Legacy: true, Revision: revision})
 	return out.Record, e
 }
@@ -345,7 +340,7 @@ func (s *Store) checkpoint(h, id, decision, note, actor string, human bool, revi
 // reopen rebinds a pending review to the current artifact. The owner still
 // decides; reopen re-runs the required checks, so the new content has fresh
 // verification before the decision.
-func (s *Store) reopen(h, id, note string) (mission.Record, error) {
+func (s *App) reopen(h, id, note string) (mission.Record, error) {
 	var current mission.Record
 	var attempt mission.Attempt
 	var st mission.Step
@@ -356,7 +351,7 @@ func (s *Store) reopen(h, id, note string) (mission.Record, error) {
 		return current, mission.Problem("note_required", "reopen needs --note TEXT. Run:\n  mission review reopen %s %s --note \"Refreshed after the worker fix\"", h, platformFallbackID(id))
 	}
 	run := mission.Verification{ID: mission.UID("verify-"), Started: mission.Now(), Runner: "mission/checks@" + platform.Machine()}
-	_, e := s.mutate(h, func(r *mission.Record) error {
+	_, e := s.update(h, func(r *mission.Record) error {
 		t, e := reviewTarget(*r, id, "accept")
 		if e != nil {
 			return e
@@ -394,11 +389,7 @@ func (s *Store) reopen(h, id, note string) (mission.Record, error) {
 	// Checks run without the vault lock, like the worker verification path.
 	logs := executeChecks(st, attempt.Cwd, before, &run)
 	var failed error
-	e = s.locked(func() error {
-		r, e := s.load(h)
-		if e != nil {
-			return e
-		}
+	rec, e := s.update(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, attempt.ID)
 		if e != nil {
 			return e
@@ -406,7 +397,7 @@ func (s *Store) reopen(h, id, note string) (mission.Record, error) {
 		if a.Verifying != run.ID {
 			return mission.Problem("stale_attempt", "verification no longer owns this attempt")
 		}
-		if e = s.recordVerification(&r, a, st, &run, before, logs); e != nil {
+		if e = s.recordVerification(r, a, st, &run, before, logs); e != nil {
 			return e
 		}
 		if allPassed(run, st) {
@@ -414,19 +405,14 @@ func (s *Store) reopen(h, id, note string) (mission.Record, error) {
 			cs.Hash = before.ArtifactHash
 			r.State.Checkpoints[target] = cs
 		} else {
-			failed = mission.Problem("checks_failed", "reopened review failed checks: %s", verificationSummary(run))
+			failed = mission.Problem("checks_failed", "reopened review failed checks: %s", mission.VerificationSummary(run))
 		}
-		r.State.Revision++
-		if e = s.save(&r); e != nil {
-			return e
-		}
-		current = r
 		return nil
 	})
 	if e != nil {
 		return current, e
 	}
-	return current, failed
+	return rec, failed
 }
 
 func platformFallbackID(id string) string {
@@ -438,7 +424,7 @@ func platformFallbackID(id string) string {
 
 // cmdCheckpoint accepts both surfaces: the review verb form, and the legacy
 // flag form. The verb form implies the human attestation.
-func cmdCheckpoint(a platform.Args, s *Store) (any, error) {
+func cmdCheckpoint(a platform.Args, s *App) (any, error) {
 	h := platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE"))
 	if v := a.At(1); v == "accept" || v == "revise" {
 		req := decisionRequest{Handle: platform.Fallback(a.At(2), os.Getenv("MISSION_HANDLE")), ID: a.At(3), Decision: v, Note: a.Get("note"), Actor: a.Get("actor"), Human: true}
@@ -473,7 +459,7 @@ func revisionFlag(v string) (int, error) {
 	return n, nil
 }
 
-func cmdReview(a platform.Args, s *Store) (any, error) {
+func cmdReview(a platform.Args, s *App) (any, error) {
 	switch a.At(1) {
 	case "reopen":
 		r, e := s.reopen(platform.Fallback(a.At(2), os.Getenv("MISSION_HANDLE")), a.At(3), a.Get("note"))

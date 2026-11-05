@@ -142,7 +142,7 @@ func requestLaunch(dir string, owner launchOwner, handle, repo string, now time.
 	if e := os.MkdirAll(filepath.Dir(launchFile(dir, handle)), 0o700); e != nil {
 		return Launch{}, false, e
 	}
-	return l, true, atomicWrite(launchFile(dir, handle), append(b, '\n'))
+	return l, true, platform.AtomicWrite(launchFile(dir, handle), append(b, '\n'))
 }
 
 // launchSummary is the one line the list and the detail panel print for a live

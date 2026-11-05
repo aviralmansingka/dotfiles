@@ -10,7 +10,7 @@ import (
 )
 
 func missionFromArgs(a platform.Args) (mission.Mission, error) {
-	repo, slug, e := splitHandle(a.At(1))
+	repo, slug, e := mission.SplitHandle(a.At(1))
 	if e != nil {
 		return mission.Mission{}, e
 	}
@@ -20,7 +20,7 @@ func missionFromArgs(a platform.Args) (mission.Mission, error) {
 		if e != nil {
 			return m, e
 		}
-		body, e := parseMarkdown(b, &m)
+		body, e := platform.ParseMarkdown(b, &m)
 		if e != nil {
 			return m, e
 		}
@@ -28,7 +28,7 @@ func missionFromArgs(a platform.Args) (mission.Mission, error) {
 		m.Slug = slug
 		m.Body = body
 		mission.NormalizeMission(&m)
-		return m, validateMission(m)
+		return m, mission.Validate(m)
 	}
 	for _, title := range a.Flags["step"] {
 		m.Steps = append(m.Steps, mission.Step{Title: title, Agent: platform.Fallback(a.Get("agent"), "any")})
@@ -41,5 +41,5 @@ func missionFromArgs(a platform.Args) (mission.Mission, error) {
 		m.Checkpoints = append(m.Checkpoints, mission.Checkpoint{ID: fmt.Sprintf("C%02d", i+1), After: after, Kind: "human", Question: q})
 	}
 	mission.NormalizeMission(&m)
-	return m, validateMission(m)
+	return m, mission.Validate(m)
 }

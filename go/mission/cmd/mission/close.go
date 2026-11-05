@@ -45,28 +45,20 @@ func unfinishedSteps(r mission.Record) []string {
 
 // close retires one mission record. It refuses live work unless forced, and a
 // second close on the same record reports the earlier close instead of failing.
-func (s *Store) close(h, note string, force bool) (closedView, error) {
+func (s *App) close(h, note string, force bool) (closedView, error) {
 	var out closedView
-	e := s.locked(func() error {
-		r, e := s.load(h)
-		if e != nil {
-			return e
-		}
+	_, e := s.update(h, func(r *mission.Record) error {
 		if r.State.Status == closedStatus {
 			out = closedView{Handle: r.Handle, Status: closedStatus, ClosedAt: r.State.ClosedAt, CloseNote: r.State.CloseNote, Already: true}
-			return nil
+			return mission.ErrNoWrite
 		}
-		open := unfinishedSteps(r)
+		open := unfinishedSteps(*r)
 		if !force && (r.State.Active != "" || len(open) > 0) {
 			return mission.Problem("unfinished", "%s still has open work: %s. Retire it anyway with:\n  mission close %s --force --note %q", r.Handle, openWork(r.State.Active, open), h, platform.Fallback(strings.TrimSpace(note), "worktree retired by /cleanup"))
 		}
 		r.State.Status = closedStatus
 		r.State.ClosedAt = mission.Now()
 		r.State.CloseNote = note
-		r.State.Revision++
-		if e = s.save(&r); e != nil {
-			return e
-		}
 		out = closedView{Handle: r.Handle, Status: closedStatus, ClosedAt: r.State.ClosedAt, CloseNote: r.State.CloseNote}
 		return nil
 	})

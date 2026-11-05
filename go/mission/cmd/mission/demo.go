@@ -6,21 +6,22 @@ import (
 	"path/filepath"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
-func seedDemo(s *Store) ([]mission.Record, error) {
-	existing, e := s.repos()
+func seedDemo(s *App) ([]mission.Record, error) {
+	existing, e := s.Repo.Repos()
 	if e != nil {
 		return nil, e
 	}
 	if len(existing) > 0 {
 		return nil, mission.Problem("demo_not_empty", "demo requires an empty mission collection; existing records were left intact")
 	}
-	checkout := filepath.Join(s.Vault, "demo-checkout")
+	checkout := filepath.Join(s.Repo.VaultPath(), "demo-checkout")
 	if e = os.MkdirAll(checkout, 0700); e != nil {
 		return nil, e
 	}
-	if _, e = s.addRepo("dotfiles", checkout, "https://github.com/aviral/dotfiles"); e != nil {
+	if _, e = s.Repo.AddRepo("dotfiles", checkout, "https://github.com/aviral/dotfiles"); e != nil {
 		return nil, e
 	}
 	definitions := []mission.Mission{
@@ -38,8 +39,8 @@ func seedDemo(s *Store) ([]mission.Record, error) {
 	if e != nil {
 		return nil, e
 	}
-	session := filepath.Join(s.Vault, "demo-session.jsonl")
-	if e = atomicWrite(session, []byte("{\"type\":\"session\",\"id\":\"pi-demo-7f23\",\"demo\":true}\n")); e != nil {
+	session := filepath.Join(s.Repo.VaultPath(), "demo-session.jsonl")
+	if e = platform.AtomicWrite(session, []byte("{\"type\":\"session\",\"id\":\"pi-demo-7f23\",\"demo\":true}\n")); e != nil {
 		return nil, e
 	}
 	events := []mission.Event{{Type: "session-start", SessionID: "pi-demo-7f23", SessionFile: session, Summary: "Simulated Pi session bound to attempt"}, {Type: "agent-start", Summary: "Inspect lifecycle boundaries"}, {Type: "tool-start", Tool: "read", Summary: "Read interactive-subagents lifecycle handlers"}, {Type: "tool-end", Tool: "read", Summary: "Identified session, agent, tool and shutdown events"}, {Type: "agent-end", Summary: "Turn ended; attempt is still owned"}}
@@ -49,7 +50,7 @@ func seedDemo(s *Store) ([]mission.Record, error) {
 			return nil, e
 		}
 	}
-	if e = atomicWrite(artifactPath(s, c), []byte("# Lifecycle map\n\nSIMULATED EVIDENCE\n\n- session_start binds the session.\n- agent_end ends a turn, not the attempt.\n- session_shutdown preserves the transcript.\n\nA real Pi compatibility pilot is still required.\n")); e != nil {
+	if e = platform.AtomicWrite(s.Repo.Artifacts(c), []byte("# Lifecycle map\n\nSIMULATED EVIDENCE\n\n- session_start binds the session.\n- agent_end ends a turn, not the attempt.\n- session_shutdown preserves the transcript.\n\nA real Pi compatibility pilot is still required.\n")); e != nil {
 		return nil, e
 	}
 	if _, e = s.finish(c.Handle, c.Attempt.ID, c.Token, false, "Simulated result ready for human review", false, 0); e != nil {

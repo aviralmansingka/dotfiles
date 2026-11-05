@@ -14,14 +14,17 @@ hook retries, transcript copies, checkpoint pauses, and verified completion.
 They check that a normal turn without a completion report keeps its owner.
 They also check that an interrupted turn cannot settle a completion report.
 
-Four Go cases pin the ledger commit point. A save of a record read before a claim
-is refused with `revision_conflict`. Two actors with different lock directories
-(`Store.LockDir`, a second `TMPDIR`) reproduce the lost-claim incident through
-`mutate`, and the same compare-and-swap stops it. The journal names every writer,
-refused saves included. `mission repair` re-admits an orphaned
-`attempts/NNN.md` projection, restores the owning attempt and step, and keeps a
-passed step passed. The extension tests pin the gate: a tracking record that
-fails degrades read and bash-class tools to a warning and keeps blocking edits.
+Go cases pin the ledger commit point, and the storage half of that contract is
+tested beside the store it pins (`internal/adapters/vaultfs`). A save of a record
+read before a claim is refused with `revision_conflict`. Two actors with different
+lock directories (`vaultfs.WithLockDir`, a second `TMPDIR`) reproduce the
+lost-claim incident through the store's write transaction, and the same
+compare-and-swap stops it. The journal names every writer, refused saves
+included. `mission repair` re-admits an orphaned `attempts/NNN.md` projection,
+restores the owning attempt and step, replays an interrupted step edit, and
+keeps a passed step passed. The extension tests pin the gate: a tracking record
+that fails degrades read and bash-class tools to a warning and keeps blocking
+edits.
 
 Four context cases pin the attempt every emitted line names. Each one asserts on
 the rendered text: the claim a seat reads, the context `show` returns, the driver

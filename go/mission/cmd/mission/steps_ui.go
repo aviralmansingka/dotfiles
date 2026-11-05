@@ -1,9 +1,10 @@
 package main
 
 import (
-	"charm.land/huh/v2"
 	"fmt"
 	"strings"
+
+	"charm.land/huh/v2"
 
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"

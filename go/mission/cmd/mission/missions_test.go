@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 func TestMissionRecordRoundTrip(t *testing.T) {
@@ -48,7 +49,7 @@ func TestMissionValidationRejectsBadDefinitions(t *testing.T) {
 		m.Steps = append([]mission.Step{}, base.Steps...)
 		mission.NormalizeMission(&m)
 		tweak(&m)
-		if e := validateMission(m); e == nil {
+		if e := mission.Validate(m); e == nil {
 			t.Fatalf("%s: invalid mission accepted", name)
 		}
 	}
@@ -56,10 +57,10 @@ func TestMissionValidationRejectsBadDefinitions(t *testing.T) {
 
 func TestTitleStringsInMissionTemplate(t *testing.T) {
 	var m mission.Mission
-	_, e := parseMarkdown([]byte("---\nrepo: dotfiles\nslug: simple-steps\ntitle: Simple\ngoal: Produce evidence\nkind: research\nsteps:\n  - Inspect hooks\n  - title: Propose a fix\n---\n\nShared constraints."), &m)
+	_, e := platform.ParseMarkdown([]byte("---\nrepo: dotfiles\nslug: simple-steps\ntitle: Simple\ngoal: Produce evidence\nkind: research\nsteps:\n  - Inspect hooks\n  - title: Propose a fix\n---\n\nShared constraints."), &m)
 	must(t, e)
 	mission.NormalizeMission(&m)
-	must(t, validateMission(m))
+	must(t, mission.Validate(m))
 	if m.Steps[1].ID != "S02" {
 		t.Fatal("title-only step IDs missing")
 	}

@@ -13,7 +13,7 @@ import (
 // backdate rewrites every stamp the attempt keeps, so repair sees a stream that
 // has been silent for longer than its quiet window. It is the only way a test
 // proves the window: no test waits ten minutes for real.
-func backdate(t *testing.T, s *Store, h string, d time.Duration) {
+func backdate(t *testing.T, s *App, h string, d time.Duration) {
 	t.Helper()
 	at := time.Now().UTC().Add(-d).Format(time.RFC3339Nano)
 	_, e := s.mutate(h, func(r *mission.Record) error {
@@ -38,7 +38,7 @@ func backdate(t *testing.T, s *Store, h string, d time.Duration) {
 // recordSession writes the attempt's recorded session file, last modified age
 // ago, the way a Pi seat records the file its session appends to. The file is
 // this host's only heartbeat for an attempt that reports no pid.
-func recordSession(t *testing.T, s *Store, h, id string, age time.Duration) string {
+func recordSession(t *testing.T, s *App, h, id string, age time.Duration) string {
 	t.Helper()
 	p := filepath.Join(t.TempDir(), "session.jsonl")
 	must(t, os.WriteFile(p, []byte(`{"type":"session_end","stopReason":"stop"}`+"\n"), 0o600))
@@ -58,7 +58,7 @@ func recordSession(t *testing.T, s *Store, h, id string, age time.Duration) stri
 
 // recordHost moves the attempt to another machine, with a pid that means
 // nothing on this host.
-func recordHost(t *testing.T, s *Store, h, id, host string, pid int) {
+func recordHost(t *testing.T, s *App, h, id, host string, pid int) {
 	t.Helper()
 	_, e := s.mutate(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)

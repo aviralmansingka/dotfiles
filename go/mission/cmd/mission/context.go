@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 // The active attempt is a ledger fact, never a captured value.
@@ -103,12 +104,12 @@ func contextOf(r mission.Record) contextView {
 // file, and the injected context. Everything here is computed from the record as
 // it stands, so a replayed attach after a re-claim names the new attempt, and a
 // report the seat sends names an attempt the ledger lists.
-func (s *Store) emitClaim(r mission.Record, a mission.Attempt, token string) (mission.Claim, error) {
+func (s *App) emitClaim(r mission.Record, a mission.Attempt, token string) (mission.Claim, error) {
 	listed := listedAttempt(r)
 	if listed == nil || listed.ID != a.ID {
 		return mission.Claim{}, mission.Problem("stale_attempt", "attempt %s is not the attempt the ledger lists", a.ID)
 	}
-	d, e := s.dir(r.Handle)
+	d, e := s.Repo.Dir(r.Handle)
 	if e != nil {
 		return mission.Claim{}, e
 	}
@@ -118,7 +119,7 @@ func (s *Store) emitClaim(r mission.Record, a mission.Attempt, token string) (mi
 	if e = os.MkdirAll(filepath.Dir(brief), 0o700); e != nil {
 		return mission.Claim{}, e
 	}
-	if e = atomicWrite(brief, []byte(text)); e != nil {
+	if e = platform.AtomicWrite(brief, []byte(text)); e != nil {
 		return mission.Claim{}, e
 	}
 	artifact := filepath.Join(d, filepath.FromSlash(a.Artifact))
@@ -126,7 +127,7 @@ func (s *Store) emitClaim(r mission.Record, a mission.Attempt, token string) (mi
 		Handle: r.Handle, Step: st, Attempt: a, Token: token,
 		Context: text, Driver: driverLines(r),
 		Environment: map[string]string{
-			"MISSION_VAULT": s.Vault, "MISSION_HANDLE": r.Handle, "MISSION_ATTEMPT": listed.ID,
+			"MISSION_VAULT": s.Repo.VaultPath(), "MISSION_HANDLE": r.Handle, "MISSION_ATTEMPT": listed.ID,
 			"MISSION_TOKEN": token, "MISSION_ARTIFACT": artifact, "MISSION_BRIEF": brief, "MISSION_STEP": a.Step,
 		},
 	}, nil

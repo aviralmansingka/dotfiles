@@ -55,9 +55,9 @@ func boundedFile(p string, limit int64) ([]byte, error) {
 	}
 	return b, e
 }
-func (s *Store) subject(r mission.Record, a mission.Attempt, st mission.Step) subjectSnapshot {
+func (s *App) subject(r mission.Record, a mission.Attempt, st mission.Step) subjectSnapshot {
 	var snap subjectSnapshot
-	p, e := s.path(r.Mission.Repo, r.Mission.Slug, a.Artifact)
+	p, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, a.Artifact)
 	if e == nil {
 		snap.Artifact, e = boundedFile(p, 16<<20)
 	}
@@ -75,7 +75,7 @@ func (s *Store) subject(r mission.Record, a mission.Attempt, st mission.Step) su
 		if name == "go-test" {
 			goTestDeclared = true
 		}
-		if strings.HasPrefix(name, cmdCheckPrefix) {
+		if strings.HasPrefix(name, mission.CmdCheckPrefix) {
 			cmdDeclared = true
 		}
 	}
@@ -210,7 +210,7 @@ func allPassed(v mission.Verification, st mission.Step) bool {
 	}
 	return true
 }
-func (s *Store) verified(r mission.Record, a mission.Attempt) bool {
+func (s *App) verified(r mission.Record, a mission.Attempt) bool {
 	if len(a.Verifications) == 0 {
 		return false
 	}
@@ -224,7 +224,7 @@ func (s *Store) verified(r mission.Record, a mission.Attempt) bool {
 			return false
 		}
 		for _, ev := range c.Evidence {
-			p, e := s.path(r.Mission.Repo, r.Mission.Slug, ev.Path)
+			p, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, ev.Path)
 			if e != nil {
 				return false
 			}

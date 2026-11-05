@@ -136,7 +136,7 @@ func TestPlanWritesNothing(t *testing.T) {
 	s, h, _ := piFixture(t)
 	state := t.TempDir()
 	t.Setenv("MISSION_STATE_DIR", state)
-	before := tree(t, s.Vault)
+	before := tree(t, s.Repo.VaultPath())
 	worktrees := filepath.Dir(mustRuntime(t, s, h).Cwd)
 	beforeWorktrees := tree(t, worktrees)
 	rec, e := s.load(h)
@@ -148,7 +148,7 @@ func TestPlanWritesNothing(t *testing.T) {
 	_, e = s.plan(h, "rex", "")
 	must(t, e)
 
-	if after := tree(t, s.Vault); !reflect.DeepEqual(before, after) {
+	if after := tree(t, s.Repo.VaultPath()); !reflect.DeepEqual(before, after) {
 		t.Fatalf("plan changed the vault:\nbefore %v\nafter  %v", before, after)
 	}
 	if after := tree(t, worktrees); !reflect.DeepEqual(beforeWorktrees, after) {
@@ -167,7 +167,7 @@ func TestPlanWritesNothing(t *testing.T) {
 	}
 }
 
-func mustRuntime(t *testing.T, s *Store, h string) *mission.RuntimeBinding {
+func mustRuntime(t *testing.T, s *App, h string) *mission.RuntimeBinding {
 	t.Helper()
 	r, e := s.load(h)
 	must(t, e)
