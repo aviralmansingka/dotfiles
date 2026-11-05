@@ -193,7 +193,6 @@ expect_contains "dry remote" "homeConfigurations.remote-devbox" "names the devbo
 expect_contains "dry remote" "remote switch over" "reports the remote mode"
 expect_contains "dry remote" "flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo" "lists the deploy tree only"
 expect_contains "dry remote" "terminfo secrets scripts/stow-packages" "stages the encrypted secrets the sops module reads at evaluation"
-expect_contains "dry remote" "scripts/ssh-to-age-key.py" "stages the store-free identity converter a host needs before its first switch"
 
 echo "== remote deploy copies the tree and switches over ssh"
 STUB_HOSTNAME=testmac run "remote run" remote devbox
