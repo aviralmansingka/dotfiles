@@ -31,10 +31,6 @@ in
     chmod 644 "$HOME/.local/state/fleet-owned-tools"
   '';
 
-  home.file.".local/state/fleet-libvirt-domains.json".text = builtins.toJSON (
-    (import ../../lib/libvirt-domains.nix).domains
-  );
-
   home.sessionVariables = {
     FLEET_PROFILE = "remote";
   };

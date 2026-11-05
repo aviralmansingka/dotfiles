@@ -87,7 +87,7 @@ RULES = (
     ),
     Rule(
         "hypervisor",
-        "root libvirt/QEMU daemon: the nine domains and their networks run under it",
+        "root libvirt/QEMU daemon: the guests' networks run under it",
         r"libvirt-.*|virtinst|qemu-.*|cloud-image-utils|debootstrap|dnsmasq|genisoimage",
     ),
     Rule(
