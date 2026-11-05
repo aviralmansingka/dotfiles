@@ -107,10 +107,11 @@ bob use nightly
 # Mirrors: ops/packer/scripts/deploy_dotfiles.sh
 
 echo "==> Removing conflicting files"
-rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
+rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.zprofile" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
 
 echo "==> Deploying dotfiles via stow"
 stow -d "$DOTFILES_DIR" -t "$HOME" zsh
+stow -d "$DOTFILES_DIR" -t "$HOME" profile
 stow -d "$DOTFILES_DIR" -t "$HOME" tmux
 stow -d "$DOTFILES_DIR" -t "$HOME" nvim
 stow -d "$DOTFILES_DIR" -t "$HOME" starship

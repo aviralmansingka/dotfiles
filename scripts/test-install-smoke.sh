@@ -51,6 +51,7 @@ newtmp() { mktemp -d "$TMPROOT/smoke.XXXXXX"; }
 # keeps this portable: macOS ships bash 3.2, which has no associative arrays.
 SENTINEL_TABLE='
 zsh=.zshenv
+profile=.profile
 tmux=.tmux.conf
 nvim=.config/nvim
 starship=.config/starship.toml
