@@ -66,8 +66,11 @@ parse, keys, and repo-paths.
   path, SKIP). The pr-digest and flight-checkin-reminders units were
   removed together with their feature (the retired-units list in
   README.md records them).
-- `launchd/Library/LaunchAgents` (2): com.aviral.dotfiles-auto-sync.plist,
-  com.aviral.vault-auto-sync.plist.
+- `launchd/Library/LaunchAgents`: no tracked files any more. The two
+  `com.aviral.*-auto-sync` plists were a stow package; nix-darwin renders them
+  now (`nix/services/launchd.nix`), so the suite has no plist in the checkout to
+  parse. Their rendered shape is checked with `nix eval` of
+  `.#darwinConfigurations.macbook.config.launchd.user.agents`.
 
 ## Known gaps
 

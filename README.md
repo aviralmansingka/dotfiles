@@ -36,7 +36,7 @@ For manual package and configuration deployment (excluding installer-managed int
 brew bundle
 gh extension install dlvhdr/gh-dash
 ./scripts/pi-settings-sync
-stow nvim tmux zsh ghostty aerospace git starship gh-dash tuicr agents pi herdr launchd
+stow nvim tmux zsh ghostty aerospace git starship gh-dash tuicr agents pi herdr
 ```
 
 On Linux (systemd) systems, deploy the user services with:
@@ -103,7 +103,6 @@ both binaries for a fresh machine. An older `cargo install`ed `~/.cargo/bin/rata
 | `gh-dash`    | GitHub dashboard config and PR worktree launcher                            |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
 | `git`        | Git configuration                                                           |
-| `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `nvim`       | Neovim with LazyVim                                                         |
 | `profile`    | Login-shell PATH for sh/bash (`~/.profile`: pi and rex binaries)            |
 | `rex`        | Rex terminal multiplexer keybindings (`~/.config/rex`)                       |
@@ -206,11 +205,11 @@ systemctl --user status vault-auto-sync.service dotfiles-auto-sync.service
 Manage macOS user agents:
 
 ```sh
-stow launchd
-launchctl bootstrap "gui/$UID" ~/Library/LaunchAgents/com.aviral.vault-auto-sync.plist
-launchctl bootstrap "gui/$UID" ~/Library/LaunchAgents/com.aviral.dotfiles-auto-sync.plist
+# The plists are rendered by nix-darwin into ~/Library/LaunchAgents by a switch.
 launchctl print "gui/$UID/com.aviral.vault-auto-sync"
 launchctl print "gui/$UID/com.aviral.dotfiles-auto-sync"
+# Logs, because launchd has no journal.
+tail -f ~/Library/Logs/com.aviral.vault-auto-sync.log
 ```
 
 ## Pi agent
