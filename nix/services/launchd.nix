@@ -6,8 +6,10 @@
 # this renderer removes. Everything job-specific now comes from
 # nix/services/jobs.nix; only platform policy lives here:
 #
-#   - PATH starts with `<home>/.nix-profile/bin`, then the system directories the
-#     plists already carried.
+#   - PATH starts with the nix-darwin per-user profile
+#     (`/etc/profiles/per-user/<user>/bin`, where the deploy actually puts every
+#     tool), keeps `~/.nix-profile/bin` behind it as a standalone-Home-Manager
+#     fallback, then the system directories the plists already carried.
 #   - an explicit interpreter stays: a launchd agent inherits no login shell
 #     environment.
 #   - launchd has no journal, so stdout and stderr go under `~/Library/Logs/`,
@@ -25,8 +27,13 @@ let
   user = config.system.primaryUser;
   home = config.home-manager.users.${user}.home.homeDirectory;
 
-  # Nix profile first — that is the fix. The tail is the order the plists used.
-  agentPath = "${home}/.nix-profile/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+  # The directory every deployed tool actually lands in. nix-darwin manages the
+  # per-user profile at /etc/profiles/per-user/<user> (225 binaries here) while
+  # `~/.nix-profile` — the standalone Home Manager location — does not exist on
+  # this host at all, so it follows the real profile as a fallback instead of
+  # leading it. Leading with it was the inherited bug: the agent then fell
+  # through to Homebrew and /usr/bin. The tail is the order the stow plists used.
+  agentPath = "/etc/profiles/per-user/${user}/bin:${home}/.nix-profile/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
 
   toHome = lib.replaceStrings [ "@home@" ] [ home ];
 
