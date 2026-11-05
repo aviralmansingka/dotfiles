@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, driverStatus, droppableReportError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
+import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, driverStatus, driverTask, droppableReportError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -1145,6 +1145,138 @@ test("Pi factory callbacks use final settlement and block only finish at a revie
   writeFileSync(join(f.cache,readdirSync(f.cache)[0]),"invalid JSON");
   await events.session_start({},ctx);
   assert.equal((await events.tool_call({toolName:"write"},ctx)).block,true);
+});
+
+/** The driver contract: a launched seat attaches first, every seat carries the
+ *  same duties, and a seat that answers no launch intent invents no id. Duty 3
+ *  keeps the judge for every step and drops it only for a step whose cmd: check
+ *  is the verdict; Duty 4 keeps the driver moving without a human nudge. */
+test("the driver contract carries the advance duty and no empty launch id", () => {
+  const launched = driverTask("dotfiles/contract", "launch-7");
+  const attached = driverTask("dotfiles/contract");
+  assert.match(launched, /launch_id=launch-7/);
+  // A hand attach answers no launch intent: no attach line and no empty id.
+  assert.doesNotMatch(attached, /launch_id/);
+  assert.doesNotMatch(attached, /undefined/);
+  for (const task of [launched, attached]) {
+    assert.match(task, /Duty 1 — hold the claim/);
+    assert.match(task, /Duty 2 — subagents do all step work/);
+    // A step with no cmd: check still carries the judge duty.
+    assert.match(task, /Duty 3 — subagents judge/);
+    assert.match(task, /spawn one judge subagent/);
+    assert.match(task, /When the step's checks include a cmd: check, the passed check is the verdict, so spawn no judge\./);
+    assert.match(task, /Duty 4 — advance in the same turn: after a judge records a pass, spawn the next step's work subagent in that same turn/);
+    assert.match(task, /A pending checkpoint is the only reason to stop between steps\./);
+  }
+});
+
+/** A mission CLI and a Herdr pane that answer without a binary: the attach path
+ *  reads `show`, replays `attach`, and records one `hook`, and the seat is one
+ *  pane in this session's cwd. A replayed attach recovers the same attempt,
+ *  exactly as the CLI does, so a second attach starts no second writer. */
+function attachFixture(t) {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-attach-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const cwd=join(root,"worktree");mkdirSync(cwd,{recursive:true});
+  const file=join(root,"pi.jsonl");writeFileSync(file,"");
+  const handle="dotfiles/attached";
+  const session="attach-pi";
+  const record={handle,mission:{title:"Attached",steps:[{id:"S01",title:"Inspect hooks"}]},
+    state:{status:"ready",current_step:"S01",active_attempt:"",runtime:null,attempts:[]}};
+  const claimOf=a=>({handle,step:a.step,attempt:a,environment:{MISSION_ARTIFACT:join(root,"vault","artifact.md"),MISSION_BRIEF:join(root,"brief.md")}});
+  const env={MISSION_BIN:"mission-fake",MISSION_VAULT:join(root,"vault"),MISSION_STATE_DIR:join(root,"cache"),
+    HERDR_ENV:"1",HERDR_PANE_ID:"pane-1",HERDR_WORKSPACE_ID:"ws-1"};
+  const run=async(binary,args)=>{
+    if(binary==="herdr") return JSON.stringify({result:{panes:[{pane_id:"pane-1",workspace_id:"ws-1",cwd,foreground_cwd:cwd}]}});
+    const verb=args.find(a=>["show","attach","hook"].includes(a));
+    if(verb==="show") return JSON.stringify({ok:true,data:record});
+    if(verb==="attach") {
+      if(!record.state.active_attempt) {
+        const a={id:"attempt-1",step:"S01",status:"running",brief_snapshot:"Inspect the lifecycle hooks.",cwd};
+        record.state.attempts.push(a);record.state.active_attempt=a.id;
+      }
+      record.state.runtime={session_id:session,cwd,session_file:file};
+      return JSON.stringify({ok:true,data:claimOf(record.state.attempts.at(-1))});
+    }
+    if(verb==="hook") return JSON.stringify({ok:true,data:{}});
+    throw Error("the attach path asked the CLI for "+args.slice(2).join(" "));
+  };
+  const ctx={cwd,sessionManager:{getSessionId:()=>session,getSessionFile:()=>file},
+    hasUI:true,isIdle:()=>true,hasPendingMessages:()=>false,ui:{notify:()=>{},setStatus:()=>{}}};
+  return {env,run,ctx,handle,record};
+}
+
+test("an attach carries the whole driver contract once and keeps later turns short",async t=>{
+  const f=attachFixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},f.ctx);
+  const attached=await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,f.ctx);
+  assert.equal(attached.isError,undefined,attached.content?.[0]?.text);
+  // A seat that attached by hand hears the driver contract, not one fixed line:
+  // every duty arrives with the attempt line and the step brief.
+  const first=await events.before_agent_start({},f.ctx);
+  assert.equal(first.message.customType,"mission-context");assert.equal(first.message.display,false);
+  assert.match(first.message.content,/Inspect the lifecycle hooks\./);
+  assert.match(first.message.content,/Duty 1 — hold the claim/);
+  assert.match(first.message.content,/Duty 2 — subagents do all step work/);
+  assert.match(first.message.content,/Duty 3 — subagents judge/);
+  // A hand attach answers no launch intent, so no launch id is ever invented.
+  assert.doesNotMatch(first.message.content,/launch_id/);
+  // The following turn keeps the attempt line and the brief and repeats no duty.
+  const next=await events.before_agent_start({},f.ctx);
+  assert.match(next.message.content,/Inspect the lifecycle hooks\./);
+  assert.doesNotMatch(next.message.content,/Duty 1 — hold the claim/);
+  // A second attach replays the same attempt, so the contract is not stacked.
+  await tools.mission.execute("attach-again",{action:"attach",handle:f.handle},null,null,f.ctx);
+  const again=await events.before_agent_start({},f.ctx);
+  assert.doesNotMatch(again.message.content,/Duty 1 — hold the claim/);
+});
+
+/** The contract rides the attach, once per attempt, and a waiting review is the
+ *  one thing that stops the advance: the same settled ready state emits mission
+ *  action=next only when no checkpoint waits. */
+test("an attach carries the contract once and a waiting review stops the advance",async t=>{
+  const f=attachFixture(t);
+  const factory=await loadFactory();
+  const events={},tools={},sent=[],notes=[];
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:(message,options)=>sent.push({message,options})};
+  f.ctx.ui={notify:(text,tone)=>notes.push({text,tone}),setStatus:()=>{}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},f.ctx);
+  const attached=await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,f.ctx);
+  assert.equal(attached.isError,undefined,attached.content?.[0]?.text);
+  // 1. An attach to a ready mission emits the whole contract, Duty 1 to Duty 4.
+  const turn=async()=>{const r=await events.before_agent_start({},f.ctx);assert.equal(r.message.customType,"mission-context");return r.message.content};
+  const contents=[await turn()];
+  assert.match(contents[0],/Inspect the lifecycle hooks\./);
+  for(const duty of ["Duty 1 — hold the claim","Duty 2 — subagents do all step work","Duty 3 — subagents judge","Duty 4 — advance in the same turn"])
+    assert.match(contents[0],new RegExp(duty));
+  assert.match(contents[0],/A pending checkpoint is the only reason to stop between steps\./);
+  // 2. A second attach replays the same attempt, so the contract arrives once.
+  const again=await tools.mission.execute("attach-again",{action:"attach",handle:f.handle},null,null,f.ctx);
+  assert.equal(again.isError,undefined,again.content?.[0]?.text);
+  contents.push(await turn());
+  assert.match(contents[1],/Inspect the lifecycle hooks\./);
+  assert.equal(contents.filter(c=>/Duty 1 — hold the claim/.test(c)).length,1,"the contract arrives one time");
+  // 3. A mission with a pending checkpoint emits no advance instruction, even
+  // though its state is ready and one step is still eligible to run.
+  f.record.mission.steps.push({id:"S02",title:"Attach the hooks"});
+  f.record.state.status="ready";
+  f.record.state.steps={S01:{status:"passed"},S02:{status:"pending"}};
+  f.record.state.pending_checkpoint="C01";
+  await events.agent_settled({aborted:false,outcome:"completed"},f.ctx);
+  assert.equal(sent.filter(s=>s.message?.customType==="mission-next").length,0,"a waiting review emits no advance instruction");
+  // The same state without the waiting review does advance, so the silence above
+  // is the checkpoint and not a settle path that never ran.
+  delete f.record.state.pending_checkpoint;
+  await events.agent_settled({aborted:false,outcome:"completed"},f.ctx);
+  const advance=sent.filter(s=>s.message?.customType==="mission-next");
+  assert.equal(advance.length,1);
+  assert.match(advance[0].message.content,/Call mission action=next to pick up the next eligible step/);
+  assert.deepEqual(notes,[]);
 });
 
 test("a broken tracking record blocks edits and warns on reads",needsCLI,async t=>{
