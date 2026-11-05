@@ -18,9 +18,6 @@
 
   # macOS keeps its own shell defaults; the profile only sets what Nix owns.
   home.sessionVariables = {
-    GOPATH = "/Users/aviral/go";
-    RUSTUP_HOME = "/Users/aviral/.rustup";
-    CARGO_HOME = "/Users/aviral/.cargo";
     BUN_INSTALL = "/Users/aviral/.bun";
   };
 }

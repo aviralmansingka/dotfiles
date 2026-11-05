@@ -1,7 +1,6 @@
 # The shared `remote` profile: everything the homelab and the devbox agree on.
 # The per-host modules add only the differences the S01 audit proved.
 {
-  config,
   pkgs,
   lib,
   ...
@@ -46,8 +45,5 @@ in
   # check) can tell which generation it runs under without reading the flake.
   home.sessionVariables = {
     FLEET_PROFILE = "remote";
-    GOPATH = "${config.home.homeDirectory}/go";
-    RUSTUP_HOME = "${config.home.homeDirectory}/.rustup";
-    CARGO_HOME = "${config.home.homeDirectory}/.cargo";
   };
 }
