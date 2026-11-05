@@ -258,15 +258,17 @@ export function trooperReport(message) {
   return report;
 }
 
-/** CLI refusals that make a queued trooper report permanently undeliverable: the
- *  record already holds a different aspect of that ID, the attempt the trooper
- *  finished under is gone or no longer active, or its handle vanished. Matched
- *  on the CLI's own error codes (see the `Problem("code"` calls under
- *  go/mission), never on a substring: a transient failure — the CLI is busy or
- *  gone — is not on this list, so that report retries. */
-export const DROPPABLE_REPORT_CODES = new Set(["event_conflict", "stale_attempt", "attempt_terminal", "closed", "not_found", "invalid_handle"]);
-export function droppableReportError(message) {
-  return DROPPABLE_REPORT_CODES.has(/^([a-z_]+): /.exec(String(message ?? ""))?.[1] ?? "");
+/** CLI refusals that make a queued line permanently undeliverable: the record
+ *  already holds a different aspect of that ID, the attempt the line names is
+ *  gone, ended, or no longer the owner, or its handle vanished. Matched on the
+ *  CLI's own error codes (see the `Problem("code"` calls under go/mission),
+ *  never on a substring: a transient failure — the CLI is busy or gone — is not
+ *  on this list, so that line retries. A hook is dropped by the same rule as a
+ *  report: an attempt the ledger stopped listing cannot take either one, and
+ *  retrying it forever is how a wedged outbox held every later event. */
+export const DROPPABLE_EVENT_CODES = new Set(["event_conflict", "stale_attempt", "attempt_terminal", "closed", "not_found", "invalid_handle"]);
+export function droppableEventError(message) {
+  return DROPPABLE_EVENT_CODES.has(/^([a-z_]+): /.exec(String(message ?? ""))?.[1] ?? "");
 }
 
 /** The path of a block's `pwd` answer: `file://<host>/<abs path>`, or a bare
@@ -320,6 +322,11 @@ export class MissionBridge {
     // The attempt whose contract this session already delivered: the contract
     // goes with the attach, and the turns after it stay short.
     this.contractAttempt = null;
+    // The attempt the last ledger read listed as the owner. Every emitted line
+    // names this one, never `hint.attempt`: the hint records which attempt this
+    // session attached to, and a ledger read is the only thing that says which
+    // attempt is the owner now.
+    this.ledgerAttempt = null;
     this.surfaceSession = null;
     this.surface = null;
     this.expectedAttachment = false;
@@ -441,6 +448,7 @@ export class MissionBridge {
     this.hint = null; this.error = null; this.surfaceSession = null; this.expectedAttachment = false;
     // A restored session starts a fresh history, so it hears the contract again.
     this.contractAttempt = null;
+    this.ledgerAttempt = null;
     const file = this.key(ctx);
     if (!existsSync(file)) return;
     this.expectedAttachment = true;
@@ -461,8 +469,16 @@ export class MissionBridge {
     const b = r.state.runtime;
     if (!b || b.session_id !== ctx.sessionManager.getSessionId() || b.cwd !== realpathSync(ctx.cwd) || b.session_file !== realpathSync(ctx.sessionManager.getSessionFile() || ""))
       throw new Error("Mission owner differs from this session; tracking is suspended.");
-    const a = r.state.attempts.find(a => a.id === r.state.active_attempt);
-    if (active(a) && a.id !== this.hint.attempt) throw new Error("Mission attempt changed; explicitly attach before continuing.");
+    // The owner is the attempt the ledger lists now, never the one an earlier
+    // attach captured. A re-claim — retry, abandon, or repair, then a fresh
+    // claim — replaces this session's attempt, so this read adopts it and every
+    // emitted line names the new id. An attempt another session or a managed run
+    // owns is still a refusal.
+    const a = (r.state.attempts || []).find(x => x.id === r.state.active_attempt) || null;
+    const mine = Boolean(a?.session_id) && a.session_id === ctx.sessionManager.getSessionId();
+    if (mine && this.hint.attempt !== a.id) { this.hint.attempt = a.id; this.save(ctx); }
+    if (active(a) && !mine) throw new Error("Mission attempt changed; explicitly attach before continuing.");
+    this.ledgerAttempt = a?.id ?? null;
     return { record: r, attempt: a };
   }
   async attach(ctx, handle, launchID, agent) {
@@ -489,6 +505,9 @@ export class MissionBridge {
       const c = await this.call(args, this.hint.token);
       this.expectedAttachment = true;
       this.hint.attempt = c.attempt.id; this.hint.launchID = launchID;
+      // The claim the CLI just rendered is the ledger's answer, so it is also
+      // the attempt this session reports on until the next read replaces it.
+      this.ledgerAttempt = c.attempt.id;
       // A successful attach that this session owns arms the loop. A read-only
       // attach (another session owns the binding) stays explicit.
       const own = !binding?.session_id || binding.session_id === ctx.sessionManager.getSessionId();
@@ -507,7 +526,10 @@ export class MissionBridge {
     return true;
   }
   publicClaim(c) {
-    return { handle: c.handle, step: c.step, attempt: c.attempt.id, brief: c.attempt.brief_snapshot,
+    // `context` is the step brief and attempt line the CLI rendered from the
+    // ledger for this claim, and `driver` its driver lines. A seat reads those,
+    // not a text this extension assembled: only the CLI reads the ledger.
+    return { handle: c.handle, step: c.step, attempt: c.attempt.id, context: c.context || "", driver: c.driver || [],
       artifact: c.environment.MISSION_ARTIFACT, brief_file: c.environment.MISSION_BRIEF, cwd: c.attempt.cwd };
   }
   async flush(ctx) {
@@ -522,11 +544,12 @@ export class MissionBridge {
       const item = this.hint.outbox[0];
       try { await this.deliver(item); }
       catch (e) {
-        // A report the record can never take is not re-sent: the CLI refuses a
-        // reused ID, and a trooper that finished after its attempt settled has
-        // no attempt left to report on. Dropping it keeps the outbox from
-        // wedging behind one undeliverable line; a transient failure retries.
-        if (!(item.report && droppableReportError(e.message))) throw e;
+        // A line the record can never take is not re-sent: the CLI refuses a
+        // reused ID, and a hook or report queued under an attempt the ledger no
+        // longer lists has no attempt left to land on. Dropping it keeps the
+        // outbox from wedging behind one undeliverable line — the 2026-11-05
+        // wedge — while a transient failure still retries.
+        if (!droppableEventError(e.message)) throw e;
       }
       this.hint.outbox.shift(); this.save(ctx);
     }
@@ -553,21 +576,25 @@ export class MissionBridge {
   }
   /** Record one finished trooper. The report queues in the same outbox as the
    *  lifecycle hooks and flushes at once, so a reload replays an unacknowledged
-   *  report under the same ID instead of appending a second one. */
+   *  report under the same ID instead of appending a second one. The attempt it
+   *  names is the one the ledger listed at the last read: a report is never
+   *  queued under an id the ledger cannot show. */
   async report(ctx, message) {
-    if (!this.hint?.attempt) return;
+    const attempt = this.ledgerAttempt;
+    if (!attempt) return;
     const report = trooperReport(message);
     if (!report) return;
     if (this.hint.outbox.some(item => item.report?.id === report.id)) return;
     if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
-    this.hint.outbox.push({ attempt: this.hint.attempt, report });
+    this.hint.outbox.push({ attempt, report });
     this.save(ctx); await this.flush(ctx);
   }
   async record(ctx, event) {
-    if (!this.hint?.attempt) return;
+    const attempt = this.ledgerAttempt;
+    if (!attempt) return;
     if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
     const seat = this.eventSeat();
-    this.hint.outbox.push({ attempt: this.hint.attempt, event: { id: randomUUID(), session_id: ctx.sessionManager.getSessionId(),
+    this.hint.outbox.push({ attempt, event: { id: randomUUID(), session_id: ctx.sessionManager.getSessionId(),
       session_file: ctx.sessionManager.getSessionFile(), pane_id: seat.pane, workspace_id: seat.workspace,
       model:ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined, ...event } });
     this.save(ctx); await this.flush(ctx);
@@ -579,7 +606,7 @@ export class MissionBridge {
     await this.record(ctx, { type: "agent-settled", summary: "Pi run settled", quiescent: quiescent(event, ctx) });
     const current = await this.current(ctx);
     if (current?.attempt?.status === "reported" && quiescent(event, ctx)) {
-      return this.call(["settle", this.hint.handle, "--attempt", this.hint.attempt, "--session-id", ctx.sessionManager.getSessionId()], this.hint.token);
+      return this.call(["settle", this.hint.handle, "--attempt", current.attempt.id, "--session-id", ctx.sessionManager.getSessionId()], this.hint.token);
     }
   }
   /** The mux this session runs in. Herdr names a workspace and a pane for every
@@ -817,6 +844,10 @@ export class MissionBridge {
     await this.flush(ctx);
     const current = await this.current(ctx);
     if (!active(current?.attempt)) throw new Error("No active step; inspect checkpoints or explicitly pick up next.");
+    // Every call below names the attempt this read found in the ledger, so a
+    // re-claim is reported under its new id and a hint value can never address
+    // an attempt the ledger does not list.
+    const attempt = current.attempt.id;
     // The judge reads the artifact, runs the check run itself, and records its
     // verdict. Its capability is a file path; the token stays in this cache.
     if (p.action === "judge") {
@@ -824,13 +855,13 @@ export class MissionBridge {
       const st = a.Definition || (current.record.mission.steps || []).find(s => s.id === a.step) || {};
       const checks = [...new Set(["nonempty-artifact", ...(st.checks || [])])];
       const artifact = join(this.vault, "6_missions", handle, a.artifact);
-      const capability = this.judgeCapability(ctx, a.id);
-      const task = judgeTask({ handle, attempt: a.id, step: a.step, artifact, evidence: a.artifact,
+      const capability = this.judgeCapability(ctx, attempt);
+      const task = judgeTask({ handle, attempt, step: a.step, artifact, evidence: a.artifact,
         acceptance: st.acceptance || "", checks, capability, vault: this.vault, binary: this.binary, cwd: a.cwd });
-      return { handle, attempt: a.id, step: a.step, artifact, acceptance: st.acceptance || "", checks,
+      return { handle, attempt, step: a.step, artifact, acceptance: st.acceptance || "", checks,
         capability, agent: "worker", name: "judge-" + a.step, task };
     }
-    const args = [p.action, handle, "--attempt", this.hint.attempt];
+    const args = [p.action, handle, "--attempt", attempt];
     if (p.action === "progress") {
       args.push("--status", p.status || "working", "--summary", p.summary || "", "--event-id", p.event_id || eventID);
       if (p.actor) args.push("--actor", p.actor);
@@ -842,10 +873,10 @@ export class MissionBridge {
     const r = await this.call(args, this.hint.token);
     // The judge has finished once the driver verifies or reports: its one-shot
     // capability must not outlive that, and a failed call keeps it for a retry.
-    if (["verify", "finish", "fail"].includes(p.action)) this.releaseJudgeCapabilities(ctx, this.hint.attempt);
+    if (["verify", "finish", "fail"].includes(p.action)) this.releaseJudgeCapabilities(ctx, attempt);
     if (!r.state) return r;
-    const a = r.state.attempts.find(a => a.id === this.hint.attempt);
-    return { handle, status:r.state.status, attempt:a.id, attempt_status:a.status, step:a.step, checkpoint:r.state.pending_checkpoint,
+    const a = (r.state.attempts || []).find(x => x.id === attempt) || current.attempt;
+    return { handle, status:r.state.status, attempt: attempt, attempt_status:a.status, step:a.step, checkpoint:r.state.pending_checkpoint,
       progress:a.progress?.at(-1), verification:a.verifications?.at(-1),
       message: p.action === "finish" || p.action === "fail" ? "Completion reported. Ownership remains until the turn settles; checks and checkpoints still apply." : undefined };
   }

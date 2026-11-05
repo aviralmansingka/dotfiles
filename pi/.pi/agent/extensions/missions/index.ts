@@ -49,8 +49,14 @@ export default function missions(pi: ExtensionAPI, options = {}) {
       // after it keep the attempt line and the step brief, so a compacted
       // history still reads as a driver and no duty is restated every turn.
       const contract = c?.attempt && bridge.contractTurn(c.attempt) ? driverTask(bridge.hint.handle, bridge.hint.launchID) : DRIVER_REMINDER;
+      // The context is the text the CLI rendered from this ledger read: the step
+      // brief, the attempt line, and the driver lines. The extension never
+      // assembles an attempt id of its own, so the id here is one the ledger
+      // lists now — a re-claim is named by its new id on the very next turn.
+      const live = c?.record?.context ?? "";
+      if (live) return { message: { customType: "mission-context", display: false, content: `${live}\n${contract}` } };
       return { message: { customType: "mission-context", display: false, content: c?.attempt ?
-        `Mission ${bridge.hint.handle}, step ${c.attempt.step}, attempt ${c.attempt.id}.\n${c.attempt.brief_snapshot}\n${contract}` :
+        `Mission ${bridge.hint.handle}, step ${c.attempt.step}.\n${contract}` :
         `Mission ${bridge.hint.handle} is ${c?.record.state.status}. Inspect status and answer the human's status and admin prompts here. Start another step only with mission action=next after reviews are decided. Do not modify code while no step is active.` } };
     } catch (e: any) { bridge.error = e.message; return { message: { customType: "mission-context", display: false, content: "Mission tracking failed: " + e.message + ". Restore tracking before making changes." } }; }
   });

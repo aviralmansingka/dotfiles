@@ -228,11 +228,11 @@ func (s *Store) applyEdit(tx pendingEdit) (mission.Record, error) {
 }
 
 // repair replays an interrupted step edit, re-admits attempt projections the
-// ledger lost, and rewrites the commit point.
+// ledger lost, reconciles an active attempt whose process is gone, and rewrites
+// the commit point.
 func (s *Store) repair(h string) (mission.Record, error) {
 	var r mission.Record
 	e := s.locked(func() error {
-		replayed := false
 		p, e := s.editPath(h)
 		if e != nil {
 			return e
@@ -256,7 +256,6 @@ func (s *Store) repair(h string) (mission.Record, error) {
 			if r, e = s.applyEdit(tx); e != nil {
 				return e
 			}
-			replayed = true
 		} else if os.IsNotExist(e) {
 			if r, e = s.load(h); e != nil {
 				return e
@@ -271,7 +270,14 @@ func (s *Store) repair(h string) (mission.Record, error) {
 		if e != nil {
 			return e
 		}
-		if replayed && adopted == 0 {
+		// A dead attempt keeps its step unclosable until something ends it, so
+		// repair reconciles one whose process is gone and whose stream is
+		// quiet. A live process is never touched.
+		reconciled := s.reconcileAttempts(&r)
+		// Nothing to re-admit and nothing to reconcile: repair leaves the
+		// record exactly as it found it. A replayed edit already saved itself,
+		// so this is also the path that keeps repair to a single write.
+		if adopted == 0 && reconciled == 0 {
 			return nil
 		}
 		r.State.Revision++

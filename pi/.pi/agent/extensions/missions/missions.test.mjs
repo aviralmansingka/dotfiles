@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, driverStatus, driverTask, droppableReportError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
+import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, driverStatus, driverTask, droppableEventError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -215,12 +215,13 @@ test("a finished subagent becomes one trooper report named by itself", () => {
   assert.equal(trooperLine("a".repeat(400)).length, 160);
   // Content blocks are flattened the same way: the headline is still not a report.
   assert.equal(trooperLine([{ type: "text", text: `Sub-agent "trooper-S01" completed (2m).` }, { type: "text", text: "Mapped the lifecycle hooks." }]), "Mapped the lifecycle hooks.");
-  // A report the record can never take is dropped, a transient failure retries.
-  // Only the CLI's own error codes count, never a substring of a message.
+  // A line the record can never take is dropped — a trooper report or a
+  // lifecycle hook queued under an attempt the ledger stopped listing — while a
+  // transient failure retries. Only the CLI's own codes count, never a substring.
   for (const refusal of ["event_conflict: progress id reused with different content", "stale_attempt: progress needs the active attempt", "attempt_terminal: attempt is settled", "closed: mission dotfiles/x is closed", "not_found: mission dotfiles/x not found", "invalid_handle: handle must be REPO/SLUG"])
-    assert.equal(droppableReportError(refusal), true, refusal);
+    assert.equal(droppableEventError(refusal), true, refusal);
   for (const transient of ["io_error: no such file", "unavailable", "Mission CLI returned invalid JSON", "Mission CLI unavailable: spawn mission ENOENT", "usage: progress needs a stable event-id", "the closed attempt not_found event_conflict", "closed the pane"])
-    assert.equal(droppableReportError(transient), false, transient);
+    assert.equal(droppableEventError(transient), false, transient);
 });
 
 
@@ -889,9 +890,12 @@ test("a Herdr pane outside the mission checkout is refused by its own seat", asy
   assert.equal(bridge.surfaceSession,null);
 });
 
-/** The seat one hook event reports, recorded without the CLI. */
+/** The seat one hook event reports, recorded without the CLI. The attempt the
+ *  event names is the one the last ledger read listed, so the fixture sets that
+ *  read's answer and not the persisted hint. */
 async function recordedSeat(bridge, ctx, event = { type: "session-start", summary: "Pi session attached" }) {
   bridge.hint = { handle: "dotfiles/seat", attempt: "attempt-1", token: "token", outbox: [] };
+  bridge.ledgerAttempt = "attempt-1";
   bridge.flush = async () => {};
   await bridge.record(ctx, event);
   const { pane_id, workspace_id } = bridge.hint.outbox.at(-1).event;
@@ -1183,16 +1187,27 @@ function attachFixture(t) {
   const session="attach-pi";
   const record={handle,mission:{title:"Attached",steps:[{id:"S01",title:"Inspect hooks"}]},
     state:{status:"ready",current_step:"S01",active_attempt:"",runtime:null,attempts:[]}};
-  const claimOf=a=>({handle,step:a.step,attempt:a,environment:{MISSION_ARTIFACT:join(root,"vault","artifact.md"),MISSION_BRIEF:join(root,"brief.md")}});
+  // The CLI renders the injected context from the ledger on every read: the step
+  // brief, then the attempt line for the attempt the ledger lists now, and no id
+  // at all when it lists none. This fixture renders the same text, so a test
+  // asserts on what the extension injects and not on what it remembers.
+  const attemptLine=()=>{
+    const a=record.state.attempts.find(x=>x.id===record.state.active_attempt);
+    return a ? `Attempt ${a.id} on step ${a.step} is ${a.status}.` : "No active attempt: the ledger lists none. Claim the step before editing.";
+  };
+  const driver=["Mission "+handle+" is ready."];
+  const rendered=()=>`# Assigned step: S01 — Inspect hooks\n\nInspect the lifecycle hooks.\n\n${attemptLine()}\n`;
+  const claimOf=a=>({handle,step:a.step,attempt:a,context:rendered(),driver,
+    environment:{MISSION_ARTIFACT:join(root,"vault","artifact.md"),MISSION_BRIEF:join(root,"brief.md"),MISSION_ATTEMPT:a.id}});
   const env={MISSION_BIN:"mission-fake",MISSION_VAULT:join(root,"vault"),MISSION_STATE_DIR:join(root,"cache"),
     HERDR_ENV:"1",HERDR_PANE_ID:"pane-1",HERDR_WORKSPACE_ID:"ws-1"};
   const run=async(binary,args)=>{
     if(binary==="herdr") return JSON.stringify({result:{panes:[{pane_id:"pane-1",workspace_id:"ws-1",cwd,foreground_cwd:cwd}]}});
     const verb=args.find(a=>["show","attach","hook"].includes(a));
-    if(verb==="show") return JSON.stringify({ok:true,data:record});
+    if(verb==="show") return JSON.stringify({ok:true,data:{...record,context:rendered(),driver}});
     if(verb==="attach") {
       if(!record.state.active_attempt) {
-        const a={id:"attempt-1",step:"S01",status:"running",brief_snapshot:"Inspect the lifecycle hooks.",cwd};
+        const a={id:"attempt-"+(record.state.attempts.length+1),step:"S01",status:"running",session_id:session,brief_snapshot:"Inspect the lifecycle hooks.",cwd};
         record.state.attempts.push(a);record.state.active_attempt=a.id;
       }
       record.state.runtime={session_id:session,cwd,session_file:file};
@@ -1277,6 +1292,63 @@ test("an attach carries the contract once and a waiting review stops the advance
   assert.equal(advance.length,1);
   assert.match(advance[0].message.content,/Call mission action=next to pick up the next eligible step/);
   assert.deepEqual(notes,[]);
+});
+
+/** The injected context is the text the CLI rendered from the ledger for this
+ *  read, so a re-claim is named by its new attempt id on the very next turn and
+ *  a ledger that lists no attempt produces no attempt id at all — the two halves
+ *  of the 2026-11-05 incident, where a captured attempt id outlived its claim. */
+test("a re-claim is named by the new attempt and no turn names an unlisted one",async t=>{
+  const f=attachFixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},f.ctx);
+  await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,f.ctx);
+  const turn=async()=>{const r=await events.before_agent_start({},f.ctx);assert.equal(r.message.customType,"mission-context");return r.message.content};
+  const first=await turn();
+  assert.match(first,/Attempt attempt-1 on step S01 is running\./);
+  // The owner dies and the step is claimed again: the ledger names attempt-2.
+  f.record.state.attempts.at(-1).status="failed";
+  f.record.state.active_attempt="";
+  f.record.state.attempts.push({id:"attempt-2",step:"S01",status:"running",session_id:"attach-pi",cwd:f.ctx.cwd});
+  f.record.state.active_attempt="attempt-2";
+  const second=await turn();
+  assert.match(second,/Attempt attempt-2 on step S01 is running\./,second);
+  assert.doesNotMatch(second,/attempt-1/,second);
+  // The incident shape: active_attempt survives, the attempt record does not.
+  f.record.state.attempts=[];
+  f.record.state.active_attempt="attempt-2";
+  const lost=await turn();
+  assert.doesNotMatch(lost,/attempt-\d/,lost);
+  assert.match(lost,/No active attempt/,lost);
+});
+
+/** A queued line whose attempt the ledger stopped listing is dropped instead of
+ *  wedging the outbox: the incident's outbox kept every later event behind one
+ *  hook the CLI could never accept. The attempt a hook names is the one the last
+ *  ledger read listed, never the value the persisted hint captured. */
+test("a hook the ledger cannot take is dropped and a transient failure retries",async t=>{
+  const f=attachFixture(t);
+  const b=new MissionBridge({env:f.env,run:f.run});
+  await b.restore(f.ctx);
+  b.hint={handle:f.handle,token:"t",session:f.ctx.sessionManager.getSessionId(),vault:b.vault,attempt:"attempt-999",outbox:[]};
+  b.surfaceSession=f.ctx.sessionManager.getSessionId();
+  b.ledgerAttempt="attempt-1";
+  b.call=async()=>{throw new Error("not_found: attempt attempt-1 not found")};
+  await b.record(f.ctx,{type:"agent-start",summary:"Pi turn started"});
+  assert.equal(b.hint.outbox.length,0,"the undeliverable hook is dropped");
+  // The hint's captured id is never what a line names.
+  b.call=async(_args)=>{throw new Error("io_error: the CLI is busy")};
+  b.hint.outbox.push({attempt:"attempt-1",event:{id:"e1",type:"agent-start",summary:"Pi turn started"}});
+  await assert.rejects(b.flush(f.ctx),/io_error/);
+  assert.equal(b.hint.outbox.length,1,"a transient failure retries");
+  assert.equal(b.hint.outbox[0].attempt,"attempt-1","the queued line names the ledger attempt");
+  // A ledger that lists no attempt queues nothing at all.
+  b.ledgerAttempt=null;
+  await b.record(f.ctx,{type:"agent-start",summary:"Pi turn started"});
+  assert.equal(b.hint.outbox.length,1,"nothing is queued without a listed attempt");
 });
 
 test("a broken tracking record blocks edits and warns on reads",needsCLI,async t=>{

@@ -543,8 +543,38 @@ The record keeps its shape. The check run fills `verifications[]` with its
 entry of the same attempt. No `state.md` field, vault directory, or CLI command
 changes for this flow.
 
-## Reload and recovery
+## The injected context and the attempt it names
 
+The attempt id a seat reads is a ledger fact, never a value a claim captured. The
+CLI renders that text when it emits it, and one file holds every renderer:
+`listedAttempt`, `attemptLine`, `stepBrief`, `stepContext`, and `driverLines` in
+`go/mission/cmd/mission/context.go`.
+
+- `mission attach` returns the claim: `context` is the step brief followed by the
+  attempt line, and `driver` is the driver and continuation lines.
+- `mission show` returns the same two fields, rendered from the record it read,
+  so a turn injects the text of that read and the extension assembles no
+  attempt id of its own.
+- `MISSION_ATTEMPT` and `MISSION_BRIEF` name the attempt the ledger lists, and the
+  brief file is written from the record on every claim and every attach replay.
+
+`listedAttempt` answers only when `active_attempt` names an attempt the `attempts`
+list holds. An id that survives a lost attempt record is a phantom: the context
+says `No active attempt: the ledger lists none`, it names no id, and the emitter
+refuses to hand out a claim for it (`stale_attempt`) instead of printing it.
+
+A re-claim — `retry` or `abandon`, then a fresh claim — is therefore named by its
+new attempt id on the very next read, and the previous attempt is named by no
+emitted line. The extension keeps the attempt it attached to in its credential
+cache, but no emitted line comes from that value: a hook or a trooper report names
+the attempt the last ledger read listed, and a queued line the CLI can no longer
+take (`not_found`, `stale_attempt`, `attempt_terminal`, `closed`, `event_conflict`,
+`invalid_handle`) is dropped instead of blocking every later event. That is the
+2026-11-05 wedge: a captured attempt id outlived its claim, so the context named
+an owner that could not attach while the ledger listed another, and the outbox
+never drained.
+
+## Reload and recovery
 Credentials and unacknowledged lifecycle events live in
 `$MISSION_STATE_DIR` or `$XDG_STATE_HOME/pi-missions` (default
 `~/.local/state/pi-missions`). Files are mode 0600, keyed by vault and session ID.
@@ -570,7 +600,21 @@ registry entry: steer it with `rex send -s army -b <block> <text>` in Rex, or
 same seat. A resume that changes seat kind, such as Herdr to Rex, also needs the
 re-attach described in [Seating a captain](#seating-a-captain).
 An operator must resolve a missing credential, abandoned launch, or crashed
-verifier; this version has no takeover or lease expiry command.
+verifier. `mission abandon REPO/SLUG --attempt ID --note TEXT` is that operator's
+escape for an attempt whose process is gone: it ends the attempt without the
+attempt token, because the caller is the owner or the commander rather than the
+lost process.
+
+Liveness is one probe, the attempt's own recorded process. Signal 0 asks whether
+that process exists, and only `ESRCH` proves it gone, so `abandon` refuses with
+`busy` while the process is live, and refuses an attempt whose process this host
+cannot judge at all: a Pi seat is Herdr's child with no reported pid, and a pid
+recorded on another host means nothing here. The second refusal names
+`mission repair`. A successful abandon sets the attempt `abandoned`, appends an
+`attempt-abandoned` event carrying the note, leaves the step failed, and clears
+the active owner; `retry` then `next` offers that work again. It never edits
+`mission.md`. A repeat abandon reports `already: true` without writing, and an
+attempt that ended another way is refused with `attempt_terminal`.
 
 Every save carries the revision it was loaded from and refuses to replace a
 ledger that already moved (`revision_conflict`), so a record held across a claim
@@ -580,6 +624,42 @@ wrote it. A refused save writes a line too. `mission repair REPO/SLUG` replays a
 interrupted step edit and re-admits `attempts/NNN.md` projections that the ledger
 no longer lists. It restores the owning attempt and step, and restores a step
 whose re-admitted attempt passed its checks.
+
+Repair also reconciles a dead attempt, so no record stays unclosable. It asks the
+same liveness probe `abandon` uses, never `process_exited`: only the run wrapper
+sets that flag, so a wrapper killed with its child leaves it false on an attempt
+whose process is long gone. Repair ends an active attempt as `failed` only when
+no process answers and the attempt is quiescent.
+
+Quiescent means nothing inside a quiet window of ten minutes: no event, no
+progress note, no report, no write to the recorded session file, and an
+untouched `updated_at`. The session file is the heartbeat a seat without a pid
+offers, so its modification time is read when this host holds it. A session file
+that is missing proves nothing, and the attempt's own stamps decide; a stamp that
+will not parse does not open the window. A live pid always keeps the attempt
+`running`, however silent its stream, and any write inside the window keeps it
+`running` even after its process exited, so a working process is never misread as
+dead. The sum of `attempt-reconciled` events names the attempt, its step, and why
+repair judged it.
+
+The uninspectable case differs from `abandon` on purpose. A Pi seat is Herdr's
+child and reports no pid, so this host cannot prove its process gone; `abandon`
+refuses that attempt, and its refusal names `mission repair`. Repair ends it once
+the session file and the stream are quiet, because a wedged Pi attempt is exactly
+the record that must not stay unclosable. The event says whether the process was
+proven gone or only never inspectable. Repair keeps a `reported` attempt under
+the same rule: a lost settlement leaves its completion unverified, so the attempt
+ends `failed` and the step is offered again. The step is left `failed` on the
+attempt, the active owner is cleared, `current_step` names that step, and
+`state.status` becomes `failed`; `retry` then `next` offers the work again.
+
+Two cases refuse, and repair changes nothing. An attempt recorded on another host
+is not this host's to judge: its pid, session file, and session are evidence
+elsewhere, so repair leaves it `running` rather than guess. A step that already
+passed is never demoted, so its attempt is left for `mission abandon`. A caller
+blocked by either one is told so: the busy refusal of `claim`/`next` and the
+`attach` refusal both name `mission repair REPO/SLUG`. A repair that finds
+nothing to replay, re-admit, or reconcile writes no ledger at all.
 
 Transcript snapshots are limited to 16 MiB. The vault ledger and cached hook outbox
 are local files, with atomic replacements. Vault synchronization is not a multi-host
