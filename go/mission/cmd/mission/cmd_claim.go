@@ -27,5 +27,8 @@ func cmdLaunch(a platform.Args, s *Store) (any, error) {
 	if a.Has("release") {
 		return s.release(a.At(1), a.Get("launch-id"))
 	}
+	if a.Has("ack") {
+		return s.ack(a.At(1))
+	}
 	return s.launch(a.At(1), a.Get("session-file"), a.Get("launch-id"))
 }

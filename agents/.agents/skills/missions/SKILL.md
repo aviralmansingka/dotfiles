@@ -221,5 +221,5 @@ mission --json close dotfiles/session-progress --note "Shipped in #430"
 `close` sets `status: closed`, `closed_at`, and the note. It refuses open work:
 an active attempt, or a step that is not `passed`. Add `--force` to close anyway.
 A second close is safe and returns `already: true`. A closed mission refuses
-`claim`, `pickup`, `launch`, `workspace`, `attach`, `next`, `finish`, `retry`,
-and `repair`. Start a new mission instead.
+`claim`, `pickup`, `launch`, `plan`, `workspace`, `attach`, `next`, `finish`,
+`retry`, and `repair`. Start a new mission instead.

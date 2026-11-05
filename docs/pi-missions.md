@@ -135,8 +135,17 @@ A waiting review blocks the next step and `finish` only. The driver keeps every 
 
 The launched agent is the **driver**. It holds the claim on one work request and
 performs no step work itself. Its launch prompt names three duties and one
-touchpoint, and `driverTask` in `missions/core.mjs` is the single source of that
-text:
+touchpoint.
+
+> **Rank vocabulary.** The rank this mission deploys for that seat is the
+> **captain**, and the launch prompt has one owner: `mission plan` renders it as
+> `captain_brief` (`captainBrief` in `go/mission/cmd/mission/plan.go`), together
+> with `captain_argv` and the `subagent_session` its troopers work in. The
+> extension prompts the seat with that text (`core.mjs`), and `driverTask` in
+> `missions/core.mjs` is the fallback contract for a plan that carries no brief.
+> Both descriptions name the same seat and the same three duties; the sections
+> below that speak of the captain (`The launch description`, `Deploy into Rex`)
+> are the rank vocabulary for this seat.
 
 1. **Hold the claim.** The driver session owns the attempt and keeps the `mission`
    tool. It reports structured progress and calls `verify` and `finish` only after
@@ -196,6 +205,53 @@ shape the answer: `step edit` needs no active attempt (`busy`) and no pending re
 (`review_pending`), so the driver ends or retries the running attempt first and
 tells the human that it did. `reset` stays CLI-only, because it invalidates later
 progress and needs an explicit human decision.
+
+## The launch description
+
+`mission plan REPO/SLUG [--mux rex]` is the read-only launch description. It
+returns the rank vocabulary (session `army`, windows `commander` and
+`captain-<slug>`, subagent session `mission-<slug>`), the captain argv and the
+captain brief text, the mission worktree and branch, and an ack token. The plan
+owns those names; no adapter spells them itself. `--mux` is accepted so a caller
+can say which surface it deploys to, and the description never depends on it.
+
+The ack token is derived from the vault, the handle, and the branch, not reserved,
+so the same mission answers with the same JSON twice. `mission launch --ack`
+records it, and it never becomes the launch intent: the token says the seats
+exist, while the intent is a reservation a captain consumes. `plan` writes
+nothing: it creates no worktree, claims no attempt, and records no launch. A
+mission with no worktree answers `worktree_required`; a recorded checkout that is
+gone, `worktree_missing`; a closed mission, `closed`.
+
+Mission slugs are unbounded, so a seat label is derived, not copied: the rank
+prefix plus the slug, cut to 32 characters with a short digest of the whole slug
+when it does not fit. Plan and deploy read that one label, so the same mission
+always gets the same name and two long slugs never share one.
+
+The launch prompt text lives in the CLI, not in the Pi extension. The extension
+reserves its own launch intent and asks `mission plan --launch-id <id>` for the
+brief, so one place owns the wording and the brief still names the intent the
+extension will record.
+
+## Deploy into Rex
+
+`mission deploy REPO/SLUG --mux rex` turns one plan into seats. It reads the plan,
+then reserves the launch intent (a `launch-<uid>` id, as the Pi extension does),
+then creates only what is missing: the `army` session with its `commander`
+window, the mission's `mission-<slug>` session, and its `captain-<slug>` window
+in army. The captain window runs the plan's argv and a brief rendered from that
+reserved intent, so the captain attaches with the id the record holds. The ack
+lands last, with the plan's derived token beside the reserved intent.
+
+A repeated deploy focuses the live captain window and creates nothing, so one key
+press cannot seat two captains. A resumable deployment keeps its intent: a
+failure part way leaves the record unacknowledged, and the next press reserves
+nothing new and finishes the same deployment. `--mux` has one adapter today;
+another value answers `mux_unsupported`.
+
+`prefix+n` (`mission_deploy_pick`) opens the deployment picker: a floating layer
+listing `mission ready`, previewed with `mission show`. Enter deploys the chosen
+mission; Escape exits 0 and changes neither the vault nor Rex.
 
 ## Launch from the desk
 

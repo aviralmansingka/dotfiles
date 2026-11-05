@@ -38,7 +38,13 @@ const help = `mission — work that survives the agent
       --workspace ID --pane ID             Private token in MISSION_TOKEN
   mission progress REPO/SLUG --status working --summary TEXT --event-id ID
       [--next TEXT] [--blocker TEXT] [--evidence artifacts/001/result.md]
+  mission plan REPO/SLUG [--mux rex]       Read-only launch description: army
+      session and window labels, captain argv and brief, worktree, ack token
+  mission deploy REPO/SLUG [--mux rex]     Seat the mission: army session, its
+      captain window, and the mission-<slug> session; a repeat focuses the seat
   mission launch REPO/SLUG                 Reserve one launch; adapters only
+  mission launch REPO/SLUG --ack           Record the plan's ack token: the
+      seats exist. It never replaces the reserved launch intent
   mission launch REPO/SLUG --release --launch-id ID
                                            Drop a failed launch intent
   mission settle REPO/SLUG --session-id ID  Settle a reported Pi attempt after idle
@@ -176,6 +182,10 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdWorkspace(a, s)
 	case "attach":
 		return cmdAttach(a, s)
+	case "plan":
+		return cmdPlan(a, s)
+	case "deploy":
+		return cmdDeploy(a, s)
 	case "launch":
 		return cmdLaunch(a, s)
 	case "progress":

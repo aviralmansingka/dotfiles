@@ -546,6 +546,35 @@ func (s *Store) release(h, launchID string) (map[string]any, error) {
 	return map[string]any{"released": released, "runtime": r.State.Runtime}, e
 }
 
+// ack records that an adapter deployed the mission its plan described. The ack
+// token is derived, so a reader finds the same token in the plan and in the
+// record; it is never written as the launch intent, because the intent is the
+// reservation a captain consumes, not a value a plan can derive. A second ack
+// writes nothing and says so, so a repeated deploy is harmless.
+func (s *Store) ack(h string) (map[string]any, error) {
+	acknowledged, token := false, ""
+	r, e := s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
+		b := r.State.Runtime
+		if b == nil {
+			return mission.Problem("worktree_required", "prepare a mission workspace first")
+		}
+		token = ackToken(s.Vault, h, b.Branch)
+		if b.LaunchAck == "" {
+			acknowledged = true
+			b.LaunchAck = token
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+	return map[string]any{"acknowledged": acknowledged, "ack": token, "runtime": r.State.Runtime}, nil
+}
+
+// launch reserves one launch intent, or records the session file an adapter got.
 func (s *Store) launch(h, file, launchID string) (map[string]any, error) {
 	if file != "" {
 		p, e := filepath.Abs(file)
