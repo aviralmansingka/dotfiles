@@ -16,6 +16,24 @@ const active = a => a && ["running", "reported"].includes(a.status);
 export const CAPTAIN_AGENT = "mission-captain";
 export const WORKER_AGENT = "mission-worker";
 
+/** The contract of one mission driver. The driver holds the claim on one work
+ *  request and steers it; it performs no step work itself. One work subagent
+ *  executes each step, one judge subagent decides it, and the driver stays the
+ *  single place the human visits for status and admin prompts. A launch id
+ *  names the intent a seat answers, so only a launched seat is told to attach. */
+export function driverTask(handle, launchID) {
+  return [
+    `You are the driver for mission ${handle}, not its worker. You hold the claim on this work request.`,
+    ...(launchID ? [`Attach first: call mission with action=attach, handle=${handle}, launch_id=${launchID}. Its returned step brief and the missions skill describe the work, but you send that work out.`] : []),
+    "Duty 1 — hold the claim: this session owns the attempt and keeps the mission tool. Report structured progress, and call mission action=verify and mission action=finish only after a judge records a pass.",
+    "Duty 2 — subagents do all step work: you never edit repository code and you never write a step artifact. For each step, spawn one work subagent (agent=worker) with the step brief, its artifact path, and the acceptance criteria, then wait for its result.",
+    "Duty 3 — subagents judge: after the work subagent reports, call mission action=judge and spawn one judge subagent (agent=worker, name=judge-<step>) with the returned task verbatim. Never judge your own work and never reuse the work subagent's session. The judge reads the artifact, runs the CLI checks itself through mission verify, and records its verdict with reasons as progress. When the step's checks include a cmd: check, the passed check is the verdict, so spawn no judge.",
+    "Duty 4 — advance in the same turn: after a judge records a pass, spawn the next step's work subagent in that same turn instead of ending it. A pending checkpoint is the only reason to stop between steps.",
+    "Touchpoint — you answer the human's status and admin prompts in this session. Status: call mission action=status and report what is running, what passed, and what is next, plus any review or blocker, in plain words. Admin: run the change through an existing command — mission action=edit (with the revision you reported), mission action=retry, mission action=fail, or a checkpoint decision the human explicitly gives — then confirm the result. A stale edit is refused, never forced. Stop at human checkpoints and never approve one yourself.",
+    "Keep the mission worktree as this session's cwd and keep the mission tool available for later steps. Do not launch another mission owner.",
+  ].join("\n");
+}
+
 /** One judge subagent's task. The judge works on the artifact, not on code: it
  *  reads the result, runs the CLI check run itself, and records the verdict with
  *  reasons in the attempt's existing progress fields. The attempt token reaches
@@ -299,6 +317,9 @@ export class MissionBridge {
     });
     this.hint = null;
     this.error = null;
+    // The attempt whose contract this session already delivered: the contract
+    // goes with the attach, and the turns after it stay short.
+    this.contractAttempt = null;
     this.surfaceSession = null;
     this.surface = null;
     this.expectedAttachment = false;
@@ -418,6 +439,8 @@ export class MissionBridge {
   }
   async restore(ctx) {
     this.hint = null; this.error = null; this.surfaceSession = null; this.expectedAttachment = false;
+    // A restored session starts a fresh history, so it hears the contract again.
+    this.contractAttempt = null;
     const file = this.key(ctx);
     if (!existsSync(file)) return;
     this.expectedAttachment = true;
@@ -474,6 +497,14 @@ export class MissionBridge {
       await this.record(ctx, { type: "session-start", summary: "Pi session attached" });
       return this.publicClaim(c);
     } catch (e) { if (previous) this.hint = previous; throw e; }
+  }
+  /** Whether this turn carries the driver contract. One attempt delivers it
+   *  once: a new attempt, or a restored session, delivers it again, while a
+   *  replayed attach to the same attempt repeats nothing. */
+  contractTurn(attempt) {
+    if (!attempt?.id || this.contractAttempt === attempt.id) return false;
+    this.contractAttempt = attempt.id;
+    return true;
   }
   publicClaim(c) {
     return { handle: c.handle, step: c.step, attempt: c.attempt.id, brief: c.attempt.brief_snapshot,

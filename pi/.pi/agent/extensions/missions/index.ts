@@ -1,7 +1,11 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { MissionBridge, missionContinues, missionToolBlock, trackingFailureBlock } from "./core.mjs";
+import { MissionBridge, driverTask, missionContinues, missionToolBlock, trackingFailureBlock } from "./core.mjs";
 import { LABEL_COLUMN, actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
+
+// The turn after the contract keeps one line of the driver stance, so a
+// compacted history still reads as the driver of this attempt.
+const DRIVER_REMINDER = "Stay the driver of this attempt: send the step work to one work subagent with this brief, send the verification to one judge subagent (mission action=judge), write no artifact yourself, and report finish only after a judge records a pass.";
 
 export default function missions(pi: ExtensionAPI, options = {}) {
   const bridge = new MissionBridge(options);
@@ -41,8 +45,12 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     try {
       await bridge.flush(ctx);
       const c = await bridge.current(ctx);
+      // The whole driver contract rides the attach, once per attempt. The turns
+      // after it keep the attempt line and the step brief, so a compacted
+      // history still reads as a driver and no duty is restated every turn.
+      const contract = c?.attempt && bridge.contractTurn(c.attempt) ? driverTask(bridge.hint.handle, bridge.hint.launchID) : DRIVER_REMINDER;
       return { message: { customType: "mission-context", display: false, content: c?.attempt ?
-        `Mission ${bridge.hint.handle}, step ${c.attempt.step}, attempt ${c.attempt.id}.\n${c.attempt.brief_snapshot}\nYou are the driver of this attempt, not its worker: send the step work to one work subagent with this brief, then send the verification to one judge subagent (mission action=judge). Write no artifact yourself. Answer the human's status and admin prompts here with mission action=status and the existing commands. Report finish only after a judge records a pass; turn end alone does not complete work. Stay in this worktree. Human reviews require the user.` :
+        `Mission ${bridge.hint.handle}, step ${c.attempt.step}, attempt ${c.attempt.id}.\n${c.attempt.brief_snapshot}\n${contract}` :
         `Mission ${bridge.hint.handle} is ${c?.record.state.status}. Inspect status and answer the human's status and admin prompts here. Start another step only with mission action=next after reviews are decided. Do not modify code while no step is active.` } };
     } catch (e: any) { bridge.error = e.message; return { message: { customType: "mission-context", display: false, content: "Mission tracking failed: " + e.message + ". Restore tracking before making changes." } }; }
   });
