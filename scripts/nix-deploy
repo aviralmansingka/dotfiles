@@ -287,7 +287,10 @@ SNIPPET
 files_report() {
   cat <<'REPORT'
 files: still outside the deploy (by design)
-  secrets    ~/.config/*.env, SSH keys - not in the repo, not in the store
+  secrets/   the ciphertext is staged (secrets/*.yaml); what it replaces stays
+             host state - plaintext ~/.config/*.env, and the identity at
+             ~/.config/sops/age/keys.txt
+  ssh keys   ~/.ssh, /etc/ssh/ssh_host_* - not in the repo, not in the store
   data       ~/vault, ~/projects/whatsapp-mcp
   venvs      ~/.local/share/pi-*/.venv (uv, host state)
 REPORT
