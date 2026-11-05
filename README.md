@@ -89,6 +89,7 @@ terraform -chdir=ops/devbox destroy \
 | `git`        | Git configuration                                                           |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `nvim`       | Neovim with LazyVim                                                         |
+| `profile`    | Login-shell PATH for sh/bash (`~/.profile`: pi and rex binaries)            |
 | `rex`        | Rex terminal multiplexer keybindings (`~/.config/rex`)                       |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
