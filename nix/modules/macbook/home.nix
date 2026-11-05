@@ -13,7 +13,6 @@
     go
     nodejs_22
     bun
-    herdr
   ];
 
   # macOS keeps its own shell defaults; the profile only sets what Nix owns.

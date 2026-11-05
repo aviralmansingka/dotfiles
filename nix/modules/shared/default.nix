@@ -56,6 +56,8 @@ in
         # User tools both profiles need; each profile used to declare its own
         # copy, and this module owns them once now.
         gnupg
+        # herdr comes from the flake pin like any other profile tool.
+        herdr
         just
         mermaid-cli
         openssh
