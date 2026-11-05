@@ -365,6 +365,7 @@ export class MissionBridge {
     this.hint = null;
     this.error = null;
     this.surfaceSession = null;
+    this.surface = null;
     this.expectedAttachment = false;
   }
   key(ctx) { return join(this.cacheDir, hash(this.vault + "\0" + ctx.sessionManager.getSessionId()) + ".json"); }
@@ -505,7 +506,8 @@ export class MissionBridge {
         const pane = result.panes?.find(p => p.pane_id === this.env.HERDR_PANE_ID);
         if (!pane || realpathSync(pane.foreground_cwd || pane.cwd) !== cwd) continue;
         this.surfaceSession = ctx.sessionManager.getSessionId();
-        return { workspace: w.workspace_id, pane: pane.pane_id };
+        this.surface = { workspace: w.workspace_id, pane: pane.pane_id };
+        return this.surface;
       }
     }
     // A Rex block is a seat too: the CLI accepts a session id and a block id
@@ -514,7 +516,8 @@ export class MissionBridge {
       const info = await this.seatCwd();
       if (info && realpathSync(info) === cwd) {
         this.surfaceSession = ctx.sessionManager.getSessionId();
-        return { workspace: this.env.REX_SESSION, pane: this.env.REX_BLOCK };
+        this.surface = { workspace: this.env.REX_SESSION, pane: this.env.REX_BLOCK };
+        return this.surface;
       }
     }
     throw new Error("Missions need a Herdr pane or a Rex block, running in the mission worktree. Move or resume this session there before attaching.");
@@ -638,8 +641,9 @@ export class MissionBridge {
   async record(ctx, event) {
     if (!this.hint?.attempt) return;
     if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
+    const seat = this.eventSeat();
     this.hint.outbox.push({ attempt: this.hint.attempt, event: { id: randomUUID(), session_id: ctx.sessionManager.getSessionId(),
-      session_file: ctx.sessionManager.getSessionFile(), pane_id: this.env.HERDR_PANE_ID, workspace_id: this.env.HERDR_WORKSPACE_ID,
+      session_file: ctx.sessionManager.getSessionFile(), pane_id: seat.pane, workspace_id: seat.workspace,
       model:ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined, ...event } });
     this.save(ctx); await this.flush(ctx);
   }
@@ -787,6 +791,15 @@ export class MissionBridge {
   /** The Herdr seat this session occupies. The desk writes the same two values
    *  into its request, so a request addressed to this workspace belongs here. */
   seat() { return { workspace: this.env.HERDR_WORKSPACE_ID || "", label: this.env.HERDR_PANE_ID || "" }; }
+  /** The seat a hook event reports: the one assertSurface resolved, or the
+   *  environment that names it before an attach. A Rex seat carries no Herdr
+   *  variables, so reading Herdr alone left its workspace empty. */
+  eventSeat() {
+    if (this.surface) return this.surface;
+    return this.env.HERDR_ENV === "1"
+      ? { workspace: this.env.HERDR_WORKSPACE_ID, pane: this.env.HERDR_PANE_ID }
+      : { workspace: this.env.REX_SESSION, pane: this.env.REX_BLOCK };
+  }
   /** The working directory of one live process: `lsof` on macOS, `/proc` on
    *  Linux. This reads the real seat; no environment value can stand in. */
   async procCwd(pid) {

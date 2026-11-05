@@ -1009,6 +1009,62 @@ test("a Herdr pane still binds by pane cwd and never asks Rex", async t => {
   assert.equal(bridge.surfaceSession,"herdr-pi");assert.equal(calls.includes("rex"),false);
 });
 
+/** The seat one hook event reports, recorded without the CLI. */
+async function recordedSeat(bridge, ctx, event = { type: "session-start", summary: "Pi session attached" }) {
+  bridge.hint = { handle: "dotfiles/seat", attempt: "attempt-1", token: "token", outbox: [] };
+  bridge.flush = async () => {};
+  await bridge.record(ctx, event);
+  const { pane_id, workspace_id } = bridge.hint.outbox.at(-1).event;
+  return { pane_id, workspace_id };
+}
+
+test("a Rex seat reports its own workspace and block on every hook event", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-event-rex-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const bridge = new MissionBridge({ env: { REX_SESSION: "army", REX_BLOCK: "block:x", MISSION_STATE_DIR: join(root, "state") },
+    run: async () => { throw Error("no live session in a test") } });
+  bridge.seatCwd = async () => root;
+  const ctx = context(root, join(root, "session.jsonl"), "rex-pi");
+  assert.deepEqual(await bridge.assertSurface(ctx), { workspace: "army", pane: "block:x" });
+  // The incident: Herdr variables are undefined in a Rex seat, so the CLI
+  // refused every event with workspace_mismatch.
+  assert.deepEqual(await recordedSeat(bridge, ctx), { pane_id: "block:x", workspace_id: "army" });
+});
+
+test("a Herdr seat keeps recording its own pane and workspace", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-event-herdr-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const bridge = new MissionBridge({ env: { HERDR_ENV: "1", HERDR_PANE_ID: "repo:p2", HERDR_WORKSPACE_ID: "w-mission",
+    REX_SESSION: "army", REX_BLOCK: "block:x", MISSION_STATE_DIR: join(root, "state") },
+    run: async () => { throw Error("no live session in a test") } });
+  assert.deepEqual(await recordedSeat(bridge, context(root, join(root, "session.jsonl"), "herdr-pi")),
+    { pane_id: "repo:p2", workspace_id: "w-mission" });
+});
+
+test("a hook event before any attach still names the Rex seat", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-event-before-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  // A moved session records before this process attaches: the environment is
+  // the only seat there is, and it must not report an empty workspace.
+  const bridge = new MissionBridge({ env: { REX_SESSION: "army", REX_BLOCK: "block:x", MISSION_STATE_DIR: join(root, "state") },
+    run: async () => { throw Error("no live session in a test") } });
+  assert.equal(bridge.surface, null);
+  assert.deepEqual(await recordedSeat(bridge, context(root, join(root, "session.jsonl"), "rex-pi")),
+    { pane_id: "block:x", workspace_id: "army" });
+});
+
+test("a caller-supplied seat field still wins over the default", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-event-caller-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const bridge = new MissionBridge({ env: { REX_SESSION: "army", REX_BLOCK: "block:x", MISSION_STATE_DIR: join(root, "state") },
+    run: async () => { throw Error("no live session in a test") } });
+  bridge.seatCwd = async () => root;
+  const ctx = context(root, join(root, "session.jsonl"), "rex-pi");
+  await bridge.assertSurface(ctx);
+  assert.deepEqual(await recordedSeat(bridge, ctx, { type: "tool-start", workspace_id: "caller-workspace" }),
+    { pane_id: "block:x", workspace_id: "caller-workspace" });
+});
+
 test("a driver pane inherits the launcher configuration and no credential", () => {
   assert.deepEqual(driverEnv({ PI_CODING_AGENT_DIR: "/cfg", MISSION_VAULT: "/vault", MISSION_BIN: "/bin/mission", MISSION_STATE_DIR: "/state", MISSION_TOKEN: "secret", MISSION_ATTEMPT: "attempt-1", EMPTY: "" }),
     [["PI_CODING_AGENT_DIR", "/cfg"], ["MISSION_VAULT", "/vault"], ["MISSION_BIN", "/bin/mission"], ["MISSION_STATE_DIR", "/state"]]);
