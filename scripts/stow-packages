@@ -8,6 +8,7 @@
 #     breaks the installer-style fetches a fresh host may still need
 # The systemd units are NOT here: the flake ships them (S05).
 zsh
+profile
 tmux
 nvim
 starship

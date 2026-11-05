@@ -9,8 +9,8 @@ first), and a live but wedged pi with no deadline. Both waited forever.
 
 ## Overview
 
-The suite tests herdr.ts, tmux.ts, and index.ts in `interactive-subagents`,
-plus `no-mistakes-pane/bridge.ts`. Every wait now has a bound. Both
+The suite tests herdr.ts, tmux.ts, and index.ts in `interactive-subagents`.
+Every wait now has a bound. Both
 surfaces share one contract: herdr.ts reads `pane process-info`; tmux.ts
 reads the pane process tree with `pane_pid` plus `ps`.
 

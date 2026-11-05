@@ -4,11 +4,16 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"mission.local/prototype/internal/domain/mission"
 )
+
+// reportsKey finds the reports field in a projected record's frontmatter, at any
+// nesting depth (state.md nests it under attempts, the attempt note does not).
+var reportsKey = regexp.MustCompile(`(?m)^\s*reports:`)
 
 func TestPiTurnDoesNotFinishWithoutReportAndQuietBoundary(t *testing.T) {
 	s, h, p := piFixture(t)
@@ -47,7 +52,7 @@ func TestPiTurnDoesNotFinishWithoutReportAndQuietBoundary(t *testing.T) {
 	_, e = s.settle(h, c.Attempt.ID, p.Token, p.SessionID)
 	must(t, e)
 	_, e = s.attach(h, p)
-	wantCode(t, e, "checkpoint_pending")
+	wantCode(t, e, "review_pending")
 	r, e = s.checkpoint(h, "C01", "accept", "Reviewed", "aviral", true, r.State.Revision)
 	must(t, e)
 	next, e := s.attach(h, p)
@@ -83,24 +88,157 @@ func TestProgressIsStructuredHashedAndReplaySafe(t *testing.T) {
 	must(t, e)
 	result(t, s, c, "Evidence")
 	progress := mission.Progress{ID: "report-1", Status: "blocked", Summary: "Need design review", Blocker: "Choose retention period", Next: "Implement retention"}
-	r, e := s.progress(h, c.Attempt.ID, p.Token, progress, []string{c.Attempt.Artifact})
+	r, e := s.progress(h, c.Attempt.ID, p.Token, "", progress, []string{c.Attempt.Artifact})
 	must(t, e)
-	r, e = s.progress(h, c.Attempt.ID, p.Token, progress, []string{c.Attempt.Artifact})
+	r, e = s.progress(h, c.Attempt.ID, p.Token, "", progress, []string{c.Attempt.Artifact})
 	must(t, e)
 	if r.State.Status != "waiting" || len(r.State.Attempts[0].Progress) != 1 || r.State.Attempts[0].Progress[0].Evidence[0].Hash != mission.Digest([]byte("Evidence")) {
 		t.Fatal("progress lost or duplicated")
 	}
 	progress.Summary = "different"
-	_, e = s.progress(h, c.Attempt.ID, p.Token, progress, []string{c.Attempt.Artifact})
+	_, e = s.progress(h, c.Attempt.ID, p.Token, "", progress, []string{c.Attempt.Artifact})
 	wantCode(t, e, "event_conflict")
 	progress.ID = "report-2"
-	_, e = s.progress(h, c.Attempt.ID, p.Token, progress, []string{"../secret"})
+	_, e = s.progress(h, c.Attempt.ID, p.Token, "", progress, []string{"../secret"})
 	wantCode(t, e, "invalid_evidence")
 	progress.Status = "ready"
-	r, e = s.progress(h, c.Attempt.ID, p.Token, progress, nil)
+	r, e = s.progress(h, c.Attempt.ID, p.Token, "", progress, nil)
 	must(t, e)
 	if r.State.Active != c.Attempt.ID || r.State.Steps["S01"].Status != "running" {
 		t.Fatal("progress bypassed completion")
+	}
+}
+
+// A trooper report rides one progress call that names its actor. The call keeps
+// the earlier behavior without an actor, and one trooper keeps one row even when
+// the call is replayed or the record is reloaded. Names are pinned in rank case
+// (`trooper-S01`), the way a sitrep records them.
+func TestProgressWithActorRecordsOneTrooperReport(t *testing.T) {
+	s, h, p := piFixture(t)
+	c, e := s.attach(h, p)
+	must(t, e)
+	result(t, s, c, "Evidence")
+	// The existing call keeps working and records no trooper report.
+	r, e := s.progress(h, c.Attempt.ID, p.Token, "", mission.Progress{ID: "event-1", Status: "working", Summary: "Reading hooks"}, nil)
+	must(t, e)
+	if n := len(r.State.Attempts[0].Reports); n != 0 {
+		t.Fatalf("progress without --actor recorded %d reports", n)
+	}
+	report := mission.Progress{ID: "event-2", Status: "ready", Summary: "Mapped the lifecycle hooks", Next: "Hand the diff to the captain"}
+	r, e = s.progress(h, c.Attempt.ID, p.Token, " trooper-S01 ", report, nil)
+	must(t, e)
+	a := r.State.Attempts[0]
+	if len(a.Reports) != 1 {
+		t.Fatalf("want one trooper report, got %d", len(a.Reports))
+	}
+	got := a.Reports[0]
+	// The name is the subagent's own, case preserved.
+	if got.ID != "event-2" || got.Trooper != "trooper-S01" || got.Status != "ready" || got.Summary != "Mapped the lifecycle hooks" || got.Next != "Hand the diff to the captain" || got.At == "" {
+		t.Fatalf("trooper report lost a field: %+v", got)
+	}
+	if got.At != a.Progress[len(a.Progress)-1].At {
+		t.Fatal("report time differs from the progress entry it came from")
+	}
+	// A repeated call is a replay, not a second report.
+	_, e = s.progress(h, c.Attempt.ID, p.Token, "trooper-S01", report, nil)
+	must(t, e)
+	// A replayed call after a reload finds the existing progress entry and adds
+	// no second report either.
+	s2, e := openStore(s.Vault)
+	must(t, e)
+	_, e = s2.progress(h, c.Attempt.ID, p.Token, "trooper-S01", report, nil)
+	must(t, e)
+	r, e = s2.load(h)
+	must(t, e)
+	if len(r.State.Attempts[0].Reports) != 1 {
+		t.Fatalf("replay or reload duplicated the report: %d", len(r.State.Attempts[0].Reports))
+	}
+	// The same ID with different content stays refused, so a report can never be
+	// silently rewritten.
+	report.Summary = "Different"
+	_, e = s2.progress(h, c.Attempt.ID, p.Token, "trooper-S01", report, nil)
+	wantCode(t, e, "event_conflict")
+	// A second trooper — the judge a judge step records — is a second row.
+	r, e = s2.progress(h, c.Attempt.ID, p.Token, "sergeant-S01", mission.Progress{ID: "event-3", Status: "working", Summary: "Reviewing the diff"}, nil)
+	must(t, e)
+	if len(r.State.Attempts[0].Reports) != 2 || r.State.Attempts[0].Reports[1].Trooper != "sergeant-S01" {
+		t.Fatalf("second trooper report lost: %+v", r.State.Attempts[0].Reports)
+	}
+	// The actor is bounded, and a blocked report still needs its blocker.
+	_, e = s2.progress(h, c.Attempt.ID, p.Token, strings.Repeat("x", 65), mission.Progress{ID: "event-4", Status: "working", Summary: "S"}, nil)
+	wantCode(t, e, "usage")
+	_, e = s2.progress(h, c.Attempt.ID, p.Token, "trooper-S01", mission.Progress{ID: "event-5", Status: "blocked", Summary: "Stuck"}, nil)
+	wantCode(t, e, "usage")
+}
+
+// A trooper that finishes blocked, is resumed, and then finishes ready reports
+// twice under its own name: the attempt keeps one row, and that row is the
+// state it finished in.
+func TestResumedTrooperReportReplacesItsEarlierRow(t *testing.T) {
+	s, h, p := piFixture(t)
+	c, e := s.attach(h, p)
+	must(t, e)
+	result(t, s, c, "Evidence")
+	r, e := s.progress(h, c.Attempt.ID, p.Token, "trooper-S01", mission.Progress{ID: "event-blocked", Status: "blocked", Summary: "Stopped at the fixture loader", Blocker: "Provider overload"}, nil)
+	must(t, e)
+	if len(r.State.Attempts[0].Reports) != 1 || r.State.Attempts[0].Reports[0].Status != "blocked" {
+		t.Fatalf("blocked report lost: %+v", r.State.Attempts[0].Reports)
+	}
+	// The resume is a new completion of the same trooper, so its progress event
+	// carries a new ID; the report it writes is the one the attempt keeps.
+	r, e = s.progress(h, c.Attempt.ID, p.Token, "trooper-S01", mission.Progress{ID: "event-ready", Status: "ready", Summary: "Finished the fixture loader", Next: "Hand the diff to the captain"}, nil)
+	must(t, e)
+	a := r.State.Attempts[0]
+	if len(a.Reports) != 1 {
+		t.Fatalf("a resumed trooper keeps one row, got %d: %+v", len(a.Reports), a.Reports)
+	}
+	final := a.Reports[0]
+	if final.ID != "event-ready" || final.Status != "ready" || final.Summary != "Finished the fixture loader" || final.Next != "Hand the diff to the captain" {
+		t.Fatalf("the surviving report is not the final one: %+v", final)
+	}
+	// Both completions stay in the append-only progress stream, so the history
+	// of the resume is not lost with the replaced row.
+	if len(a.Progress) != 2 {
+		t.Fatalf("progress history lost: %d entries", len(a.Progress))
+	}
+	// A stale retry of the blocked call is a replay: it neither duplicates the
+	// row nor undoes the final state.
+	r, e = s.progress(h, c.Attempt.ID, p.Token, "trooper-S01", mission.Progress{ID: "event-blocked", Status: "blocked", Summary: "Stopped at the fixture loader", Blocker: "Provider overload"}, nil)
+	must(t, e)
+	if len(r.State.Attempts[0].Reports) != 1 || r.State.Attempts[0].Reports[0].Status != "ready" {
+		t.Fatalf("a replayed stale report rewrote the row: %+v", r.State.Attempts[0].Reports)
+	}
+}
+
+// A record written before reports existed loads unchanged, and its projection
+// carries the report a later call adds — in both the ledger and the attempt note.
+func TestTrooperReportsStayBackwardCompatible(t *testing.T) {
+	s, h, p := piFixture(t)
+	c, e := s.attach(h, p)
+	must(t, e)
+	r, e := s.load(h)
+	must(t, e)
+	if len(r.State.Attempts[0].Reports) != 0 {
+		t.Fatal("a fresh attempt starts with no reports")
+	}
+	d, e := s.dir(h)
+	must(t, e)
+	state, e := os.ReadFile(filepath.Join(d, "state.md"))
+	must(t, e)
+	// The projected frontmatter must not carry the key at all: an attempt with
+	// no reports reads exactly as it did before the field existed.
+	if reportsKey.Match(state) {
+		t.Fatalf("an attempt without reports must not write the field:\n%s", state)
+	}
+	result(t, s, c, "Evidence")
+	_, e = s.progress(h, c.Attempt.ID, p.Token, "trooper-S01", mission.Progress{ID: "event-1", Status: "ready", Summary: "Done"}, nil)
+	must(t, e)
+	for _, file := range []string{"state.md", "attempts/001.md"} {
+		b, e := os.ReadFile(filepath.Join(d, file))
+		must(t, e)
+		if !strings.Contains(string(b), "trooper: trooper-S01") || !reportsKey.Match(b) {
+			t.Fatalf("%s does not project the trooper report:\n%s", file, b)
+		}
 	}
 }
 
@@ -415,4 +553,49 @@ func TestMissionWorkspaceAdoptsUnmarkedCheckout(t *testing.T) {
 	if got, e := os.ReadFile(filepath.Join(foreign, "notes.txt")); e != nil || string(got) != "keep me" {
 		t.Fatalf("foreign path was touched: %q %v", got, e)
 	}
+}
+
+// A failed launch must stay retryable. The adapter releases the intent it
+// reserved, and the next launch reserves again without a hand edit.
+func TestFailedLaunchIntentIsReleased(t *testing.T) {
+	s, h, _ := piFixture(t)
+	got, e := s.launch(h, "", "")
+	must(t, e)
+	if got["acquired"] != true {
+		t.Fatal("the first launch did not reserve an intent")
+	}
+	id := got["runtime"].(*mission.RuntimeBinding).LaunchID
+	if id == "" {
+		t.Fatal("the reservation records no launch id")
+	}
+	// Only the intent this call reserved can be released.
+	_, e = s.release(h, "launch-other")
+	wantCode(t, e, "launch_mismatch")
+	_, e = s.release(h, "")
+	wantCode(t, e, "usage")
+	r, e := s.release(h, id)
+	must(t, e)
+	if r["released"] != true {
+		t.Fatal("release did not free the intent")
+	}
+	if left := r["runtime"].(*mission.RuntimeBinding).LaunchID; left != "" {
+		t.Fatalf("launch id survived the release: %q", left)
+	}
+	again, e := s.launch(h, "", "")
+	must(t, e)
+	if again["acquired"] != true {
+		t.Fatal("a released launch intent must be reservable again")
+	}
+}
+
+// A live owner keeps its intent. Release never frees a recorded session.
+func TestReleaseRefusesARecordedSession(t *testing.T) {
+	s, h, p := piFixture(t)
+	got, e := s.launch(h, "", "")
+	must(t, e)
+	id := got["runtime"].(*mission.RuntimeBinding).LaunchID
+	_, e = s.launch(h, p.SessionFile, id)
+	must(t, e)
+	_, e = s.release(h, id)
+	wantCode(t, e, "session_owned")
 }

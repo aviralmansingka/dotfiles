@@ -42,6 +42,15 @@ It runs headless, offline, and with no plugin manager.
   and `<leader>mm` reaches the mermaid guard. The wiring sets the parser,
   the conceal options, and the fence-detection autocmds; markdownlint
   skips herdr scrollback buffers.
+- `markdown_reader_spec`: the reader column helper, against a real window
+  layout. It asserts the eligibility rules (markdown only, never octo, never
+  a herdr scrollback capture, never a non-prose buftype), the 100-cell
+  column and the 8-cell margin, and the auto rule (the column opens
+  wherever it fits, and a narrow window stays alone). Open and
+  close must leave two fillers, a centered text area, wrap and linebreak
+  on while open and back on exit, and `q`/`<Esc>` mapped only while open.
+  `:write` keeps the fillers. A resize re-cuts them, a too-narrow resize, a
+  buffer switch to an octo buffer, and a closed editing window drop them.
 
 ## How to run
 
@@ -69,11 +78,16 @@ entry. The script fails on any spec failure or budget breach.
   the `ft`, `fT`, and `mm` handlers are exercised. The `vf`, `vt`, `ot`,
   `ob`, and `ol` handlers belong to other clusters. The suite found no
   source bug; no source file changed.
+- `helpers/reader.lua`: `eligible`, `column_width`, `should_auto`, `enable`,
+  `close`, `toggle`, `maybe_auto`, and `setup` are exercised. The filler
+  windows and the resize path run against the headless screen.
 
 ## Known gaps
 
 - Live mmdflux rendering, the real float display, and colorscheme
   rendering stay untested. They need a live binary and a real UI.
+- The reader column is proven on the headless screen only; the real display
+  (width 100 in a wide terminal) needs a live UI.
 - The plugin has no enable/disable toggle and no timer debounce. The
   pending map acts as the debounce. The suite pins that state instead.
 - The grok-mermaid node script runs stubbed, so its body is never run.

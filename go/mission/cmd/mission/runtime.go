@@ -241,6 +241,9 @@ func ensureWorktree(checkout, cwd, branch string) error {
 // Existing sessions can adopt their current linked worktree with --cwd.
 func (s *Store) workspace(h, cwd, base, root string) (mission.Record, error) {
 	return s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		repo, e := s.repo(r.Mission.Repo)
 		if e != nil {
 			return e
@@ -456,6 +459,11 @@ func validatePiSession(p *mission.PiAttachment) error {
 }
 
 func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) {
+	if r, e := s.load(h); e != nil {
+		return mission.Claim{}, e
+	} else if e = requireOpen(r); e != nil {
+		return mission.Claim{}, e
+	}
 	if e := validatePiSession(&p); e != nil {
 		return mission.Claim{}, e
 	}
@@ -465,6 +473,9 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 	e := s.locked(func() error {
 		r, e := s.load(h)
 		if e != nil {
+			return e
+		}
+		if e = requireOpen(r); e != nil {
 			return e
 		}
 		if r.State.Active == "" {
@@ -505,6 +516,65 @@ func (s *Store) piClaim(r mission.Record, a mission.Attempt, token string) missi
 	}}
 }
 
+// release drops one launch intent that its adapter could not use, so a later
+// launch may reserve again. A recorded session or session file keeps the
+// intent: a live owner is never taken over, and an intent this call did not
+// reserve is never released.
+func (s *Store) release(h, launchID string) (map[string]any, error) {
+	released := false
+	r, e := s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
+		b := r.State.Runtime
+		if b == nil {
+			return mission.Problem("worktree_required", "prepare a mission workspace first")
+		}
+		if launchID == "" {
+			return mission.Problem("usage", "release needs the launch id of the failed intent")
+		}
+		if b.SessionID != "" || b.SessionFile != "" {
+			return mission.Problem("session_owned", "mission already records a session; resume it instead of launching again")
+		}
+		if b.LaunchID == "" || b.LaunchID != launchID {
+			return mission.Problem("launch_mismatch", "launch intent does not match the reservation")
+		}
+		b.LaunchID = ""
+		released = true
+		return nil
+	})
+	return map[string]any{"released": released, "runtime": r.State.Runtime}, e
+}
+
+// ack records that an adapter deployed the mission its plan described. The ack
+// token is derived, so a reader finds the same token in the plan and in the
+// record; it is never written as the launch intent, because the intent is the
+// reservation a captain consumes, not a value a plan can derive. A second ack
+// writes nothing and says so, so a repeated deploy is harmless.
+func (s *Store) ack(h string) (map[string]any, error) {
+	acknowledged, token := false, ""
+	r, e := s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
+		b := r.State.Runtime
+		if b == nil {
+			return mission.Problem("worktree_required", "prepare a mission workspace first")
+		}
+		token = ackToken(s.Vault, h, b.Branch)
+		if b.LaunchAck == "" {
+			acknowledged = true
+			b.LaunchAck = token
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+	return map[string]any{"acknowledged": acknowledged, "ack": token, "runtime": r.State.Runtime}, nil
+}
+
+// launch reserves one launch intent, or records the session file an adapter got.
 func (s *Store) launch(h, file, launchID string) (map[string]any, error) {
 	if file != "" {
 		p, e := filepath.Abs(file)
@@ -519,6 +589,9 @@ func (s *Store) launch(h, file, launchID string) (map[string]any, error) {
 	}
 	acquired := false
 	r, e := s.mutate(h, func(r *mission.Record) error {
+		if e := requireOpen(*r); e != nil {
+			return e
+		}
 		b := r.State.Runtime
 		if b == nil {
 			return mission.Problem("worktree_required", "prepare a mission workspace first")

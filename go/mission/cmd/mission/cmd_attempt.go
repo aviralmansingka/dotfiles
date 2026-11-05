@@ -4,14 +4,16 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"strconv"
 
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
 )
 
+// cmdProgress carries an optional --actor: the trooper that reported. One call
+// then appends both the structured progress and the trooper report, so the
+// sitrep can name who finished what.
 func cmdProgress(a platform.Args, s *Store) (any, error) {
-	return s.progress(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), mission.Progress{ID: a.Get("event-id"), Status: a.Get("status"), Summary: a.Get("summary"), Next: a.Get("next"), Blocker: a.Get("blocker")}, a.Flags["evidence"])
+	return s.progress(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), a.Get("actor"), mission.Progress{ID: a.Get("event-id"), Status: a.Get("status"), Summary: a.Get("summary"), Next: a.Get("next"), Blocker: a.Get("blocker")}, a.Flags["evidence"])
 }
 
 func cmdSettle(a platform.Args, s *Store) (any, error) {
@@ -41,14 +43,6 @@ func cmdHook(a platform.Args, s *Store) (any, error) {
 
 func cmdFinish(cmd string, a platform.Args, s *Store) (any, error) {
 	return s.finish(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), cmd == "fail", a.Get("note"), false, 0)
-}
-
-func cmdCheckpoint(a platform.Args, s *Store) (any, error) {
-	rev, e := strconv.Atoi(a.Get("revision"))
-	if e != nil || rev < 1 {
-		return nil, mission.Problem("usage", "checkpoint requires a positive --revision from show")
-	}
-	return s.checkpoint(a.At(1), a.Get("id"), a.Get("decision"), a.Get("note"), a.Get("actor"), a.Has("human"), rev)
 }
 
 func cmdRetry(a platform.Args, s *Store) (any, error) { return s.retry(a.At(1)) }

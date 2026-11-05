@@ -34,40 +34,69 @@ func cmdRender(a platform.Args, s *Store) int {
 	if e != nil {
 		return emit(nil, e)
 	}
-	m := newDesk(s)
+	m := newNavigationDesk(s)
 	m.width = w
 	m.height = h
 	m.refresh()
 	if m.err != nil {
 		return emit(nil, m.err)
 	}
+	if a.Has("filter") {
+		idx, ok := filterIndex(a.Get("filter"))
+		if !ok {
+			return emit(nil, mission.Problem("usage", "unknown filter %s; use one of %s", a.Get("filter"), filterLabels()))
+		}
+		m.filter = idx
+		m.refreshNavigationList("")
+	}
 	if a.Has("handle") {
+		if m.inboxOnly() {
+			m.view = m.records
+		}
 		found := false
-		for i, r := range m.records {
+		for i, r := range m.view {
 			if r.Handle == a.Get("handle") {
 				m.selected = i
 				found = true
 			}
 		}
 		if !found {
-			return emit(nil, mission.Problem("not_found", "mission %s not found", a.Get("handle")))
+			return emit(nil, mission.Problem("not_found", "mission %s is not in this view", a.Get("handle")))
 		}
 	}
-	if a.Has("id") && len(m.records) > 0 {
-		idx, err := stepIndex(m.records[m.selected].Mission, a.Get("id"))
+	view := a.Get("view")
+	if mode, ok := map[string]int{"inbox": 0, "table": 1, "repos": 2}[view]; ok {
+		r, _ := m.current()
+		m.nav.mode = mode
+		m.refreshNavigationList(r.Handle)
+	}
+	views := map[string]int{"overview": 0, "troopers": 1, "attempts": 2, "activity": 3, "steps": 4}
+	if tab, ok := views[view]; ok {
+		m.enterNavigation()
+		m.tab = tab
+	}
+	if view == "step" || view == "call" {
+		m.enterNavigation()
+	}
+	if a.Has("id") {
+		r, ok := m.current()
+		if !ok {
+			return emit(nil, mission.Problem("not_found", "no mission selected"))
+		}
+		idx, err := stepIndex(r.Mission, a.Get("id"))
 		if err != nil {
 			return emit(nil, err)
 		}
 		m.selectedStep = idx
 	}
-	if a.Get("view") == "attempts" {
-		m.tab = 1
+	if view == "step" || view == "call" {
+		m.enterNavigation()
+		if cmd := m.pollNavigationCalls(); cmd != nil {
+			m.Update(cmd())
+		}
 	}
-	if a.Get("view") == "activity" {
-		m.tab = 2
-	}
-	if a.Get("view") == "steps" {
-		m.tab = 3
+	if view == "call" {
+		m.enterNavigation()
 	}
 	if a.Get("view") == "edit" {
 		m.startStepEdit()

@@ -17,12 +17,15 @@ func ParseArgs(argv []string) (Args, error) {
 	a := Args{Flags: map[string][]string{}}
 	booleans := map[string]bool{"json": true, "human": true, "stdin": true, "color": true, "no-color": true, "help": true, "reset": true}
 	booleans["quiescent"] = true
-	values := map[string]bool{"vault": true, "checkout": true, "remote": true, "title": true, "goal": true, "step": true, "checkpoint": true, "kind": true, "from": true, "repo": true, "agent": true, "session-id": true, "session-file": true, "cwd": true, "attempt": true, "token": true, "event-id": true, "tool": true, "message": true, "note": true, "id": true, "decision": true, "actor": true, "revision": true, "view": true, "width": true, "height": true, "model": true, "pane": true, "workspace": true}
+	booleans["release"] = true
+	booleans["ack"] = true
+	booleans["force"] = true
+	values := map[string]bool{"vault": true, "checkout": true, "remote": true, "title": true, "goal": true, "step": true, "checkpoint": true, "kind": true, "from": true, "repo": true, "agent": true, "session-id": true, "session-file": true, "cwd": true, "attempt": true, "token": true, "event-id": true, "tool": true, "message": true, "note": true, "id": true, "decision": true, "actor": true, "revision": true, "view": true, "width": true, "height": true, "model": true, "pane": true, "workspace": true, "filter": true}
 	values["handle"] = true
 	for _, k := range []string{"instructions", "acceptance", "checks", "output"} {
 		values[k] = true
 	}
-	for _, k := range []string{"base", "root", "status", "summary", "next", "blocker", "evidence", "launch-id"} {
+	for _, k := range []string{"base", "root", "status", "summary", "next", "blocker", "evidence", "launch-id", "mux"} {
 		values[k] = true
 	}
 	for i := 0; i < len(argv); i++ {

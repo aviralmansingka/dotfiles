@@ -141,6 +141,7 @@ type Event struct {
 type Attempt struct {
 	Execution       string         `yaml:"execution,omitempty" json:"execution,omitempty"`
 	Progress        []Progress     `yaml:"progress,omitempty" json:"progress,omitempty"`
+	Reports         []Report       `yaml:"reports,omitempty" json:"reports,omitempty"`
 	Settled         bool           `yaml:"settled,omitempty" json:"settled,omitempty"`
 	ID              string         `yaml:"id" json:"id"`
 	Sequence        int            `yaml:"sequence" json:"sequence"`
@@ -178,6 +179,8 @@ type State struct {
 	Revision    int                   `yaml:"revision" json:"revision"`
 	SpecHash    string                `yaml:"spec_hash" json:"spec_hash"`
 	Status      string                `yaml:"status" json:"status"`
+	ClosedAt    string                `yaml:"closed_at,omitempty" json:"closed_at,omitempty"`
+	CloseNote   string                `yaml:"close_note,omitempty" json:"close_note,omitempty"`
 	Current     string                `yaml:"current_step,omitempty" json:"current_step,omitempty"`
 	Active      string                `yaml:"active_attempt,omitempty" json:"active_attempt,omitempty"`
 	Pending     string                `yaml:"pending_checkpoint,omitempty" json:"pending_checkpoint,omitempty"`
@@ -265,7 +268,7 @@ func NextStep(m Mission, s State) (Step, error) {
 		}
 		for _, cp := range m.Checkpoints {
 			if cp.After == step.ID && s.Checkpoints[cp.ID].Status != "accepted" {
-				return Step{}, Problem("checkpoint_pending", "%s requires human checkpoint %s", step.ID, cp.ID)
+				return Step{}, Problem("review_pending", "%s needs review %s. Decide with:\n  mission checkpoint accept %s/%s %s --note \"Reviewed the evidence\"", step.ID, cp.ID, m.Repo, m.Slug, cp.ID)
 			}
 		}
 	}
@@ -312,6 +315,26 @@ type RuntimeBinding struct {
 	Pane        string `yaml:"pane_id,omitempty" json:"pane_id,omitempty"`
 	Workspace   string `yaml:"workspace_id,omitempty" json:"workspace_id,omitempty"`
 	LaunchID    string `yaml:"launch_id,omitempty" json:"launch_id,omitempty"`
+	// LaunchAck is the plan's ack token once an adapter has deployed the
+	// reserved intent. It marks the seats as created, not the launch as owned:
+	// the launch id stays reserved until the captain attaches.
+	LaunchAck string `yaml:"launch_ack,omitempty" json:"launch_ack,omitempty"`
+}
+
+// A Report is one trooper's own line in the attempt: the subagent that did the
+// work, the state it reached, what it wrote, what comes next, and when it
+// finished. The operator records it, so a trooper never holds a vault token.
+// An attempt keeps one report per trooper, replaced by that trooper's later
+// report, so a resumed run leaves its final state and not the one it left
+// behind. `id` is the progress event ID that carried the report, so a repeated
+// or replayed call adds nothing.
+type Report struct {
+	ID      string `yaml:"id" json:"id"`
+	Trooper string `yaml:"trooper" json:"trooper"`
+	Status  string `yaml:"status" json:"status"`
+	Summary string `yaml:"summary" json:"summary"`
+	Next    string `yaml:"next,omitempty" json:"next,omitempty"`
+	At      string `yaml:"at" json:"at"`
 }
 
 type Progress struct {

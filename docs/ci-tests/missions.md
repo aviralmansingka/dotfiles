@@ -13,11 +13,36 @@ attachment, launch intent deduplication, structured progress and evidence hashes
 hook retries, transcript copies, checkpoint pauses, and verified completion.
 They check that a normal turn without a completion report keeps its owner.
 They also check that an interrupted turn cannot settle a completion report.
+
+Four Go cases pin the ledger commit point. A save of a record read before a claim
+is refused with `revision_conflict`. Two actors with different lock directories
+(`Store.LockDir`, a second `TMPDIR`) reproduce the lost-claim incident through
+`mutate`, and the same compare-and-swap stops it. The journal names every writer,
+refused saves included. `mission repair` re-admits an orphaned
+`attempts/NNN.md` projection, restores the owning attempt and step, and keeps a
+passed step passed. The extension tests pin the gate: a tracking record that
+fails degrades read and bash-class tools to a warning and keeps blocking edits.
+
+Close cases pin the retirement contract: close after every step passes, refusal
+of open work that names the unfinished step ids and the `--force` hint, a forced
+close that records its note and timestamp, an idempotent second close that
+returns `already: true`, and live-work commands refused with code `closed` and a
+pointer at a new mission. They also pin that a closed mission never appears as
+ready work, and that `repair` refuses a closed mission without losing its
+replay-or-adopt behavior: the ledger cases above still pass unchanged.
+
 One Go case pins the mission identity: branch `mission/<slug>`, a linked checkout
 under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
 and refusal of an unmarked `mission/<slug>` branch. The extension cases stub
 `herdr` and pin the `herdr worktree open` registration plus the workspace the
-mission-worker tab lands in; no Herdr call is made.
+worker pane lands in; no Herdr call is made. They pin the full worker launch
+(`herdr agent start`, `herdr agent wait`, one `herdr agent prompt`, then
+`herdr agent get` for the session file), that a launch needs no subagent
+extension, and that a worker which never reaches its prompt releases its launch
+intent. Three more extension cases pin the agent name: the mission-derived name,
+a taken name that takes a hashed name once without a rename, and a second
+collision that fails with the holding pane. They also pin that a failed launch
+releases its launch intent, and that a launch pane which hosts an agent keeps it.
 
 The extension test file also runs in the Pi test job. Without MISSION_TEST_BIN,
 it runs only the pure adapter tests and marks CLI integration cases as skipped.

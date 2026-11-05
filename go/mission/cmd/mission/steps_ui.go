@@ -24,10 +24,10 @@ func (m *desk) stepsDetail(r mission.Record, w int) string {
 	return out
 }
 func (m *desk) startStepEdit() {
-	if len(m.records) == 0 {
+	r, ok := m.current()
+	if !ok {
 		return
 	}
-	r := m.records[m.selected]
 	if r.State.Active != "" {
 		m.err = mission.Problem("busy", "Finish the active attempt before customizing steps.")
 		return

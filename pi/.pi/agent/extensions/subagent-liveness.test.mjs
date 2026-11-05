@@ -642,6 +642,15 @@ esac
 	mkdirSync(configDir, { recursive: true });
 	mkdirSync(stubDir, { recursive: true });
 	const parentSessionFile = join(sessionDir, "parent.jsonl");
+	// Scenario 5 needs a durable profile that names no tools: the shipped
+	// durable profiles name extension tools the staged agent dir cannot
+	// provide, and the spawn gate (C30) refuses those. Keep the fixture local
+	// so the durable path never depends on a shipped profile's flag.
+	mkdirSync(join(configDir, "agents"), { recursive: true });
+	writeFileSync(
+		join(configDir, "agents", "durable-worker.md"),
+		"---\nname: durable-worker\ndescription: Durable fixture for the stalled-run scenario\nauto-exit: false\n---\n\nA durable test fixture.\n",
+	);
 	// The worker profile's extension tools (web_search, web_fetch, mermaid,
 	// tuicr, tuicr_reply) must be discoverable in the child's agent dir —
 	// the subagent tool's spawn gate refuses a profile naming tools no
@@ -958,7 +967,7 @@ esac
 			assert.equal(hooks.runningSubagents.size, 0);
 		}
 
-		// Scenario 5 — durable run (mission-worker, `auto-exit: false`): the
+		// Scenario 5 — durable run (a staged `auto-exit: false` fixture): the
 		// wall clock never ends it. Only a quiet transcript does, and that
 		// verdict keeps the tab, the pane, and the CLI attempt ownership.
 		{
@@ -966,7 +975,7 @@ esac
 			// A 100 ms deadline would kill an auto-exit run on the first tick.
 			process.env.PI_SUBAGENT_MAX_WAIT_MS = "100";
 			process.env.PI_SUBAGENT_STALL_MS = "300";
-			const ack = await spawn("Own the mission.", "mission-worker");
+			const ack = await spawn("Own the mission.", "durable-worker");
 			const name = ack.details.name;
 			const running = [...hooks.runningSubagents.values()].at(-1);
 			assert.ok(running, "the durable worker is registered as running");
@@ -1048,68 +1057,6 @@ esac
 		delete process.env.LIV_E2E_SCREEN;
 		delete process.env.LIV_E2E_PROC;
 		delete process.env.LIV_E2E_READ_SLEEP;
-		rmSync(root, { recursive: true, force: true });
-	}
-}
-
-// ---------------------------------------------------------------------------
-// no-mistakes bridge — waitTabReady and discoverSessionFile carry bounded
-// deadlines (env-overridable), so a step tab that never reports ready or
-// never surfaces a session file cannot wedge the orchestrator.
-// ---------------------------------------------------------------------------
-{
-	const root = mkdtempSync(join(tmpdir(), "subagent-liveness-bridge-"));
-	const bin = join(root, "bin");
-	mkdirSync(bin, { recursive: true });
-	writeFileSync(
-		join(bin, "herdr"),
-		`#!/bin/sh
-case "$1:$2" in
-	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"'"$LIV_BRIDGE_STATUS"'"}}}' ;;
-	*) printf '%s\\n' '{"result":{}}' ;;
-esac
-`,
-		{ mode: 0o755 },
-	);
-	const saved = {
-		PATH: process.env.PATH,
-		NM_BRIDGE_POLL_MS: process.env.NM_BRIDGE_POLL_MS,
-		NM_TAB_READY_TIMEOUT_MS: process.env.NM_TAB_READY_TIMEOUT_MS,
-		NM_SESSION_DISCOVER_TIMEOUT_MS: process.env.NM_SESSION_DISCOVER_TIMEOUT_MS,
-	};
-	try {
-		process.env.PATH = `${bin}:${saved.PATH}`;
-		process.env.NM_BRIDGE_POLL_MS = "25";
-		process.env.NM_TAB_READY_TIMEOUT_MS = "120";
-		process.env.NM_SESSION_DISCOVER_TIMEOUT_MS = "120";
-		const bridge = freshJiti()("./no-mistakes-pane/bridge.ts");
-		assert.equal(bridge.TAB_READY_TIMEOUT_MS, 120, "NM_TAB_READY_TIMEOUT_MS overrides the deadline");
-		assert.equal(bridge.SESSION_DISCOVER_TIMEOUT_MS, 120, "NM_SESSION_DISCOVER_TIMEOUT_MS overrides the deadline");
-
-		// A tab that never becomes ready rejects at the deadline, quickly.
-		process.env.LIV_BRIDGE_STATUS = "unknown";
-		const readyStart = Date.now();
-		await assert.rejects(bridge.waitTabReady("wB:p1"), /never became ready/);
-		assert.ok(Date.now() - readyStart < 2000, "the readiness wait is deadline-bounded");
-
-		// A blocked tab rejects immediately with the actionable reason.
-		process.env.LIV_BRIDGE_STATUS = "blocked";
-		await assert.rejects(bridge.waitTabReady("wB:p1"), /blocked during startup/);
-
-		// A tab that never surfaces a session file rejects at its deadline.
-		process.env.LIV_BRIDGE_STATUS = "idle";
-		const discoverStart = Date.now();
-		await assert.rejects(
-			bridge.discoverSessionFile({ paneId: "wB:p1" }, {}, undefined),
-			/could not discover the tab agent's session file/,
-		);
-		assert.ok(Date.now() - discoverStart < 2000, "the discovery wait is deadline-bounded");
-	} finally {
-		for (const [key, value] of Object.entries(saved)) {
-			if (value === undefined) delete process.env[key];
-			else process.env[key] = value;
-		}
-		delete process.env.LIV_BRIDGE_STATUS;
 		rmSync(root, { recursive: true, force: true });
 	}
 }

@@ -77,6 +77,22 @@ terraform -chdir=ops/devbox destroy \
   -var="ssh_public_key=$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
+## Build
+
+`mission` and `rataflow-view` build from this checkout with nothing but the Go and Rust toolchains: no
+`cargo install`, no `go install`, no network.
+
+```sh
+just build           # both binaries into ~/.local/bin
+just build-mission   # one of them
+BIN_DIR=/tmp/out just build
+```
+
+`just build` compiles each binary into its package's own gitignored build directory, then moves it into
+`BIN_DIR` (default `~/.local/bin`). The Go and Rust toolchains are the only requirements; `install.sh` still installs
+both binaries for a fresh machine. An older `cargo install`ed `~/.cargo/bin/rataflow-view` shadows the fresh copy
+(`~/.cargo/bin` comes first on `PATH`) — delete it once.
+
 ## Stow Packages
 
 | Package      | Description                                                                 |
@@ -89,6 +105,7 @@ terraform -chdir=ops/devbox destroy \
 | `git`        | Git configuration                                                           |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `nvim`       | Neovim with LazyVim                                                         |
+| `profile`    | Login-shell PATH for sh/bash (`~/.profile`: pi and rex binaries)            |
 | `rex`        | Rex terminal multiplexer keybindings (`~/.config/rex`)                       |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
@@ -237,11 +254,15 @@ later.
 Use `/cleanup` from a durable parent session in a linked worktree after its work
 ships. The command confirms its worktree, local branch, and configured upstream
 branch, when one exists. It warns about local files, including ignored files, and
-commits absent from upstream. It then deletes those targets and closes Pi. It
-refuses sub-agent sessions, the main checkout, detached HEAD, and protected local
-or upstream branches. The deletions are best-effort: a remote branch, worktree, or
-local branch that is already gone counts as done, a real failure is reported and
-skipped over, and Pi closes either way.
+commits absent from upstream. When a vault mission is bound to the worktree, it
+names the mission handle, warns about steps that did not pass, and closes the
+record with `mission close --force --note "worktree retired by /cleanup"`, so the
+mission stops offering work and never revives the deleted checkout. It then
+deletes those targets and closes Pi. It refuses sub-agent sessions, the main
+checkout, detached HEAD, and protected local or upstream branches. The deletions
+and the mission close are best-effort: a remote branch, worktree, or local branch
+that is already gone counts as done, a real failure is reported and skipped over,
+and Pi closes either way.
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
@@ -261,10 +282,9 @@ mkdir -p ~/.pi/agent/npm
 (cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts)
 ```
 
-Pi surfaces No Mistakes runs in the shared activity widget without replacing the attached TUI. See the
+See the
 [interactive-subagents status documentation](pi/.pi/agent/extensions/interactive-subagents/README.md#status-widget--configuration)
-for display, scoping, and fallback behavior. In Pi, agents drive the pipeline with the
-`no_mistakes_axi` tool; see the [no-mistakes skill](agents/.agents/skills/no-mistakes/SKILL.md).
+for subagent widget display and fallback behavior.
 
 In Herdr-backed TUI sessions, an active Pi UI prompt reports the agent as blocked until the prompt closes, so
 Sidekick shows that Pi is waiting for user input.

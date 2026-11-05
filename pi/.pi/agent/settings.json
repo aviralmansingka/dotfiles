@@ -4,7 +4,8 @@
   "defaultThinkingLevel": "max",
   "defaultTools": [
     "+tool_search",
-    "+worktree"
+    "+worktree",
+    "+mission"
   ],
   "packages": [
     "npm:pi-mcp-adapter"
@@ -12,6 +13,7 @@
   "extensions": [
     "+extensions/cleanup.ts",
     "+extensions/opengateway.ts",
+    "+extensions/program-status.ts",
     "+extensions/python.ts",
     "+extensions/rounded-bar-footer.ts",
     "+extensions/thinking-title.ts",

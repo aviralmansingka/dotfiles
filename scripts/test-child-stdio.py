@@ -90,24 +90,6 @@ INTENTIONAL_INHERIT = {
             "reason": "test harness: fake-binary child with a scratch env; stderr goes to the runner log, not a user TTY",
         },
     ],
-    "pi/.pi/agent/extensions/no-mistakes-bridge.test.mjs": [
-        {
-            "needle": "ws-stub",
-            "reason": "test harness: stub tab created through the fake herdr on PATH; stderr goes to the runner log, not a user TTY",
-        },
-        {
-            "needle": '["pane", "close", gone]',
-            "reason": "test harness: best-effort cleanup of a stub pane through the fake herdr",
-        },
-        {
-            "needle": "w1:p-nope",
-            "reason": (
-                "deliberately leaky control-child source string — this is "
-                "the #291 regression made visible; the suite pins that the "
-                "production seam removes it"
-            ),
-        },
-    ],
     "pi/.pi/agent/extensions/tool-call-renderer-public.test.mjs": [
         {
             "needle": "git init --quiet",

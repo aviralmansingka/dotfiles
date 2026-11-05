@@ -101,7 +101,6 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **worker** | session default | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
 | **professor** | session default | lesson tools, mermaid diagrams, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
 | **tuicr-review** | session default | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
-| **nm-orchestrator** | session default | `no_mistakes_axi`, `read` | no-mistakes run orchestrator; drives one pipeline run through its gates and returns the run summary |
 | **research-orchestrator** | session default | `read`, `write`, `edit`, `grep`, `find`, `ls`, `bash`, `web_fetch` + spawning | Maps research nodes and sends each one to a researcher |
 
 Bundled agents inherit the session model (no `model:` pin in their
@@ -109,10 +108,10 @@ frontmatter); each agent's `thinking:` level still applies on top of the
 inherited model. Pin a model per spawn with the `model` parameter, or per
 custom agent with a `model:` frontmatter line.
 
-`scout`, `researcher`, `worker`, `tuicr-review`, and `nm-orchestrator` are
+`scout`, `researcher`, `worker`, and `tuicr-review` are
 autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
 (`auto-exit: false`) that auto-loads the `professor` skill and remains open
-until the learner exits it. All six carry their identity in the system prompt
+until the learner exits it. All of them carry their identity in the system prompt
 (`system-prompt: append`).
 
 The `tuicr-review` agent is started by the tuicr extension's `tuicr_review`
@@ -122,12 +121,6 @@ tab (the wrapper it spawns inherits its `HERDR_PANE_ID`), parks in `waiting`
 between comment batches — auto-exit is suppressed while its comment watcher
 is active — and closes itself after the TUI exits and its summary is
 delivered.
-
-The `nm-orchestrator` agent is started by the no-mistake-pane extension's
-`no_mistakes_axi` tool when a Herdr captain session submits `run`: it owns
-the attach pane, gate panels, and the step-agent bridge for that run, parks
-in `waiting` between axi results (auto-exit is suppressed while the run is
-active), and closes itself after the terminal outcome and its run summary.
 
 ## Custom agents
 
@@ -225,23 +218,9 @@ settings.
 
 The widget tracks each sub-agent from a runtime activity snapshot written by the child: `starting`, `active` (turn/provider/tool work), `waiting` (open for input or another stage), `stalled` (no valid snapshot for too long), or `running` (fallback). Completion messages expand with `Ctrl+O`.
 
-Press `Ctrl+S` in the main editor to toggle the widget between the full box and a one-line count summary — e.g. `3 running: 1 active · 1 waiting · 1 stalled` — with an active No Mistakes pipeline counted in as well. Pi's own `Ctrl+S` defaults live inside pickers (session tree sort, model selector save), so there is no conflict; the toggle resets with the session.
+Press `Ctrl+S` in the main editor to toggle the widget between the full box and a one-line count summary — e.g. `3 running: 1 active · 1 waiting · 1 stalled`. Pi's own `Ctrl+S` defaults live inside pickers (session tree sort, model selector save), so there is no conflict; the toggle resets with the session.
 
 If a Herdr tab or tmux pane is closed before its completion sentinel appears, the run is marked failed instead of stalling forever. The parent receives a steer prompt asking whether to resume the saved session, launch a fresh sub-agent, or ignore it.
-
-The same widget shows an active No Mistakes pipeline when the sibling `no-mistakes-pane.ts` extension is
-loaded. Its compact row omits the branch and shows the current (or synthetic `starting`/`merge`) phase,
-phase wall-clock time, and total wall-clock time. Below it, every explicit `error`, `warning`, or `info`
-review finding appears with `❌`, `⚠️`, or `ℹ️`; unknown severities and count-only findings are omitted.
-The widget is hidden when status reports no run or a terminal run.
-
-For `no_mistakes_axi run` and `respond` calls whose cwd matches the Pi session cwd, a read-only observer
-polls `no-mistakes axi status`; No Mistakes still owns execution and gates, with `no-mistakes attach` in
-the adjacent Herdr pane and the existing pane/inline fallbacks. A valid AXI run ID matching the invocation
-is required before phase progress is attached. With matched phase data, `Ctrl+O` expands all phases; failed
-calls also retain their raw error output. Runs owned by another Pi session are ignored even when the shared
-daemon reports them as active. Without matched phase data, or for calls targeting another cwd, the native
-tool output remains and that call does not trigger status polling or activity publication.
 
 Status display is configured via `config.json` in the extension directory (copy `config.json.example`; it's gitignored):
 

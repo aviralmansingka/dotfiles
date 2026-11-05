@@ -75,12 +75,6 @@ import {
   type SubagentActivityState,
 } from "./activity.ts";
 import {
-  noMistakesFindingLines,
-  noMistakesIsWaiting,
-  noMistakesWidgetStatus,
-  type NoMistakesActivity,
-} from "./no-mistakes.ts";
-import {
   agentIsolationArgs,
   loadAgentDefaultsFromPaths,
   parseAgentDefinition,
@@ -148,6 +142,12 @@ const SubagentParams = Type.Object({
     Type.String({
       description:
         "Working directory for the sub-agent. The agent starts in this folder and picks up its local .pi/ config, CLAUDE.md, skills, and extensions. Use for role-specific subfolders.",
+    }),
+  ),
+  session: Type.Optional(
+    Type.String({
+      description:
+        "Rex session label or id for the child tab, such as mission-fix-login. Defaults to this session. Use it to keep workers in their mission's session instead of your own.",
     }),
   ),
 });
@@ -533,7 +533,6 @@ function formatUsageSegments(stats: SessionStats): string[] {
  *   { toolCallId, result:{ progress:{ status, startedAt?, completedAt?,
  *   recentTools?, error? }, output, exitCode?, stats? }, done } */
 const SUBAGENT_BACKGROUND_UPDATE_EVENT = "subagent:background-update";
-const NO_MISTAKES_ACTIVITY_UPDATE_EVENT = "no-mistakes:activity-update";
 
 /** A single subagent tool call, for the expanded `◆ ◇` nested tree. */
 interface SubagentRecentTool {
@@ -1018,8 +1017,6 @@ const RUNNING_CHILDREN_COUNT_KEY = Symbol.for("pi-subagents/running-children-cou
 let latestCtx: ExtensionContext | null = null;
 /** Latest ExtensionAPI, used to deliver ask_question notifications from the watcher. */
 let latestPi: ExtensionAPI | null = null;
-/** Read-only pipeline activity published by no-mistakes-pane.ts. */
-let noMistakesActivity: NoMistakesActivity | null = null;
 
 /** Interval timer for widget re-renders. */
 let widgetInterval: ReturnType<typeof setInterval> | null = null;
@@ -1108,7 +1105,6 @@ function borderBottom(width: number): string {
  *  kind with its count, most interesting first; zero counts are omitted. */
 function minimizedWidgetInfo(
   agents: RunningSubagent[],
-  pipeline: NoMistakesActivity | null,
   count: number,
 ): string {
   const counts = new Map<StatusSnapshot["kind"], number>();
@@ -1116,32 +1112,29 @@ function minimizedWidgetInfo(
   for (const agent of agents) {
     bump(classifyStatus(agent.statusState, Date.now()).kind);
   }
-  if (pipeline) bump(noMistakesIsWaiting(pipeline) ? "waiting" : "active");
 
   const order: StatusSnapshot["kind"][] = ["active", "running", "waiting", "stalled", "starting"];
   const parts = order
     .filter((kind) => counts.get(kind))
     .map((kind) => `${counts.get(kind)} ${kind}`);
-  const total = pipeline ? "active" : "running";
-  return parts.length > 0 ? `${count} ${total}: ${parts.join(" · ")}` : `${count} ${total}`;
+  return parts.length > 0 ? `${count} running: ${parts.join(" · ")}` : `${count} running`;
 }
 
 function renderSubagentWidgetLines(
   agents: RunningSubagent[],
   width: number,
-  pipeline: NoMistakesActivity | null = null,
   minimized = false,
 ): string[] {
-  const count = agents.length + (pipeline ? 1 : 0);
-  const title = pipeline ? "Activities" : "Subagents";
+  const count = agents.length;
+  const title = "Subagents";
 
   // Minimized: the whole box collapses to its top border carrying the
   // per-state counts — one line, no per-agent rows.
   if (minimized) {
-    return [borderTop(title, minimizedWidgetInfo(agents, pipeline, count), width)];
+    return [borderTop(title, minimizedWidgetInfo(agents, count), width)];
   }
 
-  const info = `${count} ${pipeline ? "active" : "running"}`;
+  const info = `${count} running`;
   const lines: string[] = [borderTop(title, info, width)];
 
   for (const agent of agents) {
@@ -1159,15 +1152,6 @@ function renderSubagentWidgetLines(
     lines.push(borderLine(left, right, width));
   }
 
-  if (pipeline) {
-    const waiting = noMistakesIsWaiting(pipeline);
-    const icon = waiting ? `${ICON_DIM}○${RST}` : `${ICON_YELLOW}⟳${RST}`;
-    lines.push(borderLine(` ${icon} no-mistakes `, noMistakesWidgetStatus(pipeline), width));
-    for (const finding of noMistakesFindingLines(pipeline)) {
-      lines.push(borderLine(`   ${finding} `, "", width));
-    }
-  }
-
   lines.push(borderBottom(width));
   return lines;
 }
@@ -1175,7 +1159,7 @@ function renderSubagentWidgetLines(
 function updateWidget() {
   if (!latestCtx?.hasUI) return;
 
-  if (runningSubagents.size === 0 && !noMistakesActivity) {
+  if (runningSubagents.size === 0) {
     latestCtx.ui.setWidget("subagent-status", undefined);
     if (widgetInterval) {
       clearInterval(widgetInterval);
@@ -1194,7 +1178,6 @@ function updateWidget() {
           return renderSubagentWidgetLines(
             Array.from(runningSubagents.values()),
             width,
-            noMistakesActivity,
             widgetMinimized,
           );
         },
@@ -1635,8 +1618,6 @@ export const __test__ = {
   unregisterActiveWatcher,
   sweepExpiredSubagents,
   activeWatchers,
-  noMistakesWidgetStatus,
-  noMistakesFindingLines,
   formatElapsed,
   formatTokens,
   formatContextUsage,
@@ -1682,7 +1663,7 @@ async function launchSubagent(
 ): Promise<RunningSubagent> {
   const adoptPane = typeof params.pane === "string" ? params.pane.trim() : "";
   if (adoptPane) {
-    if (activeSurface !== "herdr" && activeSurface !== "rex") {
+    if (activeSurface() !== "herdr" && activeSurface() !== "rex") {
       throw new Error("Pane adoption requires Herdr or Rex; this session runs on another surface");
     }
     const adoptDefs = params.agent ? loadAgentDefaults(params.agent) : null;
@@ -1690,7 +1671,11 @@ async function launchSubagent(
     assertAdoptablePane(adoptPane, effectiveCwd ?? ctx.cwd);
     return launchSubagentOnSurface(params, ctx, adoptPane, signal);
   }
-  return withNewSurface(params.name, (surface) => launchSubagentOnSurface(params, ctx, surface, signal));
+  return withNewSurface(
+    params.name,
+    (surface) => launchSubagentOnSurface(params, ctx, surface, signal),
+    { session: params.session, cwd: params.cwd },
+  );
 }
 
 async function launchSubagentOnSurface(
@@ -1736,7 +1721,7 @@ async function launchSubagentOnSurface(
   await sleep(
     getShellReadyDelayMs(),
     undefined,
-    activeSurface === "herdr" ? { signal } : undefined,
+    activeSurface() === "herdr" ? { signal } : undefined,
   );
 
   const launchBehavior = resolveLaunchBehavior(params, agentDefs);
@@ -1803,7 +1788,7 @@ async function launchSubagentOnSurface(
 
     // Herdr launches the CLI first and submits the task only after native agent
     // detection reports an interactive prompt. Tmux retains its positional prompt.
-    const promptAfterStartup = activeSurface === "herdr";
+    const promptAfterStartup = activeSurface() === "herdr";
     if (!promptAfterStartup) cmdParts.push(shellEscape(params.task));
 
     const cdPrefix = effectiveCwd ? `cd ${shellEscape(effectiveCwd)} && ` : "";
@@ -1953,7 +1938,7 @@ async function launchSubagentOnSurface(
     taskArg = `@${artifactPath}`;
   }
 
-  const promptAfterStartup = activeSurface === "herdr";
+  const promptAfterStartup = activeSurface() === "herdr";
   const promptArgs = buildPiPromptArgs({
     effectiveSkills,
     taskDelivery: launchBehavior.taskDelivery,
@@ -2557,14 +2542,6 @@ export default function subagentsExtension(pi: ExtensionAPI) {
   // diagnostic for any extension shortcut that claims a built-in key
   // (ctrl+s is built-in for app.thinking.save / app.session.toggleSort).
   // The minimized-widget render path stays; only the keybinding is gone.
-  pi.events.on(NO_MISTAKES_ACTIVITY_UPDATE_EVENT, (data: unknown) => {
-    const payload = data && typeof data === "object" ? data as { snapshot?: unknown } : {};
-    const snapshot = payload.snapshot;
-    noMistakesActivity = snapshot && typeof snapshot === "object"
-      ? snapshot as NoMistakesActivity
-      : null;
-    updateWidget();
-  });
   // Capture the UI context for widget updates
   pi.on("session_start", (_event, ctx) => {
     latestCtx = ctx;
@@ -2612,7 +2589,6 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       watchdogInterval = null;
       (globalThis as any)[WATCHDOG_INTERVAL_KEY] = null;
     }
-    noMistakesActivity = null;
     widgetMinimized = false;
   });
 
@@ -2629,6 +2605,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       label: "Subagent",
       description:
         "Spawn a sub-agent in a dedicated Herdr or Rex tab, or a tmux pane. " +
+        "Pass `session` to put its tab in another Rex session, such as mission-<slug>. " +
         "This is a fire-and-forget async tool: Herdr and Rex return after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
@@ -2636,6 +2613,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       promptSnippet:
         "Spawn a sub-agent in a dedicated Herdr or Rex tab, or a tmux pane. " +
+        "Pass `session` to put its tab in another Rex session, such as mission-<slug>. " +
         "This is a fire-and-forget async tool: Herdr and Rex return after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
@@ -3216,7 +3194,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         await sleep(
           getShellReadyDelayMs(),
           undefined,
-          activeSurface === "herdr" ? { signal: launchSignal } : undefined,
+          activeSurface() === "herdr" ? { signal: launchSignal } : undefined,
         );
 
         // Build pi resume command
@@ -3249,7 +3227,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           );
           mkdirSync(dirname(resumeMsgFile), { recursive: true });
           writeFileSync(resumeMsgFile, message, "utf8");
-          if (activeSurface !== "herdr") parts.push(shellEscape(`@${resumeMsgFile}`));
+          if (activeSurface() !== "herdr") parts.push(shellEscape(`@${resumeMsgFile}`));
         }
 
         // Build env prefix — replay the snapshot's config dir + spawn whitelist
@@ -3290,7 +3268,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             .replace(/-+/g, "-")
             .replace(/^-|-$/g, "") || "resume"}-resume-${Date.now()}.sh`,
         );
-        if (activeSurface === "herdr") launchSignal.throwIfAborted();
+        if (activeSurface() === "herdr") launchSignal.throwIfAborted();
         sendLongCommand(surface, command, {
           scriptPath: launchScriptFile,
           scriptPreamble: [
@@ -3301,7 +3279,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             ...(resumeMsgFile ? [`# Resume message file: ${resumeMsgFile}`] : []),
           ].join("\n"),
         });
-        if (activeSurface === "herdr") {
+        if (activeSurface() === "herdr") {
           await waitForAgentReady(surface, launchSignal);
           launchSignal.throwIfAborted();
           if (message) sendAgentPrompt(surface, message);

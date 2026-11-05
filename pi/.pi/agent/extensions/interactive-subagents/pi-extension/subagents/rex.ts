@@ -53,13 +53,57 @@ function hasCommand(command: string): boolean {
   return available;
 }
 
+/** Optional injection for tests: the env and the PATH probe. */
+type RexInputCheck = {
+  env?: Record<string, string | undefined>;
+  commandAvailable?: (command: string) => boolean;
+};
+
+/**
+ * Which of the three Rex inputs are missing, in a fixed order:
+ * `REX_SESSION`, `REX_BLOCK`, `rex on PATH`.
+ *
+ * Reads the environment on every call — a session can gain its Rex identity
+ * after load, and a cached environment answer is what left sessions unable to
+ * spawn children until they restarted. The PATH probe is the only cached
+ * input (`hasCommand`).
+ */
+export function missingRexInputs(options: RexInputCheck = {}): string[] {
+  const env = options.env ?? process.env;
+  const present = options.commandAvailable ?? hasCommand;
+  const missing: string[] = [];
+  if (!env.REX_SESSION) missing.push("REX_SESSION");
+  if (!env.REX_BLOCK) missing.push("REX_BLOCK");
+  if (!present("rex")) missing.push("rex on PATH");
+  return missing;
+}
+
+function listInputs(inputs: string[]): string {
+  if (inputs.length <= 1) return inputs.join("");
+  return `${inputs.slice(0, -1).join(", ")} and ${inputs[inputs.length - 1]}`;
+}
+
+/**
+ * One sentence naming exactly which Rex input is missing, or null when the
+ * identity is complete (nothing to report) or wholly absent (no Rex identity
+ * at all, so this is not a Rex session and the caller's generic multiplexer
+ * hint is the right one).
+ */
+export function rexRefusalDetail(options: RexInputCheck = {}): string | null {
+  const env = options.env ?? process.env;
+  if (!env.REX_SESSION && !env.REX_BLOCK) return null;
+  const missing = missingRexInputs(options);
+  if (missing.length === 0) return null;
+  return `Rex is not fully available: missing ${listInputs(missing)}.`;
+}
+
 /**
  * True when running inside Rex with the `rex` binary on PATH.
  * Rex sets `REX_SESSION` and `REX_BLOCK` on every process in a block;
  * `REX_BLOCK` is the parent pi's own block, the analogue of `TMUX_PANE`.
  */
 export function isRexAvailable(): boolean {
-  return !!process.env.REX_SESSION && !!process.env.REX_BLOCK && hasCommand("rex");
+  return missingRexInputs().length === 0;
 }
 
 /** Surface-agnostic gate (matches the ./tmux.ts `isMuxAvailable` contract). */
@@ -72,9 +116,11 @@ export function muxSetupHint(): string {
 }
 
 function requireRex(): void {
-  if (!isRexAvailable()) {
-    throw new Error(`rex is required for subagents. ${muxSetupHint()}`);
-  }
+  const missing = missingRexInputs();
+  if (missing.length === 0) return;
+  throw new Error(
+    `rex is required for subagents; missing ${listInputs(missing)}. ${muxSetupHint()}`,
+  );
 }
 
 // ── Shell helpers ──
@@ -118,6 +164,51 @@ function rexJsonOrNull<T>(args: string[]): T | null {
 function sessionArgs(): string[] {
   const session = process.env.REX_SESSION;
   return session ? ["-s", session] : [];
+}
+
+/**
+ * The session a child runs in. `PI_SUBAGENT_SESSION` names a label or an id,
+ * so a mission captain fans work out into the mission session instead of its
+ * own. Without it, a child follows the caller, as before.
+ */
+let childSession: string | null = null;
+
+/** Every session label the server has, for an error a caller can act on. */
+function sessionLabels(): string {
+  const listed = rexJsonOrNull<{ sessions?: Array<{ label?: string }> }>(["ls", "--json"]);
+  const labels = (listed?.sessions ?? []).map((s) => s.label).filter(Boolean);
+  return labels.length ? labels.join(", ") : "none";
+}
+
+/** A label or a full id, or a throw that names the live sessions. */
+function requireSession(want: string): string {
+  if (want.startsWith("session:")) return want;
+  const found = findSessionByLabel(want);
+  if (found) return found;
+  throw new Error(`unknown session "${want}"; live sessions: ${sessionLabels()}`);
+}
+
+function childSessionId(explicit?: string): string | null {
+  if (explicit) return requireSession(explicit.trim());
+  const want = process.env.PI_SUBAGENT_SESSION?.trim();
+  if (!want) return process.env.REX_SESSION || null;
+  if (childSession !== null) return childSession;
+  childSession = want.startsWith("session:") ? want : findSessionByLabel(want) ?? "";
+  return childSession || null;
+}
+
+/** `-s` scope for a child tab, or none when no session is known. */
+function childSessionArgs(explicit?: string): string[] {
+  const session = childSessionId(explicit);
+  return session ? ["-s", session] : [];
+}
+
+/**
+ * The cwd a child starts in. A rank tab belongs to the mission worktree, so a
+ * captain sets `PI_SUBAGENT_CWD`; otherwise the child inherits the caller.
+ */
+function childCwd(explicit?: string): string | null {
+  return explicit?.trim() || process.env.PI_SUBAGENT_CWD?.trim() || process.cwd() || null;
 }
 
 /**
@@ -217,24 +308,27 @@ export function createSession(
  * Create a new tab for a subagent, anchored to nothing: Rex tabs are
  * session-scoped, so a new tab follows the agent the way a Herdr tab does.
  * The tab is created unfocused so the captain keeps their current view.
+ * The π prefix keeps pi's glyph in the Rex tab header, because a named
+ * window shows its label instead of the terminal title.
  *
  * Returns the new tab's root block id (e.g. `block:01a1...`).
  */
-export function createSurface(name: string): string {
+export function createSurface(name: string, options?: SurfaceOptions): string {
   requireRex();
-  const label = sanitizeLabel(name);
-  const out = rexSync([
-    "window",
-    "new",
-    ...sessionArgs(),
-    label,
-    "--focus=false",
-    "--json",
-  ]);
+  const label = `π ${sanitizeLabel(name)}`;
+  const session = childSessionId(options?.session);
+  const cwd = childCwd(options?.cwd);
+  const args = ["window", "new"];
+  if (session) args.push("-s", session);
+  args.push(label, "--focus=false", "--json");
+  if (cwd) args.push("-c", cwd);
+  const out = rexSync(args);
   const created = parseCreated(out);
   if (!created) {
     throw new Error(`Unexpected rex window new output: ${out.slice(0, 200)}`);
   }
+  // Later reads and sends resolve a block inside one session.
+  if (session) rememberBlock(created, session);
   return created;
 }
 
@@ -249,11 +343,15 @@ export function createSurfaceSplit(
   name: string,
   direction: "left" | "right" | "up" | "down",
   fromSurface?: string,
+  options?: SurfaceOptions,
 ): string {
   void name; // Rex block labels are not settable at split time.
   requireRex();
   const anchor = fromSurface ?? process.env.REX_BLOCK;
-  const args = ["split", ...sessionArgs()];
+  // A split lives beside its anchor, so the anchor's session wins. Without one,
+  // the child target decides.
+  const scope = anchor ? scopeArgs(anchor) : childSessionArgs(options?.session);
+  const args = ["split", ...scope];
   if (anchor) args.push("-b", anchor);
   args.push(`--split=${direction}`, "--focus=false", "--json");
   const out = rexSync(args);
@@ -261,6 +359,8 @@ export function createSurfaceSplit(
   if (!created) {
     throw new Error(`Unexpected rex split output: ${out.slice(0, 200)}`);
   }
+  const session = scope[1];
+  if (session) rememberBlock(created, session);
   return created;
 }
 
@@ -328,7 +428,11 @@ export function sendLongCommand(
   scriptParts.push(command);
 
   writeFileSync(scriptPath, scriptParts.join("\n") + "\n", { mode: 0o755 });
-  sendCommand(surface, `bash ${shellEscape(scriptPath)}`);
+  // An interactive bash gives the script's foreground job its own process group
+  // and the terminal's foreground slot, so Rex names the block's program as pi
+  // (the pi glyph) instead of bash. Sourcing keeps the script's trailing done
+  // sentinel running.
+  sendCommand(surface, `bash --norc --noprofile -i -c ${shellEscape(`. ${scriptPath}`)}`);
   return scriptPath;
 }
 

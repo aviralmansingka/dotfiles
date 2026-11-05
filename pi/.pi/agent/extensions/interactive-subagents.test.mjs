@@ -29,10 +29,10 @@ const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 
 // Every surface is simulated explicitly below (fake herdr/tmux binaries on
-// PATH), and ./surface.ts resolves its surface once at module load. A real Rex
-// shell that launches this suite exports REX_SESSION/REX_BLOCK, which would
-// make ./rex.ts win that load and starve every fake. Clear them before the
-// first surface import so the suite is hermetic.
+// PATH). ./surface.ts selects its surface per call from the environment, so a
+// real Rex shell that launches this suite exports REX_SESSION/REX_BLOCK and
+// would make ./rex.ts win every dispatch. Clear them up front so the suite is
+// hermetic.
 const savedRexSession = process.env.REX_SESSION;
 const savedRexBlock = process.env.REX_BLOCK;
 delete process.env.REX_SESSION;
@@ -623,13 +623,6 @@ try {
 	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: parent\n---\nBody").agentDir, "parent");
 	assert.equal(parseAgentDefinition("---\nname: x\n---\nBody").agentDir, undefined, "omission parses to undefined");
 	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: repo\n---\nBody").agentDir, undefined, "unsupported value parses to undefined");
-	const orchestrator = loadAgentDefaultsFromPaths("nm-orchestrator", {
-		cwd: profileRoot,
-		configDir: join(profileRoot, "global-agent-config"),
-		bundledDir: bundledAgentsDir,
-	});
-	assert.equal(orchestrator.agentDir, "parent");
-	assert.equal(orchestrator.tools, "no_mistakes_axi, read");
 
 	const researcher = loadAgentDefaultsFromPaths("researcher", {
 		cwd: profileRoot,
@@ -661,7 +654,8 @@ try {
 	});
 	assert.equal(missionWorker.tools, undefined);
 	assert.equal(missionWorker.agentDir, "parent");
-	assert.equal(missionWorker.autoExit, false);
+	// A trooper ends after its step: parking it leaves the captain waiting forever.
+	assert.equal(missionWorker.autoExit, true);
 } finally {
 	rmSync(profileRoot, { recursive: true, force: true });
 }
@@ -675,7 +669,6 @@ try {
 		"tuicr-review": "high",
 		professor: "high",
 		"research-orchestrator": "high",
-		"nm-orchestrator": undefined,
 	};
 	for (const [name, thinking] of Object.entries(expectedThinking)) {
 		const defs = loadAgentDefaultsFromPaths(name, {
@@ -690,35 +683,6 @@ try {
 	// real through the whole-load __test__ hooks in the applySandboxToParts
 	// section of the index.ts whole-load block below.
 }
-
-// --- No Mistakes compact status follows the shared activity-widget contract ---
-const { noMistakesFindingLines, noMistakesIsWaiting, noMistakesWidgetStatus } = jiti(
-	"./interactive-subagents/pi-extension/subagents/no-mistakes.ts",
-);
-const pipelineActivity = {
-	id: "01TEST",
-	status: "running",
-	gate: "review",
-	summary: "review · 12s · 17s total",
-	phases: [{ name: "review", status: "awaiting_approval", findings: 3 }],
-	reviewFindings: [
-		{ severity: "error", file: "src/a.ts", description: "Null value reaches renderer" },
-		{ severity: "warning", file: "src/b.ts", description: "Missing cleanup" },
-		{ severity: "info", description: "Context only" },
-		{ severity: "error", file: "src/c.ts", description: "Fourth explicit finding" },
-		{ severity: "unknown", description: "Count-only finding" },
-	],
-};
-assert.equal(noMistakesWidgetStatus(pipelineActivity), " review · 12s · 17s total ");
-assert.equal(noMistakesIsWaiting(pipelineActivity), true);
-assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: "checks-passed" }), true);
-assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: undefined }), false);
-assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
-	"❌ src/a.ts: Null value reaches renderer",
-	"⚠️ src/b.ts: Missing cleanup",
-	"ℹ️ Context only",
-	"❌ src/c.ts: Fourth explicit finding",
-]);
 
 // --- List rendering, baseline renderer, and applySandboxToParts behavior ---
 // These were the last source-string-split eval blocks (C29): index.ts is
@@ -1049,16 +1013,10 @@ assert.equal(
 			assert.equal(expanded.length, 5, "expanded box: top + one row per agent + bottom");
 			assert.ok(expanded.some((line) => line.includes("planner")), "expanded rows name each agent");
 
-			const minimized = hooks.renderSubagentWidgetLines(agents, 80, null, true);
+			const minimized = hooks.renderSubagentWidgetLines(agents, 80, true);
 			assert.equal(minimized.length, 1, "minimized widget is exactly one line");
 			assert.match(minimized[0], /3 running: 1 active · 1 waiting · 1 stalled/);
 			assert.ok(!minimized[0].includes("planner"), "minimized line drops agent names");
-
-			// Pipeline mode: the no-mistakes row joins the counts under the
-			// Activities title and the active word.
-			const pipelined = hooks.renderSubagentWidgetLines([agents[0]], 80, pipelineActivity, true);
-			assert.match(pipelined[0], /Activities/);
-			assert.match(pipelined[0], /2 active: 1 active · 1 waiting/);
 
 			// The toggle hook flips module state; the next render picks it up.
 			assert.equal(hooks.toggleWidgetMinimized(), true);
@@ -1353,6 +1311,9 @@ assert.equal(
 	const knownTools = new Set([
 		"read", "write", "edit", "bash", "grep", "find", "ls",
 		"subagent", "subagent_message", "subagents_list", "ask_question",
+		// pi's tool search: how a deferred tool (mission) is reached without
+		// listing it, enabled through defaultTools in settings.json.
+		"tool_search",
 		"web_search", "web_fetch", "video_extract", "youtube_search",
 		"google_image_search", "tuicr", "tuicr_reply",
 	]);
@@ -1464,7 +1425,7 @@ try {
 	const herdrMatrix = createJiti(import.meta.url, { moduleCache: false })(
 		"./interactive-subagents/pi-extension/subagents/surface.ts",
 	);
-	assert.equal(herdrMatrix.activeSurface, "herdr");
+	assert.equal(herdrMatrix.activeSurface(), "herdr");
 	assert.equal(herdrMatrix.isMuxAvailable(), true);
 	assert.equal(herdrMatrix.createSurface("matrix-herdr"), "w50:p7");
 	assert.deepEqual(matrixCalls(matrixHerdrCapture), [
@@ -1484,7 +1445,7 @@ try {
 	const tmuxMatrix = createJiti(import.meta.url, { moduleCache: false })(
 		"./interactive-subagents/pi-extension/subagents/surface.ts",
 	);
-	assert.equal(tmuxMatrix.activeSurface, "tmux");
+	assert.equal(tmuxMatrix.activeSurface(), "tmux");
 	assert.equal(tmuxMatrix.isMuxAvailable(), true);
 	const tmuxPane = tmuxMatrix.createSurface("matrix-tmux");
 	assert.equal(tmuxPane, "%12");
@@ -1545,7 +1506,7 @@ try {
 	const noneMatrix = createJiti(import.meta.url, { moduleCache: false })(
 		"./interactive-subagents/pi-extension/subagents/surface.ts",
 	);
-	assert.equal(noneMatrix.activeSurface, "none");
+	assert.equal(noneMatrix.activeSurface(), "none");
 	assert.equal(noneMatrix.isMuxAvailable(), false);
 	const noneHint = noneMatrix.muxSetupHint();
 	assert.match(noneHint, /Herdr/);
@@ -2823,7 +2784,7 @@ esac
 		process.env.REX_BLOCK = "block:test";
 		process.env.PATH = `${rexSelectionBin}:${savedRexSelectionEnv.PATH ?? ""}`;
 		const rexSelection = loadSurface();
-		assert.equal(rexSelection.activeSurface, "rex");
+		assert.equal(rexSelection.activeSurface(), "rex");
 		assert.equal(rexSelection.isMuxAvailable(), true);
 		assert.match(rexSelection.muxSetupHint(), /Rex/);
 
@@ -2831,12 +2792,12 @@ esac
 		// the innermost multiplexer, so the outer tmux owns the panes.
 		process.env.TMUX = "/tmp/tmux-501/default,1,0";
 		process.env.TERM = "tmux-256color";
-		assert.equal(loadSurface().activeSurface, "tmux");
+		assert.equal(loadSurface().activeSurface(), "tmux");
 
 		// Rex running inside tmux splits with Rex (xterm-rex is innermost).
 		process.env.TMUX = "/tmp/tmux-501/default,1,0";
 		process.env.TERM = "xterm-rex";
-		assert.equal(loadSurface().activeSurface, "rex");
+		assert.equal(loadSurface().activeSurface(), "rex");
 
 		// Herdr still wins when it owns the pane and no other surface is set.
 		delete process.env.REX_SESSION;
@@ -2845,7 +2806,7 @@ esac
 		delete process.env.TERM;
 		process.env.HERDR_ENV = "1";
 		process.env.HERDR_PANE_ID = "w44:p2";
-		assert.equal(loadSurface().activeSurface, "herdr");
+		assert.equal(loadSurface().activeSurface(), "herdr");
 	} finally {
 		for (const [key, value] of Object.entries(savedRexSelectionEnv)) {
 			if (value === undefined) delete process.env[key];
@@ -2878,6 +2839,7 @@ case "$1" in
 	new) printf '%s\\n' '{"session_id":"session:new","initial_windows":[{"block_ids":["block:new"]}]}' ;;
 	session) printf '%s\\n' '{"windows":[{"layers":[{"blocks":[{"block_id":"block:root"}]}]}]}' ;;
 	block) printf '%s\\n' "$REX_TEST_PROCESS" ;;
+	window) printf '%s\\n' "$REX_TEST_WINDOW" ;;
 	*) printf '%s\\n' '{}' ;;
 esac
 `,
@@ -2936,6 +2898,30 @@ esac
 			"cross-session block calls carry -s",
 		);
 
+		// A subagent tab keeps pi's glyph, because a named window shows its
+		// label instead of the terminal title.
+		process.env.REX_TEST_WINDOW = '{"block_ids":["block:newtab"]}';
+		assert.equal(rex2.createSurface("probe"), "block:newtab");
+		const windowCall = rexCallsFor().find((call) => call.startsWith("window new"));
+		assert.ok(windowCall, "`rex window new` is called for the tab");
+		assert.ok(windowCall.includes("π probe"), `the tab label keeps the π glyph: ${windowCall}`);
+
+		// A long command runs under an interactive bash so the foreground job owns
+		// the terminal, and the script is sourced to keep its done sentinel.
+		rex2.sendLongCommand("block:new", "echo hi", { scriptPath: join(rexRoot, "long-cmd.sh") });
+		const longSend = rexCallsFor().find(
+			(call) => call.startsWith("send ") && call.includes("long-cmd.sh"),
+		);
+		assert.ok(longSend, "`rex send` carries the staged long-command script");
+		assert.ok(
+			longSend.includes("--norc --noprofile -i -c"),
+			`the script runs under an interactive bash: ${longSend}`,
+		);
+		assert.ok(
+			longSend.includes(`'. ${join(rexRoot, "long-cmd.sh")}'`),
+			`the script is sourced, not executed: ${longSend}`,
+		);
+
 		// The parent's own block is never adoptable.
 		assert.throws(
 			() => rex2.assertAdoptablePane("block:caller", "/tmp/other"),
@@ -2952,10 +2938,111 @@ esac
 			if (value === undefined) delete process.env[key];
 			else process.env[key] = value;
 		}
-		for (const key of ["REX_TEST_CAPTURE", "REX_TEST_LIST", "REX_TEST_PROCESS"]) {
+		for (const key of ["REX_TEST_CAPTURE", "REX_TEST_LIST", "REX_TEST_PROCESS", "REX_TEST_WINDOW"]) {
 			delete process.env[key];
 		}
 		rmSync(rexRoot, { recursive: true, force: true });
+	}
+}
+
+// --- The mux gate is lazy: the surface follows the environment per call ---
+{
+	const savedGateEnv = {
+		REX_SESSION: process.env.REX_SESSION,
+		REX_BLOCK: process.env.REX_BLOCK,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		TMUX: process.env.TMUX,
+		TERM: process.env.TERM,
+		PATH: process.env.PATH,
+	};
+	// Selection needs `rex` on PATH and no competing surface. Stub the binary
+	// and neutralise Herdr/tmux *before* the single load below, so the one
+	// cached PATH probe sees it.
+	const gateRoot = mkdtempSync(join(tmpdir(), "mux-gate-test-"));
+	const gateBin = join(gateRoot, "bin");
+	mkdirSync(gateBin, { recursive: true });
+	writeFileSync(join(gateBin, "rex"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+	try {
+		process.env.PATH = `${gateBin}:${savedGateEnv.PATH ?? ""}`;
+		delete process.env.HERDR_ENV;
+		delete process.env.HERDR_PANE_ID;
+		delete process.env.TMUX;
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
+		process.env.TERM = "xterm-mux-gate";
+
+		// One load for the whole block: the gate must follow the environment
+		// without a reload, which a load-time constant cannot do.
+		const gate = createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/surface.ts",
+		);
+		assert.equal(gate.isMuxAvailable(), false, "no REX_SESSION/REX_BLOCK → unavailable");
+		assert.equal(gate.activeSurface(), "none");
+		// With no Rex identity at all the hint names every supported surface.
+		const noIdentityHint = gate.muxSetupHint();
+		assert.match(noIdentityHint, /Rex/);
+		assert.match(noIdentityHint, /Herdr/);
+		assert.match(noIdentityHint, /tmux/);
+
+		// Half an identity: the refusal names the exact missing inputs in turn.
+		process.env.REX_SESSION = "session:gate";
+		assert.equal(gate.isMuxAvailable(), false);
+		const halfHint = gate.muxSetupHint();
+		assert.match(halfHint, /missing REX_BLOCK/, "names the missing REX_BLOCK");
+		assert.doesNotMatch(halfHint, /REX_SESSION/, "does not blame the variable that is set");
+
+		// The identity completes; the same module instance now spawns.
+		process.env.REX_BLOCK = "block:gate";
+		assert.equal(gate.isMuxAvailable(), true, "same module load, now available");
+		assert.equal(gate.activeSurface(), "rex");
+
+		// Losing the identity flips it back: nothing about the environment is cached.
+		delete process.env.REX_BLOCK;
+		assert.equal(gate.isMuxAvailable(), false);
+
+		// Each of the three inputs named in turn, with no PATH change and no session.
+		const rexModule = jiti("./interactive-subagents/pi-extension/subagents/rex.ts");
+		const noCommand = () => false;
+		const yesCommand = () => true;
+		assert.deepEqual(
+			rexModule.missingRexInputs({ env: { REX_BLOCK: "b" }, commandAvailable: yesCommand }),
+			["REX_SESSION"],
+		);
+		assert.deepEqual(
+			rexModule.missingRexInputs({ env: { REX_SESSION: "s" }, commandAvailable: yesCommand }),
+			["REX_BLOCK"],
+		);
+		assert.deepEqual(
+			rexModule.missingRexInputs({
+				env: { REX_SESSION: "s", REX_BLOCK: "b" },
+				commandAvailable: noCommand,
+			}),
+			["rex on PATH"],
+		);
+		for (const [env, wanted] of [
+			[{ REX_BLOCK: "b" }, /REX_SESSION/],
+			[{ REX_SESSION: "s" }, /REX_BLOCK/],
+			[{ REX_SESSION: "s", REX_BLOCK: "b" }, /rex on PATH/],
+		]) {
+			const detail = rexModule.rexRefusalDetail({ env, commandAvailable: noCommand });
+			assert.match(detail, wanted, `refusal names ${wanted}`);
+		}
+		// A wholly absent identity is not a Rex shortfall: no detail to report.
+		assert.equal(rexModule.rexRefusalDetail({ env: {}, commandAvailable: yesCommand }), null);
+
+		// The requireRex refusal carries the same detail, before it runs `rex`.
+		assert.throws(
+			() => rexModule.createSurface("gate-refusal"),
+			/rex is required for subagents; missing REX_BLOCK/,
+			"requireRex names the missing input",
+		);
+	} finally {
+		for (const [key, value] of Object.entries(savedGateEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		rmSync(gateRoot, { recursive: true, force: true });
 	}
 }
 

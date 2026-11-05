@@ -40,12 +40,12 @@ made by source greps; it does not ban structural lints.
 python3 scripts/test-child-stdio.py
 ```
 
-The entry self-wires into `nm-test.sh`, `nm-lint.sh` (py_compile), and CI
-through its `# Paths:` header. It needs `git` and `python3` only.
+The entry self-wires into CI (py_compile in the lint job, execution in the
+scripts job) through its `# Paths:` header. It needs `git` and `python3` only.
 
 ## Runtime and SLA
 
-The run takes about 0.05 s over 84 files and 44 captured call sites.
+The run takes about 0.10 s over 96 files and 45 captured call sites.
 It is offline and deterministic: no network, no `$HOME` writes, no sleeps.
 
 ## Coverage result
@@ -59,8 +59,7 @@ set hold no unguarded captured call — the #291 fix wave guarded them.
 | nvim-open.ts | 6 + 1 seam | guarded; seam forwards caller stdio |
 | mermaid.ts · python.ts | 1 spawn each | guarded, pipe×3 |
 | image-drop · run-command · tuicr · tuicr-core | async execFile | stderr captured in the error |
-| no-mistakes gate · pane · bridge · report | 3 + 4 + 1 + 2 `pi.exec` | guarded, async, or pi API seam |
-| run-command `r` flow · tuicr pane · nm shim · `exec` wrappers | 6 | intentional passthrough |
+| run-command `r` flow · tuicr pane · `exec` wrappers | 6 | intentional passthrough |
 | telegram + whatsapp daemons · pi-stt-*.py | 2 each / 0 | pipes, capture_output, or no child |
 
 ## Known gaps
@@ -69,8 +68,7 @@ set hold no unguarded captured call — the #291 fix wave guarded them.
   in `subagents/herdr.ts` (10 sites) and `subagents/tmux.ts` (9 sites)
   now carries `stdio: ["pipe", "pipe", "pipe"]`, the two `allow_all`
   entries were deleted, and the lint enforces both files (0 unguarded).
-  `subagents/index.ts` and `orchestrate.ts` have no direct child calls;
-  `no-mistakes-pane.ts` was already guarded.
+  `subagents/index.ts` has no direct child calls.
 - Shell wrappers in `pi/bin` use `exec`, not a captured child; the lint
   does not scan `.sh` files. It also cannot see a stdio built at runtime
   from a variable — no such site exists in scope today.

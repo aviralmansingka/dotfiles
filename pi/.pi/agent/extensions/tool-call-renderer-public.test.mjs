@@ -89,7 +89,7 @@ try {
     return lines.join("\n");
   };
   const options = { expanded: false, isPartial: false };
-  const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
+  const CONNECTED = new Set(["subagent"]);
   const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "python", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "tuicr", "mcp__not_connected__search"]);
   for (const name of [...NEVER_DELEGATE, "mcp__whatsapp__list_messages", "edit", "ask_question", "mcpScript", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name) || name.startsWith("mcp__");
@@ -140,8 +140,6 @@ try {
   assert.equal(typeof shortcut.handler, "function");
   assert.ok(shortcut.description, "the shortcut carries a /hotkeys description");
   const notifications = [];
-  let togglePayload;
-  bus.set("no-mistakes:toggle-rows", (payload) => { togglePayload = payload; });
   const shortcutCtx = { ui: { notify: (message, type) => notifications.push([message, type]) } };
   const quietStart = { executionStarted: false };
   const hiddenBash = render(bash.renderCall(
@@ -164,8 +162,7 @@ try {
   const beforeToggle = invalidations;
   shortcut.handler(shortcutCtx);
   assert.ok(invalidations > beforeToggle, "the toggle invalidates mounted rows");
-  assert.equal(togglePayload, false, "the shared event publishes the shown state");
-  assert.deepEqual(notifications.at(-1), ["Commands and no-mistakes rows shown", "info"]);
+  assert.deepEqual(notifications.at(-1), ["Commands shown", "info"]);
   const bashCtx = context("timed", { command: "printf hi\nexit 0" });
   handlers.get("tool_execution_start")({ toolCallId: "timed" });
   const call = bash.renderCall(bashCtx.args, theme, bashCtx);
@@ -306,6 +303,47 @@ try {
   assert.equal(invalidations, afterDone, "settled results disarm their clocks");
   assert.match(render(call), /◆/);
   assert.doesNotMatch(render(call), /\d+ms/, "sub-second elapsed is suppressed");
+  // Live progress: one dim line on a running output-tool row, updated in place.
+  const progressTheme = { ...theme, fg: (color, text) => color === "dim" ? `<dim>${text}</dim>`
+    : color === "borderMuted" && text === "│" ? `<bm>│</bm>` : text };
+  const progressCtx = context("live-progress", { command: "npm test" }, { executionStarted: true });
+  handlers.get("tool_execution_start")({ toolCallId: "live-progress" });
+  const streamed = result("PASS a\nPASS b\n3 failed, 12 passed", { exitCode: 0 });
+  const stream = (text) => result(text, { exitCode: 0 });
+  const live = (text, ctx = progressCtx) => render(bash.renderResult(
+    stream(text), { ...options, isPartial: true }, progressTheme, ctx));
+  const runningOut = live("PASS a\nPASS b\n3 failed, 12 passed");
+  const runningLines = runningOut.split("\n");
+  assert.equal(runningLines.length, 2, "a running row keeps its summary plus exactly one progress line");
+  assert.match(runningLines[0], /└─ running/, "the collapsed running summary is untouched");
+  assert.match(runningLines[1], /^ <bm>│<\/bm> <dim>…/, "the progress line rides a muted rail and stays dim");
+  assert.match(runningLines[1], /3 new lines · last: 3 failed, 12 passed<\/dim>$/,
+    "it counts new lines and shows the newest one");
+  const repeat = live("PASS a\nPASS b\n3 failed, 12 passed");
+  assert.equal(repeat.split("\n").length, 2, "unchanged output never adds a second progress line");
+  assert.match(repeat, /· 3 new lines · last: 3 failed, 12 passed/,
+    "the cached delta survives a redraw instead of resetting to zero");
+  const grown = live("PASS a\nPASS b\n3 failed, 12 passed\nPASS c");
+  assert.match(grown, /· 1 new line · last: PASS c<\/dim>$/,
+    "only the lines that arrived since the last draw are counted");
+  const longTailCtx = context("live-tail", {}, { executionStarted: true });
+  const longTail = render(bash.renderResult(stream(`x\n${"word ".repeat(30).trim()}`),
+    { ...options, isPartial: true }, theme, longTailCtx));
+  const tail = /last: (.*)$/.exec(longTail.split("\n")[1])?.[1] ?? "";
+  assert.ok(tail.endsWith("…") && [...tail].length <= 60, "an overlong tail clips to one short line");
+  const waiting = live("", context("live-empty", { command: "sleep 5" }, { executionStarted: true }));
+  assert.match(waiting, /<bm>│<\/bm> <dim>….*· waiting for output<\/dim>/,
+    "a silent running call says it is waiting");
+  const pyLiveCtx = context("py-live", pyCode, { executionStarted: true });
+  const pyLive = render(python.renderResult(result("import os\nprint(os.getcwd())"),
+    { ...options, isPartial: true }, progressTheme, pyLiveCtx));
+  assert.match(pyLive, /· 2 new lines · last: print\(os\.getcwd\(\)\)<\/dim>$/, "python rows carry the same line");
+  // Settle every live row so no row clock outlives this block.
+  render(python.renderResult(result("import os\nprint(os.getcwd())"), options, progressTheme, pyLiveCtx));
+  const settledOut = render(bash.renderResult(streamed, options, progressTheme, progressCtx));
+  assert.doesNotMatch(settledOut, /new line|waiting for output/, "a settled row drops the progress line");
+  assert.equal(settledOut.split("\n").length, 1, "only the exit summary remains");
+  assert.match(settledOut, /└─ exit 0 · 3 lines/, "the settled exit summary is untouched");
   const errorTheme = { ...theme, fg: (color, text) => color === "error" ? `<error>${text}</error>` : text };
   const error = bash.renderResult(result("bad command"), options, errorTheme, context("error", {}, { isError: true }));
   assert.match(render(error), /<error>bad command/);
@@ -820,168 +858,6 @@ try {
   const mixedOutput = render(subagent.renderResult(mixed, options, theme, context("mixed")));
   assert.match(mixedOutput, /├─ ▸ good ◆/);
   assert.match(mixedOutput, /└─ × bad · broken/);
-  const axi = resolver("no_mistakes_axi", () => undefined);
-  const pipeline = result("failed", { progress: { kind: "pipeline", status: "failed", error: "tests failed", recentTools: [{ name: "tests", status: "failed" }] } });
-  const pipelineOutput = render(axi.renderResult(pipeline, options, theme, context("axi")));
-  assert.match(pipelineOutput, /× no-mistakes · tests failed/);
-  const pipelineFallback = render(axi.renderResult(pipeline, { ...options, expanded: true }, theme, context("axi")));
-  assert.ok(pipelineFallback.includes("└─ ✗ tests failed") && pipelineFallback.includes("    failed"));
-  assert.ok(!pipelineFallback.includes("│"), "unstructured pipeline output uses plain indentation");
-  const cleanToon = `run:
-  id: "01MEXAMPLE"
-  branch: fix/topic
-  status: running
-  head: abcdef12
-  pr: "https://github.com/owner/repo/pull/185"
-  findings: none
-  steps[9]{step,status,findings,duration_ms}:
-    intent,completed,0,1
-    rebase,completed,0,1419
-    review,completed,0,12
-    test,completed,0,5
-    document,completed,0,0
-    lint,completed,0,0
-    push,completed,0,0
-    pr,completed,0,0
-    ci,running,0,0
-branch_sync:
-  state: pipeline_owned
-  note: Pipeline owns this branch.
-  next_action:
-    command: no-mistakes axi status`;
-  const gateToon = `run:
-  branch: fix/topic
-  status: running
-  findings: 1 awaiting
-  steps[3]{step,status,findings,duration_ms}:
-    intent,completed,0,1
-    rebase,awaiting_approval,1,1419
-    ci,pending,0,0
-gate:
-  step: rebase
-  status: awaiting_approval
-  summary: branch bundles 3 unpushed main commit
-  findings[1]{id,severity,file,action,description}:
-    R1,error,src/view.ts,ask-user,"Rendered lines exceed the viewport, including the overflow marker."
-branch_sync:
-  state: pipeline_owned
-  next_action:
-    command: no-mistakes axi status`;
-  const toonResult = (output, extra = {}) => result("[no-mistakes axi — visible (tui), exit 0]\n" + output, {
-    output, subcommand: "run", progress: { kind: "pipeline", status: "completed" }, ...extra,
-  });
-  const toonCtx = context("toon", {}, quiet);
-  const showToon = (output, t = theme, extra = {}) => render(axi.renderResult(toonResult(output, extra), { ...options, expanded: true }, t, toonCtx), 1000);
-  const cleanFrame = showToon(cleanToon, styT);
-  assert.ok(cleanFrame.includes("<borderMuted>├─</borderMuted> <dim>▣ </dim> <text>fix/topic</text><dim> · pr #185</dim>"));
-  assert.ok(cleanFrame.includes("<mdLink>● gate running · 0 findings</mdLink>"));
-  assert.ok(cleanFrame.includes("<dim>intent </dim><success>✓</success>"));
-  assert.ok(cleanFrame.includes("<dim>rebase </dim><success>✓</success><dim> 1.4s</dim>"));
-  assert.ok(cleanFrame.includes("<dim>ci </dim><mdLink>●</mdLink>"));
-  assert.ok(cleanFrame.includes("<dim>branch_sync: pipeline_owned · Pipeline owns this branch.</dim>"));
-  assert.ok(cleanFrame.includes("<dim>next: no-mistakes axi status</dim>"));
-  assert.ok(!cleanFrame.includes("run:") && !cleanFrame.includes("01MEXAMPLE"));
-  const gateFrame = showToon(gateToon, styT);
-  assert.ok(gateFrame.includes("<mdLink>● gate awaiting approval · 1 finding</mdLink><dim> · rebase</dim>"));
-  assert.ok(gateFrame.includes("<dim>✎ </dim> <dim>r1 · rebase — Rendered lines exceed the viewport, including the overflow marker.</dim>"));
-  assert.ok(gateFrame.includes("<borderMuted>│</borderMuted>  <dim>branch bundles 3 unpushed main commit</dim>"));
-  const gatePlain = showToon(gateToon);
-  assert.ok(gatePlain.includes("intent ✓ · rebase ● 1.4s · ci pending"));
-  assert.ok(!gatePlain.includes("outcome") && !gatePlain.includes("pr #"));
-  for (const outcome of ["passed", "merged"]) {
-    const passed = showToon(cleanToon.replace("status: running", "status: completed") + `\noutcome: ${outcome}`, styT);
-    assert.ok(passed.includes(`<success>✓ gate passed · 0 findings · outcome ${outcome}</success>`));
-  }
-  for (const output of [
-    cleanToon.replace("status: running", "status: failed") + "\noutcome: failed",
-    gateToon.replaceAll("awaiting_approval", "blocked"),
-  ]) assert.ok(showToon(output, styT).includes("<error>✗ gate blocked ·"));
-  assert.ok(showToon(cleanToon, styT, { exitCode: 1 }).includes("<error>✗ gate blocked"), "a nonzero exit blocks even without isError");
-  const minimalToon = showToon("run:\n  status: completed");
-  assert.ok(minimalToon.includes("✓ gate passed") && !minimalToon.includes("findings") && !minimalToon.includes("▣"));
-  const unknownToon = showToon("run:\n  branch: topic\n  status: futuristic\nunknown:\n  command: do not render");
-  assert.ok(unknownToon.includes("▣  topic") && !unknownToon.includes("gate passed") && !unknownToon.includes("do not render"));
-  for (const subcommand of ["run", "respond", "status", "sync"]) {
-    const chip = render(axi.renderResult(toonResult(gateToon, { subcommand }), options, styT, toonCtx), 1000);
-    assert.ok(chip.includes(`<text><b>no-mistakes</b></text><dim> · ${subcommand}</dim><mdLink> · findings 1</mdLink>`));
-    assert.ok(!chip.includes("1.4s") && !chip.includes("✎"));
-  }
-  const compoundToon = gateToon.replace("findings: 1 awaiting", 'findings: "1 awaiting, 1 auto-fix"');
-  const compoundFrame = showToon(compoundToon);
-  assert.ok(compoundFrame.includes("findings: 1 awaiting, 1 auto-fix") && !compoundFrame.includes(" · 1 finding"));
-  const compoundChip = render(axi.renderResult(toonResult(compoundToon), options, theme, toonCtx));
-  assert.ok(!compoundChip.includes("findings 1") && !compoundChip.includes("findings 2"), "compound categories do not imply a run-wide total");
-  const cleanChip = render(axi.renderResult(toonResult(cleanToon), options, styT, toonCtx));
-  assert.ok(!cleanChip.includes("findings 0"), "zero findings do not add a badge");
-  const bareChip = render(axi.renderResult(result("ok"), options, theme, context("bare-axi", {}, quiet)));
-  assert.ok(bareChip.includes("▸ no-mistakes ◆ 0 tools"), "absent details keep the old chip");
-  const invalidTable = showToon(gateToon.replace('R1,error,src/view.ts,ask-user,"Rendered lines exceed the viewport, including the overflow marker."', 'R1,error,unclosed,"quote'));
-  assert.ok(!invalidTable.includes("✎"), "incomplete CSV rows are omitted");
-  const malformedCell = showToon(gateToon.replace('"Rendered lines exceed the viewport, including the overflow marker."', '"bad"junk'));
-  assert.ok(!malformedCell.includes("✎"), "invalid quoted scalars reject the entire finding row");
-  for (const header of ["unknown-section:", "help[6]:"]) {
-    const isolated = showToon(`run:\n  status: running\n  ${header}\n    status: completed`);
-    assert.ok(isolated.includes("● gate running") && !isolated.includes("✓ gate passed"), "unsupported subtrees cannot overwrite parent fields");
-  }
-  const escapedFinding = showToon(gateToon.replace("Rendered lines exceed the viewport, including the overflow marker.", 'A \\"quoted\\" label, and `code`.'));
-  assert.ok(escapedFinding.includes('r1 · rebase — A "quoted" label, and `code`.'));
-  const narrowGate = render(axi.renderResult(toonResult(gateToon), { ...options, expanded: true }, theme, toonCtx), 45);
-  assert.ok(narrowGate.includes("│     "), "finding continuations use a bare spine");
-  assert.ok(narrowGate.split("\n").every((line) => [...line].length <= 45));
-  for (const count of [60, 62, 63, 100]) {
-    const raw = Array.from({ length: count }, (_, i) => `raw-line-${i + 1}`).join("\n");
-    const fallback = showToon(raw);
-    assert.ok(!fallback.includes("│") && fallback.includes("    raw-line-1\n") && fallback.includes(`    raw-line-${count}`));
-    if (count <= 62) assert.ok(!fallback.includes("lines hidden"));
-    else {
-      assert.ok(fallback.includes(`… ${count - 60} lines hidden …`));
-      assert.ok(fallback.includes("    raw-line-30\n") && !fallback.includes("    raw-line-31\n"));
-      assert.ok(fallback.includes(`    raw-line-${count - 29}\n`));
-    }
-  }
-  const safeToon = showToon(cleanToon.replace("fix/topic", "fix/\u001b[31mtopic\u001b[0m"));
-  assert.ok(safeToon.includes("fix/topic") && !safeToon.includes("\u001b"));
-  // Live no-mistakes resolution: activity updates carry the current review
-  // gate's unresolved finding ids. Findings a later fix round resolved drop
-  // from chips of the same run; other runs' chips stay unfiltered history.
-  const liveToon = `run:
-  id: "01M4LIVERUN0000000000000"
-  branch: fix/live
-  status: running
-  findings: 2 auto-fix
-  steps[3]{step,status,findings,duration_ms}:
-    intent,completed,0,1
-    review,awaiting_approval,2,1419
-    ci,pending,0,0
-gate:
-  step: review
-  status: awaiting_approval
-  findings[2]{id,severity,file,action,description}:
-    keep-me,error,src/a.ts,auto-fix,"Still open at the gate."
-    fixed-me,error,src/b.ts,auto-fix,"Resolved by a later fix round."
-branch_sync:
-  state: pipeline_owned`;
-  const liveCtx = context("live-axi", {}, quiet);
-  const liveShow = () => render(axi.renderResult(toonResult(liveToon), { ...options, expanded: true }, theme, liveCtx), 1000);
-  const liveChip = () => render(axi.renderResult(toonResult(liveToon), options, theme, liveCtx));
-  const beforeLive = liveShow();
-  assert.ok(beforeLive.includes("keep-me") && beforeLive.includes("fixed-me"), "before tracking, all findings render");
-  const nmUpdate = bus.get("no-mistakes:activity-update");
-  assert.ok(typeof nmUpdate === "function", "the renderer subscribes to no-mistakes activity updates");
-  nmUpdate({ snapshot: { id: "01M4LIVERUN0000000000000", gate: "review", reviewFindings: [{ id: "keep-me", severity: "error" }] } });
-  const afterLive = liveShow();
-  assert.ok(afterLive.includes("keep-me"), "unresolved findings stay visible");
-  assert.ok(!afterLive.includes("fixed-me"), "resolved findings drop from the chip");
-  assert.ok(afterLive.includes("1 resolved finding hidden"), "the hidden count is disclosed");
-  const afterChip = liveChip();
-  assert.ok(afterChip.includes("findings 1") && !afterChip.includes("findings 2"), "the badge counts only visible findings");
-  nmUpdate({ snapshot: { id: "01M4OTHERRUN00000000000", gate: "review", reviewFindings: [] } });
-  const otherRun = liveShow();
-  assert.ok(otherRun.includes("fixed-me"), "chips of other runs render unfiltered");
-  nmUpdate({ snapshot: { id: "01M4LIVERUN0000000000000", gate: "review", reviewFindings: [{ id: "keep-me", severity: "error" }] } });
-  nmUpdate({ snapshot: undefined });
-  const endedRun = liveShow();
-  assert.ok(!endedRun.includes("fixed-me"), "the last known resolution state survives the run ending");
   session("first");
   assert.match(render(chip), /▸ scout/, "same session preserves live final state");
   session("second", [{ message: { role: "assistant", content: [{ type: "toolCall", id: "restored" }] } }]);
@@ -993,9 +869,7 @@ branch_sync:
   render(read.renderResult(result("a\nb"), options, theme, restoredCtx));
   assert.doesNotMatch(render(restoredCall), /\d+(?:ms|s)/, "restored calls have no invented elapsed time");
   shortcut.handler(shortcutCtx);
-  assert.equal(togglePayload, true, "the shared event publishes the hidden state");
-  bus.delete("no-mistakes:toggle-rows");
-  assert.deepEqual(notifications.at(-1), ["Commands and no-mistakes rows hidden", "info"], "the toggle flips back to hidden");
+  assert.deepEqual(notifications.at(-1), ["Commands hidden", "info"], "the toggle flips back to hidden");
   const hiddenPy = render(python.renderCall(
     { code: "# parse the session log for nested bash calls\nimport json" },
     theme,
@@ -1352,7 +1226,6 @@ branch_sync:
     ["find result", find.renderResult(paths, { ...options, expanded: true }, theme, context("sw-find", {}, quiet))],
     ["ls result", ls.renderResult(listing, { ...options, expanded: true }, theme, context("sw-ls", {}, quiet))],
     ["edit call", editRow.renderCall({ path: "src/main.rs", edits: [{ oldText: "a", newText: "b" }] }, theme, context("sw-edit", {}, quiet))],
-    ["no-mistakes frame", axi.renderResult(toonResult(gateToon), { ...options, expanded: true }, theme, context("sw-axi", {}, quiet))],
   ];
   for (let width = 20; width <= 80; width += 2) {
     for (const [name, component] of sweepComponents) {

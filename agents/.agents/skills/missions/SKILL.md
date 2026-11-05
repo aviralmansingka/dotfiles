@@ -64,15 +64,29 @@ directly. Print `mission --json steps` and stop. Do not call `start` until the
 human accepts the steps: a brief the agent wrote alone is not groomed. Reread
 `steps` after any `mission step edit`, before a launch.
 
+## Seat a captain
+
+Start a captain under the login shell (`zsh -l`, or `sh -l`), so `pi`, `rex`,
+and `mission` resolve on its `PATH`. A non-login shell has none of them: the
+subagent gate fails on `rex`, and lifecycle calls fail with `spawn mission
+ENOENT`. Verify a seat with `command -v pi rex mission` in the captain's own
+block. A captain moved between multiplexers keeps its transcript but not its
+binding, so re-attach after the move; without it every call warns `Restore the
+mission's Herdr attachment before continuing`. Full contract:
+`docs/pi-missions.md` § Seating a captain.
+
 ## Launch or attach in Pi
 
 Discover the deferred `mission` tool through `tool_search`. Humans can use
-`/missions` to select a mission, or `/mission start REPO/SLUG`.
+`/missions` to open the mission desk in a Herdr pane, or
+`/mission start REPO/SLUG`.
 
 - `mission {action:"start", handle:"REPO/SLUG"}` reserves a launch, creates or
   reuses the mission's `mission/<slug>` worktree, registers it as a Herdr worktree
-  workspace (linked under the repository), and launches the durable mission-worker
-  through interactive-subagents in that workspace.
+  workspace (linked under the repository), and starts the worker as a full Pi
+  agent in that workspace (`herdr agent start`, then one `herdr agent prompt`).
+  The worker is not a subagent: it has no subagent identity, loadout, timer, or
+  watchdog.
 - `mission {action:"attach", handle:"REPO/SLUG"}` adopts the current existing Pi
   session. It must already run at the root of an unowned non-main linked worktree,
   inside the mission's worktree workspace or, for missions bound before worktree
@@ -92,18 +106,25 @@ duplicated.
 If an owner session is recorded, resume it. If the step failed, run
 `mission retry`, then `next`.
 
-A started mission-worker receives a continuation prompt after each verified step
-when no checkpoint is pending. An attached existing session uses explicit `next`
-and does not automatically start more work. At a checkpoint, wait for the user to
-accept it and direct continuation.
+A started worker receives a continuation prompt after each verified step
+when no review is pending. A session that attaches and holds the claim runs
+autonomously the same way: after each verified step it picks up the next
+eligible step without a human message, and stops only at checkpoints, reviews,
+`waiting`, and `done`. An attached session that does not own the binding stays
+explicit. At a review, wait for the user to decide and direct continuation.
 
 One repository owns one Herdr workspace, plus one linked worktree workspace per
 registered worktree; a mission's checkout owns its own. One mission owns one
 persistent linked worktree and one durable Pi owner. Attempts belong to steps, not
 to new worktrees.
-Do not remove a worktree after a step. Never bypass a pending launch by spawning
-again: a crash may have launched the first session. Inspect its recorded session
+Do not remove a worktree after a step. Never bypass a pending launch by launching
+again: a crash may have started the first session. Inspect its recorded session
 file and Herdr pane, then attach that session using the pending launch_id.
+A launch that fails with no worker in its pane releases its launch intent, so the
+next launch reserves again. Herdr agent names are unique for the server. A launch
+names the worker `mission-<slug>`; when another session holds that name, the
+launch takes a short handle hash once. If that name is taken too, the error names
+the pane that holds it. The launch never renames another session's agent.
 
 ## Work and report
 
@@ -122,25 +143,79 @@ them. Reuse an event_id when retrying the same report; change it for a new repor
 The extension records lifecycle metadata and snapshots the transcript separately.
 It does not interpret tool counts, elapsed time, or assistant prose as completion.
 
-Write the required artifact to the exact path returned by attach. Call
-`mission {action:"verify"}` to inspect check verdicts and evidence. Call
-`mission {action:"finish",summary:"Implemented and verified attachment"}` when
+Add `"actor": "<name>"` to record a trooper report: the attempt then also lists
+who reported, so the sitrep can name the agent that finished the work. One
+report per trooper stands: a later report from the same name replaces the row,
+so a resumed run leaves its final state. The extension already does this for
+every subagent it sees finish, so an agent only names itself when it reports for
+another.
+
+The step's work subagent writes the required artifact to the exact path returned by
+attach; the session that holds the claim sends that write out and never makes it
+itself. Call `mission {action:"verify"}` to inspect check verdicts and evidence.
+Call `mission {action:"finish",summary:"Implemented and verified attachment"}` when
 ready. This reports completion. The extension settles the attempt only after a
 normal Pi 1.5+ run settles without pending messages, child agents, or external waits, and
 the CLI's required checks pass. A failed check keeps the attempt owned; fix it
 and report again. `action:"fail"` reports an unsuccessful attempt.
+
+### Judge the step before finishing
+
+A step's verification belongs to one judge subagent, never to the session that
+holds the claim. After the work reports, call `mission {action:"judge"}`. It
+returns the judge task plus the artifact path, the acceptance criteria, the check
+list, and a one-shot capability path. Spawn one judge subagent with that task
+verbatim, in its own session and never the work subagent's session. The judge
+reads the artifact, runs the CLI check run itself through `mission verify` with the
+capability, and records its verdict with reasons as progress citing the artifact.
+`verify` and `finish` follow a recorded pass only; a failed verdict leaves the step
+with its owner and names what must change.
+
+### Answer the human
+
+You are the human's one touchpoint while the mission runs. A status prompt is
+answered with `mission {action:"status"}`, whose `summary` lines come from the
+ledger: what runs, what passed, what is next, and any review or blocker. An admin
+prompt is run through an existing command and confirmed from
+`mission {action:"steps"}`: `edit` for a step's words, `retry` after a failed step,
+`fail` to end an attempt. `edit` always names the revision your answer was built
+from, so a concurrent write refuses with `revision_conflict` instead of being
+overwritten; re-read and re-apply the human's words. An active attempt or a pending
+review blocks `step edit`, so end or retry the attempt first and say that you did.
+A checkpoint decision happens only when the human gives it.
 
 `mission run` remains available for foreground process-managed agents. It owns
 completion through observed process exit. Do not use it to wrap an already
 running Pi session. For those agents, `mission progress` accepts status, summary,
 next, blocker, evidence, and event-id with the wrapper's MISSION_* context.
 
-## Checkpoints, interruption, and recovery
+## Test pi changes from a worktree
 
-Stop at human checkpoints. Show the user the result and check evidence. Only an
-explicit user decision authorizes `mission checkpoint --human --actor ...
---decision accept|revise --revision ...`. The flag records an attestation, not
-authentication. Never let an agent silently approve its own work.
+A live Pi session loads the main checkout, not the worktree. Unmerged edits to
+`pi/.pi/agent/**` do nothing there. A worker that changes those paths must run
+Pi on the worktree's own config directory instead:
+
+- Interactive: `scripts/pi-dev <worktree>` starts Pi with that worktree's
+  extensions, settings, and theme. Type `/reload` in it after a further edit.
+- Scripted evidence: `scripts/pi-dev <worktree> -p "<prompt>"` is a one-shot
+  probe with those extensions loaded. `scripts/pi-dev <worktree> --print` gives
+  the exact command, for your own probe wrappers.
+
+The script sets `PI_CODING_AGENT_DIR` and links `~/.pi/agent/auth.json` into
+the worktree config. It keeps that link out of `git status`. No other session
+changes its config, and the main checkout stays untouched.
+
+## Reviews, interruption, and recovery
+
+Stop at human reviews. Show the user the result and check evidence. Only an
+explicit user decision authorizes `mission checkpoint accept|revise REPO/SLUG
+[C01] --note TEXT`. `--actor` defaults to git user.name, and no revision is
+needed. The command records an attestation, not authentication. Never let an
+agent silently approve its own work.
+
+A waiting review never blocks your tools. It blocks the next step, `step edit`,
+and `finish`. Use the tools to investigate or fix your own result. `finish` fails
+with the review id and the exact command the user runs.
 
 On Pi reload, the extension replays unacknowledged hooks with their original IDs
 and restores the attempt. A session shutdown preserves its owner and transcript;
@@ -151,5 +226,20 @@ the ledger to clear a stuck verifier, launch, or owner. Surface these for recove
 
 The local credential/outbox directory must survive a restart. Its loss requires
 operator recovery; this version deliberately has no automatic owner takeover.
-Follow the repository's normal No Mistakes validation and shipping workflow.
+Follow the repository's normal CI validation and shipping workflow.
 Mission checks do not replace it, and agents must not start nested pipelines.
+
+## Retire the mission
+
+A finished mission stays in the vault as a record. Close it when its work ships,
+so the record stops offering work.
+
+```sh
+mission --json close dotfiles/session-progress --note "Shipped in #430"
+```
+
+`close` sets `status: closed`, `closed_at`, and the note. It refuses open work:
+an active attempt, or a step that is not `passed`. Add `--force` to close anyway.
+A second close is safe and returns `already: true`. A closed mission refuses
+`claim`, `pickup`, `launch`, `plan`, `workspace`, `attach`, `next`, `finish`,
+`retry`, and `repair`. Start a new mission instead.

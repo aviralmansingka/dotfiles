@@ -30,6 +30,10 @@ Do not change the brief or edit generated state while an attempt is active.
 
 `workspace` prepares or adopts one linked worktree per mission. It accepts a local
 base branch, records the starting commit, and never creates a Herdr workspace.
+`close` retires a mission record: it sets `status: closed` with `closed_at` and a
+note, refuses open work unless you add `--force`, and reports `already: true` on a
+second close. A closed mission refuses every command that needs live work, so it
+never offers work or revives its deleted checkout. `/cleanup` calls it.
 `attach` binds an existing Pi session after checking its file header and worktree.
 `progress` stores status, summary, next action, blocker, and hashed evidence using
 stable event IDs. A `ready` report does not pass a step. `finish` reports completion;
@@ -41,6 +45,13 @@ attestation; it does not authenticate a human. Required checks and runtime hooks
 assume a trusted local adapter. This version does not automatically recover a
 lost credential, replace an owner, clear a crashed verifier, or retry an ambiguous
 launch. Preserve the ledger and inspect the existing owner first.
+
+Every save carries the revision it was loaded from and refuses to replace a
+ledger that already moved; the failure code is `revision_conflict`. The mission
+directory keeps `journal.jsonl`, one line per save with the command, base revision,
+new revision, and attempt count. `mission repair` replays an interrupted step edit
+and re-admits `attempts/NNN.md` projections that the ledger lost, with the owning
+attempt and step restored.
 
 Run `bash scripts/test-missions.sh` from the repository root for Go tests, vet,
 and the Pi adapter contract tests using a real CLI and isolated Git worktrees.

@@ -14,6 +14,9 @@ const help = `mission — work that survives the agent
   mission --json list                     Agent interface: JSON, no prompts
   mission --json steps REPO/SLUG
   mission ui                              Optional human mission desk
+      tab moves the focus, [ and ] walk the focused pane's tabs,
+      j/k moves the selection, q quits. The mission list opens on ACTIVE:
+      the lane tabs narrow it by state: YOURS, READY, FAILED, DONE.
   mission repo add dotfiles --checkout ~/dotfiles
   mission new dotfiles/audit-hooks --title "Audit lifecycle hooks"
       --goal "Document gaps" --step "Inspect current hooks"
@@ -34,16 +37,37 @@ const help = `mission — work that survives the agent
   mission attach REPO/SLUG --session-id ID --session-file PATH --cwd WORKTREE
       --workspace ID --pane ID             Private token in MISSION_TOKEN
   mission progress REPO/SLUG --status working --summary TEXT --event-id ID
-      [--next TEXT] [--blocker TEXT] [--evidence artifacts/001/result.md]
+      [--actor TROOPER] [--next TEXT] [--blocker TEXT]
+      [--evidence artifacts/001/result.md]
+                                           --actor also records one trooper
+                                           report on the attempt
+  mission plan REPO/SLUG [--mux rex]       Read-only launch description: army
+      session and window labels, captain argv and brief, worktree, ack token
+  mission deploy REPO/SLUG [--mux rex]     Seat the mission: army session, its
+      captain window, and the mission-<slug> session; a repeat focuses the seat
   mission launch REPO/SLUG                 Reserve one launch; adapters only
+  mission launch REPO/SLUG --ack           Record the plan's ack token: the
+      seats exist. It never replaces the reserved launch intent
+  mission launch REPO/SLUG --release --launch-id ID
+                                           Drop a failed launch intent
   mission settle REPO/SLUG --session-id ID  Settle a reported Pi attempt after idle
   mission hook agent-start --session-id ID --event-id ID
   mission finish [REPO/SLUG] | fail [REPO/SLUG] --note TEXT
-  mission checkpoint REPO/SLUG --id C01 --decision accept --human
-      --actor aviral --note "Reviewed the evidence" --revision 5
+  mission show REPO/SLUG                    Record plus revision, pending_review,
+      next_command                         one stable line for the owner
+  mission checkpoint accept|revise REPO/SLUG [C01] --note TEXT [--actor NAME]
+      Owner decision; no revision needed; --actor defaults to git user.name
+  mission checkpoint REPO/SLUG --id C01 --decision accept --human --actor NAME
+      --note TEXT [--revision N]           Legacy flag form, one release
+  mission review reopen REPO/SLUG [C01] --note TEXT
+      Rebind a review after its evidence changed
   mission retry REPO/SLUG | repair REPO/SLUG
+  mission close REPO/SLUG [--note TEXT] [--force]
+                                           Retire the record; refuses open work
   mission demo --vault ./demo-vault         Seed isolated, simulated records
-  mission render --view dashboard --width 128 --height 42 --color
+  mission render --view inbox|table|repos|overview|troopers|attempts|activity|steps|step|call
+      [--filter ACTIVE|YOURS|READY|FAILED|DONE]
+      [--handle REPO/SLUG] [--id S01] [--width 128] [--height 42] [--color]
 
 Global: --vault PATH (default $MISSION_VAULT or ~/vault), --json
 All data commands return one JSON envelope. No command specified: list missions.
@@ -71,7 +95,7 @@ func emit(v any, e error) int {
 		switch key {
 		case "usage", "invalid_handle", "not_found", "invalid_mission", "invalid_slug":
 			code = 2
-		case "busy", "checkpoint_pending", "step_blocked", "worktree_busy":
+		case "busy", "checkpoint_pending", "review_pending", "step_blocked", "worktree_busy":
 			code = 3
 		}
 	} else {
@@ -113,6 +137,7 @@ func execute(argv []string) int {
 		}
 	}
 	vault := platform.Fallback(a.Get("vault"), platform.Fallback(os.Getenv("MISSION_VAULT"), "~/vault"))
+	writer = writeVerb(cmd, a)
 	if cmd == "demo" && !a.Has("vault") {
 		return emit(nil, mission.Problem("usage", "demo requires an explicit --vault pointing to an isolated directory"))
 	}
@@ -139,7 +164,7 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 	case "new":
 		return cmdNew(a, s)
 	case "list":
-		return s.list()
+		return s.listViews()
 	case "show":
 		return cmdShow(a, s)
 	case "checks":
@@ -160,6 +185,10 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdWorkspace(a, s)
 	case "attach":
 		return cmdAttach(a, s)
+	case "plan":
+		return cmdPlan(a, s)
+	case "deploy":
+		return cmdDeploy(a, s)
 	case "launch":
 		return cmdLaunch(a, s)
 	case "progress":
@@ -172,6 +201,10 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdFinish(cmd, a, s)
 	case "checkpoint":
 		return cmdCheckpoint(a, s)
+	case "review":
+		return cmdReview(a, s)
+	case "close":
+		return cmdClose(a, s)
 	case "retry":
 		return cmdRetry(a, s)
 	case "repair":

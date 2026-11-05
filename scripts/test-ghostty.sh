@@ -227,11 +227,14 @@ mkdir -p "$TI1" "$TI2"
 chk_terminfo_compile() {
     # PR #11 install surface: install.sh runs `tic -x -w` on this file.
     # Here it compiles into a mktemp dir — never $HOME.
-    local out
+    local out entry
     out="$(tic -o "$TI1" "$1" 2>&1)"
     [[ $? -eq 0 ]] || { echo "tic failed: $out"; return 1; }
     [[ -z "$out" ]] || { echo "tic emitted warnings: $out"; return 1; }
-    [[ -f "$TI1/x/xterm-ghostty" ]] || { echo "compiled terminfo entry not found at $TI1/x/xterm-ghostty"; return 1; }
+    # ncurses writes the entry under a one-letter subdir on some versions and a
+    # hex subdir (78 for x) on others; find it by name instead of assuming one.
+    entry="$(find "$TI1" -type f -name xterm-ghostty | head -1)"
+    [[ -n "$entry" ]] || { echo "compiled terminfo entry not found under $TI1"; return 1; }
 }
 
 chk_terminfo_roundtrip() {
@@ -253,7 +256,8 @@ chk_terminfo_key_caps() {
     local dump="$WORK/rt1"
     [[ -s "$dump" ]] || { echo "no compiled dump available"; return 1; }
     local colors
-    colors="$(sed -n 's/.*[[:space:]]colors#\([0-9x]\+\),\?$/\1/p' "$dump" | head -1)"
+    # BSD sed has no \+ in a basic regex, so read the value with awk.
+    colors="$(awk -F'[#,]' '/^[[:space:]]*colors#/ {print $2; exit}' "$dump")"
     [[ -n "$colors" ]] || { echo "colors# capability missing"; return 1; }
     # infocmp prints hex (0x100) on some ncurses versions, decimal elsewhere.
     colors=$(( colors ))

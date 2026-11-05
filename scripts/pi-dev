@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Run pi on one worktree's own config directory.
+#
+# Why: extensions load from the agent directory, which points at the main
+# checkout, and `pi update` swaps the core package only. So an unmerged change
+# to pi/.pi/agent/** stays invisible to a live session.
+#
+# How: PI_CODING_AGENT_DIR moves pi's whole config directory. This repository
+# keeps that same shape at pi/.pi/agent (extensions/, settings.json, themes/,
+# keybindings.json, git/, APPEND_SYSTEM.md), so that directory works as a config
+# directory. Auth is the only gap: the auth file lives in ~/.pi/agent. This
+# script links it in and keeps it out of git status. See docs/pi-live-config.md.
+#
+# Other sessions keep their own config. The main checkout stays untouched.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/pi-dev [worktree-path] [--] [pi args...]
+  scripts/pi-dev                      current directory's Git root
+  scripts/pi-dev ~/wt/feat-x          interactive session, that config
+  scripts/pi-dev . -p "probe"         one-shot probe, that extensions
+  scripts/pi-dev . --print -- -p "x"  print the command, do not run it
+EOF
+}
+
+target=""
+print_only=0
+pi_args=()
+
+# The path comes first. A pi option starts the pi arguments, so the rest of the
+# line belongs to pi. --print still counts before a "--".
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --) shift; pi_args+=("$@"); break ;;
+    --print) print_only=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    -*) pi_args+=("$@"); break ;;
+    *)
+      if [ -n "$target" ] || [ "${#pi_args[@]}" -gt 0 ]; then
+        pi_args+=("$@"); break
+      fi
+      target="$1"; shift ;;
+  esac
+done
+
+start=${target:-$PWD}
+[ -d "$start" ] || { echo "pi-dev: no such directory: $start" >&2; exit 1; }
+root=$(git -C "$start" rev-parse --show-toplevel 2>/dev/null) ||
+  { echo "pi-dev: not a Git worktree: $start" >&2; exit 1; }
+agent_dir="$root/pi/.pi/agent"
+[ -d "$agent_dir" ] ||
+  { echo "pi-dev: no pi config directory at $agent_dir" >&2; exit 1; }
+
+# Auth: link the user's credentials in once, then leave the link alone.
+auth_source="$HOME/.pi/agent/auth.json"
+if [ ! -e "$agent_dir/auth.json" ] && [ ! -L "$agent_dir/auth.json" ]; then
+  if [ -e "$auth_source" ]; then
+    ln -s "$auth_source" "$agent_dir/auth.json"
+  else
+    echo "pi-dev: no auth file at $auth_source; run pi /login there, or set an API key" >&2
+  fi
+fi
+
+# Keep the linked auth file out of git status. Git reads info/exclude from the
+# shared Git directory, so one entry covers the primary checkout and every
+# linked worktree. --git-path resolves through a linked worktree's own Git
+# directory to the shared file.
+exclude=$(git -C "$root" rev-parse --path-format=absolute --git-path info/exclude)
+mkdir -p "$(dirname "$exclude")"
+entry=pi/.pi/agent/auth.json
+grep -qxF "$entry" "$exclude" 2>/dev/null || printf '%s\n' "$entry" >>"$exclude"
+
+command=(env "PI_CODING_AGENT_DIR=$agent_dir" pi "${pi_args[@]+"${pi_args[@]}"}")
+if [ "$print_only" -eq 1 ]; then
+  printf '%q' "${command[0]}"
+  for word in "${command[@]:1}"; do printf ' %q' "$word"; done
+  printf '\n'
+  exit 0
+fi
+exec "${command[@]}"

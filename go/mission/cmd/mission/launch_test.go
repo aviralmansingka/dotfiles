@@ -14,14 +14,16 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
-// launchDesk is a desk whose requests land in a throwaway state dir.
+// launchDesk is a desk whose requests land in a throwaway state dir, opened on
+// the lane that holds the fixture mission.
 func launchDesk(t *testing.T) (*desk, string) {
 	t.Helper()
-	s, _ := fixture(t)
+	s, h := fixture(t)
 	m := newDesk(s)
 	dir := t.TempDir()
 	m.launchDir = dir
 	m.refresh()
+	selectHandle(t, m, h)
 	return m, dir
 }
 
@@ -133,9 +135,21 @@ func TestLaunchStateReachesTheFrame(t *testing.T) {
 	}
 }
 
+// ownDesk marks the desk's record as owned by a live Pi session, the way a
+// claim leaves it, and re-filters so the detail panel reads the same record.
+func ownDesk(t *testing.T, m *desk, handle string) {
+	t.Helper()
+	for i := range m.records {
+		if m.records[i].Handle == handle {
+			m.records[i].State.Runtime = &mission.RuntimeBinding{Machine: platform.Machine(), SessionID: "owner-session"}
+		}
+	}
+	selectHandle(t, m, handle)
+}
+
 func TestLaunchKeyRefusesAnOwnedMission(t *testing.T) {
 	m, dir := launchDesk(t)
-	m.records[m.selected].State.Runtime = &mission.RuntimeBinding{Machine: platform.Machine(), SessionID: "owner-session"}
+	ownDesk(t, m, m.records[m.selected].Handle)
 	press(m, "L")
 	if !strings.Contains(m.notice, "Already owned") {
 		t.Fatalf("notice = %q", m.notice)

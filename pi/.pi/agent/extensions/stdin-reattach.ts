@@ -1,6 +1,7 @@
 import { closeSync, constants as fsConstants, fstatSync, openSync, readlinkSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import tty from "node:tty";
+import { getSystemErrorName } from "node:util";
 import { Text } from "@earendil-works/pi-tui";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
@@ -82,6 +83,20 @@ export default function stdinReattach(pi: ExtensionAPI) {
 	let tuiRef: { requestRender: (force?: boolean) => void; terminal?: any } | undefined;
 	let recovering = false;
 	let generation = 0;
+	// Size readers of the streams patched onto the current pty. Replaced on
+	// every recovery: an older generation's fd is dead and must not be read.
+	const sizeRefreshers = new Set<() => void>();
+	const refreshAllSizes = () => {
+		for (const refresh of sizeRefreshers) {
+			try {
+				refresh();
+			} catch {
+				// A failing reader logs itself; never let the signal handler throw.
+			}
+		}
+	};
+	let sigwinchArmed = false;
+	let staleHandlerDropped = false;
 
 	const note = (detail: Record<string, unknown>) => {
 		try {
@@ -126,15 +141,73 @@ export default function stdinReattach(pi: ExtensionAPI) {
 		const wrapped = stream as unknown as Record<string, unknown>;
 		wrapped.write = (...args: unknown[]) =>
 			(target as unknown as { write: (...a: unknown[]) => boolean }).write(...args);
+		// Sizes: a hand-built WriteStream reads TIOCGWINSZ once, at construction,
+		// and node only refreshes the process's ORIGINAL stdout on SIGWINCH — so
+		// this synthetic stream would answer the launch size forever (measured on
+		// node 26.8.1: target.columns=40 on a 120x30 pty, resizeEvents(target)=0).
+		// Re-read the live size from the reopened fd instead, once per access, and
+		// emit `resize` on the patched object when it changes: that event is what
+		// pi-tui repaints on (dist/terminal.js:136).
+		let columns = target.columns;
+		let rows = target.rows;
+		let lastSizeError: string | undefined;
+		const refreshSize = () => {
+			const handle = (target as unknown as { _handle?: { getWindowSize?: (ws: number[]) => number } })
+				._handle;
+			if (typeof handle?.getWindowSize !== "function") {
+				reportSizeFailure("no tty handle");
+				return;
+			}
+			const winSize = [columns, rows];
+			const errno = handle.getWindowSize(winSize);
+			if (errno !== 0) {
+				// TTYWrap reports libuv codes: a negative errno on failure, 0 on success
+				// (getSystemErrorName wants that same negative form: -9 → "EBADF").
+				let name = "winsize ioctl failed";
+				if (typeof errno === "number") {
+					const code = errno > 0 ? -errno : errno;
+					if (code < 0) {
+						try {
+							name = getSystemErrorName(code);
+						} catch {
+							name = `errno ${code}`;
+						}
+					}
+				}
+				reportSizeFailure(name);
+				return;
+			}
+			lastSizeError = undefined;
+			if (winSize[0] === columns && winSize[1] === rows) return;
+			columns = winSize[0];
+			rows = winSize[1];
+			stream.emit("resize");
+		};
+		// One line per distinct failure, and keep the last known size. `undefined`
+		// would drop pi-tui onto its `env.COLUMNS || 80` fallback — a wrong width
+		// that looks healthy; a stale-but-consistent frame plus this line does not.
+		function reportSizeFailure(err: string) {
+			const message = `winsize read failed fd=${newFd} err=${err}`;
+			if (message === lastSizeError) return;
+			lastSizeError = message;
+			try {
+				process.stderr.write(`stdin-reattach: ${message} (keeping last known ${columns}x${rows})\n`);
+			} catch {
+				// Both ttys may already reject writes; the failure stands either way.
+			}
+		}
 		for (const dim of ["columns", "rows"] as const) {
 			try {
 				Object.defineProperty(stream, dim, {
-					get: () => (target as unknown as Record<string, number>)[dim],
-					// Node's own SIGWINCH handler writes the fresh size back onto stdout:
+					get: () => {
+						refreshSize();
+						return dim === "columns" ? columns : rows;
+					},
+					// Node's own SIGWINCH handler writes the size back onto stdout:
 					// `this.columns = newCols` in WriteStream._refreshSize. A getter with no
 					// setter throws there, uncaught, and kills pi on the next resize after a
-					// rescue. The getter already reads the live stream, so the write is a
-					// no-op we must accept rather than reject.
+					// rescue. The getter re-reads the live fd, so the write is a no-op we
+					// must accept rather than reject.
 					set: () => {},
 					configurable: true,
 				});
@@ -142,8 +215,14 @@ export default function stdinReattach(pi: ExtensionAPI) {
 				// Getter already configurable elsewhere; sizes may go stale.
 			}
 		}
-		// The TUI's resize handler listens on the original stdout object.
-		target.on("resize", () => stream.emit("resize"));
+		// The TUI's resize handler listens on the original stdout object, so the
+		// emit has to originate here: nothing wires the synthetic stream to
+		// SIGWINCH, and `target.on("resize")` therefore never fires.
+		sizeRefreshers.add(refreshSize);
+		if (!sigwinchArmed) {
+			sigwinchArmed = true;
+			process.on("SIGWINCH", refreshAllSizes);
+		}
 		return target;
 	};
 
@@ -205,6 +284,26 @@ export default function stdinReattach(pi: ExtensionAPI) {
 				// can never take input again; exit cleanly as the last resort.
 				process.exit(EXIT_CODE);
 			}
+			// Node's own SIGWINCH handler refreshes the ORIGINAL stdout handle — after
+			// a swap that handle is the old pty (a second, contradictory `resize` on
+			// stdout) or a closed fd (an unhandled 'error' on the next resize). It can
+			// only mislead now: our getters read the new fd and refreshAllSizes emits
+			// the resize. Drop it — matched by what it does, not by its name — and
+			// leave every other SIGWINCH listener alone. Once is enough; it never
+			// comes back.
+			if (!staleHandlerDropped) {
+				staleHandlerDropped = true;
+				for (const listener of process.listeners("SIGWINCH")) {
+					try {
+						if (listener.toString().includes("_refreshSize()")) {
+							process.removeListener("SIGWINCH", listener);
+						}
+					} catch {
+						// Uninspectable listener: leave it be.
+					}
+				}
+			}
+			sizeRefreshers.clear();
 			patchOutputStream(process.stdout, writeFd);
 			try {
 				const errFd = openNewSlave(fs_O_WRONLY | fs_O_NONBLOCK);
