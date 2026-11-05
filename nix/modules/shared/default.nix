@@ -52,6 +52,15 @@ in
         wget
         unzip
         lazygit
+        # User tools both profiles need; each profile used to declare its own
+        # copy, and this module owns them once now.
+        gnupg
+        just
+        mermaid-cli
+        openssh
+        rsync
+        rustup
+        uv
       ]
       # Owner batch two (S06): the headless browser and the tailscale CLI come
       # from the profile. The tailscaled daemon stays with apt (root service);

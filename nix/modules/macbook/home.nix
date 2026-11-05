@@ -10,17 +10,10 @@
 
   home.packages = with pkgs; [
     # ubuntu-only tools from the remote profile are deliberately absent here.
-    just
-    gnupg
-    openssh
-    rsync
     go
     nodejs_22
     bun
-    uv
-    rustup
     herdr
-    mermaid-cli
   ];
 
   # macOS keeps its own shell defaults; the profile only sets what Nix owns.

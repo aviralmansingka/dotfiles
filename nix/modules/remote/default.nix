@@ -19,18 +19,7 @@ in
     ../../services
   ];
 
-  home.packages =
-    lib.attrValues ownedTools
-    ++ (with pkgs; [
-      # User tools apt does not ship; Nix owns the version.
-      rustup
-      just
-      uv
-      mermaid-cli
-      gnupg
-      openssh
-      rsync
-    ]);
+  home.packages = lib.attrValues ownedTools;
 
   # `fleet.ownedTools` gives the store path of every one of the 23 apt names the
   # remote profile took over. A host check compares these with `command -v`.
