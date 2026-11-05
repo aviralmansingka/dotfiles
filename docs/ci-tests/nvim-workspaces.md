@@ -39,7 +39,7 @@ require, and drives real tabpages and buffers in a headless instance.
 
 Run `scripts/test-nvim-workspaces.sh` from the repository root. The script
 runs `nvim/tests/ci/workspaces_spec.lua` with `nvim --headless -u NONE`.
-It finds nvim on `PATH`, else in `~/.local/share/bob`. Each check prints
+It finds nvim on `PATH`. Each check prints
 `PASS`. The script exits non-zero when a check fails or a `PASS` mark is
 missing. Set `STRICT=1` to turn a missing nvim binary into a failure. The
 shared suite `scripts/test-nvim-headless.sh` also runs this spec.

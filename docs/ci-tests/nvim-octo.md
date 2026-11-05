@@ -45,7 +45,7 @@ Four specs run under `nvim --headless -u NONE` through the shared harness
 ## How to run
 
 Run `scripts/test-nvim-octo.sh` from the repository root. It finds nvim
-on `PATH`, else in `~/.local/share/bob`, and globs
+on `PATH` and globs
 `nvim/tests/ci/octo*_spec.lua`. Each case must print `PASS` and exit zero;
 nvim exits zero even when a lua chunk fails, so the script also requires
 the `PASS` mark. Without nvim, the entry prints `SKIP` and exits zero;

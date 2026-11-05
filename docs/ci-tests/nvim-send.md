@@ -46,9 +46,9 @@ the WORKTREE copy of the config, never a stowed `~/.config/nvim` copy.
 ## How to run
 
 Run `scripts/test-nvim-send.sh` from the repository root. The script finds
-nvim on `PATH`, else in `~/.local/share/bob`. It runs each case with
-`nvim --headless -u NONE`. Each case must print `PASS` and exit zero, because
-nvim exits zero even when a Lua chunk fails. The three cases also run inside
+nvim on `PATH`. It runs each case with `nvim --headless -u NONE`. Each case
+must print `PASS` and exit zero, because nvim exits zero even when a Lua
+chunk fails. The three cases also run inside
 `scripts/test-nvim-headless.sh` through the `nvim/tests/ci/*_spec.lua` glob.
 When nvim is missing, the entry prints `SKIP` and exits zero. Set `STRICT=1`
 to make the missing binary a failure.

@@ -7,13 +7,3 @@ source "$HOME/.cargo/env"
 
 echo "==> Installing eza"
 cargo install eza --locked
-
-echo "==> Installing bob-nvim"
-cargo install bob-nvim
-
-echo "==> Installing neovim nightly via bob"
-# bob-nvim checks SUDO_USER to resolve home dir; under sudo -iu this is
-# the invoking user (ubuntu), not the target user. Unset it so bob falls
-# through to USER/HOME which are set correctly by sudo -iu.
-unset SUDO_USER
-"$HOME/.cargo/bin/bob" use nightly

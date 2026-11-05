@@ -11,7 +11,7 @@ gaps.
 
 The contract this locks (S01 inventory): the repo owns exactly two programs,
 `mission` (from `go/mission`) and `rataflow-view` (from the `rataflow`
-crate). Everything else the machine runs (`bob-nvim`, `eza`, `herdr`, `rex`,
+crate). Everything else the machine runs (`eza`, `herdr`, `rex`,
 `mmdflux`, `grok-mermaid`, the patched reviewer) comes from a registry, a
 release tarball, or npm — out of scope, and a recipe that installs one of
 those is not a build of this repo.

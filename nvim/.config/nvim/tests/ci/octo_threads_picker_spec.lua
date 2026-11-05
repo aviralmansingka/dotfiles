@@ -24,7 +24,7 @@ H.run("octo_threads_picker_spec", function()
     },
     {
       id = "T2", path = "b.lua", originalLine = 9, isResolved = true, isOutdated = true,
-      comments = { nodes = { { body = string.rep("x", 90), author = { login = "bob" } } } },
+      comments = { nodes = { { body = string.rep("x", 90), author = { login = "carol" } } } },
     },
     {
       id = "T3", path = "c.lua", isResolved = false,

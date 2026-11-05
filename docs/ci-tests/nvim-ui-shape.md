@@ -45,7 +45,7 @@ test stubs the file system so it stays dead.
 ## How to run
 
 Run `scripts/test-nvim-ui-shape.sh` from the repository root. The
-script finds nvim on `PATH`, else in `~/.local/share/bob`. Each check
+script finds nvim on `PATH`. Each check
 prints its own `PASS` line with a timing. The script exits non-zero
 when any check fails. When nvim is absent, the script prints `SKIP`
 and exits zero; set `STRICT=1` to make the absence a failure.

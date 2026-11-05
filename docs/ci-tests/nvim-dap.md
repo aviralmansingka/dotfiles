@@ -44,7 +44,7 @@ spec is `nvim/tests/ci/dap_eval_spec.lua`.
 ## How to run
 
 Run `scripts/test-nvim-dap.sh` from the repository root. It finds nvim on
-`PATH`, else in `~/.local/share/bob`, and runs the spec with
+`PATH` and runs the spec with
 `nvim --headless -u NONE`. It prints one PASS line per case plus timing,
 and exits non-zero on any FAIL. With no nvim, the default prints SKIP
 and exits zero; `STRICT=1` makes it FAIL.

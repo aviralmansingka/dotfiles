@@ -37,7 +37,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 
 | Component | Entry | Checks | Runtime |
 |---|---|---|---|
-| zsh layer | test-zsh.sh | 19 | 0.42 s |
+| zsh layer | test-zsh.sh | 25 | 1.4 s |
 | tmux + ghostty + terminfo | test-tmux.sh, test-ghostty.sh | 17 + 11 | 0.36 s |
 | Config lint (starship, aerospace, git) | test-config-lint.py | 8, 5 files | 0.06 s |
 | install.sh | test-install-smoke.sh | 46 | 2.9 s |

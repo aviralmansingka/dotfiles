@@ -10,22 +10,12 @@ find_nvim() {
     command -v nvim
     return 0
   fi
-  local bob_nvim="$HOME/.local/share/bob/nightly/bin/nvim"
-  if [[ -x "$bob_nvim" ]]; then
-    printf '%s\n' "$bob_nvim"
-    return 0
-  fi
-  local bob_stable="$HOME/.local/share/bob/v0.12.2/bin/nvim"
-  if [[ -x "$bob_stable" ]]; then
-    printf '%s\n' "$bob_stable"
-    return 0
-  fi
   return 1
 }
 
 nvim_bin="$(find_nvim || true)"
 if [[ -z "$nvim_bin" ]]; then
-  echo "verify-nvim: nvim not found on PATH or in ~/.local/share/bob" >&2
+  echo "verify-nvim: nvim not found on PATH" >&2
   exit 127
 fi
 

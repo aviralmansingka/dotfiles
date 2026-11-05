@@ -56,6 +56,11 @@ in
         # User tools both profiles need; each profile used to declare its own
         # copy, and this module owns them once now.
         gnupg
+        # The editor and the diff pager are profile tools, not version-managed
+        # ones: the shell text calls plain `nvim`, and delta is on PATH on both
+        # platforms.
+        neovim
+        delta
         # herdr comes from the flake pin like any other profile tool.
         herdr
         just
@@ -80,6 +85,9 @@ in
   '';
 
   # A stable editor and pager contract for tools that do not read the shell rc.
+  # Every machine-neutral export the tracked zsh files carried lives here now:
+  # Home Manager writes them to hm-session-vars.sh, ~/.zprofile sources that at
+  # login, and zsh/.zshenv sources it for shells that never read ~/.zprofile.
   home.sessionVariables = {
     EDITOR = "nvim";
     VISUAL = "nvim";
@@ -92,5 +100,95 @@ in
     GOPATH = "${config.home.homeDirectory}/go";
     RUSTUP_HOME = "${config.home.homeDirectory}/.rustup";
     CARGO_HOME = "${config.home.homeDirectory}/.cargo";
+
+    XDG_CONFIG_HOME = config.xdg.configHome;
+    # Pi reads COLORTERM to decide whether to emit 24-bit colors under SSH/tmux.
+    COLORTERM = "truecolor";
+    # Also send copies over OSC 52 after the local clipboard write, so a remote
+    # Herdr attach without SSH variables still copies.
+    PI_CLIPBOARD_OSC52 = "1";
+    HOMEBREW_NO_AUTO_UPDATE = "1";
+  };
+
+  # PATH, in Home Manager's one list: it prepends these to the inherited PATH in
+  # this order, so the Nix profile comes first and beats a /usr/bin/nix a
+  # distribution package may have left behind. Directories that belong to a
+  # single platform are added by that platform's module (see nix/modules/remote).
+  #
+  # `~/.cargo/bin` is deliberately absent: it held only cargo-installed
+  # duplicates of tools the profile now ships (`bob`, `delta`, `rataflow-view`),
+  # and an earlier entry here kept shadowing the profile copies. `cargo` itself
+  # is a profile package, so a `cargo install` is still possible; its output just
+  # needs an explicit path, which is the point.
+  home.sessionPath = [
+    "$HOME/.nix-profile/bin"
+    # pi and rex binaries; a login shell needs them for `sh -lc 'command -v rex'`.
+    "$HOME/.pi/agent/bin"
+    "$HOME/.local/bin"
+    "$HOME/bin"
+    "$HOME/go/bin"
+    "$HOME/.bun/bin"
+    "/usr/local/bin"
+  ];
+
+  # The shell is the profile's now: Home Manager writes ~/.zshenv, ~/.zprofile
+  # and ~/.zshrc, so `stow` no longer links the zsh package. The editable text
+  # stays in the repo and is read at evaluation time, which keeps the files the
+  # single place a human edits them.
+  programs.zsh = {
+    enable = true;
+
+    oh-my-zsh = {
+      enable = true;
+      # zsh-syntax-highlighting and zsh-autosuggestions are not oh-my-zsh
+      # plugins upstream (the tracked .zshrc kept them in
+      # ~/.oh-my-zsh/custom/plugins), so naming them here would only make
+      # oh-my-zsh print "plugin not found" at every shell start. Their own
+      # modules below load the same two features from real packages.
+      plugins = [
+        "git"
+        "extract"
+        "colored-man-pages"
+        "history"
+      ];
+      # Read before oh-my-zsh.sh is sourced, which is when the framework decides
+      # whether to program the terminal title.
+      extraConfig = ''DISABLE_AUTO_TITLE="true"'';
+    };
+    syntaxHighlighting.enable = true;
+    autosuggestion.enable = true;
+
+    # zsh/.zshrc is the reference text for the interactive shell, zsh/.zshenv
+    # for every zsh invocation. Both are read, never copied, so an edit in zsh/
+    # lands on the next switch.
+    initContent = builtins.readFile ../../../zsh/.zshrc;
+    envExtra = builtins.readFile ../../../zsh/.zshenv;
+
+    # The four aliases zsh/.zshrc used to define. Home Manager writes them at
+    # the end of the generated ~/.zshrc, after every initContent line, so a
+    # function of the same name in the shell text cannot shadow them.
+    shellAliases = {
+      ls = "eza --icons -l";
+      rg = "rg --hidden";
+      inv = "uv run inv";
+      ghd = "gh dash";
+    };
+  };
+
+  # The tool hooks zsh/.zshrc used to eval behind a `command -v` guard. Each
+  # module writes the init line into programs.zsh.initContent itself, and its
+  # zsh integration option defaults to `programs.zsh.enable`, so enabling the
+  # program is the whole declaration.
+  programs.starship.enable = true;
+  programs.zoxide.enable = true;
+  programs.direnv.enable = true;
+
+  # FZF_DEFAULT_COMMAND, the same value .zshrc used to export. The module writes
+  # it to the generated hm-session-vars.sh, so non-zsh callers keep it too.
+  # enableZshIntegration brings fzf's completion and key bindings (`Ctrl-R`,
+  # `Ctrl-T`, `Alt-C`), which no tracked file ever wired up.
+  programs.fzf = {
+    enable = true;
+    defaultCommand = ''rg --hidden --ignore .git -g ""'';
   };
 }
