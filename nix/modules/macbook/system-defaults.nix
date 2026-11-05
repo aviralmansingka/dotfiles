@@ -1,11 +1,3 @@
-# macOS system settings, generated from the live Mac by
-# scripts/capture-macos-defaults.py --nix-out nix/darwin/system-defaults.nix.
-#
-# The generated file is not committed: it holds machine-private preferences
-# (2600+ keys, including local identifiers) and it changes whenever an app
-# rewrites a domain. The deploy script regenerates it before a switch, so a
-# fresh MacBook that has never run the capture still builds: this module falls
-# back to an empty set and says so.
 { lib, ... }:
 
 let
