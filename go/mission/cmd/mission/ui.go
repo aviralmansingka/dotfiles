@@ -16,15 +16,15 @@ import (
 )
 
 var (
-	ink    = lg.Color("#ebdbb2")
-	muted  = lg.Color("#a89984")
-	green  = lg.Color("#b8bb26")
-	aqua   = lg.Color("#8ec07c")
-	orange = lg.Color("#fe8019")
-	yellow = lg.Color("#fabd2f")
+	ink    = lg.Color("#d4be98")
+	muted  = lg.Color("#928374")
+	green  = lg.Color("#a9b665")
+	aqua   = lg.Color("#89b482")
+	orange = lg.Color("#e78a4e")
+	yellow = lg.Color("#d8a657")
 	pink   = lg.Color("#d3869b")
-	bg     = lg.Color("#1d2021")
-	edge   = lg.Color("#504945")
+	bg     = lg.Color("#282828")
+	edge   = lg.Color("#32302f")
 )
 
 func paint(c interface {
