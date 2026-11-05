@@ -75,6 +75,27 @@ in
 
   programs.zsh.enable = true;
 
+  # The fleet units name their interpreter and their PATH in Ubuntu's
+  # vocabulary: `nix/services/jobs.nix` hardcodes `/bin/bash`, and
+  # `nix/services/default.nix` puts `%h/.nix-profile/bin` first on every unit's
+  # PATH. Neither spelling works here. NixOS has no `/bin/bash`, and with
+  # `home-manager.useUserPackages` the user's packages land in
+  # `/etc/profiles/per-user/<user>/bin`, so `~/.nix-profile/bin` is an empty
+  # directory; the S03 probe measured the result as
+  # `Failed at step EXEC spawning /bin/bash: No such file or directory`
+  # (203/EXEC) on `dotfiles-auto-sync`. The correction belongs here, not in the
+  # shared renderer: the Ubuntu hosts must keep their unit bytes.
+  #
+  # The six unit names and their rendered `Service` sections come from that same
+  # module, evaluated against the only config attribute it reads
+  # (`fleet.services.enableUnits`). One rewrite over that whole set is what keeps
+  # this to a single rule instead of six hand-written units; reading
+  # `config.systemd.user.services` instead would be a self-reference, because the
+  # module below overrides that very option.
+  #
+  # `pkgs.bash` is in `environment.systemPackages` so the interpreter the units
+  # name is in the system closure by construction, not by accident.
+  #
   # The Home Manager user layer for a NixOS target is `shared` (mkNixos) plus
   # what every Linux host needs: the fleet's user units, which belong to the
   # fleet and not to a host (the same module `nix/modules/remote` imports for the
@@ -82,8 +103,45 @@ in
   # came from apt; `shared` has lazygit and herdr but neither of these.
   # `sharedModules` applies them to whichever account mkNixos declared, which
   # this file cannot name before evaluation.
+  environment.systemPackages = [ pkgs.bash ];
+
   home-manager.sharedModules = [
     ../../services
+    (
+      { config, lib, pkgs, ... }:
+      let
+        fleetUnits =
+          (import ../../services {
+            inherit lib pkgs;
+            config.fleet.services.enableUnits = config.fleet.services.enableUnits;
+          }).config.systemd.user.services;
+
+        # The two Ubuntu spellings, mapped to the NixOS ones. The store path is
+        # interpolated, so the unit files carry it as a runtime reference.
+        toNixosString = lib.replaceStrings
+          [
+            "/bin/bash"
+            "%h/.nix-profile/bin"
+          ]
+          [
+            "${pkgs.bash}/bin/bash"
+            "/etc/profiles/per-user/${managedUser}/bin"
+          ];
+
+        # `Service.ExecStart` and `Service.Environment` are both coerced to
+        # lists downstream, so handle either shape.
+        toNixos =
+          value: if builtins.isList value then map toNixosString value else toNixosString value;
+      in
+      {
+        config.systemd.user.services = lib.mapAttrs (_: unit: {
+          Service = {
+            ExecStart = lib.mkForce (toNixos unit.Service.ExecStart);
+            Environment = lib.mkForce (toNixos unit.Service.Environment);
+          };
+        }) fleetUnits;
+      }
+    )
     {
       home.packages = [
         pkgs.go
