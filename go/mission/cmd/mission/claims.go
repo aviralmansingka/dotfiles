@@ -173,10 +173,6 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 		if _, e = s.path(r.Mission.Repo, r.Mission.Slug, artifact); e != nil {
 			return e
 		}
-		brief := filepath.Join(d, "artifacts", fmt.Sprintf("%03d", seq), "brief.md")
-		if e = atomicWrite(brief, []byte(assignedBrief(r.Mission, st))); e != nil {
-			return e
-		}
 		a := mission.Attempt{ID: mission.UID("attempt-"), Sequence: seq, Step: st.ID, Agent: agent, Status: "running", Started: mission.Now(), Updated: mission.Now(), Machine: platform.Machine(), SessionID: session, Cwd: cwd, Branch: branch, Managed: managed, TokenHash: mission.Digest([]byte(token)), SpecHash: r.State.SpecHash, Brief: r.Mission.Body, Artifact: artifact, Events: []mission.Event{}}
 		if attachment != nil {
 			if e := s.attachBinding(r, *attachment, cwd, branch); e != nil {
@@ -186,6 +182,8 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 			a.SessionFile = attachment.SessionFile
 		}
 		a.Definition = &st
+		// The snapshot stays the step definition alone: the attempt line the
+		// seat reads is rendered from this record, never stored here.
 		a.Brief = assignedBrief(r.Mission, st)
 		// One version event per attempt: the build that claims and the Herdr it
 		// runs on, read here so a later reader never has to infer either from
@@ -196,9 +194,10 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 		r.State.Current = st.ID
 		r.State.Status = "running"
 		r.State.Steps[st.ID] = mission.StepState{Status: "running", Attempt: a.ID}
-		claim = mission.Claim{Handle: h, Step: st, Attempt: a, Token: token, Environment: map[string]string{"MISSION_VAULT": s.Vault, "MISSION_HANDLE": h, "MISSION_ATTEMPT": a.ID, "MISSION_TOKEN": token, "MISSION_ARTIFACT": filepath.Join(d, filepath.FromSlash(artifact))}}
-		claim.Environment["MISSION_BRIEF"] = brief
-		claim.Environment["MISSION_STEP"] = st.ID
+		claim, e = s.emitClaim(*r, a, token)
+		if e != nil {
+			return e
+		}
 		exe, _ := os.Executable()
 		claim.Environment["MISSION_BIN"] = exe
 		return nil

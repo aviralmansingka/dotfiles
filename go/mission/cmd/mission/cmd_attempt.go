@@ -50,6 +50,12 @@ func cmdRetry(a platform.Args, s *Store) (any, error) { return s.retry(a.At(1)) 
 
 func cmdRepair(a platform.Args, s *Store) (any, error) { return s.repair(a.At(1)) }
 
+// cmdAbandon ends an attempt whose process is gone. It reads no token: the
+// commander, not the lost process, is the caller.
+func cmdAbandon(a platform.Args, s *Store) (any, error) {
+	return s.abandon(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), a.Get("attempt"), a.Get("note"))
+}
+
 func cmdRun(a platform.Args, s *Store) (any, error) {
 	return runAgent(s, a.At(1), a.Get("agent"), a.Get("cwd"), a.Command)
 }
