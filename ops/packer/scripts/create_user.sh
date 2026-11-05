@@ -21,7 +21,6 @@ sudo chmod 440 /etc/sudoers.d/"$USERNAME"
 echo "==> Setting up home directories"
 sudo mkdir -p /home/"$USERNAME"/.ssh
 sudo mkdir -p /home/"$USERNAME"/.local/bin
-sudo mkdir -p /home/"$USERNAME"/.local/share/bob
 sudo chmod 700 /home/"$USERNAME"/.ssh
 sudo chown -R "$USERNAME":"$USERNAME" /home/"$USERNAME"
 

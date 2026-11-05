@@ -14,8 +14,9 @@
 [commit]
 	verbose = true
 # No [editor] section: git's real key is core.editor, and it already
-# follows $EDITOR from zsh/.zshrc ("bob run stable"), so an [editor] tool
-# entry was a silent no-op.
+# follows $EDITOR, which the profile sets to nvim (home.sessionVariables
+# in nix/modules/shared/default.nix), so an [editor] tool entry was a
+# silent no-op.
 [alias]
 	d = difftool
 [pull]

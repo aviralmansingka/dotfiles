@@ -38,8 +38,8 @@ The script handles:
 - **Launching a new editor** via `herdr pane split --current --direction
   right` + `herdr pane run` when no editor exists.
 - **tmux fallback** when Herdr is unavailable.
-- **PATH augmentation** for common nvim installations (bob version
-  manager, homebrew) that may not be on the agent's PATH.
+- **PATH augmentation** for common nvim installations (homebrew) that may
+  not be on the agent's PATH.
 
 ## Dotfiles worktree config detection
 

@@ -10,13 +10,14 @@ this repo never installs from a registry.
 
 ## Overview
 
-`just build` compiles both binaries into their gitignored build directories
-and moves them into `BIN_DIR` (default `~/.local/bin`). Mission `just-build`
-added it because `mission` was built by `scripts/install-missions`, which no
-installer calls, and `rataflow-view` could only be produced by
-`cargo install` — which writes `~/.cargo/bin` and needs the network.
-`install.sh` still owns the installer path; the justfile owns the builder
-path.
+`just build` compiles both binaries into their gitignored build directories;
+`mission` is then moved into `BIN_DIR` (default `~/.local/bin`). Mission
+`just-build` added it because `mission` was built by
+`scripts/install-missions`, which no installer calls, and `rataflow-view`
+could only be produced by `cargo install` — which writes `~/.cargo/bin` and
+needs the network. The justfile owns the builder path; the installed binaries
+come from the profile (`nix/pkgs/rataflow-view.nix` for `rataflow-view`), so
+`build-rataflow-view` leaves its release build in `rataflow/target/release/`.
 
 ## What the suite covers
 
@@ -86,5 +87,5 @@ No network, no writes, no `$HOME` mutation, no sleeps. Budget is 5 s.
   `RATAFLOW_BUILD=1 scripts/test-rataflow.py` covers the crate.
 - The registry scan reads commands, not effects. A shell script that a
   recipe calls could still install something; no recipe calls one today.
-- `BIN_DIR` is not asserted. The recipe honors it, but the destination is a
-  machine preference, not a repo invariant.
+- `BIN_DIR` is not asserted. `build-mission` honors it, but the destination
+  is a machine preference, not a repo invariant.

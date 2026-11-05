@@ -187,6 +187,10 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 		}
 		a.Definition = &st
 		a.Brief = assignedBrief(r.Mission, st)
+		// One version event per attempt: the build that claims and the Herdr it
+		// runs on, read here so a later reader never has to infer either from
+		// timing.
+		a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "version", At: mission.Now(), Tool: "mission", Summary: versionSummary(herdrVersionRead())})
 		r.State.Attempts = append(r.State.Attempts, a)
 		r.State.Active = a.ID
 		r.State.Current = st.ID

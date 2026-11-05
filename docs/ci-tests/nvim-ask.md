@@ -41,7 +41,7 @@ this flow:
 ## How to run
 
 Run `scripts/test-nvim-ask.sh` from the repository root. The script
-finds nvim on `PATH`, then at `~/.local/bin/nvim`, then in `bob`. It
+finds nvim on `PATH`, then at `~/.local/bin/nvim`. It
 runs each case with `nvim --headless -u NONE`. When nvim is missing,
 the entry prints SKIP and exits zero. Set `STRICT=1` to make the
 missing binary a failure. `scripts/test-nvim-headless.sh` also runs

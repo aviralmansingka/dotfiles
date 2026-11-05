@@ -33,16 +33,29 @@ replay-or-adopt behavior: the ledger cases above still pass unchanged.
 
 One Go case pins the mission identity: branch `mission/<slug>`, a linked checkout
 under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
-and refusal of an unmarked `mission/<slug>` branch. The extension cases stub
-`herdr` and pin the `herdr worktree open` registration plus the workspace the
-worker pane lands in; no Herdr call is made. They pin the full worker launch
-(`herdr agent start`, `herdr agent wait`, one `herdr agent prompt`, then
-`herdr agent get` for the session file), that a launch needs no subagent
-extension, and that a worker which never reaches its prompt releases its launch
-intent. Three more extension cases pin the agent name: the mission-derived name,
-a taken name that takes a hashed name once without a rename, and a second
-collision that fails with the holding pane. They also pin that a failed launch
-releases its launch intent, and that a launch pane which hosts an agent keeps it.
+and refusal of an unmarked `mission/<slug>` branch.
+
+The deploy cases pin the seat seam. A recording Rex server and a recording Herdr
+server each satisfy one adapter, and every deploy case installs both: a `--mux
+rex` deployment makes no Herdr call and a `--mux herdr` one makes no Rex call, and
+an unknown mux is refused before either is asked. Both muxes answer the same plan
+decisions (army session, `captain-<slug>`, `mission-<slug>`), and both seats are
+built by the one `seatExecLine` — Rex adds only `REX_SESSION`, because it sets
+`REX_BLOCK` in the block's own environment. The Herdr cases pin the mapping (a
+workspace labeled `army` with a renamed `commander` root tab, the captain's tab in
+the mission worktree), the readiness poll before the write, the split write
+(`pane send-text`, then `pane send-keys enter`), one retried submit, a live
+captain that is focused and never duplicated, a dead one whose tab is closed
+before a fresh seat, and the session file Herdr reports. The Rex cases pin the
+window command (`$SHELL -l -c <exec line>`, the plan cwd, the login shell's base
+name) and that nothing is ever written into the block, the verification and its
+one retry, the block-and-window error text, focus, replacement, and the dead-seat
+clear.
+
+The extension's launch cases are one pair now: a launch calls `mission deploy
+<handle> --mux herdr|rex` for the mux its environment names, spawns no Herdr
+process at all, and adopts the runtime from `mission show`; a launch that found
+the captain already seated reports `launched: false`.
 
 The extension test file also runs in the Pi test job. Without MISSION_TEST_BIN,
 it runs only the pure adapter tests and marks CLI integration cases as skipped.

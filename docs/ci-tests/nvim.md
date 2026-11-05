@@ -31,8 +31,8 @@ manager, opens no network socket, and runs no live tmux or herdr process.
 ## How to run
 
 Run `scripts/test-nvim-headless.sh` from the repository root. The script
-finds nvim on `PATH`, else in `~/.local/share/bob`. It runs each case
-with `nvim --headless -u NONE`. It globs `nvim/tests/ci/*_spec.lua`, so a
+finds nvim on `PATH`. It runs each case with
+`nvim --headless -u NONE`. It globs `nvim/tests/ci/*_spec.lua`, so a
 new case file runs with no list change. `obsidian_spec` runs twice: once
 for `America/New_York` and once for `UTC`, because `os.date` cannot
 switch time zones inside one process. Each case must print `PASS` and

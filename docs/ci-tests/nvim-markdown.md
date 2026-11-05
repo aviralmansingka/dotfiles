@@ -55,7 +55,7 @@ It runs headless, offline, and with no plugin manager.
 ## How to run
 
 Run `scripts/test-nvim-markdown.sh` from the repository root. The script
-finds nvim on `PATH`, else in `~/.local/share/bob`, and runs each spec
+finds nvim on `PATH` and runs each spec
 with `nvim --headless -u NONE` and the shared harness. It pins
 `XDG_CONFIG_HOME` to a temp copy of the query shadow, so no stowed config
 is read. A missing nvim prints SKIP and exits zero; `STRICT=1` makes it
