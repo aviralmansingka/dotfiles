@@ -190,6 +190,48 @@ func TestMissionDeskHandoffAttention(t *testing.T) {
 	}
 }
 
+func TestMissionDeskInboxShowsHistoryOnlyAsContext(t *testing.T) {
+	s, handle := fixture(t)
+	closed, err := s.load(handle)
+	must(t, err)
+	closed.State.Status, closed.Mission.Title = closedStatus, "Retired example"
+	ready := closed
+	ready.Handle, ready.Mission.Title, ready.State.Status = "dotfiles/ready", "Queued example", "ready"
+	for _, tc := range []struct {
+		name    string
+		key     rune
+		records []mission.Record
+		empty   bool
+		shown   []string
+		hidden  []string
+	}{
+		{"inbox without active work", '1', []mission.Record{closed}, true, []string{"Mission inbox", "No missions in this view."}, []string{"HISTORY", "Retired example"}},
+		{"inbox with queued work", '1', []mission.Record{closed, ready}, false, []string{"READY TO START", "Queued example"}, nil},
+		{"table keeps history", '2', []mission.Record{closed}, false, []string{"Retired example"}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newNavigationDesk(s)
+			m.records = tc.records
+			m.refreshNavigationList("")
+			m.Update(tea.KeyPressMsg{Code: tc.key})
+			if got := len(m.view); (got == 0) != tc.empty {
+				t.Fatalf("view holds %d records, want empty %v", got, tc.empty)
+			}
+			out := stripANSI(m.render())
+			for _, want := range tc.shown {
+				if !strings.Contains(out, want) {
+					t.Fatalf("frame missing %q:\n%s", want, out)
+				}
+			}
+			for _, unwanted := range tc.hidden {
+				if strings.Contains(out, unwanted) {
+					t.Fatalf("frame leaked %q:\n%s", unwanted, out)
+				}
+			}
+		})
+	}
+}
+
 func TestMissionDeskInboxSummarizesBackgroundWork(t *testing.T) {
 	s, handle := fixture(t)
 	r, err := s.load(handle)
