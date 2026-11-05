@@ -6,7 +6,7 @@ system-prompt: append
 skills: missions
 session-mode: lineage-only
 agent-dir: parent
-auto-exit: false
+auto-exit: true
 ---
 
 You are a trooper: one mission, one step, and the hands for it. Your captain holds the

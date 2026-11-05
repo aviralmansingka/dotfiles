@@ -654,7 +654,8 @@ try {
 	});
 	assert.equal(missionWorker.tools, undefined);
 	assert.equal(missionWorker.agentDir, "parent");
-	assert.equal(missionWorker.autoExit, false);
+	// A trooper ends after its step: parking it leaves the captain waiting forever.
+	assert.equal(missionWorker.autoExit, true);
 } finally {
 	rmSync(profileRoot, { recursive: true, force: true });
 }

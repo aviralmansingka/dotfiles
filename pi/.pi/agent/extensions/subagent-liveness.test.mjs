@@ -642,6 +642,15 @@ esac
 	mkdirSync(configDir, { recursive: true });
 	mkdirSync(stubDir, { recursive: true });
 	const parentSessionFile = join(sessionDir, "parent.jsonl");
+	// Scenario 5 needs a durable profile that names no tools: the shipped
+	// durable profiles name extension tools the staged agent dir cannot
+	// provide, and the spawn gate (C30) refuses those. Keep the fixture local
+	// so the durable path never depends on a shipped profile's flag.
+	mkdirSync(join(configDir, "agents"), { recursive: true });
+	writeFileSync(
+		join(configDir, "agents", "durable-worker.md"),
+		"---\nname: durable-worker\ndescription: Durable fixture for the stalled-run scenario\nauto-exit: false\n---\n\nA durable test fixture.\n",
+	);
 	// The worker profile's extension tools (web_search, web_fetch, mermaid,
 	// tuicr, tuicr_reply) must be discoverable in the child's agent dir —
 	// the subagent tool's spawn gate refuses a profile naming tools no
@@ -958,7 +967,7 @@ esac
 			assert.equal(hooks.runningSubagents.size, 0);
 		}
 
-		// Scenario 5 — durable run (mission-worker, `auto-exit: false`): the
+		// Scenario 5 — durable run (a staged `auto-exit: false` fixture): the
 		// wall clock never ends it. Only a quiet transcript does, and that
 		// verdict keeps the tab, the pane, and the CLI attempt ownership.
 		{
@@ -966,7 +975,7 @@ esac
 			// A 100 ms deadline would kill an auto-exit run on the first tick.
 			process.env.PI_SUBAGENT_MAX_WAIT_MS = "100";
 			process.env.PI_SUBAGENT_STALL_MS = "300";
-			const ack = await spawn("Own the mission.", "mission-worker");
+			const ack = await spawn("Own the mission.", "durable-worker");
 			const name = ack.details.name;
 			const running = [...hooks.runningSubagents.values()].at(-1);
 			assert.ok(running, "the durable worker is registered as running");
