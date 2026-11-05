@@ -337,6 +337,31 @@ not: every lifecycle call fails, and the captain reports warnings instead of
 work. The attempt it held stays attached to the session id, so a re-attach lands
 in the same attempt rather than opening a second one.
 
+## Mission desk
+
+`mission ui` opens a full-width Inbox. It puts decisions, blocked work, and PRs
+ready for review ahead of background work. Press `1`, `2`, or `3` to switch
+between Inbox, Table, and Repos. Use `/` to search, `[` / `]` to filter, and
+`v` for a side preview on wide terminals. When there is active work, the
+default Inbox summarizes queued and historical missions. Table shows them all.
+
+Press `Enter` to open the selected mission, step, or tool call. `Esc` returns to
+the previous view with its selection. In a mission, `[` / `]` switch detail
+tabs. In a step, `f` follows the latest call. Opening a call holds the selection
+while the feed updates. Scroll its text with `j` / `k` or Page Up / Page Down.
+
+The checkpoint and known PR and CI status stay visible while inspecting a call.
+The desk reads GitHub through an authenticated `gh` and distinguishes a missing
+PR from an unavailable lookup. A draft or a completed implementation with a
+confirmed missing PR still needs a handoff. The Step Evidence card shows the
+latest recorded direct check results for that step's attempt. The Inbox shows
+a PR as ready for review after the mission's steps are done and reported CI
+checks pass.
+The step feed reads saved Pi calls and results, including registered subagent
+sessions it can still access. When a transcript is unavailable, the feed uses
+the recorded lifecycle metadata. To capture a frame, use
+`mission render --view step --handle REPO/SLUG --id S01 --color`.
+
 ## Launch from the desk
 
 `mission ui` is a Go TUI. Press `L` on the selected mission to ask for a launch.
@@ -398,7 +423,7 @@ content; they are intentionally preserved in the mission vault.
 
 ### Reading the troopers
 
-The mission desk shows reports in two places. The detail pane's second tab
+The mission desk shows reports in two places. The mission's second tab
 (` Troopers `, between Overview and Attempts) renders one row per report of the
 attempt being watched: the active attempt while it carries reports, otherwise the
 newest attempt that does, so a finished attempt's rows outlive its active slot.
@@ -406,7 +431,7 @@ Each row is a state glyph, the trooper's name, its age, and its summary. `✓` g
 means ready, `◉` aqua means still working, and `◆` yellow means blocked or waiting
 on input.
 
-The newest of those rows also surfaces as a line in the desk's refresh header, so
+The newest of those rows also surfaces as a line in the mission header, so
 the ground is readable without leaving the Overview tab: `TROOPER`, the same state
 glyph, the name, the age, and the summary. The header updates on the desk's
 two-second refresh tick — a trooper that finishes while the human watches changes
