@@ -204,14 +204,53 @@ STOW_GAP_ALLOWLIST = {}
 
 STOW_OPTS_WITH_ARG = {"-d", "-t", "--dir", "--target"}
 
+# install.sh no longer spells each package on its own stow line; it loops over
+# the shared manifests (`for pkg in $(stow_list "$DOTFILES_DIR/scripts/...")`
+# and stows "$pkg"). A static reader has to expand that loop, or it sees the
+# literal `$pkg` and reports every stow-shaped dir as unstowed.
+STOW_MANIFEST_LOOP = re.compile(
+    r'^for\s+(\w+)\s+in\s+\$\(\s*stow_list\s+"?\$(?:\{DOTFILES_DIR\}|'
+    r'DOTFILES_DIR)/(scripts/stow-packages(?:-darwin)?)"?\s*\)\s*;?\s*do\b')
+STOW_MANIFEST_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def read_stow_manifest(rel_path):
+    """Return the package names in a stow manifest, in listed order.
+
+    Same convention as install.sh's stow_list() and scripts/nix-deploy:
+    blank lines and `#` comments are skipped, one package per line. A line
+    carrying anything else (shell logic, globs, several words) is not
+    deterministically readable -- raise rather than guess.
+    """
+    path = REPO / rel_path
+    names = []
+    for lineno, raw in enumerate(path.read_text().split("\n"), start=1):
+        entry = raw.strip()
+        if not entry or entry.startswith("#"):
+            continue
+        if not STOW_MANIFEST_NAME.match(entry):
+            raise ValueError(
+                f"{rel_path}:{lineno}: not a plain package name, so the "
+                f"stow manifest cannot be read statically: {entry!r}")
+        names.append(entry)
+    return names
+
 
 def parse_stow_lines(install_text):
-    """Return [(lineno, package, guard_stack)] for every stow invocation."""
+    """Return [(lineno, package, guard_stack)] for every stow invocation.
+
+    Expands a manifest loop into one entry per package, keeping the guard
+    stack of the stow line that links them.
+    """
     lines = install_text.split("\n")
     guards = []          # stack of (label, active)
+    manifests = {}       # "$pkg" -> [manifest path, ...]
     stows = []
     for idx, line in enumerate(lines, start=1):
         stripped = line.strip()
+        loop = STOW_MANIFEST_LOOP.match(stripped)
+        if loop:
+            manifests.setdefault("$" + loop.group(1), []).append(loop.group(2))
         if re.match(r"^if\s+!?\s*command -v (\S+)", stripped):
             name = re.match(r"^if\s+!?\s*command -v (\S+)", stripped).group(1)
             guards.append([f"cmd:{name}", True])
@@ -237,6 +276,9 @@ def parse_stow_lines(install_text):
                     skip_next = True
                 elif tok.startswith("-"):
                     continue
+                elif tok in manifests:
+                    for rel in manifests[tok]:
+                        packages.extend(read_stow_manifest(rel))
                 else:
                     packages.append(tok)
             active = [label for label, on in guards if on]
@@ -260,7 +302,10 @@ def check_install_stow():
     text = install_path.read_text()
     problems = []
 
-    stows, _lines = parse_stow_lines(text)
+    try:
+        stows, _lines = parse_stow_lines(text)
+    except (OSError, ValueError) as exc:
+        return False, [f"FAIL stow manifest: {exc}"]
     if not stows:
         return False, ["install.sh contains no stow invocations"]
     stowed = {pkg for _ln, pkg, _g in stows}
