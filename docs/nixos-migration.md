@@ -27,9 +27,8 @@ On the three Linux hosts Nix owns **only the user layer**:
 - `nix/modules/shared/default.nix` — the common user environment (`home.packages`,
   session variables, `EDITOR`, ghostty terminfo). `targets.genericLinux.enable`
   at line 27 is what tells Home Manager the host is not NixOS.
-- `nix/modules/remote/default.nix` — the Linux user layer: `home.packages` from
-  `owned-tools.nix` plus chrome and tailscale, `FLEET_PROFILE = "remote"`, the
-  activation that writes `~/.local/state/fleet-owned-tools`, and the import of
+- `nix/modules/remote/default.nix` — the Ubuntu deltas: `home.packages` holds
+  only chrome and tailscale, plus `FLEET_PROFILE = "remote"` and the import of
   `nix/services` (the eight user units; six here, the semianalysis pair in
   `nix/services/homelab.nix`).
 - `nix/modules/remote/{homelab,devbox,probe}.nix` — per-host deltas only.
@@ -40,11 +39,15 @@ ownership table, line 53). The reason is written down twice: `ops/pi-stt/README.
 for the GPU worker that shares the RTX 3060 with Steam, and `nix/services/default.nix:1-4`
 for the user units.
 
-`nix/lib/owned-tools.nix` exists because of that split. It maps 23 apt names to
-store paths, `nix/modules/remote/default.nix:23-32` writes the mapping to
-`~/.local/state/fleet-owned-tools`, and the deploy check compares it with
-`command -v` on the host (`docs/ec2-bringup.md:111-112`). `scripts/apt-accounting.py`
-audits every other `apt-mark showmanual` package against the same rule.
+The apt-name map is retired. A hand-kept list used to sit outside every module:
+23 apt names for 22 packages, written by an activation of the remote profile to a
+state file under `~/.local/state` and compared against `command -v` by the
+deploy check (`docs/ec2-bringup.md`). That list and its accounting file are gone;
+the set is now `home.packages` entries in `nix/modules/shared/default.nix`, so
+one declaration serves the Ubuntu profiles and every NixOS target, and nothing
+maintains an apt-name → attr map. The apt copies stay installed on the Ubuntu
+hosts — the profile packages are what a shell resolves. `scripts/apt-accounting.py`
+still audits every other `apt-mark showmanual` package against the same rule.
 
 `nix/lib/libvirt-domains.nix` no longer exists. It was deleted in `545a94d4`
 ("refactor(libvirt): retire the nine homelab domain definitions", PR #486,
@@ -197,16 +200,18 @@ branch for it: build `nixosConfigurations.<attr>`, then `nixos-rebuild switch
 | `nix/modules/remote/homelab.nix` | `nix/modules/nixos/homelab.nix` | homelab cutover | the homelab cutover commit |
 | `homeConfigurations.remote` = `mkRemote "homelab"` (`flake.nix:48`) and the `target == "homelab"` branch of `remoteOutput` (`nix/lib/fleet.nix:38`) | `nixosConfigurations.homelab` | homelab cutover | the homelab cutover commit |
 | `homeConfigurations.remote-probe` (`flake.nix:51`), `nix/modules/remote/probe.nix` | `nixosConfigurations.probe`, `nix/modules/nixos/probe.nix` (S02) | homelab cutover, once S03 has proven the probe | the homelab cutover commit |
-| `nix/lib/owned-tools.nix`, `fleet.ownedTools` (`flake.nix:110-115`), `home.activation.writeOwnedToolsList` (`nix/modules/remote/default.nix:23-32`) | nothing: on NixOS every one of the 23 tools is a `home.packages` entry from `shared` (ripgrep, fd, fzf, bat, tmux, git, jq) or a per-host module. The "23 apt names" check becomes a `command -v` → `/nix/store` check | **devbox cutover** — the devbox is the last Ubuntu consumer of `nix/modules/remote` | the devbox cutover commit |
+| the apt-name map (a `nix/lib` file, a `fleet` output in `flake.nix`, and the activation that wrote the state file in `nix/modules/remote/default.nix`) | nothing: the same tools are `home.packages` entries in `nix/modules/shared/default.nix`, so both Ubuntu profiles and every NixOS target install them from one list. The "apt names" check is a `command -v` → `/nix/store` check now | **already retired before the cutovers** — `shared` is imported by every target, so nothing waits for a host to move | the shared-set commit |
 | `nix/modules/remote/` (all four files), `mkRemote` and `remoteOutput` (`nix/lib/fleet.nix:38-63`), `homeConfigurations.remote-devbox` (`flake.nix:49`) | `nix/modules/nixos/{default,homelab,devbox}.nix` and `mkNixos` | devbox cutover | the devbox cutover commit |
 | `scripts/apt-accounting.py`, `scripts/apt-base-packages.txt` | nothing: no host runs apt | devbox cutover | the devbox cutover commit |
 | fence 1 of `docs/nix-profiles.md` ("Ubuntu stays on the homelab and the devbox") | this document, then `docs/nix-profiles.md` rewritten for three constructors | devbox cutover | the devbox cutover commit |
 | `docs/nix-profiles.md` targets table rows for `probe` and `homelab` | the `nixos` constructor and `nixosConfigurations` | with each cutover | homelab commit, devbox commit |
 
 The homelab cutover commit and the devbox cutover commit are two distinct
-commits. `owned-tools.nix` cannot retire at the homelab cutover, because the
-devbox still imports `nix/modules/remote`, and `nix/modules/remote/default.nix:8`
-is its only in-module consumer.
+commits. The apt-name map does not wait for either: it retired in its own commit
+before the cutovers, because `nix/modules/shared` is imported by every target and
+is the right home for a package every host wants. A stale apt-name accounting
+file left in `~/.local/state` on a host that ran the old profile is just a file;
+nothing reads or rewrites it.
 
 ## Cutover order
 
@@ -268,10 +273,10 @@ after the module tree has survived a real machine.
 5. **D5 — repoint.** Move the `devbox` ssh alias and any DNS or Elastic IP to
    the NixOS instance; keep the old Ubuntu instance stopped (not terminated) for
    a soak period.
-6. **D6 — commit and cleanup.** Delete `nix/lib/owned-tools.nix`,
-   `fleet.ownedTools`, `nix/modules/remote/`, `mkRemote`, `remoteOutput`,
-   `homeConfigurations.remote-devbox`, `scripts/apt-accounting.py`,
-   `scripts/apt-base-packages.txt`; rewrite fence 1 of `docs/nix-profiles.md`.
+6. **D6 — commit and cleanup.** Delete `nix/modules/remote/`, `mkRemote`,
+   `remoteOutput`, `homeConfigurations.remote-devbox`,
+   `scripts/apt-accounting.py`, `scripts/apt-base-packages.txt`; rewrite fence 1
+   of `docs/nix-profiles.md`.
    Terminate the stopped Ubuntu instance only after the soak, from a separate
    action, not in this commit.
 
@@ -333,7 +338,7 @@ ssh homelab 'systemctl --user list-units --type=service --state=running'
 #   semianalysis-sync.timer
 ssh homelab 'command -v lazygit herdr go node just'  # every path under /nix/store
 ssh homelab 'test ! -x /usr/bin/apt && echo apt-gone'
-ssh homelab 'test ! -e ~/.local/state/fleet-owned-tools && echo accounting-retired'
+ssh homelab 'command -v tree htop pandoc ffmpeg convert vim mosh screen byobu luarocks'  # the retired apt set, from /nix/store
 ssh homelab 'readlink -f ~/.zshrc'                   # ~/dotfiles/zsh/.zshrc
 ssh homelab 'nvidia-smi -L'                          # the RTX 3060, driver from Nix
 ssh homelab 'docker info >/dev/null && systemctl is-active k3s'
@@ -352,7 +357,7 @@ ssh devbox 'nixos-rebuild switch --flake .#devbox'    # second run: "no changes"
 ssh devbox 'systemctl --failed'
 ssh devbox 'systemctl --user is-active pi-stt-worker pi-telegram pi-whatsapp whatsapp-bridge vault-auto-sync'
 ssh devbox 'command -v lazygit herdr go node just aws terraform kubectl k9s gcloud'
-ssh devbox 'test ! -e ~/.local/state/fleet-owned-tools && echo accounting-retired'
+ssh devbox 'command -v tree htop pandoc ffmpeg convert vim mosh screen byobu'  # from /nix/store
 ssh devbox 'readlink -f ~/.zshrc'
 nix eval --raw .#fleet.targets.devbox.kind            # nixos
 just targets                                          # no home-manager rows left for Linux
