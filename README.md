@@ -88,7 +88,7 @@ just build-mission   # one of them
 BIN_DIR=/tmp/out just build
 ```
 
-`just build` compiles into the gitignored `go/mission/bin/` and `rataflow/target/`, then moves each binary into
+`just build` compiles each binary into its package's own gitignored build directory, then moves it into
 `BIN_DIR` (default `~/.local/bin`). The Go and Rust toolchains are the only requirements; `install.sh` still installs
 both binaries for a fresh machine. An older `cargo install`ed `~/.cargo/bin/rataflow-view` shadows the fresh copy
 (`~/.cargo/bin` comes first on `PATH`) — delete it once.
