@@ -260,6 +260,12 @@ func (m *desk) refreshNavigationList(handle string) {
 	}
 	if m.inboxOnly() && slices.ContainsFunc(m.view, func(r mission.Record) bool { return m.inboxLane(r) < inboxQueue }) {
 		m.view = slices.DeleteFunc(m.view, func(r mission.Record) bool { return m.inboxLane(r) >= inboxQueue })
+	} else if m.inboxOnly() && !slices.ContainsFunc(m.view, func(r mission.Record) bool {
+		return m.inboxLane(r) < inboxHistory
+	}) {
+		// History is context for the work in front of you, not a substitute for
+		// it: an inbox with nothing active is an empty page, not a backlog.
+		m.view = nil
 	}
 	sort.SliceStable(m.view, func(i, j int) bool {
 		a, b := m.view[i], m.view[j]
