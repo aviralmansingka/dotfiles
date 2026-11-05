@@ -26,8 +26,11 @@
 #                      started and the journal has no record of it — kept as-is)
 #   homelab only       semianalysis-sync.service + .timer (nix/services/homelab.nix)
 #
-# The launchers under `~/bin` and the env files under `~/.config/*.env` stay
-# file-deployed (stow and 1Password-managed); only the units move to the flake.
+# The launchers under `~/bin` stay file-deployed (stow); the unit files move to
+# the flake. The three env files these units read used to be plaintext stow/
+# 1Password files under `~/.config`; S02 moved them to sops, so each unit reads
+# `~/.config/sops-nix/secrets/<name>` (declared in nix/modules/remote/homelab.nix,
+# decrypted by sops-nix's `sops-nix.service`).
 {
   config,
   lib,
@@ -100,8 +103,18 @@ in
     pi-stt-worker = {
       Unit = {
         Description = "Pi speech-to-text worker";
-        After = [ "network-online.target" ];
-        Wants = [ "network-online.target" ];
+        After = [
+          "network-online.target"
+          # The env file below lives in $XDG_RUNTIME_DIR/secrets.d (tmpfs, gone
+          # at reboot) and is written by sops-nix's oneshot. `After` is what
+          # stops this unit from racing the decryption at login, and `Wants`
+          # pulls that unit in when only this one is started by hand.
+          "sops-nix.service"
+        ];
+        Wants = [
+          "network-online.target"
+          "sops-nix.service"
+        ];
       };
       Service = {
         Type = "simple";
@@ -109,7 +122,10 @@ in
         Restart = "always";
         RestartSec = "5";
         Environment = [ "PATH=${unitPath}" ];
-        EnvironmentFile = "%h/.config/pi-stt-worker.env";
+        # Was %h/.config/pi-stt-worker.env (plaintext). The sops copy holds the
+        # same KEY=value text; the key is declared in
+        # nix/modules/remote/homelab.nix.
+        EnvironmentFile = "%h/.config/sops-nix/secrets/pi-stt-worker.env";
       };
       Install.WantedBy = lib.optional config.fleet.services.enableUnits "default.target";
     };
@@ -117,8 +133,14 @@ in
     pi-telegram = {
       Unit = {
         Description = "Pi over Telegram daemon";
-        After = [ "network-online.target" ];
-        Wants = [ "network-online.target" ];
+        After = [
+          "network-online.target"
+          "sops-nix.service"
+        ];
+        Wants = [
+          "network-online.target"
+          "sops-nix.service"
+        ];
       };
       Service = {
         Type = "simple";
@@ -130,7 +152,11 @@ in
         RestartSec = "5";
         TimeoutStopSec = "10";
         Environment = [ "PATH=%h/.nix-profile/bin:%h/.nvm/versions/node/v22.22.3/bin:%h/.local/bin:%h/go/bin:/usr/local/bin:/usr/bin:/bin" ];
-        EnvironmentFile = "-%h/.config/pi-telegram.env";
+        # Was -%h/.config/pi-telegram.env (plaintext, `-` because a missing
+        # file was tolerated). The sops copy is declared, so a missing file now
+        # means the decryption failed — the unit should fail loudly instead of
+        # starting without its bot token.
+        EnvironmentFile = "%h/.config/sops-nix/secrets/pi-telegram.env";
       };
       Install.WantedBy = lib.optional config.fleet.services.enableUnits "default.target";
     };
@@ -141,10 +167,12 @@ in
         After = [
           "network-online.target"
           "whatsapp-bridge.service"
+          "sops-nix.service"
         ];
         Wants = [
           "network-online.target"
           "whatsapp-bridge.service"
+          "sops-nix.service"
         ];
       };
       Service = {
@@ -165,7 +193,7 @@ in
           # daemon's own override variable points it at the real binary.
           "PI_WHATSAPP_PI_BIN=%h/.local/bin/pi"
         ];
-        EnvironmentFile = "-%h/.config/pi-whatsapp.env";
+        EnvironmentFile = "%h/.config/sops-nix/secrets/pi-whatsapp.env";
       };
       Install.WantedBy = lib.optional config.fleet.services.enableUnits "default.target";
     };
