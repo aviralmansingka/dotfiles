@@ -1583,7 +1583,21 @@ function resolveResumeLaunchBehavior(): { autoExit: boolean; interactive: boolea
   return { autoExit: true, interactive: false };
 }
 
+/**
+ * `PI_SUBAGENT_REX_SESSION` is the Rex routing variable: a session label or id,
+ * never a file path. A child that inherits it routes its own children into the
+ * same Rex session, so a grandchild of a mission captain stays seated. The pi
+ * session file keeps its own variable (`PI_SUBAGENT_SESSION`), so the two can
+ * never be confused again. Unset means inherit: nothing is written.
+ */
+function rexRoutingEnvParts(env: Record<string, string | undefined> = process.env): string[] {
+  const session = env.PI_SUBAGENT_REX_SESSION?.trim();
+  if (!session) return [];
+  return [`PI_SUBAGENT_REX_SESSION=${shellEscape(session)}`];
+}
+
 export const __test__ = {
+  rexRoutingEnvParts,
   borderLine,
   getShellReadyDelayMs,
   renderSubagentWidgetLines,
@@ -1911,6 +1925,7 @@ async function launchSubagentOnSurface(
     envParts.push(`PI_SUBAGENT_AUTO_EXIT=1`);
   }
   envParts.push(`PI_SUBAGENT_SESSION=${shellEscape(subagentSessionFile)}`);
+  envParts.push(...rexRoutingEnvParts());
   envParts.push(`PI_SUBAGENT_ID=${shellEscape(id)}`);
   envParts.push(`PI_SUBAGENT_ACTIVITY_FILE=${shellEscape(activityFile)}`);
   envParts.push(`PI_SUBAGENT_SURFACE=${shellEscape(surface)}`);
@@ -3246,6 +3261,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         }
         resumeEnvParts.push(`PI_SUBAGENT_NAME=${shellEscape(name)}`);
         resumeEnvParts.push(`PI_SUBAGENT_SESSION=${shellEscape(sessionPath)}`);
+        resumeEnvParts.push(...rexRoutingEnvParts());
         resumeEnvParts.push(`PI_SUBAGENT_ID=${shellEscape(id)}`);
         resumeEnvParts.push(`PI_SUBAGENT_ACTIVITY_FILE=${shellEscape(activityFile)}`);
         if (autoExit) {

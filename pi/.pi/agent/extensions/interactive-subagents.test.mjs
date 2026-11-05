@@ -2945,6 +2945,318 @@ esac
 	}
 }
 
+// --- Rex routing: a child's session file is never a session target ---
+// `PI_SUBAGENT_SESSION` carries the child's pi session FILE
+// (`…/2026-…_abc.jsonl`) for subagent-done and the resume path, while
+// `PI_SUBAGENT_REX_SESSION` carries the Rex label a child should join. A child
+// that spawned a grandchild used to hand its own .jsonl path to the label
+// lookup, find nothing, and create a tab with no `-s` scope at all — Rex then
+// placed that tab wherever it liked. The lookup must also never be cached on a
+// miss, or a corrected environment is ignored for the life of the process.
+{
+	const savedRexRoutingEnv = {
+		REX_SESSION: process.env.REX_SESSION,
+		REX_BLOCK: process.env.REX_BLOCK,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		TMUX: process.env.TMUX,
+		TMUX_PANE: process.env.TMUX_PANE,
+		TERM: process.env.TERM,
+		PATH: process.env.PATH,
+		PI_SUBAGENT_SESSION: process.env.PI_SUBAGENT_SESSION,
+		PI_SUBAGENT_REX_SESSION: process.env.PI_SUBAGENT_REX_SESSION,
+	};
+	const routingRoot = mkdtempSync(join(tmpdir(), "rex-routing-test-"));
+	const routingBin = join(routingRoot, "bin");
+	const routingLog = join(routingRoot, "calls");
+	mkdirSync(routingBin, { recursive: true });
+	writeFileSync(
+		join(routingBin, "rex"),
+		`#!/bin/sh
+printf '%s\\n' "$*" >> "$REX_TEST_CAPTURE"
+case "$1" in
+	ls) printf '%s\\n' "$REX_TEST_LIST" ;;
+	window) printf '%s\\n' '{"block_ids":["block:routed"]}' ;;
+	*) printf '%s\\n' '{}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	// A fresh module per case: the session cache is module-level, so reusing an
+	// instance would test the cache instead of the environment.
+	const loadRoutingRex = () =>
+		createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/rex.ts",
+		);
+	const lastWindowNew = () => {
+		try {
+			const calls = readFileSync(routingLog, "utf8").split("\n");
+			return calls.filter((line) => line.startsWith("window new")).at(-1) ?? "";
+		} catch {
+			return "";
+		}
+	};
+	try {
+		delete process.env.HERDR_ENV;
+		delete process.env.HERDR_PANE_ID;
+		delete process.env.TMUX;
+		delete process.env.TMUX_PANE;
+		delete process.env.PI_SUBAGENT_SESSION;
+		delete process.env.PI_SUBAGENT_REX_SESSION;
+		process.env.TERM = "xterm-rex";
+		process.env.REX_SESSION = "session:caller";
+		process.env.REX_BLOCK = "block:caller";
+		process.env.PATH = `${routingBin}:${savedRexRoutingEnv.PATH}`;
+		process.env.REX_TEST_CAPTURE = routingLog;
+
+		// 1. The routing variable names the session the child joins.
+		process.env.REX_TEST_LIST = '{"sessions":[{"session_id":"session:x","label":"mission-x"}]}';
+		process.env.PI_SUBAGENT_REX_SESSION = "mission-x";
+		loadRoutingRex().createSurface("trooper-x");
+		assert.match(
+			lastWindowNew(),
+			/-s session:x/,
+			"PI_SUBAGENT_REX_SESSION routes the tab to the mission session",
+		);
+
+		// 2. A child's pi session file is not a session target. A grandchild
+		// used to get no scope at all here; now it falls back to the caller.
+		delete process.env.PI_SUBAGENT_REX_SESSION;
+		process.env.PI_SUBAGENT_SESSION =
+			"/Users/x/.pi/agent/sessions/--a--/2026-01-01T00-00-00-000Z_abc.jsonl";
+		loadRoutingRex().createSurface("trooper-path");
+		const pathCall = lastWindowNew();
+		assert.match(pathCall, /-s session:caller/, "a session file path is ignored for routing");
+		assert.doesNotMatch(pathCall, /\.jsonl/, "the child's session file never reaches rex");
+
+		// 3. Compatibility: mission deploy still exports a plain label in the
+		// old variable, and that label keeps routing.
+		process.env.PI_SUBAGENT_SESSION = "mission-y";
+		process.env.REX_TEST_LIST =
+			'{"sessions":[{"session_id":"session:x","label":"mission-x"},{"session_id":"session:y","label":"mission-y"}]}';
+		loadRoutingRex().createSurface("trooper-y");
+		assert.match(
+			lastWindowNew(),
+			/-s session:y/,
+			"a plain label in PI_SUBAGENT_SESSION still routes (today's captains)",
+		);
+
+		// 4. No routing variable at all: the child follows the caller.
+		delete process.env.PI_SUBAGENT_SESSION;
+		loadRoutingRex().createSurface("trooper-caller");
+		assert.match(
+			lastWindowNew(),
+			/-s session:caller/,
+			"no routing variable means the caller's own session",
+		);
+
+		// 5. An explicit session argument beats both variables.
+		process.env.PI_SUBAGENT_REX_SESSION = "mission-y";
+		process.env.PI_SUBAGENT_SESSION = "mission-x";
+		loadRoutingRex().createSurface("trooper-explicit", { session: "mission-x" });
+		assert.match(lastWindowNew(), /-s session:x/, "the explicit session argument wins");
+		delete process.env.PI_SUBAGENT_REX_SESSION;
+		delete process.env.PI_SUBAGENT_SESSION;
+
+		// 6. A miss is never cached: one module instance recomputes the lookup
+		// once the session exists.
+		process.env.REX_TEST_LIST = '{"sessions":[]}';
+		process.env.PI_SUBAGENT_REX_SESSION = "mission-late";
+		const lateRex = loadRoutingRex();
+		lateRex.createSurface("trooper-late-1");
+		assert.doesNotMatch(lastWindowNew(), /-s session:late/, "the session does not exist yet");
+		process.env.REX_TEST_LIST =
+			'{"sessions":[{"session_id":"session:late","label":"mission-late"}]}';
+		lateRex.createSurface("trooper-late-2");
+		assert.match(lastWindowNew(), /-s session:late/, "a failed lookup is not cached");
+	} finally {
+		for (const [key, value] of Object.entries(savedRexRoutingEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		delete process.env.REX_TEST_CAPTURE;
+		delete process.env.REX_TEST_LIST;
+		rmSync(routingRoot, { recursive: true, force: true });
+	}
+}
+
+// --- The Rex routing variable survives into a launched child ---
+// A child that spawns a grandchild routes with its own environment, so the
+// launch script must carry PI_SUBAGENT_REX_SESSION when the caller had it —
+// and must not write the variable at all when it did not (an empty or
+// path-shaped value would re-break routing one generation down).
+{
+	const propRoot = mkdtempSync(join(tmpdir(), "subagent-rex-propagation-"));
+	const propBin = join(propRoot, "bin");
+	const propStubs = join(propRoot, "stubs");
+	const propConfigDir = join(propRoot, "agent-config");
+	mkdirSync(propBin, { recursive: true });
+	mkdirSync(propStubs, { recursive: true });
+	mkdirSync(propConfigDir, { recursive: true });
+	// The worker profile's extension tools must be discoverable in the child's
+	// agent dir — the spawn gate refuses a profile naming tools no source
+	// provides.
+	for (const dir of ["web-search", "web-fetch"]) {
+		mkdirSync(join(propConfigDir, "extensions", dir), { recursive: true });
+		writeFileSync(join(propConfigDir, "extensions", dir, "index.ts"), "export {};\n");
+	}
+	for (const file of ["mermaid.ts", "tuicr.ts"]) {
+		writeFileSync(join(propConfigDir, "extensions", file), "export {};\n");
+	}
+	writeFileSync(join(propStubs, "agent.cjs"), "exports.defineTool = (tool) => tool;\nexports.keyHint = () => 'hint';\n");
+	writeFileSync(join(propStubs, "ai.cjs"), "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
+	writeFileSync(
+		join(propStubs, "tui.cjs"),
+		[
+			"exports.Box = class Box { constructor(...a) { this.a = a; } };",
+			"exports.Text = class Text { constructor(text) { this.text = text; } render() { return String(this.text).split('\\n'); } };",
+			"exports.truncateToWidth = (text, width) => String(text).slice(0, Math.max(0, width));",
+			"exports.visibleWidth = (text) => String(text).length;",
+			"",
+		].join("\n"),
+	);
+	writeFileSync(
+		join(propBin, "herdr"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$PROP_CAPTURE"
+printf '%s\\n' --call-- >> "$PROP_CAPTURE"
+case "$1:$2" in
+	pane:get) printf '%s\\n' '{"result":{"pane":{"pane_id":"wR:p1","tab_id":"wR:t1","workspace_id":"wR"}}}' ;;
+	tab:create) printf '%s\\n' '{"result":{"root_pane":{"pane_id":"wR:p2"}}}' ;;
+	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
+	*) printf '%s\\n' '{"result":{}}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const savedPropEnv = {
+		PATH: process.env.PATH,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		TMUX: process.env.TMUX,
+		TMUX_PANE: process.env.TMUX_PANE,
+		TERM: process.env.TERM,
+		REX_SESSION: process.env.REX_SESSION,
+		REX_BLOCK: process.env.REX_BLOCK,
+		PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+		PI_SUBAGENT_AGENT: process.env.PI_SUBAGENT_AGENT,
+		PI_SUBAGENT_ALLOWED: process.env.PI_SUBAGENT_ALLOWED,
+		PI_SUBAGENT_REX_SESSION: process.env.PI_SUBAGENT_REX_SESSION,
+		PI_SUBAGENT_SESSION: process.env.PI_SUBAGENT_SESSION,
+		PI_SUBAGENT_SHELL_READY_DELAY_MS: process.env.PI_SUBAGENT_SHELL_READY_DELAY_MS,
+	};
+	// Launch one worker on a fake Herdr surface and return the launch script
+	// index.ts wrote for it (the command line the child actually runs).
+	const launchScriptFor = async (label) => {
+		const sessionDir = join(propRoot, `sessions-${label}`);
+		mkdirSync(sessionDir, { recursive: true });
+		const parentFile = join(sessionDir, "parent.jsonl");
+		writeFileSync(
+			parentFile,
+			JSON.stringify({ type: "session", version: 3, id: `parent-${label}`, cwd: propRoot, timestamp: new Date().toISOString() }) + "\n",
+		);
+		const capture = join(propRoot, `calls-${label}`);
+		process.env.PROP_CAPTURE = capture;
+		const registeredTools = new Map();
+		const handlers = {};
+		const fakePi = {
+			registerTool: (tool) => registeredTools.set(tool.name, tool),
+			registerCommand() {},
+			registerMessageRenderer() {},
+			registerShortcut() {},
+			on: (name, handler) => { handlers[name] = handler; },
+			events: { on() {}, emit() {} },
+			getAllTools: () => [],
+			sendMessage() {},
+		};
+		const mod = createJiti(import.meta.url, {
+			moduleCache: false,
+			alias: {
+				"@earendil-works/pi-coding-agent": join(propStubs, "agent.cjs"),
+				"@earendil-works/pi-ai": join(propStubs, "ai.cjs"),
+				"@earendil-works/pi-tui": join(propStubs, "tui.cjs"),
+			},
+		})(new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url).href);
+		mod.default(fakePi);
+		handlers.session_start?.({}, {});
+		const tool = registeredTools.get("subagent");
+		assert.ok(tool, "the subagent tool is registered");
+		try {
+			await tool.execute(
+				`call-${label}`,
+				{ agent: "worker", task: "Route me." },
+				new AbortController().signal,
+				undefined,
+				{
+					sessionManager: {
+						getSessionFile: () => parentFile,
+						getSessionId: () => `parent-${label}`,
+						getSessionDir: () => sessionDir,
+					},
+					cwd: propRoot,
+				},
+			);
+		} finally {
+			// No watcher outlives the case (the suite must exit on its own).
+			handlers.session_shutdown?.({}, {});
+		}
+		const calls = readFileSync(capture, "utf8")
+			.split("--call--\n")
+			.filter(Boolean)
+			.map((call) => call.trim().split("\n"));
+		const run = calls.find((call) => call[0] === "pane" && call[1] === "run");
+		assert.ok(run, `the ${label} launch ran in a pane`);
+		const scriptPath = /bash '(.+)'/.exec(run[3] ?? "")?.[1];
+		assert.ok(scriptPath, `the ${label} launch ran a staged script: ${run.join(" ")}`);
+		return readFileSync(scriptPath, "utf8");
+	};
+	try {
+		delete process.env.HERDR_ENV;
+		delete process.env.HERDR_PANE_ID;
+		delete process.env.TMUX;
+		delete process.env.TMUX_PANE;
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
+		delete process.env.TERM;
+		delete process.env.PI_SUBAGENT_AGENT;
+		delete process.env.PI_SUBAGENT_ALLOWED;
+		delete process.env.PI_SUBAGENT_SESSION;
+		process.env.PATH = `${propBin}:${savedPropEnv.PATH}`;
+		process.env.HERDR_ENV = "1";
+		process.env.HERDR_PANE_ID = "wR:p0";
+		process.env.PI_CODING_AGENT_DIR = propConfigDir;
+		process.env.PI_SUBAGENT_SHELL_READY_DELAY_MS = "1";
+
+		process.env.PI_SUBAGENT_REX_SESSION = "mission-x";
+		const routedScript = await launchScriptFor("routed");
+		assert.match(
+			routedScript,
+			/PI_SUBAGENT_REX_SESSION='mission-x'/,
+			"the child inherits the Rex routing variable",
+		);
+		assert.match(
+			routedScript,
+			/PI_SUBAGENT_SESSION='[^']+\.jsonl'/,
+			"the child's own pi session file keeps its own variable",
+		);
+
+		delete process.env.PI_SUBAGENT_REX_SESSION;
+		const plainScript = await launchScriptFor("plain");
+		assert.doesNotMatch(
+			plainScript,
+			/PI_SUBAGENT_REX_SESSION/,
+			"an unset routing variable is not invented for the child",
+		);
+	} finally {
+		for (const [key, value] of Object.entries(savedPropEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		delete process.env.PROP_CAPTURE;
+		rmSync(propRoot, { recursive: true, force: true });
+	}
+}
+
 // --- The mux gate is lazy: the surface follows the environment per call ---
 {
 	const savedGateEnv = {
