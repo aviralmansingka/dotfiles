@@ -128,6 +128,35 @@ def parse_justfile(text):
     return recipes
 
 
+def duplicate_recipe_names(text):
+    """Recipe names defined more than once.
+
+    `just` refuses to load such a file ("recipe `x` first defined on line N
+    is redefined on line M"), so every recipe is dead, not just the
+    duplicate. `parse_justfile` returns a dict, so a duplicate silently
+    overwrote its twin and this suite passed a justfile no `just` could read.
+    That is how the nix-fleet merge shipped a second `default:`.
+    """
+    seen = {}
+    problems = []
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        if not raw.strip() or raw[0] in " \t":
+            continue
+        line = raw.rstrip()
+        if line.startswith("#") or ASSIGN_RE.match(line):
+            continue
+        match = RECIPE_RE.match(line)
+        if not match:
+            continue
+        name = match.group(1)
+        if name in seen:
+            problems.append(f"recipe '{name}' defined on line {seen[name]} and "
+                            f"again on line {lineno}")
+        else:
+            seen[name] = lineno
+    return problems
+
+
 def closure(recipes, start):
     """`start` plus every dependency reachable from it."""
     seen = set()
@@ -375,7 +404,17 @@ def selftest(justfile):
               f"caught by {caught or 'nothing'}")
         if not ok:
             failures.append(f"{label}: expected {wanted}, caught {caught}")
-    print(f"\nselftest: {len(mutations) - len(failures)}/{len(mutations)} mutations caught")
+
+    # The duplicate gate reads the text, not the parsed dict, so it gets its
+    # own case: a second `default:` is invisible to parse_justfile by design.
+    doubled = text + "\ndefault:\n    @just --list\n"
+    dupes = duplicate_recipe_names(doubled)
+    print(f"{'PASS' if dupes else 'FAIL'} mutation: duplicate default recipe -> "
+          f"caught by {dupes or 'nothing'}")
+    if not dupes:
+        failures.append("duplicate default recipe: expected a duplicate report")
+    total = len(mutations) + 1
+    print(f"\nselftest: {total - len(failures)}/{total} mutations caught")
     return 1 if failures else 0
 
 
@@ -394,7 +433,10 @@ def main():
         print(f"\n0/1 checks passed in {time.monotonic() - started:.2f} s")
         return 1
 
-    recipes = parse_justfile(justfile.read_text(encoding="utf-8"))
+    text = justfile.read_text(encoding="utf-8")
+    recipes = parse_justfile(text)
+    dupes = duplicate_recipe_names(text)
+    record("no duplicate recipe names", not dupes, "; ".join(dupes))
     for name, fn in HARD_GATE:
         began = time.monotonic()
         ok, problems = fn(recipes)

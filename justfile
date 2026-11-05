@@ -62,10 +62,6 @@ test-deploy:
 
 bin_dir := env("BIN_DIR", home_directory() / ".local/bin")
 
-# List the recipes.
-default:
-    @just --list
-
 # Dependencies run in order and stop on the first failure, so a Go error
 # never hides behind a Rust build.
 # Build mission and rataflow-view into BIN_DIR.
