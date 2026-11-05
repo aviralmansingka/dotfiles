@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, driverStatus, driverTask, droppableReportError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
+import { CAPTAIN_AGENT, CommanderInbox, MissionBridge, WORKER_AGENT, askMessage, driverStatus, driverTask, droppableReportError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -1573,4 +1573,114 @@ test("the panel opens the mission desk in a Herdr pane", async () => {
   // Outside Herdr the desk has no pane, so the caller notifies instead.
   const outside = new MissionBridge({ env: { ...process.env, HERDR_ENV: "0" } });
   await assert.rejects(outside.openDesk(), /Herdr pane/);
+});
+
+// The ask channel's fixtures: a vault with ask files, and a Rex seat that answers
+// the role probe. No live mux and no mission CLI takes part.
+function askVault(root, asks) {
+  const vault = join(root, "vault");
+  for (const ask of asks) {
+    const dir = join(vault, "6_missions", ask.handle, "asks");
+    mkdirSync(dir, { recursive: true });
+    const { stamp = "20261105T191938.000000000Z", ...fields } = ask;
+    writeFileSync(join(dir, `${stamp}-${ask.id}.json`), JSON.stringify({
+      id: ask.id, handle: ask.handle, step: "S01", kind: "blocked", text: "A question.", at: "2026-11-05T19:19:38Z", ...fields,
+    }, null, 2) + "\n");
+  }
+  return vault;
+}
+const rexSeat = windows => async (binary, args) => {
+  assert.equal(binary, "rex", "the role probe reaches Rex, not the mission CLI");
+  if (args[0] === "block" && args[1] === "inspect") return JSON.stringify({ block: { block_id: args[2], window_id: "window:cmd" } });
+  if (args[0] === "window" && args[1] === "ls") return JSON.stringify({ windows });
+  throw Error("unexpected rex call: " + args.join(" "));
+};
+function storedAsks(vault, handle) {
+  const dir = join(vault, "6_missions", handle, "asks");
+  return readdirSync(dir).map(name => JSON.parse(readFileSync(join(dir, name), "utf8")));
+}
+
+test("the commander drains each ask once and a second drain sends nothing", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [
+    { id: "ask-a", handle: "dotfiles/x", stamp: "20261105T191938.000000000Z", step: "S02", attempt: "attempt-1", kind: "blocked", text: "CI cannot reach the registry." },
+    { id: "ask-b", handle: "dotfiles/y", stamp: "20261105T192000.000000000Z", step: "S01", kind: "question", text: "Which remote should I push to?" },
+  ]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: rexSeat([{ window_id: "window:cmd", label: "commander" }]),
+    send: (message, options) => sent.push({ message, options }), now: () => "2026-11-05T19:21:00.000000000Z",
+  });
+  const delivered = await inbox.drain("commander-session");
+  assert.deepEqual(delivered.map(ask => ask.id), ["ask-a", "ask-b"], "oldest first");
+  // Two handles, two messages, each naming the handle, the step and the kind.
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].message.content, "[mission dotfiles/x · S02 · blocked] CI cannot reach the registry.");
+  assert.equal(sent[1].message.content, "[mission dotfiles/y · S01 · question] Which remote should I push to?");
+  assert.equal(sent[0].options.deliverAs, "followUp");
+  // Delivery is recorded in the same file, so no restart can deliver it twice.
+  for (const [handle, id] of [["dotfiles/x", "ask-a"], ["dotfiles/y", "ask-b"]]) {
+    const ask = storedAsks(vault, handle).find(value => value.id === id);
+    assert.equal(ask.delivered_at, "2026-11-05T19:21:00.000000000Z");
+    assert.equal(ask.delivered_to, "commander-session");
+    assert.equal(ask.step, id === "ask-a" ? "S02" : "S01", "delivery keeps the rest of the ask");
+  }
+  assert.deepEqual(await inbox.drain("commander-session"), []);
+  assert.equal(sent.length, 2, "a delivered ask is never sent twice");
+});
+
+// Consecutive asks from one handle arrive as one message, so a captain that asks
+// three things at once is one interruption rather than three.
+test("consecutive asks from one handle arrive as one message", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [
+    { id: "ask-a", handle: "dotfiles/x", stamp: "20261105T191938.000000000Z", text: "Which branch?" },
+    { id: "ask-b", handle: "dotfiles/x", stamp: "20261105T191939.000000000Z", text: "Which remote?" },
+    { id: "ask-c", handle: "dotfiles/y", stamp: "20261105T191940.000000000Z", text: "Is the registry up?" },
+  ]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: rexSeat([{ window_id: "window:cmd", label: "commander" }]),
+    send: message => sent.push(message.content),
+  });
+  assert.equal((await inbox.drain("commander-session")).length, 3);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0], "[mission dotfiles/x · S01 · blocked] Which branch?\n[mission dotfiles/x · S01 · blocked] Which remote?");
+  assert.equal(sent[1], "[mission dotfiles/y · S01 · blocked] Is the registry up?");
+});
+
+// A captain's own pane is not the commander, so nothing is delivered there.
+test("a session that is not the commander drains nothing", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [{ id: "ask-a", handle: "dotfiles/x", text: "Which branch?" }]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:captain" },
+    run: rexSeat([{ window_id: "window:captain", label: "captain-x" }]),
+    send: message => sent.push(message.content),
+  });
+  assert.deepEqual(await inbox.drain("captain-session"), []);
+  assert.deepEqual(sent, []);
+  assert.equal(storedAsks(vault, "dotfiles/x")[0].delivered_at, undefined);
+  // A Herdr session is never the Rex commander, and it probes no Rex at all.
+  const herdr = new CommanderInbox({
+    vault, env: { HERDR_ENV: "1", HERDR_PANE_ID: "w:p1", REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: async () => { throw Error("a Herdr session must not probe Rex for the commander seat"); },
+    send: message => sent.push(message.content),
+  });
+  assert.deepEqual(await herdr.drain("herdr-session"), []);
+  assert.deepEqual(sent, []);
+});
+
+// A decision ask carries the exact checkpoint command that answers it.
+test("a decision ask renders the checkpoint command", () => {
+  assert.equal(askMessage([{ handle: "dotfiles/x", step: "S02", kind: "decision", text: "Accept the migration plan?" }]),
+    "[mission dotfiles/x · S02 · decision] Accept the migration plan?\n" +
+    'Answer with: mission checkpoint accept|revise dotfiles/x C01 --note "…"');
+  assert.doesNotMatch(askMessage([{ handle: "dotfiles/x", step: "S02", kind: "blocked", text: "Stuck." }]), /checkpoint/);
 });

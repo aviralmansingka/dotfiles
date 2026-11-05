@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { MissionBridge, driverTask, missionContinues, missionToolBlock, trackingFailureBlock } from "./core.mjs";
+import { CommanderInbox, MissionBridge, driverTask, missionContinues, missionToolBlock, trackingFailureBlock } from "./core.mjs";
 import { LABEL_COLUMN, actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 
 // The turn after the contract keeps one line of the driver stance, so a
@@ -13,6 +13,23 @@ export default function missions(pi: ExtensionAPI, options = {}) {
   // idle. The desk writes requests; this session claims and starts them.
   let live: any = null;
   const sweep = () => { if (live) bridge.sweepLaunches(live).catch((e: any) => { bridge.error = e.message; }); };
+  // The ask channel's receiving half. A captain writes its question into the
+  // mission record and stops; only the commander's session drains it. Nothing
+  // here depends on the role answer except the drain itself, and the files stay
+  // on disk when no commander session exists.
+  const inbox = new CommanderInbox({
+    vault: bridge.vault, env: bridge.env,
+    run: (bin: string, args: string[], opts: any) => bridge.run(bin, args, opts),
+    send: (message: any, opts: any) => pi.sendMessage(message, opts),
+  });
+  // Deliver on idle only: a tool that is running owns the turn, and a captain or
+  // trooper session owns a mission of its own, so its pane is never a mailbox.
+  const deliverAsks = async () => {
+    if (!live || bridge.hint || bridge.env.PI_SUBAGENT_NAME) return;
+    if (!live.isIdle() || live.hasPendingMessages()) return;
+    try { await inbox.drain(live.sessionManager.getSessionId()); }
+    catch (e: any) { bridge.error = e.message; }
+  };
   const guarded = (fn: Function) => async (event: any, ctx: any) => {
     try { await fn(event, ctx); }
     catch (e: any) { bridge.error = e.message; ctx.ui.notify("Mission tracking: " + e.message, "warning"); }
@@ -29,13 +46,17 @@ export default function missions(pi: ExtensionAPI, options = {}) {
   };
   pi.on("session_start", guarded(async (_e: any, ctx: any) => {
     live = ctx;
+    // Resolve the commander seat once at session start, then let the slow
+    // re-check in the drain keep it honest.
+    inbox.reset();
+    void inbox.isCommander(true).catch(() => {});
     await bridge.restore(ctx);
     sweep();
     if (bridge.hint) await bridge.record(ctx, {type:"session-start",summary:"Pi session restored from local mission context"});
     await badge(ctx);
   }));
   pi.on("session_before_switch", guarded(async (_e: any, ctx: any) => { await bridge.record(ctx, { type: "session-end", summary: "Session switch; ownership preserved for resume" }); }));
-  pi.on("session_shutdown", guarded(async (_e: any, ctx: any) => { clearInterval(timer); await bridge.record(ctx, { type: "session-end", summary: "Session shutdown; preserve transcript and owner" }); }));
+  pi.on("session_shutdown", guarded(async (_e: any, ctx: any) => { clearInterval(timer); clearInterval(askTimer); await bridge.record(ctx, { type: "session-end", summary: "Session shutdown; preserve transcript and owner" }); }));
   pi.on("before_agent_start", async (_e, ctx) => {
     bridge.lastOutcome = undefined;
     if (!bridge.hint) {
@@ -79,6 +100,10 @@ export default function missions(pi: ExtensionAPI, options = {}) {
   const timer = setInterval(sweep, 2000);
   // The poll must never hold the process open: an idle session still exits.
   (timer as any)?.unref?.();
+  // Five seconds is short enough to unblock a captain quickly and quiet enough
+  // to cost one directory read per tick when the vault has no asks.
+  const askTimer = setInterval(() => { void deliverAsks(); }, 5000);
+  (askTimer as any)?.unref?.();
   pi.on("agent_end", guarded(async (event: any, ctx: any) => { await bridge.end(ctx, event); await badge(ctx); }));
   // agent_end can be followed by automatic retry/compaction/steered input.
   // Pi 1.5's final settlement boundary is the completion authority.
@@ -87,6 +112,9 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     const result = await bridge.settled(ctx, { ...event, outcome: bridge.lastOutcome });
     await badge(ctx);
     sweep();
+    // The turn is over and settled, so a question waiting on disk can land now
+    // instead of waiting for the next five-second tick.
+    void deliverAsks();
     // Starting a mission authorizes its eligible steps. Attaching an existing
     // session records its work without silently starting additional steps.
     // A finished or human-held mission never asks for another step.

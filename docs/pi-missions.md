@@ -191,6 +191,47 @@ shape the answer: `step edit` needs no active attempt (`busy`) and no pending re
 tells the human that it did. `reset` stays CLI-only, because it invalidates later
 progress and needs an explicit human decision.
 
+## Ask the commander
+
+A captain pane has no watcher, so a blocked captain writes a durable question
+instead of painting an `ask_user_question` menu:
+
+```sh
+mission ask dotfiles/x --text "Which branch name should the migration use?" \
+  --step S02 --attempt attempt-1 --kind decision
+mission ask --list dotfiles/x            # pending and delivered asks
+```
+
+The CLI writes `6_missions/dotfiles/x/asks/<UTC-stamp>-<ask-id>.json` with
+`{id, handle, step, attempt, kind, text, at}` and prints the id and the path. It
+needs no token and no lock, so a captain that holds no claim can still ask. Kinds
+are `blocked` (the default), `question`, and `decision`. Empty text is refused
+with `usage`, an unknown handle with `not_found`, and a closed record with
+`closed_mission` plus the new-mission hint.
+
+The receiving half runs in the commander's own Pi session. At a session start the
+missions extension asks the Rex API whether its block sits in the window labeled
+`commander` of its own Rex session, caches the answer, and re-checks it about once
+a minute; nothing outside the ask drain depends on it. While that answer is yes,
+the session polls every mission's asks about every five seconds and, only while
+it is idle and has no pending message, delivers each undelivered ask as one
+follow-up message. Consecutive asks from one handle arrive batched, at most five
+asks per drain, oldest first. Each line names the mission, the step, and the
+kind — `[mission dotfiles/x · S02 · decision] …` — and a decision ask carries the
+command that answers it:
+
+```
+mission checkpoint accept|revise dotfiles/x C01 --note "…"
+```
+
+Delivery writes `delivered_at` and `delivered_to` into the ask's own file, so a
+commander restart cannot deliver it twice. With no commander session — extension
+unloaded, not the commander, or the commander away — nothing drains and nothing
+is lost: the asks stay on disk until that session returns.
+
+`ask_user_question` is not in the captain loadout, so a captain cannot paint a
+menu nobody watches. The commander keeps it.
+
 ## The launch description
 
 `mission plan REPO/SLUG [--mux rex]` is the read-only launch description. It
