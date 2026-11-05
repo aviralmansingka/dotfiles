@@ -284,11 +284,12 @@ func TestDeploySeatsTheArmy(t *testing.T) {
 	}
 	block, _ := win["layout"].(map[string]any)["block"].(map[string]any)
 	opts, _ := block["options"].(map[string]any)
-	// The window opens on a shell that waits, then one exec line replaces it with
-	// the captain: the block id exists only after the window is created.
+	// The window opens on the human's login shell, then one exec line replaces it
+	// with the captain: the block id exists only after the window is created, and
+	// the login shell supplies the human's PATH.
 	argv, _ := opts["command"].([]string)
-	if len(argv) != 2 || argv[0] != "/bin/sh" || argv[1] != "-s" {
-		t.Fatalf("captain window command = %v, want the waiting shell", argv)
+	if want := loginShellArgv(); len(argv) != len(want) || argv[0] != want[0] || argv[1] != "-l" {
+		t.Fatalf("captain window command = %v, want the login shell %v", argv, want)
 	}
 	line := f.execLine()
 	if line == "" || !strings.HasPrefix(line, "exec env ") {
@@ -337,9 +338,10 @@ func TestDeployNamesTheReservedIntent(t *testing.T) {
 }
 
 // The seat is two phases, because a block's id exists only after its window does.
-// The window opens on a waiting shell; deploy reads the block id from the result
-// and writes one exec line that starts pi with that id as its own REX_BLOCK, the
-// session label it must deploy troopers in, and a PATH that finds rex.
+// The window opens on the human's login shell; deploy reads the block id from the
+// result and writes one exec line that starts pi with that id as its own
+// REX_BLOCK, the session label it must deploy troopers in, and the mission's
+// environment, PATH included through that login shell.
 func TestDeploySeatsTheCaptainWithItsOwnBlock(t *testing.T) {
 	s, h, _ := piFixture(t)
 	f := fakeRex(t)
@@ -365,22 +367,10 @@ func TestDeploySeatsTheCaptainWithItsOwnBlock(t *testing.T) {
 			t.Fatalf("the exec line does not carry %q:\n%s", want, line)
 		}
 	}
-	// The seat's PATH resolves rex, so the captain can deploy a trooper even when
-	// the mission binary was started from a short PATH.
-	rex, e := exec.LookPath("rex")
-	if e == nil {
-		dir, found := filepath.Dir(rex), false
-		for _, part := range strings.Split(line, "'") {
-			if !strings.HasPrefix(part, "PATH=") {
-				continue
-			}
-			for _, d := range filepath.SplitList(strings.TrimPrefix(part, "PATH=")) {
-				found = found || d == dir
-			}
-		}
-		if !found {
-			t.Fatalf("the exec line's PATH does not hold %q:\n%s", dir, line)
-		}
+	// The seat's PATH is the login shell's, so the exec line carries no PATH of its
+	// own: a hand-rolled list is exactly what dropped `mission` and `rex`.
+	if strings.Contains(line, "PATH=") {
+		t.Fatalf("the exec line hand-rolls a PATH:\n%s", line)
 	}
 	// The brief stays the first message: it is the last argument pi receives, so
 	// the line ends inside its last sentence.
@@ -391,6 +381,85 @@ func TestDeploySeatsTheCaptainWithItsOwnBlock(t *testing.T) {
 	// line on its own, so a break would run the exec in parts.
 	if strings.Contains(strings.TrimSuffix(line, "\n"), "\n") {
 		t.Fatalf("the exec line spans lines, so the shell would run it in parts:\n%s", line)
+	}
+}
+
+// The captain's block opens the human's login shell, so the exec line that
+// replaces it starts pi with the human's own PATH. That is the fix for PATH
+// parity: a captain seated from the multiplexer's minimal PATH lost `mission`
+// (`spawn mission ENOENT`, mission tracking unavailable), lost `rex` (the
+// subagent gate stayed closed, so no trooper could be deployed at all), and
+// answered `mission deploy` with executable "pi" not found in PATH. The seat
+// carries no PATH list of its own, so one machine's profile cannot drift from
+// another's.
+func TestDeploySeatsTheCaptainUnderTheLoginShell(t *testing.T) {
+	s, h, _ := piFixture(t)
+	f := fakeRex(t)
+	p, e := s.plan(h, "rex", "")
+	must(t, e)
+	if _, e = s.deploy(h, "rex"); e != nil {
+		t.Fatal(e)
+	}
+	win := f.args["session.new_window"]
+	opts, _ := win["layout"].(map[string]any)["block"].(map[string]any)["options"].(map[string]any)
+	argv, _ := opts["command"].([]string)
+	if len(argv) != 2 || argv[1] != "-l" {
+		t.Fatalf("the captain's block runs %v, want a login shell: no profile, no PATH", argv)
+	}
+	if !filepath.IsAbs(argv[0]) {
+		t.Fatalf("the captain's block runs %q: a window resolves its command against rex's own PATH", argv[0])
+	}
+	if opts["shell"] != "none" {
+		t.Fatalf("the captain's block starts a second shell over the login one: %v", opts)
+	}
+	if _, ok := opts["path_prepend"]; ok {
+		t.Fatalf("the captain's block prepends a PATH of its own: %v", opts)
+	}
+	block := f.rootBlock("army", p.CaptainWindow)
+	line := f.execLine()
+	for _, want := range []string{
+		"'REX_SESSION=army'",
+		"'REX_BLOCK=" + block + "'",
+		"'PI_SUBAGENT_SESSION=" + p.SubagentSession + "'",
+		"'PI_SUBAGENT_CWD=" + p.Cwd + "'",
+		shellQuote(p.CaptainArgv[0]),
+	} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("the seat's exec line does not carry %q:\n%s", want, line)
+		}
+	}
+	// No PATH list: the login shell's profile owns PATH, and a hand-rolled copy is
+	// what dropped `mission`, `rex`, and `pi` from the captain.
+	if strings.Contains(line, "PATH=") {
+		t.Fatalf("the exec line hand-rolls a PATH:\n%s", line)
+	}
+	// The pi in the line is the plan's absolute resolution, not a bare name the
+	// captain's environment would have to find.
+	if pi, e := exec.LookPath("pi"); e == nil {
+		abs, e := filepath.Abs(pi)
+		must(t, e)
+		if p.CaptainArgv[0] != abs {
+			t.Fatalf("the exec line starts %q, want the absolute %q", p.CaptainArgv[0], abs)
+		}
+	}
+}
+
+// $SHELL names the shell the captain's block opens, and a value the machine
+// cannot run falls back to /bin/sh. A seat never starts a shell that is not
+// there, because then no captain starts at all.
+func TestLoginShellFollowsTheUsersShell(t *testing.T) {
+	t.Setenv("SHELL", "/bin/sh")
+	if got := loginShell(); got != "/bin/sh" {
+		t.Fatalf("loginShell() = %q with SHELL=/bin/sh", got)
+	}
+	for _, bad := range []string{"", "zsh", "/nonexistent/zsh", "/tmp"} {
+		t.Setenv("SHELL", bad)
+		if got := loginShell(); got != "/bin/sh" {
+			t.Fatalf("loginShell() = %q with SHELL=%q, want /bin/sh", got, bad)
+		}
+	}
+	if argv := loginShellArgv(); len(argv) != 2 || argv[0] != "/bin/sh" || argv[1] != "-l" {
+		t.Fatalf("loginShellArgv() = %v, want /bin/sh -l", argv)
 	}
 }
 
@@ -489,8 +558,8 @@ func TestDeployReplacesADeadSeatAndAcks(t *testing.T) {
 	win := f.argsFor("session.new_window")[0]
 	block, _ := win["layout"].(map[string]any)["block"].(map[string]any)
 	argv, _ := block["options"].(map[string]any)["command"].([]string)
-	if len(argv) != 2 || argv[0] != "/bin/sh" {
-		t.Fatalf("the fresh window runs %v, want the waiting shell", argv)
+	if len(argv) != 2 || argv[0] != loginShell() || argv[1] != "-l" {
+		t.Fatalf("the fresh window runs %v, want the login shell", argv)
 	}
 	line := f.execLine()
 	if !strings.Contains(line, "launch_id="+d.LaunchID) {

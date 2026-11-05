@@ -323,17 +323,41 @@ func shellLayout(cwd string) map[string]any {
 	return map[string]any{"block": map[string]any{"flavor": terminalFlavor, "options": options}}
 }
 
-// captainLayout opens the captain's window on a shell that waits. A block's id
-// does not exist until the window is created, so the captain cannot receive its
-// own REX_BLOCK in a spawn environment. The window therefore starts a shell
-// reading commands from its terminal, and seatCaptain writes the exec line that
-// replaces that shell with pi once the id is known.
+// captainLayout opens the captain's window on the human's login shell. A
+// block's id does not exist until the window is created, so the captain cannot
+// receive its own REX_BLOCK in a spawn environment. The window therefore starts
+// a login shell reading commands from its terminal, and seatCaptain writes the
+// exec line that replaces that shell with pi once the id is known.
+//
+// The shell is a login shell on purpose: it reads the account's profile, so the
+// captain inherits the human's environment instead of the multiplexer's minimal
+// PATH. That PATH is why a captain lost `mission` (spawn mission ENOENT), lost
+// `rex` (the subagent gate stayed closed), and could not deploy troopers with pi.
 func captainLayout(p Plan) map[string]any {
 	return map[string]any{"block": map[string]any{
 		"flavor":  terminalFlavor,
 		"label":   p.CaptainWindow,
-		"options": map[string]any{"command": []string{"/bin/sh", "-s"}, "cwd": p.Cwd, "shell": "none"},
+		"options": map[string]any{"command": loginShellArgv(), "cwd": p.Cwd, "shell": "none"},
 	}}
+}
+
+// loginShellArgv is the command that opens the captain's block: the human's own
+// shell as a login shell, so its startup files run and the exec line that
+// follows reaches pi with the human's PATH. $SHELL names that shell; a relative
+// or missing value falls back to /bin/sh, which every Unix has. Pooling a PATH
+// list here instead would be a second, drifting copy of the human's profile.
+func loginShellArgv() []string { return []string{loginShell(), "-l"} }
+
+// loginShell is the account's shell, as an absolute path that exists. A Rex
+// window resolves a command against the server's own PATH, so the seat names the
+// shell by path and never by name.
+func loginShell() string {
+	if sh := os.Getenv("SHELL"); filepath.IsAbs(sh) {
+		if st, e := os.Stat(sh); e == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
+			return sh
+		}
+	}
+	return "/bin/sh"
 }
 
 // seatCaptain creates the captain's window, reads the block id Rex assigned it,
@@ -381,16 +405,16 @@ func seatedBlock(v map[string]any) string {
 	return rootBlock(v)
 }
 
-// captainExecLine is the one line that replaces the waiting shell with the
+// captainExecLine is the one line that replaces the login shell with the
 // captain: the plan's argv (the brief last, as its first message) and the seat's
-// own identity in its environment. PATH carries the directory of rex, because
-// the captain deploys its troopers through rex and inherits this PATH.
+// own identity in its environment. It sets no PATH: the login shell already
+// carries the human's PATH, so `mission`, `rex`, and `pi` resolve inside the
+// captain exactly as they do in the human's own terminal.
 func captainExecLine(p Plan, block string) string {
 	argv := append(append([]string{}, p.CaptainArgv...), p.CaptainBrief)
 	parts := []string{"exec", "env",
 		shellQuote("REX_SESSION=" + p.Session),
 		shellQuote("REX_BLOCK=" + block),
-		shellQuote("PATH=" + captainPATH()),
 		shellQuote("PI_SUBAGENT_SESSION=" + p.SubagentSession),
 		shellQuote("PI_SUBAGENT_CWD=" + p.Cwd),
 	}
@@ -398,27 +422,6 @@ func captainExecLine(p Plan, block string) string {
 		parts = append(parts, shellQuote(a))
 	}
 	return strings.Join(parts, " ")
-}
-
-// captainPATH is this process's PATH with the directory that holds rex in front
-// of it. A captain whose PATH cannot find rex cannot deploy a trooper, so the
-// seat guarantees it even when the mission binary was started from a short PATH.
-func captainPATH() string {
-	path := os.Getenv("PATH")
-	rex, e := exec.LookPath("rex")
-	if e != nil {
-		return path
-	}
-	dir := filepath.Dir(rex)
-	for _, d := range filepath.SplitList(path) {
-		if d == dir {
-			return path
-		}
-	}
-	if path == "" {
-		return dir + string(os.PathListSeparator) + "/usr/bin:/bin"
-	}
-	return dir + string(os.PathListSeparator) + path
 }
 
 // shellQuote makes one argument safe inside the shell line the seat writes. The

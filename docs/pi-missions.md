@@ -244,14 +244,32 @@ reserved intent, so the captain attaches with the id the record holds. The ack
 lands last, with the plan's derived token beside the reserved intent.
 
 Seating is two phases, because a block's id exists only after its window does. A
-window therefore opens on a waiting shell (`/bin/sh -s`), deploy reads the block
-id from the `session.new_window` result, and it writes one `exec env …` line into
+window therefore opens on the human's login shell, deploy reads the block id
+from the `session.new_window` result, and it writes one `exec env …` line into
 that block through `block.method` with method `write`. That line starts the
-plan's absolute pi with `REX_SESSION=army`, `REX_BLOCK=<its own block>`, a `PATH`
-that resolves `rex`, `PI_SUBAGENT_SESSION=<mission-<slug>>`, and
-`PI_SUBAGENT_CWD=<worktree>`; the brief arrives as pi's first message. The exec
-line is the only place a captain learns its own seat, so a captain started by
-deploy passes the subagent gate without any adapter help.
+plan's absolute pi with `REX_SESSION=army`, `REX_BLOCK=<its own block>`,
+`PI_SUBAGENT_SESSION=<mission-<slug>>`, and `PI_SUBAGENT_CWD=<worktree>`; the
+brief arrives as pi's first message. The exec line is the only place a captain
+learns its own seat, so a captain started by deploy passes the subagent gate
+without any adapter help.
+
+### Seating a captain
+
+The captain's block opens the human's login shell, `$SHELL -l` (`/bin/sh -l`
+when `$SHELL` is unset, or is not a runnable absolute path), so the shell reads
+the account's profile before the exec line replaces it with pi. The captain's
+environment is then the human's environment: `PATH` comes from the login
+profile, not from the multiplexer and not from a list the seat carries.
+
+That parity is the point of the shape. A captain seated from the multiplexer's
+minimal `PATH` lost `mission` (`spawn mission ENOENT`, so mission tracking was
+unavailable), lost `rex` (the subagent gate stayed closed, so it could deploy no
+trooper at all), and `mission deploy` answered `executable "pi" not found in
+PATH`. Sourcing the profile instead of listing directories keeps the captain's
+environment identical to the human's on every machine.
+
+pi is still named by absolute path (`captainPi`), so the seat never relies on a
+profile to find it; the login shell supplies everything else.
 
 A repeated deploy focuses the live captain window and creates nothing, so one key
 press cannot seat two captains. A resumable deployment keeps its intent: a

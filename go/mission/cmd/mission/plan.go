@@ -102,15 +102,19 @@ const captainLoadout = "mission,subagent,subagent_message,read,ask_user_question
 // captainPi resolves the pi binary at plan time. A window's command is resolved
 // against the mux server's own PATH, not the caller's, and that PATH holds the
 // app directory plus /usr/bin, /bin, /usr/sbin and /sbin. A bare "pi" is not
-// found there, so deploy fails before it seats anything:
+// found there, so a seat that named pi in the window command failed before it
+// seated anything:
 //
 //	creating "com.superlogical.terminal.shell": executable "pi" not found in
 //	PATH "...Rex Server.app/Contents/MacOS:/usr/bin:/bin:/usr/sbin:/sbin"
 //	(status=400 code=bad_request)
 //
-// LookPath resolves pi on the PATH this process holds. When the plan runs inside
-// pi itself, os.Executable is the same binary, so it answers too. The bare name
-// is the last resort: it keeps the old behaviour rather than failing the plan.
+// The seat now opens a login shell and execs pi from it, so a profile's PATH is
+// what finds pi there; the absolute path keeps the seat independent of any
+// profile. LookPath resolves pi on the PATH this process holds. When the plan
+// runs inside pi itself, os.Executable is the same binary, so it answers too.
+// The bare name is the last resort: it keeps the old behaviour rather than
+// failing the plan.
 func captainPi() string {
 	if path, e := exec.LookPath("pi"); e == nil {
 		if abs, e := filepath.Abs(path); e == nil {
