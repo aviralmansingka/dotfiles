@@ -9,12 +9,31 @@ import (
 	"mission.local/prototype/internal/domain/mission"
 )
 
+// judgeRef is the judge that reported: its session id and the session file
+// behind it. It is optional, because only a judge has one to name.
+type judgeRef struct {
+	ID   string
+	File string
+}
+
+// isJudge reports whether the reporting actor is a judge. Only a judge's own
+// report carries a session id, so only it appends the judge event.
+func isJudge(actor string) bool { return strings.HasPrefix(strings.ToLower(actor), "judge") }
+
 // progress appends one structured report to the attempt. A nonempty actor is
 // the trooper that reported: the call also appends a Report beside the
 // progress entry, so the sitrep reads who finished what without a vault token
 // in the trooper's hands. Existing calls that carry no actor keep the exact
 // earlier shape and fingerprint.
-func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths []string) (mission.Record, error) {
+//
+// A judge actor names its session: the attempt then carries one judge event
+// with that session id and file beside the progress row, so a verdict reads
+// together with the judge that reached it. The verdict itself stays in the
+// progress row and this call rules on nothing; a judge with no session id is
+// refused rather than recorded anonymously. The judge session is deliberately
+// not compared with the attempt's own session: the judge is a second session
+// watching the attempt, not the session it runs in.
+func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths []string, judges ...judgeRef) (mission.Record, error) {
 	actor = strings.TrimSpace(actor)
 	if p.ID == "" || p.Summary == "" || len(p.Summary)+len(p.Next)+len(p.Blocker) > 8000 || len(paths) > 16 {
 		return mission.Record{}, mission.Problem("usage", "progress needs a stable event-id, summary, and at most 16 evidence paths (8000 characters total)")
@@ -28,13 +47,33 @@ func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths [
 	if (p.Status == "blocked" || p.Status == "needs-input") && p.Blocker == "" {
 		return mission.Record{}, mission.Problem("usage", "blocked progress needs --blocker")
 	}
+	// A judge records who judged. The refusal lands before any mutation, so a
+	// judge that forgot its session id adds nothing to the attempt.
+	var judge *judgeRef
+	if isJudge(actor) {
+		j := judgeRef{}
+		if len(judges) > 0 {
+			j = judges[0]
+		}
+		j.ID, j.File = strings.TrimSpace(j.ID), strings.TrimSpace(j.File)
+		if j.ID == "" {
+			return mission.Record{}, mission.Problem("usage", "a judge progress needs --session-id naming the judge session")
+		}
+		if len(j.ID) > 256 || len(j.File) > 4096 {
+			return mission.Record{}, mission.Problem("usage", "judge session id or file is too long")
+		}
+		judge = &j
+	}
 	// The actor joins the fingerprint only when it is present, so a replay of a
-	// pre-report call keeps its original digest.
+	// pre-report call keeps its original digest. The judge session joins it the
+	// same way, so a replay under a different judge session conflicts instead of
+	// passing silently.
 	request, _ := json.Marshal(struct {
 		P     mission.Progress
 		Paths []string
-		Actor string `json:",omitempty"`
-	}{p, paths, actor})
+		Actor string    `json:",omitempty"`
+		Judge *judgeRef `json:",omitempty"`
+	}{p, paths, actor, judge})
 	finger := mission.Digest(request)
 	return s.mutate(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)
@@ -61,6 +100,9 @@ func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths [
 		if len(a.Progress) >= 1024 {
 			return mission.Problem("event_limit", "attempt progress limit reached")
 		}
+		if judge != nil && len(a.Events) >= 4096 {
+			return mission.Problem("event_limit", "attempt event limit reached")
+		}
 		for _, path := range paths {
 			prefix := fmt.Sprintf("artifacts/%03d/", a.Sequence)
 			if !strings.HasPrefix(path, prefix) || filepath.ToSlash(filepath.Clean(path)) != path {
@@ -79,6 +121,7 @@ func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths [
 		p.At, p.Fingerprint = mission.Now(), finger
 		a.Progress = append(a.Progress, p)
 		appendReport(a, p, actor)
+		appendJudgeEvent(a, p, judge)
 		a.Updated = p.At
 		r.State.Status = "running"
 		if p.Status == "blocked" || p.Status == "needs-input" {
@@ -86,6 +129,18 @@ func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths [
 		}
 		return nil
 	})
+}
+
+// appendJudgeEvent records the judge behind a verdict row. The event carries
+// the judge's session id and file, and names the progress row it sits beside:
+// the verdict itself stays in that row, because a second copy here would give
+// the attempt two places to disagree. A replay never reaches this call, because
+// progress returns on a known event id before it appends anything.
+func appendJudgeEvent(a *mission.Attempt, p mission.Progress, judge *judgeRef) {
+	if judge == nil {
+		return
+	}
+	a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "judge", At: p.At, SessionID: judge.ID, SessionFile: judge.File, Tool: "mission", Summary: "verdict row " + p.ID})
 }
 
 // appendReport records one trooper report for a new progress entry, keeping one

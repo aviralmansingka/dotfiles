@@ -254,6 +254,13 @@ export function trooperReport(message) {
     : status === "needs-input" ? `Steer it with ${follow}` : `Resume or replace it with ${follow}`;
   const session = String(details.sessionFile || details.sessionId || trooper);
   const report = { id: "trooper-" + hash([session, status, summary].join("\u0000")).slice(0, 24), trooper, status, summary, next };
+  // A judge report carries the session that judged: the CLI refuses a judge
+  // progress that names no session, so the identity the ID was hashed from
+  // travels with the report instead of staying behind in the hash.
+  const sessionID = String(details.sessionId ?? "").trim();
+  const sessionFile = String(details.sessionFile ?? "").trim();
+  if (sessionID) report.session = sessionID;
+  if (sessionFile) report.session_file = sessionFile;
   if (status !== "ready") report.blocker = trooperLine(details.errorMessage ?? details.error ?? "", 160) || summary;
   return report;
 }
@@ -269,6 +276,53 @@ export function trooperReport(message) {
 export const DROPPABLE_EVENT_CODES = new Set(["event_conflict", "stale_attempt", "attempt_terminal", "closed", "not_found", "invalid_handle"]);
 export function droppableEventError(message) {
   return DROPPABLE_EVENT_CODES.has(/^([a-z_]+): /.exec(String(message ?? ""))?.[1] ?? "");
+}
+
+/** The CLI's own rule for a judge report: an actor whose trimmed, lowercased
+ *  name starts with "judge" is a judge, and only a judge's report names the
+ *  session behind it (`isJudge` in go/mission/cmd/mission/attempt.go, where the
+ *  actor is trimmed before this test). Matched here rather than re-invented, so
+ *  the two sides cannot drift into the refusal that wedged a captain. */
+export function isJudge(trooper) {
+  return String(trooper ?? "").trim().toLowerCase().startsWith("judge");
+}
+
+/** How many failed flushes one outbox item may take before it is set aside. A
+ *  transient failure retries; a refusal the extension does not recognize — the
+ *  CLI's `usage` is the one that wedged a live captain — must not be retried
+ *  forever at the head of the queue, because every tool call flushes it. */
+export const OUTBOX_FAILURE_LIMIT = 3;
+
+/** How many set-aside items the state file keeps for a human to inspect. */
+export const FAILED_OUTBOX_LIMIT = 20;
+
+/** How many one-line notices a session holds for its next tool result. */
+export const OUTBOX_NOTICE_LIMIT = 20;
+
+/** The CLI error code of one failed outbox delivery: the `code: ` prefix every
+ *  CLI problem carries, or a clipped message when the answer is not the CLI's
+ *  (a binary that is gone, invalid JSON). */
+export function outboxErrorCode(message) {
+  const text = String(message ?? "").trim();
+  return /^([a-z_]+): /.exec(text)?.[1] ?? (text.split("\n")[0].slice(0, 60) || "unknown");
+}
+
+/** The one line a set-aside outbox item leaves in the next tool result, so a
+ *  report or a hook the ledger never took is visible without failing the tool
+ *  call that flushed it. */
+export function setAsideNotice(item, error) {
+  const code = outboxErrorCode(error);
+  return item.report
+    ? `1 report could not be recorded: ${item.report.trooper} (${code})`
+    : `1 hook could not be recorded: ${item.event?.type || "unknown"} (${code})`;
+}
+
+/** The report-side name of the one permanent-code rule: the outbox dropped only
+ *  reports when it first named this, and a report and a hook are refused by the
+ *  same codes, so both names read one set instead of drifting apart. */
+export const DROPPABLE_REPORT_CODES = DROPPABLE_EVENT_CODES;
+export function droppableReportError(message) {
+  return droppableEventError(message);
 }
 
 /** The path of a block's `pwd` answer: `file://<host>/<abs path>`, or a bare
@@ -319,6 +373,11 @@ export class MissionBridge {
     });
     this.hint = null;
     this.error = null;
+    // Lines the outbox owes the next tool result, drained once: a set-aside item
+    // and a judge report that carried no session are both reported this way.
+    this.notices = [];
+    // Report IDs already warned about, so a replayed completion warns once.
+    this.warned = new Set();
     // The attempt whose contract this session already delivered: the contract
     // goes with the attach, and the turns after it stay short.
     this.contractAttempt = null;
@@ -549,19 +608,57 @@ export class MissionBridge {
         // longer lists has no attempt left to land on. Dropping it keeps the
         // outbox from wedging behind one undeliverable line — the 2026-11-05
         // wedge — while a transient failure still retries.
-        if (!droppableEventError(e.message)) throw e;
+        if (droppableEventError(e.message)) { /* leave it */ }
+        else {
+          // Every other failure may pass on the next flush, so it retries
+          // OUTBOX_FAILURE_LIMIT times. After that the item is set aside: a
+          // refusal this extension does not know (`usage` above all) must not
+          // sit at the head of the queue forever, because every tool call
+          // flushes the outbox. The tool call that flushed it still succeeds,
+          // and the next tool result carries one line about the item.
+          item.failures = (item.failures || 0) + 1;
+          if (item.failures < OUTBOX_FAILURE_LIMIT) { this.save(ctx); throw e; }
+          this.setAside(item, e.message);
+          this.hint.outbox.shift(); this.save(ctx);
+          continue;
+        }
       }
       this.hint.outbox.shift(); this.save(ctx);
     }
     this.error = null;
   }
+  /** Move one item that will not be recorded out of the queue and into the last
+   *  FAILED_OUTBOX_LIMIT set-aside entries of the state file, and queue the one
+   *  line the next tool result shows. Nothing is dropped silently: a hook the
+   *  ledger needed is visible the same way a report is. */
+  setAside(item, message) {
+    const entry = { at: new Date().toISOString(), attempt: item.attempt, failures: item.failures,
+      error: String(message ?? ""), ...(item.report ? { report: item.report } : { event: item.event }) };
+    this.hint.failed = [...(this.hint.failed || []), entry].slice(-FAILED_OUTBOX_LIMIT);
+    this.notice(setAsideNotice(item, message));
+  }
+  /** Queue one line for the next tool result. Display only: the state file
+   *  keeps the facts. */
+  notice(text) { this.notices = [...this.notices, text].slice(-OUTBOX_NOTICE_LIMIT); }
+  /** Take the lines the outbox owes the next tool result. Drained once, so a
+   *  notice never repeats in every later result of the session. */
+  takeNotices() { const notes = this.notices; this.notices = []; return notes; }
   /** Send one outbox item: a lifecycle hook, or one trooper report. Hook argv
    *  contains bounded metadata only; credentials travel in env. */
   async deliver(item) {
     if (item.report) {
       const r = item.report;
       const args = ["progress", this.hint.handle, "--attempt", item.attempt, "--event-id", r.id,
-        "--actor", r.trooper, "--status", r.status, "--summary", r.summary];
+        "--actor", r.trooper];
+      // A judge records who judged, so the CLI requires the judge's own session
+      // (go/mission/cmd/mission/attempt.go). A non-judge report sends exactly
+      // the argv it always sent, so its fingerprint does not change.
+      if (isJudge(r.trooper)) {
+        if (!r.session) throw new Error("usage: a judge progress needs --session-id naming the judge session");
+        args.push("--session-id", r.session);
+        if (r.session_file) args.push("--session-file", r.session_file);
+      }
+      args.push("--status", r.status, "--summary", r.summary);
       if (r.next) args.push("--next", r.next);
       if (r.blocker) args.push("--blocker", r.blocker);
       return this.call(args, this.hint.token);
@@ -584,6 +681,18 @@ export class MissionBridge {
     if (!attempt) return;
     const report = trooperReport(message);
     if (!report) return;
+    // A judge report that names no session can never be delivered — the CLI
+    // refuses it by design — so it never enters the outbox. It is surfaced
+    // once instead, and the rest of the outbox keeps moving.
+    if (isJudge(report.trooper) && !report.session) {
+      if (!this.warned.has(report.id)) {
+        // One bounded set of warned IDs: a long session must not grow it.
+        if (this.warned.size >= 256) this.warned.clear();
+        this.warned.add(report.id);
+        this.notice(setAsideNotice({ report }, "usage: a judge progress needs --session-id naming the judge session"));
+      }
+      return;
+    }
     if (this.hint.outbox.some(item => item.report?.id === report.id)) return;
     if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
     this.hint.outbox.push({ attempt, report });
@@ -879,5 +988,148 @@ export class MissionBridge {
     return { handle, status:r.state.status, attempt: attempt, attempt_status:a.status, step:a.step, checkpoint:r.state.pending_checkpoint,
       progress:a.progress?.at(-1), verification:a.verifications?.at(-1),
       message: p.action === "finish" || p.action === "fail" ? "Completion reported. Ownership remains until the turn settles; checks and checkpoints still apply." : undefined };
+  }
+}
+
+/** The window label that marks the commander seat. A session is the commander
+ *  when its own block sits in this window of its own Rex session, so a captain
+ *  window that happens to run beside the commander is never mistaken for it. */
+export const COMMANDER_WINDOW = "commander";
+
+/** How often a cached commander answer is re-resolved. Role detection gates the
+ *  ask drain and nothing else, so a slow re-check costs one Rex call a minute
+ *  and no other behavior may depend on it. */
+export const COMMANDER_RECHECK_MS = 60_000;
+
+/** How many asks one drain delivers: a handful, oldest first. A backlog waits
+ *  for the next tick instead of arriving as one wall of text. */
+export const ASKS_PER_DRAIN = 5;
+
+/** One ask as the commander reads it: the mission, the step, and the kind come
+ *  from the record, so a line can be answered without opening the vault. */
+export function askLine(ask) {
+  return `[mission ${[ask.handle, ask.step, ask.kind].filter(Boolean).join(" · ")}] ${ask.text}`;
+}
+
+/** The command that answers a decision ask, beside the question it settles.
+ *  Blocked and question asks need a reply, not a checkpoint decision, so they
+ *  render no command. */
+export function askAnswer(ask) {
+  return ask.kind === "decision"
+    ? `Answer with: mission checkpoint accept|revise ${ask.handle} C01 --note "…"`
+    : null;
+}
+
+/** One commander message for one batch of asks: a line each, then the decision
+ *  command that settles it. */
+export function askMessage(asks) {
+  return asks.flatMap(ask => [askLine(ask), askAnswer(ask)].filter(Boolean)).join("\n");
+}
+
+/** The ask channel's receiving half. A captain writes `asks/<stamp>-<id>.json`
+ *  and stops; this drains those files into the commander's own session. The
+ *  files are the queue, so nothing is lost while the commander is absent and a
+ *  restart delivers each ask once, because delivery is recorded in the file.
+ *
+ *  Role detection is cached and re-checked slowly: `commander()` answers
+ *  whether this session's block is the block of the window labeled `commander`
+ *  in its own Rex session. It gates only the drain. */
+export class CommanderInbox {
+  constructor({ vault, env = process.env, run, send, now = () => new Date().toISOString() }) {
+    this.vault = vault;
+    this.env = env;
+    this.run = run;
+    this.send = send;
+    this.now = now;
+    this.asksPerDrain = ASKS_PER_DRAIN;
+    this.role = undefined;
+    this.roleAt = 0;
+    this.draining = null;
+  }
+
+  /** Forget a cached role answer: a fresh session resolves it again. */
+  reset() { this.role = undefined; this.roleAt = 0; }
+
+  async isCommander(force = false) {
+    const at = Date.now();
+    if (!force && this.role !== undefined && at - this.roleAt < COMMANDER_RECHECK_MS) return this.role;
+    this.role = await this.resolveCommander();
+    this.roleAt = at;
+    return this.role;
+  }
+
+  /** Resolve the seat through the Rex API the extension already reaches: the
+   *  block reports its window, and that window's label decides. A Herdr seat,
+   *  a session with no Rex block, or a Rex that cannot answer is not the
+   *  commander — the answer is false, never an error that stops a session. */
+  async resolveCommander() {
+    const session = this.env.REX_SESSION || "";
+    const block = this.env.REX_BLOCK || "";
+    if (!session || !block || this.env.HERDR_ENV === "1") return false;
+    try {
+      const view = JSON.parse(await this.run("rex", ["block", "inspect", block, "--json"], { env: this.env }));
+      const windowID = view?.block?.window_id;
+      if (!windowID) return false;
+      const windows = JSON.parse(await this.run("rex", ["window", "ls", "-s", session, "--json"], { env: this.env }))?.windows || [];
+      return windows.some(window => window.window_id === windowID && window.label === COMMANDER_WINDOW);
+    } catch { return false; }
+  }
+
+  /** Every undelivered ask under the vault, oldest first. The filename starts
+   *  with a fixed-width UTC stamp, so readdir order is the order asks were
+   *  written. A file that is not a readable ask is skipped, not fatal. */
+  pending() {
+    const out = [];
+    const entries = directory => {
+      try { return readdirSync(directory, { withFileTypes: true }); } catch { return []; }
+    };
+    for (const repo of entries(join(this.vault, "6_missions"))) {
+      if (!repo.isDirectory()) continue;
+      for (const mission of entries(join(this.vault, "6_missions", repo.name))) {
+        if (!mission.isDirectory()) continue;
+        const dir = join(this.vault, "6_missions", repo.name, mission.name, "asks");
+        for (const file of entries(dir)) {
+          if (!file.isFile() || !file.name.endsWith(".json")) continue;
+          const path = join(dir, file.name);
+          try {
+            const ask = JSON.parse(readFileSync(path, "utf8"));
+            if (ask?.id && ask?.handle && !ask.delivered_at) out.push({ ask, path, name: file.name });
+          } catch { /* a torn or foreign file is not an ask */ }
+        }
+      }
+    }
+    return out.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  }
+
+  /** Deliver consecutive asks from one handle as one message, then record the
+   *  delivery in each ask's own file. A send that throws leaves the asks
+   *  undelivered, so the next tick retries instead of losing the question. */
+  async drain(sessionID) {
+    if (!(await this.isCommander())) return [];
+    if (this.draining) return this.draining;
+    this.draining = (async () => {
+      const batch = this.pending().slice(0, this.asksPerDrain);
+      const delivered = [];
+      for (let i = 0; i < batch.length;) {
+        const handle = batch[i].ask.handle;
+        const group = [];
+        while (i < batch.length && batch[i].ask.handle === handle) group.push(batch[i++]);
+        this.send({ customType: "mission-ask", content: askMessage(group.map(f => f.ask)), display: true },
+          { deliverAs: "followUp", triggerTurn: true });
+        for (const file of group) this.markDelivered(file, sessionID);
+        delivered.push(...group.map(f => f.ask));
+      }
+      return delivered;
+    })();
+    try { return await this.draining; } finally { this.draining = null; }
+  }
+
+  /** Record delivery in the ask's own file, written beside it and renamed, so a
+   *  reader sees either the pending ask or the delivered one, never a fragment. */
+  markDelivered({ ask, path }, sessionID) {
+    const delivered = { ...ask, delivered_at: this.now(), delivered_to: sessionID };
+    const temp = path + "." + randomUUID();
+    writeFileSync(temp, JSON.stringify(delivered, null, 2) + "\n", { mode: 0o600 });
+    renameSync(temp, path);
   }
 }

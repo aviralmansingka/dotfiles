@@ -108,15 +108,17 @@ switches there. Four checks show the result:
 
 ```sh
 ssh probe 'just --version'                           # from the profile
-ssh probe 'wc -l < ~/.local/state/fleet-owned-tools' # 23 apt names
-ssh probe 'cut -d" " -f2 ~/.local/state/fleet-owned-tools | sort -u | xargs -n1 test -d'
+ssh probe 'command -v bat fd fzf rg tmux tree htop go node' # the shared set, from the profile
+ssh probe 'for t in bat fd fzf rg tmux tree htop go node; do readlink -f "$(command -v $t)"; done | grep -v /nix/store'  # no output
 ssh probe 'ls ~/.config/systemd/user/{dotfiles-auto-sync,vault-auto-sync,pi-stt-worker,pi-telegram,pi-whatsapp,whatsapp-bridge}.service'
 ssh probe 'ls ~/.config/systemd/user/default.target.wants 2>/dev/null | wc -l'  # 0
 ssh probe 'sha256sum ~/.cache/nix-fleet-deploy/remote-remote-probe/flake.lock'
 shasum -a 256 flake.lock
 ```
-The third command exits 0 when every store path exists. The fourth names the six
-unit files. The last two digests must match: the box then ran the homelab's lock.
+The second command names the core of the set `shared` installs; the third
+prints nothing when each of them resolves into `/nix/store` instead of
+`/usr/bin`. The fifth names the six unit files. The last two digests must match:
+the box then ran the homelab's lock.
 
 ## Step 6 — Deploy from the box itself
 
@@ -221,10 +223,11 @@ The steps above were executed once, from a bare instance. The values:
 | Deploy from the box | same script in `~/.cache/nix-fleet-deploy/remote-remote-probe`, `switch complete` |
 | Lock | `b7dfd2482e03fde36c5cf18b481a89111ab7f8320bd6a8e69b88473dd93cd040`, equal to the homelab |
 
-Checks after the deploy: `just 1.59.0`; `~/.local/state/fleet-owned-tools` has 23
-lines and every store path exists; the six unit files resolve into `/nix/store`
-and there is no `default.target.wants`, so all six read `linked`/`inactive`; all
-seventeen probed tools resolve from the profile; `zsh -lic` works.
+Checks after the deploy: `just 1.59.0`; both `just --version` and the shared set
+(`bat`, `fd`, `fzf`, `rg`, `tmux`, `tree`, `htop`, `go`, `node`) resolve into
+`/nix/store`; the six unit files resolve and there is no `default.target.wants`,
+so all six read `linked`/`inactive`; all seventeen probed tools resolve from the
+profile; `zsh -lic` works.
 
 The checkout lands on `main`, which predates this branch, so `install.sh
 --stow-only` does not exist there yet. The file half ran as the same stow set by

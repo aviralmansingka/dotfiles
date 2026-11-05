@@ -4,10 +4,6 @@
   ...
 }:
 
-let
-  ownedTools = import ../../lib/owned-tools.nix { inherit pkgs; };
-in
-
 {
   imports = [
     ../shared
@@ -15,21 +11,10 @@ in
     ../../services
   ];
 
-  home.packages = lib.attrValues ownedTools ++ [
+  home.packages = [
     pkgs.google-chrome
     pkgs.tailscale
   ];
-
-  home.activation.writeOwnedToolsList = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    {
-      ${lib.concatStrings (
-        lib.mapAttrsToList (aptName: pkg: ''
-          printf '${aptName} %s\n' '${pkg}'
-        '') ownedTools
-      )}
-    } > "$HOME/.local/state/fleet-owned-tools"
-    chmod 644 "$HOME/.local/state/fleet-owned-tools"
-  '';
 
   # The host toolchains are the Linux half of PATH: apt owns /usr/local/go and
   # the CUDA toolkit, so these directories are host state, not profile state.

@@ -43,6 +43,8 @@
 
       darwinConfigurations.macbook = fleet.mkMacbook;
 
+      nixosConfigurations.probe = fleet.mkNixos "probe";
+
       packages = {
         x86_64-linux.home-manager = home-manager.packages.x86_64-linux.home-manager;
         aarch64-darwin.home-manager = home-manager.packages.aarch64-darwin.home-manager;
@@ -81,9 +83,5 @@
           localNames = [ "mac" "macbook" ];
         };
       };
-
-      fleet.ownedTools = builtins.mapAttrs (
-        _: pkg: pkg.outPath
-      ) (import ./nix/lib/owned-tools.nix { pkgs = nixpkgs.legacyPackages.x86_64-linux; });
     };
 }

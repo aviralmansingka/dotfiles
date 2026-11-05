@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, driverStatus, driverTask, droppableEventError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
+import { CAPTAIN_AGENT, CommanderInbox, FAILED_OUTBOX_LIMIT, MissionBridge, OUTBOX_FAILURE_LIMIT, WORKER_AGENT, askMessage, driverStatus, driverTask, droppableEventError, droppableReportError, isJudge, judgeTask, missionContinues, missionToolBlock, outboxErrorCode, quiescent, setAsideNotice, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -248,7 +248,7 @@ async function fixture(t, checkpoint=false) {
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
   // The launch is the CLI's, so the fake covers what a session still asks
   // Herdr for: the workspaces and panes it binds on, and the desk's own split.
-  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportCalls:[], workspaces:[], calls:[] };
+  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportRefusal:null, showFailures:0, reportCalls:[], workspaces:[], calls:[] };
   const run=async(binary,args,options={})=>{
     f.calls.push({binary,args,env:options.env});
     if(binary==="herdr") {
@@ -275,14 +275,20 @@ async function fixture(t, checkpoint=false) {
       }
       return JSON.stringify({result});
     }
+    // A record the CLI cannot answer for: the session still runs, and the read
+    // that breaks is the one the gate would otherwise trust.
+    if(binary===bin && args.includes("show") && f.showFailures-->0)
+      return JSON.stringify({ok:false,error:{code:"not_found",message:"mission vanished"}});
     if(binary===bin && args.includes("hook")) {
       f.hookIDs.push(args[args.indexOf("--event-id")+1]);
       if(f.hookFailures-->0) throw Error("Temporary CLI failure");
     }
     // A trooper report rides `progress --actor`; the fixture can lose one call
-    // so the outbox retry is exercised against the real CLI.
+    // so the outbox retry is exercised against the real CLI, or refuse every
+    // call with one CLI error code so the set-aside path is exercised.
     if(binary===bin && args.includes("progress")) {
       f.reportCalls.push(args);
+      if(f.reportRefusal) return JSON.stringify({ok:false,error:{code:f.reportRefusal,message:"a judge progress needs --session-id naming the judge session"}});
       if(f.reportFailures-->0) throw Error("Temporary CLI failure");
     }
     return (await exec(binary,args,{encoding:"utf8",...options})).stdout;
@@ -465,6 +471,139 @@ test("a trooper that finishes after its attempt settled leaves no wedged outbox"
   assert.equal(f.bridge.hint.outbox.length,0);assert.equal(f.bridge.error,null);
   const r=await f.bridge.call(["show",f.handle]);
   assert.equal(r.state.attempts[0].reports,undefined);
+});
+
+/** A bridge over a fake CLI: no vault, no mux, no session, no live call. It
+ *  records the argv one outbox item sends and answers with one canned reply, so
+ *  the delivery rules are testable without a mission record. */
+function outboxFixture(t, answer=()=>JSON.stringify({ok:true,data:{}})) {
+  const dir=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-outbox-")));
+  t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const env={...process.env,MISSION_VAULT:join(dir,"vault"),MISSION_STATE_DIR:dir,MISSION_BIN:"/bin/mission"};
+  delete env.PI_SUBAGENT_NAME;
+  const calls=[];
+  const bridge=new MissionBridge({env,run:async(binary,args)=>{calls.push({binary,args});return answer(args);}});
+  const ctx={...context(join(dir,"work"),join(dir,"pi.jsonl")),cwd:join(dir,"work")};
+  bridge.hint={handle:"dotfiles/judge-report",attempt:"attempt-1",token:"token",session:"existing-pi",vault:bridge.vault,outbox:[]};
+  // The queue source is the ledger's answer, not the attach hint: a fake-CLI
+  // bridge performs no ledger read, so the fixture states the one attempt the
+  // ledger would list. `hint.attempt` alone queues nothing — that is the rule
+  // a report must not escape.
+  bridge.ledgerAttempt="attempt-1";
+  return {bridge,ctx,calls,file:bridge.key(ctx)};
+}
+
+const USAGE_REFUSAL=()=>JSON.stringify({ok:false,error:{code:"usage",message:"a judge progress needs --session-id naming the judge session"}});
+
+test("a judge report carries its own session; every other report keeps today's argv", async t => {
+  const f=outboxFixture(t);
+  // The CLI's rule, matched on both sides: a name with the judge prefix is a
+  // judge, whatever its case, and nothing else is one.
+  assert.equal(isJudge("judge-S02"),true);assert.equal(isJudge("Judge-S02"),true);assert.equal(isJudge("  judge-S02  "),true);
+  for(const name of ["trooper-S01","sergeant-S01","",undefined,"adjudicator"]) assert.equal(isJudge(name),false,String(name));
+  const summary="Mapped the lifecycle hooks and listed 12 calls.",next="Read the result in this session";
+  const judgeMessage=trooperDone("judge-S02","done",{sessionId:"pi-judge-1",sessionFile:"/tmp/judge-S02.jsonl"});
+  const judge=trooperReport(judgeMessage);
+  // The identity the ID was hashed from travels with the report.
+  assert.equal(judge.session,"pi-judge-1");assert.equal(judge.session_file,"/tmp/judge-S02.jsonl");
+  await f.bridge.report(f.ctx,judgeMessage);
+  assert.equal(f.bridge.hint.outbox.length,0);assert.equal(f.calls.length,1);
+  assert.deepEqual(f.calls[0].args,["--json","--vault",f.bridge.vault,"progress","dotfiles/judge-report","--attempt","attempt-1",
+    "--event-id",judge.id,"--actor","judge-S02","--session-id","pi-judge-1","--session-file","/tmp/judge-S02.jsonl",
+    "--status","ready","--summary",summary,"--next",next]);
+  // A name without the judge prefix flushes exactly as it always did: no session
+  // flags, so its fingerprint against the CLI does not change.
+  const plainMessage=trooperDone("trooper-S01"),plain=trooperReport(plainMessage);
+  assert.equal(plain.session,undefined);assert.equal(plain.session_file,"/tmp/trooper-S01.jsonl");
+  await f.bridge.report(f.ctx,plainMessage);
+  assert.deepEqual(f.calls[1].args,["--json","--vault",f.bridge.vault,"progress","dotfiles/judge-report","--attempt","attempt-1",
+    "--event-id",plain.id,"--actor","trooper-S01","--status","ready","--summary",summary,"--next",next]);
+});
+
+test("a judge report with no session id is never queued and warns once", async t => {
+  const f=outboxFixture(t,USAGE_REFUSAL);
+  const nameless=trooperDone("judge-S02-final");
+  assert.equal(trooperReport(nameless).session,undefined);
+  await f.bridge.report(f.ctx,nameless);
+  // The CLI refuses this report by design, so it never reaches the outbox ...
+  assert.equal(f.bridge.hint.outbox.length,0);
+  assert.equal(f.calls.length,0,"an undeliverable judge report makes no CLI call");
+  // ... and the next tool result names the trooper, once.
+  assert.deepEqual(f.bridge.takeNotices(),["1 report could not be recorded: judge-S02-final (usage)"]);
+  assert.deepEqual(f.bridge.takeNotices(),[]);
+  await f.bridge.report(f.ctx,nameless);
+  assert.deepEqual(f.bridge.takeNotices(),[],"a replayed completion warns once");
+});
+
+test("a report refused three times leaves the outbox for the failed list", async t => {
+  const f=outboxFixture(t,USAGE_REFUSAL);
+  assert.equal(OUTBOX_FAILURE_LIMIT,3);assert.equal(FAILED_OUTBOX_LIMIT,20);
+  assert.equal(outboxErrorCode("usage: a judge progress needs --session-id"),"usage");
+  assert.equal(outboxErrorCode("Mission CLI returned invalid JSON"),"Mission CLI returned invalid JSON");
+  const report=trooperReport(trooperDone("trooper-S01"));
+  f.bridge.hint.outbox.push({attempt:"attempt-1",report});
+  // A failure the extension has no rule for still retries while it may pass.
+  for(let i=1;i<OUTBOX_FAILURE_LIMIT;i++) await assert.rejects(f.bridge.flush(f.ctx),/usage: a judge progress/);
+  // The flush that sets it aside returns instead of failing the tool call.
+  await f.bridge.flush(f.ctx);
+  assert.equal(f.bridge.hint.outbox.length,0);
+  const saved=JSON.parse(readFileSync(f.file,"utf8"));
+  assert.equal(saved.outbox.length,0);assert.equal(saved.failed.length,1);
+  assert.equal(saved.failed[0].report.trooper,"trooper-S01");assert.equal(saved.failed[0].failures,OUTBOX_FAILURE_LIMIT);
+  assert.match(saved.failed[0].error,/^usage: /);
+  assert.deepEqual(f.bridge.takeNotices(),["1 report could not be recorded: trooper-S01 (usage)"]);
+  // The list is bounded: only the newest entries survive.
+  for(let i=0;i<FAILED_OUTBOX_LIMIT+5;i++) f.bridge.setAside({attempt:"attempt-1",report:{...report,id:"trooper-"+i}},`io_error: ${i}`);
+  assert.equal(f.bridge.hint.failed.length,FAILED_OUTBOX_LIMIT);
+  assert.equal(f.bridge.hint.failed.at(-1).error,"io_error: 24");
+});
+
+test("a hook refused three times leaves the outbox and says a hook was lost", async t => {
+  const io=()=>JSON.stringify({ok:false,error:{code:"io_error",message:"no such file"}});
+  const f=outboxFixture(t,io);
+  f.bridge.hint.outbox.push({attempt:"attempt-1",event:{id:"event-1",type:"tool-start",session_id:"existing-pi",
+    session_file:"/tmp/pi.jsonl",summary:"Tool call call-1"}});
+  for(let i=1;i<OUTBOX_FAILURE_LIMIT;i++) await assert.rejects(f.bridge.flush(f.ctx),/io_error: /);
+  await f.bridge.flush(f.ctx);
+  assert.equal(f.bridge.hint.outbox.length,0);
+  const saved=JSON.parse(readFileSync(f.file,"utf8"));
+  assert.equal(saved.failed.length,1);assert.equal(saved.failed[0].event.type,"tool-start");
+  // A lost hook is never dropped silently: the ledger needed it, so it surfaces.
+  assert.deepEqual(f.bridge.takeNotices(),["1 hook could not be recorded: tool-start (io_error)"]);
+});
+
+test("the tool call that sets an item aside succeeds and carries one line",needsCLI,async t=>{
+  const f=await fixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:()=>{},setStatus:()=>{}}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},ctx);
+  const claim=await tools.mission.execute("attach",{action:"attach",handle:f.handle},null,null,ctx);
+  assert.equal(claim.isError,undefined,claim.content?.[0]?.text);
+  // The CLI refuses this report every time with an error the extension has no
+  // rule for: the incident's own `usage` refusal.
+  f.reportRefusal="usage";
+  await events.message_end({message:trooperDone("trooper-S01")},ctx);
+  const state=()=>JSON.parse(readFileSync(join(f.cache,readdirSync(f.cache).filter(n=>n.endsWith(".json"))[0]),"utf8"));
+  assert.equal(state().outbox.length,1);
+  // Two failed flushes still fail the editing tool call, exactly as before.
+  assert.equal((await events.tool_call({toolName:"write"},ctx)).block,true);
+  // The third sets the item aside, so the tool call runs.
+  assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
+  const flushed=state();
+  assert.equal(flushed.outbox.length,0);
+  assert.deepEqual(flushed.failed.map(x=>x.report.trooper),["trooper-S01"]);
+  // Its result keeps what the tool returned and adds the one line, once.
+  const result=await events.tool_result({toolCallId:"write-1",toolName:"write",isError:false,content:[{type:"text",text:"wrote"}],details:{path:"x"}},ctx);
+  assert.equal(result.content[0].text,"wrote");
+  // The patch names only the content: an omitted field keeps its value, so the
+  // tool's own details still reach the transcript.
+  assert.deepEqual(Object.keys(result),["content"]);
+  assert.equal(result.content.at(-1).text,"1 report could not be recorded: trooper-S01 (usage)");
+  assert.equal(await events.tool_result({toolCallId:"read-1",toolName:"read",isError:false,content:[{type:"text",text:"read"}]},ctx),undefined);
+  await events.session_shutdown({},ctx);
 });
 
 test("failed checks retain ownership and successful correction settles it",needsCLI,async t=>{
@@ -1360,12 +1499,12 @@ test("a broken tracking record blocks edits and warns on reads",needsCLI,async t
   factory(pi,{env:f.env,run:f.run});
   await events.session_start({},ctx);
   await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,ctx);
-  // One lost hook leaves its retry in the outbox; every later flush fails, so
-  // the record this session reads never recovers.
+  // One lost hook leaves its retry in the outbox; the record this session reads
+  // never recovers, so every tool call reports the break.
   f.hookFailures=1;
   await events.tool_execution_start({toolName:"read",toolCallId:"lost"},ctx);
   assert.ok(notifications.some(n=>/Mission tracking: /.test(n.text)),"the lost hook is reported");
-  f.hookFailures=99;
+  f.showFailures=99;
   for(const toolName of ["bash","read","grep"]) assert.equal(await events.tool_call({toolName},ctx),undefined,`${toolName} runs while tracking is broken`);
   assert.ok(notifications.some(n=>n.tone==="warning"&&/Mission tracking: /.test(n.text)));
   for(const toolName of ["write","edit"]) {
@@ -1373,7 +1512,7 @@ test("a broken tracking record blocks edits and warns on reads",needsCLI,async t
     assert.equal(blocked.block,true,`${toolName} stays blocked`);assert.match(blocked.reason,/Mission tracking must recover before work continues/);
   }
   // A recovered record restores every tool again.
-  f.hookFailures=0;
+  f.showFailures=0;
   assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
   await events.session_shutdown({},ctx);
 });
@@ -1645,4 +1784,114 @@ test("the panel opens the mission desk in a Herdr pane", async () => {
   // Outside Herdr the desk has no pane, so the caller notifies instead.
   const outside = new MissionBridge({ env: { ...process.env, HERDR_ENV: "0" } });
   await assert.rejects(outside.openDesk(), /Herdr pane/);
+});
+
+// The ask channel's fixtures: a vault with ask files, and a Rex seat that answers
+// the role probe. No live mux and no mission CLI takes part.
+function askVault(root, asks) {
+  const vault = join(root, "vault");
+  for (const ask of asks) {
+    const dir = join(vault, "6_missions", ask.handle, "asks");
+    mkdirSync(dir, { recursive: true });
+    const { stamp = "20261105T191938.000000000Z", ...fields } = ask;
+    writeFileSync(join(dir, `${stamp}-${ask.id}.json`), JSON.stringify({
+      id: ask.id, handle: ask.handle, step: "S01", kind: "blocked", text: "A question.", at: "2026-11-05T19:19:38Z", ...fields,
+    }, null, 2) + "\n");
+  }
+  return vault;
+}
+const rexSeat = windows => async (binary, args) => {
+  assert.equal(binary, "rex", "the role probe reaches Rex, not the mission CLI");
+  if (args[0] === "block" && args[1] === "inspect") return JSON.stringify({ block: { block_id: args[2], window_id: "window:cmd" } });
+  if (args[0] === "window" && args[1] === "ls") return JSON.stringify({ windows });
+  throw Error("unexpected rex call: " + args.join(" "));
+};
+function storedAsks(vault, handle) {
+  const dir = join(vault, "6_missions", handle, "asks");
+  return readdirSync(dir).map(name => JSON.parse(readFileSync(join(dir, name), "utf8")));
+}
+
+test("the commander drains each ask once and a second drain sends nothing", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [
+    { id: "ask-a", handle: "dotfiles/x", stamp: "20261105T191938.000000000Z", step: "S02", attempt: "attempt-1", kind: "blocked", text: "CI cannot reach the registry." },
+    { id: "ask-b", handle: "dotfiles/y", stamp: "20261105T192000.000000000Z", step: "S01", kind: "question", text: "Which remote should I push to?" },
+  ]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: rexSeat([{ window_id: "window:cmd", label: "commander" }]),
+    send: (message, options) => sent.push({ message, options }), now: () => "2026-11-05T19:21:00.000000000Z",
+  });
+  const delivered = await inbox.drain("commander-session");
+  assert.deepEqual(delivered.map(ask => ask.id), ["ask-a", "ask-b"], "oldest first");
+  // Two handles, two messages, each naming the handle, the step and the kind.
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].message.content, "[mission dotfiles/x · S02 · blocked] CI cannot reach the registry.");
+  assert.equal(sent[1].message.content, "[mission dotfiles/y · S01 · question] Which remote should I push to?");
+  assert.equal(sent[0].options.deliverAs, "followUp");
+  // Delivery is recorded in the same file, so no restart can deliver it twice.
+  for (const [handle, id] of [["dotfiles/x", "ask-a"], ["dotfiles/y", "ask-b"]]) {
+    const ask = storedAsks(vault, handle).find(value => value.id === id);
+    assert.equal(ask.delivered_at, "2026-11-05T19:21:00.000000000Z");
+    assert.equal(ask.delivered_to, "commander-session");
+    assert.equal(ask.step, id === "ask-a" ? "S02" : "S01", "delivery keeps the rest of the ask");
+  }
+  assert.deepEqual(await inbox.drain("commander-session"), []);
+  assert.equal(sent.length, 2, "a delivered ask is never sent twice");
+});
+
+// Consecutive asks from one handle arrive as one message, so a captain that asks
+// three things at once is one interruption rather than three.
+test("consecutive asks from one handle arrive as one message", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [
+    { id: "ask-a", handle: "dotfiles/x", stamp: "20261105T191938.000000000Z", text: "Which branch?" },
+    { id: "ask-b", handle: "dotfiles/x", stamp: "20261105T191939.000000000Z", text: "Which remote?" },
+    { id: "ask-c", handle: "dotfiles/y", stamp: "20261105T191940.000000000Z", text: "Is the registry up?" },
+  ]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: rexSeat([{ window_id: "window:cmd", label: "commander" }]),
+    send: message => sent.push(message.content),
+  });
+  assert.equal((await inbox.drain("commander-session")).length, 3);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0], "[mission dotfiles/x · S01 · blocked] Which branch?\n[mission dotfiles/x · S01 · blocked] Which remote?");
+  assert.equal(sent[1], "[mission dotfiles/y · S01 · blocked] Is the registry up?");
+});
+
+// A captain's own pane is not the commander, so nothing is delivered there.
+test("a session that is not the commander drains nothing", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [{ id: "ask-a", handle: "dotfiles/x", text: "Which branch?" }]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:captain" },
+    run: rexSeat([{ window_id: "window:captain", label: "captain-x" }]),
+    send: message => sent.push(message.content),
+  });
+  assert.deepEqual(await inbox.drain("captain-session"), []);
+  assert.deepEqual(sent, []);
+  assert.equal(storedAsks(vault, "dotfiles/x")[0].delivered_at, undefined);
+  // A Herdr session is never the Rex commander, and it probes no Rex at all.
+  const herdr = new CommanderInbox({
+    vault, env: { HERDR_ENV: "1", HERDR_PANE_ID: "w:p1", REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: async () => { throw Error("a Herdr session must not probe Rex for the commander seat"); },
+    send: message => sent.push(message.content),
+  });
+  assert.deepEqual(await herdr.drain("herdr-session"), []);
+  assert.deepEqual(sent, []);
+});
+
+// A decision ask carries the exact checkpoint command that answers it.
+test("a decision ask renders the checkpoint command", () => {
+  assert.equal(askMessage([{ handle: "dotfiles/x", step: "S02", kind: "decision", text: "Accept the migration plan?" }]),
+    "[mission dotfiles/x · S02 · decision] Accept the migration plan?\n" +
+    'Answer with: mission checkpoint accept|revise dotfiles/x C01 --note "…"');
+  assert.doesNotMatch(askMessage([{ handle: "dotfiles/x", step: "S02", kind: "blocked", text: "Stuck." }]), /checkpoint/);
 });
