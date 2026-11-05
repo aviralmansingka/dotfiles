@@ -43,6 +43,8 @@
 
       darwinConfigurations.macbook = fleet.mkMacbook;
 
+      nixosConfigurations.probe = fleet.mkNixos "probe";
+
       packages = {
         x86_64-linux.home-manager = home-manager.packages.x86_64-linux.home-manager;
         aarch64-darwin.home-manager = home-manager.packages.aarch64-darwin.home-manager;
