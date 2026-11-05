@@ -6,10 +6,12 @@
 # Keys, by name:
 #   admin      one age key on the workstation, ~/.config/sops/age/keys.txt.
 #              Never committed. Every rule carries it.
-#   homelab    the lab's own SSH host key, converted to an age recipient:
-#                ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub
-#              A host decrypts with the key it already has, so no new identity
-#              is minted per host.
+#   homelab    a machine-local age identity minted on the lab,
+#              `age-keygen -o ~/.config/sops/age/keys.txt` (0400, avirus, never
+#              committed). The old host-key-derived recipient (age17swx…) is
+#              retired: host-key material is no longer fleet identity, so a
+#              compromise of the login user no longer yields the host's SSH key
+#              and the SSH key's exposure no longer yields the secrets.
 #
 # A host is added by appending its recipient to its rule and running
 # `just secrets-rotate secrets/<host>.yaml` (sops updatekeys), then editing.
@@ -20,7 +22,7 @@ creation_rules:
   - path_regex: (^|/)secrets/homelab\.yaml$
     age: >-
       age136twwr04txevsmp7gme8ckgryp9jz4ymck64t44w5qe66n3medyqazyyed,
-      age17swxezghnrynwl4lpuar4pvgc5wfkff8wftxl0sk60uk8p2d0ddq9kp9u8
+      age12yxjvnql2ecdrsd9jz465zhs3n6expd79jzksjf2ntjhxmsry90qmv85my
 
   - path_regex: (^|/)secrets/probe\.yaml$
     age: >-
