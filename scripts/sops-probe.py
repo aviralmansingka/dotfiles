@@ -409,14 +409,17 @@ def add_recipient(
     if dry_run:
         if changed:
             say("dry run: would add %s to the rule for %s" % (recipient, sops_file_arg))
-        say("dry run: would run `sops updatekeys %s`" % sops_file_arg)
+        say("dry run: would run `sops updatekeys -y %s`" % sops_file_arg)
         return {"changed": changed, "recipients": len(wrapped_before), "dry_run": True}
 
     sops = sops_bin or resolve_sops()
     # cwd=repo: sops resolves `.sops.yaml` from the file's directory upward, and
     # a relative file name (the default) only works from the repo root anyway.
+    # `-y` is not optional cosmetics: without it sops asks "Is this okay? (y/n)"
+    # on stdin and aborts with `EOF` when there is no tty, which is every run
+    # from a recipe, an agent or a script.
     result = subprocess.run(
-        [sops, "updatekeys", str(sops_path)],
+        [sops, "updatekeys", "-y", str(sops_path)],
         capture_output=True,
         text=True,
         cwd=str(repo),
@@ -574,6 +577,9 @@ import re
 import sys
 
 assert sys.argv[1] == "updatekeys", sys.argv
+# The real sops prompts "Is this okay? (y/n)" and aborts with EOF when there
+# is no tty, so the non-interactive flag is part of the contract.
+assert "-y" in sys.argv or "--yes" in sys.argv, sys.argv
 path = sys.argv[-1]
 config = open(os.path.join(os.path.dirname(os.path.dirname(path)), ".sops.yaml")).read()
 recipient = re.findall(r"age1[0-9a-z]{20,}", config)[-1]
@@ -664,17 +670,24 @@ def run_self_test() -> int:
         )
 
     # 7. The edit touches the matching rule only and keeps the comments.
+    #    Counts are relative to the file on disk: a real probe run leaves an
+    #    extra recipient in the rule, and this proof must not depend on it.
     def t_edit():
         new = "age1" + "z" * 58
+        probe_before = rule_for(config_text, DEFAULT_SOPS_FILE)["recipients"]
+        homelab_before = rule_for(config_text, "secrets/homelab.yaml")["recipients"]
         text, changed = add_recipient_text(config_text, DEFAULT_SOPS_FILE, new)
         assert changed, "no change reported"
         rules = {r["regex"]: r["recipients"] for r in parse_rules(text)}
         probe_rule = rule_for(text, DEFAULT_SOPS_FILE)["recipients"]
         homelab_rule = rule_for(text, "secrets/homelab.yaml")["recipients"]
         assert probe_rule[-1] == new, "probe rule did not gain the recipient"
-        assert len(probe_rule) == 2, "probe rule has %d recipients" % len(probe_rule)
+        assert len(probe_rule) == len(probe_before) + 1, (
+            "probe rule has %d recipients, want %d"
+            % (len(probe_rule), len(probe_before) + 1)
+        )
         assert new not in homelab_rule, "edit leaked into the homelab rule"
-        assert len(homelab_rule) == 2, "homelab rule changed"
+        assert len(homelab_rule) == len(homelab_before), "homelab rule changed"
         assert len(rules) == 2, "rule count changed"
         assert text.count("\n#") == config_text.count("\n#"), "comments were dropped"
         again, changed_again = add_recipient_text(text, DEFAULT_SOPS_FILE, new)
@@ -702,7 +715,8 @@ def run_self_test() -> int:
             result = add_recipient(
                 root, DEFAULT_SOPS_FILE, recipient, sops_bin=str(stub)
             )
-            assert result["changed"] and result["recipients"] == 2, result
+            assert result["changed"], result
+            assert result["recipients"] == len(sops_recipients(probe_text)) + 1, result
             wrapped = sops_recipients((root / DEFAULT_SOPS_FILE).read_text())
             assert recipient in wrapped, "recipient not wrapped"
             assert (root / ".sops.yaml").read_text().count("\n#") == (
