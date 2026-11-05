@@ -254,8 +254,45 @@ export function trooperReport(message) {
     : status === "needs-input" ? `Steer it with ${follow}` : `Resume or replace it with ${follow}`;
   const session = String(details.sessionFile || details.sessionId || trooper);
   const report = { id: "trooper-" + hash([session, status, summary].join("\u0000")).slice(0, 24), trooper, status, summary, next };
+  // A judge report carries the session that judged: the CLI refuses a judge
+  // progress that names no session, so the identity the ID was hashed from
+  // travels with the report instead of staying behind in the hash.
+  const sessionID = String(details.sessionId ?? "").trim();
+  const sessionFile = String(details.sessionFile ?? "").trim();
+  if (sessionID) report.session = sessionID;
+  if (sessionFile) report.session_file = sessionFile;
   if (status !== "ready") report.blocker = trooperLine(details.errorMessage ?? details.error ?? "", 160) || summary;
   return report;
+}
+
+/** The CLI's own rule for a judge report: an actor whose trimmed, lowercased
+ *  name starts with "judge" is a judge, and only a judge's report names the
+ *  session behind it (`isJudge` in go/mission/cmd/mission/attempt.go, where the
+ *  actor is trimmed before this test). Matched here rather than re-invented, so
+ *  the two sides cannot drift into the refusal that wedged a captain. */
+export function isJudge(trooper) {
+  return String(trooper ?? "").trim().toLowerCase().startsWith("judge");
+}
+
+/** How many one-line notices a session holds for its next tool result. */
+export const OUTBOX_NOTICE_LIMIT = 20;
+
+/** The CLI error code of one failed outbox delivery: the `code: ` prefix every
+ *  CLI problem carries, or a clipped message when the answer is not the CLI's
+ *  (a binary that is gone, invalid JSON). */
+export function outboxErrorCode(message) {
+  const text = String(message ?? "").trim();
+  return /^([a-z_]+): /.exec(text)?.[1] ?? (text.split("\n")[0].slice(0, 60) || "unknown");
+}
+
+/** The one line a set-aside outbox item leaves in the next tool result, so a
+ *  report or a hook the ledger never took is visible without failing the tool
+ *  call that flushed it. */
+export function setAsideNotice(item, error) {
+  const code = outboxErrorCode(error);
+  return item.report
+    ? `1 report could not be recorded: ${item.report.trooper} (${code})`
+    : `1 hook could not be recorded: ${item.event?.type || "unknown"} (${code})`;
 }
 
 /** CLI refusals that make a queued trooper report permanently undeliverable: the
@@ -317,6 +354,11 @@ export class MissionBridge {
     });
     this.hint = null;
     this.error = null;
+    // Lines the outbox owes the next tool result, drained once: a set-aside item
+    // and a judge report that carried no session are both reported this way.
+    this.notices = [];
+    // Report IDs already warned about, so a replayed completion warns once.
+    this.warned = new Set();
     // The attempt whose contract this session already delivered: the contract
     // goes with the attach, and the turns after it stay short.
     this.contractAttempt = null;
@@ -532,13 +574,28 @@ export class MissionBridge {
     }
     this.error = null;
   }
+  /** Queue one line for the next tool result. Display only: the state file
+   *  keeps the facts. */
+  notice(text) { this.notices = [...this.notices, text].slice(-OUTBOX_NOTICE_LIMIT); }
+  /** Take the lines the outbox owes the next tool result. Drained once, so a
+   *  notice never repeats in every later result of the session. */
+  takeNotices() { const notes = this.notices; this.notices = []; return notes; }
   /** Send one outbox item: a lifecycle hook, or one trooper report. Hook argv
    *  contains bounded metadata only; credentials travel in env. */
   async deliver(item) {
     if (item.report) {
       const r = item.report;
       const args = ["progress", this.hint.handle, "--attempt", item.attempt, "--event-id", r.id,
-        "--actor", r.trooper, "--status", r.status, "--summary", r.summary];
+        "--actor", r.trooper];
+      // A judge records who judged, so the CLI requires the judge's own session
+      // (go/mission/cmd/mission/attempt.go). A non-judge report sends exactly
+      // the argv it always sent, so its fingerprint does not change.
+      if (isJudge(r.trooper)) {
+        if (!r.session) throw new Error("usage: a judge progress needs --session-id naming the judge session");
+        args.push("--session-id", r.session);
+        if (r.session_file) args.push("--session-file", r.session_file);
+      }
+      args.push("--status", r.status, "--summary", r.summary);
       if (r.next) args.push("--next", r.next);
       if (r.blocker) args.push("--blocker", r.blocker);
       return this.call(args, this.hint.token);
@@ -558,6 +615,18 @@ export class MissionBridge {
     if (!this.hint?.attempt) return;
     const report = trooperReport(message);
     if (!report) return;
+    // A judge report that names no session can never be delivered — the CLI
+    // refuses it by design — so it never enters the outbox. It is surfaced
+    // once instead, and the rest of the outbox keeps moving.
+    if (isJudge(report.trooper) && !report.session) {
+      if (!this.warned.has(report.id)) {
+        // One bounded set of warned IDs: a long session must not grow it.
+        if (this.warned.size >= 256) this.warned.clear();
+        this.warned.add(report.id);
+        this.notice(setAsideNotice({ report }, "usage: a judge progress needs --session-id naming the judge session"));
+      }
+      return;
+    }
     if (this.hint.outbox.some(item => item.report?.id === report.id)) return;
     if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
     this.hint.outbox.push({ attempt: this.hint.attempt, report });

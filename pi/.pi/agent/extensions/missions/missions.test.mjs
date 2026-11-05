@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAPTAIN_AGENT, CommanderInbox, MissionBridge, WORKER_AGENT, askMessage, driverStatus, driverTask, droppableReportError, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
+import { CAPTAIN_AGENT, CommanderInbox, MissionBridge, WORKER_AGENT, askMessage, driverStatus, driverTask, droppableReportError, isJudge, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -464,6 +464,63 @@ test("a trooper that finishes after its attempt settled leaves no wedged outbox"
   assert.equal(f.bridge.hint.outbox.length,0);assert.equal(f.bridge.error,null);
   const r=await f.bridge.call(["show",f.handle]);
   assert.equal(r.state.attempts[0].reports,undefined);
+});
+
+/** A bridge over a fake CLI: no vault, no mux, no session, no live call. It
+ *  records the argv one outbox item sends and answers with one canned reply, so
+ *  the delivery rules are testable without a mission record. */
+function outboxFixture(t, answer=()=>JSON.stringify({ok:true,data:{}})) {
+  const dir=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-outbox-")));
+  t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const env={...process.env,MISSION_VAULT:join(dir,"vault"),MISSION_STATE_DIR:dir,MISSION_BIN:"/bin/mission"};
+  delete env.PI_SUBAGENT_NAME;
+  const calls=[];
+  const bridge=new MissionBridge({env,run:async(binary,args)=>{calls.push({binary,args});return answer(args);}});
+  const ctx={...context(join(dir,"work"),join(dir,"pi.jsonl")),cwd:join(dir,"work")};
+  bridge.hint={handle:"dotfiles/judge-report",attempt:"attempt-1",token:"token",session:"existing-pi",vault:bridge.vault,outbox:[]};
+  return {bridge,ctx,calls,file:bridge.key(ctx)};
+}
+
+const USAGE_REFUSAL=()=>JSON.stringify({ok:false,error:{code:"usage",message:"a judge progress needs --session-id naming the judge session"}});
+
+test("a judge report carries its own session; every other report keeps today's argv", async t => {
+  const f=outboxFixture(t);
+  // The CLI's rule, matched on both sides: a name with the judge prefix is a
+  // judge, whatever its case, and nothing else is one.
+  assert.equal(isJudge("judge-S02"),true);assert.equal(isJudge("Judge-S02"),true);assert.equal(isJudge("  judge-S02  "),true);
+  for(const name of ["trooper-S01","sergeant-S01","",undefined,"adjudicator"]) assert.equal(isJudge(name),false,String(name));
+  const summary="Mapped the lifecycle hooks and listed 12 calls.",next="Read the result in this session";
+  const judgeMessage=trooperDone("judge-S02","done",{sessionId:"pi-judge-1",sessionFile:"/tmp/judge-S02.jsonl"});
+  const judge=trooperReport(judgeMessage);
+  // The identity the ID was hashed from travels with the report.
+  assert.equal(judge.session,"pi-judge-1");assert.equal(judge.session_file,"/tmp/judge-S02.jsonl");
+  await f.bridge.report(f.ctx,judgeMessage);
+  assert.equal(f.bridge.hint.outbox.length,0);assert.equal(f.calls.length,1);
+  assert.deepEqual(f.calls[0].args,["--json","--vault",f.bridge.vault,"progress","dotfiles/judge-report","--attempt","attempt-1",
+    "--event-id",judge.id,"--actor","judge-S02","--session-id","pi-judge-1","--session-file","/tmp/judge-S02.jsonl",
+    "--status","ready","--summary",summary,"--next",next]);
+  // A name without the judge prefix flushes exactly as it always did: no session
+  // flags, so its fingerprint against the CLI does not change.
+  const plainMessage=trooperDone("trooper-S01"),plain=trooperReport(plainMessage);
+  assert.equal(plain.session,undefined);assert.equal(plain.session_file,"/tmp/trooper-S01.jsonl");
+  await f.bridge.report(f.ctx,plainMessage);
+  assert.deepEqual(f.calls[1].args,["--json","--vault",f.bridge.vault,"progress","dotfiles/judge-report","--attempt","attempt-1",
+    "--event-id",plain.id,"--actor","trooper-S01","--status","ready","--summary",summary,"--next",next]);
+});
+
+test("a judge report with no session id is never queued and warns once", async t => {
+  const f=outboxFixture(t,USAGE_REFUSAL);
+  const nameless=trooperDone("judge-S02-final");
+  assert.equal(trooperReport(nameless).session,undefined);
+  await f.bridge.report(f.ctx,nameless);
+  // The CLI refuses this report by design, so it never reaches the outbox ...
+  assert.equal(f.bridge.hint.outbox.length,0);
+  assert.equal(f.calls.length,0,"an undeliverable judge report makes no CLI call");
+  // ... and the next tool result names the trooper, once.
+  assert.deepEqual(f.bridge.takeNotices(),["1 report could not be recorded: judge-S02-final (usage)"]);
+  assert.deepEqual(f.bridge.takeNotices(),[]);
+  await f.bridge.report(f.ctx,nameless);
+  assert.deepEqual(f.bridge.takeNotices(),[],"a replayed completion warns once");
 });
 
 test("failed checks retain ownership and successful correction settles it",needsCLI,async t=>{

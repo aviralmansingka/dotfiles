@@ -507,7 +507,11 @@ rather than the one it left behind; both completions stay in the append-only
 progress stream. The extension sends one report per finished interactive subagent
 through the same outbox as its lifecycle hooks, so a reload replays the report
 under its original ID instead of appending a second copy, and a judge step records
-the judge rather than the worker that spawned it.
+the judge rather than the worker that spawned it. A report whose trooper name
+starts with `judge` also carries that subagent's `--session-id`/`--session-file`,
+because the CLI refuses a judge progress that names no session; a judge report
+that has no session id can never be delivered, so it is never queued and one
+warning names the trooper instead.
 Evidence belongs to the current attempt. Lifecycle hooks record only event metadata,
 tool names/call IDs, session identity, and transcript snapshots. They omit tool
 arguments and outputs. Transcripts themselves can contain sensitive conversation
