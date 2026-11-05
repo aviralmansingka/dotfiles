@@ -1663,7 +1663,7 @@ async function launchSubagent(
 ): Promise<RunningSubagent> {
   const adoptPane = typeof params.pane === "string" ? params.pane.trim() : "";
   if (adoptPane) {
-    if (activeSurface !== "herdr" && activeSurface !== "rex") {
+    if (activeSurface() !== "herdr" && activeSurface() !== "rex") {
       throw new Error("Pane adoption requires Herdr or Rex; this session runs on another surface");
     }
     const adoptDefs = params.agent ? loadAgentDefaults(params.agent) : null;
@@ -1721,7 +1721,7 @@ async function launchSubagentOnSurface(
   await sleep(
     getShellReadyDelayMs(),
     undefined,
-    activeSurface === "herdr" ? { signal } : undefined,
+    activeSurface() === "herdr" ? { signal } : undefined,
   );
 
   const launchBehavior = resolveLaunchBehavior(params, agentDefs);
@@ -1788,7 +1788,7 @@ async function launchSubagentOnSurface(
 
     // Herdr launches the CLI first and submits the task only after native agent
     // detection reports an interactive prompt. Tmux retains its positional prompt.
-    const promptAfterStartup = activeSurface === "herdr";
+    const promptAfterStartup = activeSurface() === "herdr";
     if (!promptAfterStartup) cmdParts.push(shellEscape(params.task));
 
     const cdPrefix = effectiveCwd ? `cd ${shellEscape(effectiveCwd)} && ` : "";
@@ -1938,7 +1938,7 @@ async function launchSubagentOnSurface(
     taskArg = `@${artifactPath}`;
   }
 
-  const promptAfterStartup = activeSurface === "herdr";
+  const promptAfterStartup = activeSurface() === "herdr";
   const promptArgs = buildPiPromptArgs({
     effectiveSkills,
     taskDelivery: launchBehavior.taskDelivery,
@@ -3194,7 +3194,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         await sleep(
           getShellReadyDelayMs(),
           undefined,
-          activeSurface === "herdr" ? { signal: launchSignal } : undefined,
+          activeSurface() === "herdr" ? { signal: launchSignal } : undefined,
         );
 
         // Build pi resume command
@@ -3227,7 +3227,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           );
           mkdirSync(dirname(resumeMsgFile), { recursive: true });
           writeFileSync(resumeMsgFile, message, "utf8");
-          if (activeSurface !== "herdr") parts.push(shellEscape(`@${resumeMsgFile}`));
+          if (activeSurface() !== "herdr") parts.push(shellEscape(`@${resumeMsgFile}`));
         }
 
         // Build env prefix — replay the snapshot's config dir + spawn whitelist
@@ -3268,7 +3268,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             .replace(/-+/g, "-")
             .replace(/^-|-$/g, "") || "resume"}-resume-${Date.now()}.sh`,
         );
-        if (activeSurface === "herdr") launchSignal.throwIfAborted();
+        if (activeSurface() === "herdr") launchSignal.throwIfAborted();
         sendLongCommand(surface, command, {
           scriptPath: launchScriptFile,
           scriptPreamble: [
@@ -3279,7 +3279,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             ...(resumeMsgFile ? [`# Resume message file: ${resumeMsgFile}`] : []),
           ].join("\n"),
         });
-        if (activeSurface === "herdr") {
+        if (activeSurface() === "herdr") {
           await waitForAgentReady(surface, launchSignal);
           launchSignal.throwIfAborted();
           if (message) sendAgentPrompt(surface, message);
