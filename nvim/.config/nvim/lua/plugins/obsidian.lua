@@ -102,6 +102,13 @@ return {
     -- Note finding and creation
     { "<leader>of", "<cmd>ObsidianQuickSwitch<cr>", desc = "Find note" },
     { "<leader>og", "<cmd>ObsidianSearch<cr>", desc = "Grep notes" },
+    {
+      "<leader>oi",
+      function()
+        require("helpers.link_picker").open()
+      end,
+      desc = "Insert link",
+    },
     { "<leader>on", "<cmd>ObsidianNew<cr>", desc = "New note" },
 
     -- Backlinks and links: handled by custom Snacks picker in markdown.lua

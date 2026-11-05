@@ -673,7 +673,7 @@ H.run("plugin_configs/obsidian", function()
   local p = opts.note_path_func({ dir = mk("/vault/notes"), id = "weekly-work-log" })
   H.eq(p.v, "/vault/notes/weekly-work-log.md", "note path = dir/id.md")
 
-  -- Keymap entries: find/grep/new/template/backlog/rename/open.
+  -- Keymap entries: find/grep/link/new/template/backlog/rename/open.
   local by_lhs = {}
   for _, k in ipairs(spec.keys) do
     by_lhs[k[1]] = k
@@ -681,6 +681,7 @@ H.run("plugin_configs/obsidian", function()
   for _, lhs in ipairs({
     "<leader>of",
     "<leader>og",
+    "<leader>oi",
     "<leader>on",
     "<leader>oT",
     "<leader>vb",
