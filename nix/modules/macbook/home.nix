@@ -15,9 +15,13 @@
 
   # `go` and `node` come from ../shared and are pinned in neither place: two
   # node derivations in the profile collide on bin/node in buildEnv. `bun` stays
-  # local because ../shared does not carry it.
+  # local because ../shared does not carry it. `age` and `age-plugin-se` are
+  # local for the same reason: `age-plugin-se` mints the Secure Enclave identity
+  # this Mac decrypts with, and it is Darwin-only, so ../shared cannot carry it.
   home.packages = with pkgs; [
     bun
+    age
+    age-plugin-se
   ];
 
   home.sessionVariables = {
