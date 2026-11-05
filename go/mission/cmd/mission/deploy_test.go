@@ -726,11 +726,18 @@ func TestDeployNeedsAWorktree(t *testing.T) {
 	}
 }
 
-// One adapter today. An unknown mux is named, not silently treated as rex.
-func TestDeployRefusesAnotherMux(t *testing.T) {
+// Two adapters, and an unknown mux is named, not silently treated as one of
+// them. It is refused before deploy reads the record, so a mission with no
+// worktree still hears the mux's own name.
+func TestDeployRefusesAnUnknownMux(t *testing.T) {
 	s, h := fixture(t)
 	_, e := s.deploy(h, "tmux")
 	wantCode(t, e, "mux_unsupported")
+	for _, want := range []string{"rex", "herdr", `"tmux"`} {
+		if !strings.Contains(e.Error(), want) {
+			t.Fatalf("the refusal does not name %q: %v", want, e)
+		}
+	}
 }
 
 // A closed mission deploys nothing, and the error is the record's own.
@@ -744,10 +751,12 @@ func TestDeployRefusesAClosedMission(t *testing.T) {
 }
 
 // The command path: `mission deploy` reaches the same seats, with rex as the
-// default mux.
+// default mux. The chosen adapter seats and the other one is never asked: a rex
+// deployment makes no Herdr call.
 func TestDeployCommandUsesRexByDefault(t *testing.T) {
 	s, h, _ := piFixture(t)
 	f := fakeRex(t)
+	herdr := fakeHerdr(t)
 	a, e := platform.ParseArgs([]string{"deploy", h, "--json"})
 	must(t, e)
 	v, e := cmdDeploy(a, s)
@@ -757,6 +766,9 @@ func TestDeployCommandUsesRexByDefault(t *testing.T) {
 	}
 	if !f.used("session.new_window") {
 		t.Fatal("the command seated no captain")
+	}
+	if len(herdr.calls) != 0 {
+		t.Fatalf("a rex deployment called herdr: %v", herdr.calls)
 	}
 }
 
@@ -840,7 +852,7 @@ func TestDeployRefusesToWriteIntoAShellThatNeverStarts(t *testing.T) {
 	f.starting = -1
 	p, e := s.plan(h, "rex", "")
 	must(t, e)
-	if _, e = seatCaptain(p, "session:army"); e == nil {
+	if _, e = (rexSeat{}).place(p, "session:army"); e == nil {
 		t.Fatal("the seat wrote into a block whose shell never started")
 	}
 	wantCode(t, e, "rex_error")
@@ -869,7 +881,7 @@ func TestDeployFailsWhenPiNeverTakesTheSeat(t *testing.T) {
 	f.shellForeground = true
 	p, e := s.plan(h, "rex", "")
 	must(t, e)
-	if _, e = seatCaptain(p, "session:army"); e == nil {
+	if _, e = (rexSeat{}).place(p, "session:army"); e == nil {
 		t.Fatal("a seat whose shell never became pi was reported as seated")
 	}
 	wantCode(t, e, "rex_error")
