@@ -410,6 +410,11 @@ phase_guards() {
   # The Nix bootstrap is the one allowed download, and it must stay guarded by
   # a `command -v nix` test so a second run does nothing.
   guard_line 'install\.determinate\.systems' 'command -v nix' 6
+
+  # The gh-dash extension install is the one network step after stow; a host
+  # whose profile switch has not landed yet has no gh, so it must stay behind
+  # a `command -v gh` test.
+  guard_line 'gh extension install' 'command -v gh'
 }
 
 
