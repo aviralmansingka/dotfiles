@@ -27,35 +27,126 @@ const jiti = createJiti(import.meta.url, {
 	alias: { "@earendil-works/pi-coding-agent": stubPi },
 });
 
+const gitRun = (cwd, args) =>
+	execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+
+/** A temp repository with one linked worktree, named by the caller. */
+const tempRepo = (prefix, worktreeName) => {
+	const repo = mkdtempSync(join(tempRoot, prefix));
+	gitRun(repo, ["init", "-q", "-b", "main"]);
+	gitRun(repo, ["config", "user.email", "test@test"]);
+	gitRun(repo, ["config", "user.name", "test"]);
+	writeFileSync(join(repo, "f.txt"), "x");
+	gitRun(repo, ["add", "."]);
+	gitRun(repo, ["commit", "-q", "-m", "init"]);
+	const branch = `feat-${worktreeName}`;
+	const wt = join(repo, worktreeName);
+	gitRun(repo, ["worktree", "add", "-q", "-b", branch, wt]);
+	return { repo, wt, branch };
+};
+
 try {
 	const ext = jiti("./cleanup.ts");
 
+	// --- /cleanup handler: the spawn guard -------------------------------------
+	//
+	// The guard keys on PI_SUBAGENT_NAME alone. A captain that `mission launch`
+	// deployed carries PI_SUBAGENT_SESSION as a child-target hint, so it must be
+	// allowed to clean up; a trooper carries PI_SUBAGENT_NAME and is refused.
+	// Both calls run against a temp repository with a stub `mission` on PATH, so
+	// neither one can reach this checkout's teardown.
 	{
-		const commands = new Map();
-		ext.default({ registerCommand: (name, command) => commands.set(name, command) });
-		const cleanup = commands.get("cleanup");
-		const notifications = [];
-		let confirmed = false;
-		const previousSession = process.env.PI_SUBAGENT_SESSION;
-		process.env.PI_SUBAGENT_SESSION = "/tmp/subagent.jsonl";
-		try {
-			await cleanup.handler("", {
-				cwd: process.cwd(),
+		const { repo, wt, branch } = tempRepo("cleanup-guard-", "wt-guard");
+		const stubDir = mkdtempSync(join(tempRoot, "guard-bin-"));
+		// An empty mission list keeps the real vault out of the test; the Rex step
+		// is skipped because REX_SESSION is cleared.
+		writeFileSync(join(stubDir, "mission"), '#!/bin/sh\nprintf \'%s\' \'{"ok":true,"data":[]}\'\n');
+		chmodSync(join(stubDir, "mission"), 0o755);
+		const saved = {
+			path: process.env.PATH,
+			workspace: process.env.HERDR_WORKSPACE_ID,
+			missionBin: process.env.MISSION_BIN,
+			rex: process.env.REX_SESSION,
+			rexBin: process.env.REX_BIN,
+			subagentSession: process.env.PI_SUBAGENT_SESSION,
+			subagentName: process.env.PI_SUBAGENT_NAME,
+		};
+		const runHandler = async (cwd) => {
+			const commands = new Map();
+			ext.default({ registerCommand: (name, command) => commands.set(name, command) });
+			const events = [];
+			const notifications = [];
+			let confirmed = false;
+			await commands.get("cleanup").handler("", {
+				cwd,
 				ui: {
-					notify: (message, level) => notifications.push([message, level]),
+					notify: (message, level) => {
+						events.push("notify");
+						notifications.push([message, level]);
+					},
 					confirm: async () => {
+						events.push("confirm");
 						confirmed = true;
 						return true;
 					},
 				},
-				shutdown: () => assert.fail("subagent cleanup must not shut down"),
+				shutdown: () => events.push("shutdown"),
 			});
+			// Let the deferred closers and the shutdown run before assertions.
+			await new Promise((resolveDelay) => setTimeout(resolveDelay, 900));
+			return { events, notifications, confirmed };
+		};
+		try {
+			process.env.PATH = `${stubDir}:${saved.path}`;
+			delete process.env.HERDR_WORKSPACE_ID;
+			delete process.env.MISSION_BIN;
+			delete process.env.REX_SESSION;
+			delete process.env.REX_BIN;
+
+			// A spawned agent is refused before anything is listed or deleted.
+			process.env.PI_SUBAGENT_NAME = "trooper-s03";
+			process.env.PI_SUBAGENT_SESSION = "/tmp/trooper-s03.jsonl";
+			const refused = await runHandler(wt);
+			assert.deepEqual(refused.notifications, [
+				[
+					'Cleanup runs in the session that owns this worktree; this session is the subagent "trooper-s03".',
+					"error",
+				],
+			]);
+			assert.deepEqual(refused.events, ["notify"]);
+			assert.equal(refused.confirmed, false);
+			assert.equal(existsSync(wt), true);
+
+			// A captain carrying the hint is a durable session: it cleans up. Against
+			// the old PI_SUBAGENT_SESSION guard this call would be refused instead.
+			delete process.env.PI_SUBAGENT_NAME;
+			process.env.PI_SUBAGENT_SESSION = "/tmp/captain.jsonl";
+			const allowed = await runHandler(wt);
+			assert.equal(allowed.confirmed, true);
+			assert.equal(allowed.events.filter((event) => event === "shutdown").length, 1);
+			assert.equal(allowed.events.at(-1), "shutdown");
+			assert.equal(allowed.notifications[0][1], "info");
+			assert.match(allowed.notifications[0][0], /Cleanup done: worktree, local branch\./);
+			assert.doesNotMatch(allowed.notifications[0][0], /Rex/);
+			assert.equal(existsSync(wt), false);
+			assert.equal(gitRun(repo, ["branch", "--list", branch]), "");
 		} finally {
-			if (previousSession === undefined) delete process.env.PI_SUBAGENT_SESSION;
-			else process.env.PI_SUBAGENT_SESSION = previousSession;
+			if (saved.path === undefined) delete process.env.PATH;
+			else process.env.PATH = saved.path;
+			if (saved.workspace === undefined) delete process.env.HERDR_WORKSPACE_ID;
+			else process.env.HERDR_WORKSPACE_ID = saved.workspace;
+			if (saved.missionBin === undefined) delete process.env.MISSION_BIN;
+			else process.env.MISSION_BIN = saved.missionBin;
+			if (saved.rex === undefined) delete process.env.REX_SESSION;
+			else process.env.REX_SESSION = saved.rex;
+			if (saved.rexBin === undefined) delete process.env.REX_BIN;
+			else process.env.REX_BIN = saved.rexBin;
+			if (saved.subagentSession === undefined) delete process.env.PI_SUBAGENT_SESSION;
+			else process.env.PI_SUBAGENT_SESSION = saved.subagentSession;
+			if (saved.subagentName === undefined) delete process.env.PI_SUBAGENT_NAME;
+			else process.env.PI_SUBAGENT_NAME = saved.subagentName;
+			rmSync(repo, { recursive: true, force: true });
 		}
-		assert.equal(confirmed, false);
-		assert.deepEqual(notifications, [["Cleanup is only available in the durable parent session.", "error"]]);
 	}
 
 	// --- parseWorktreeList ----------------------------------------------------
@@ -654,6 +745,199 @@ try {
 		);
 	}
 
+	// --- Rex session teardown --------------------------------------------------
+
+	{
+		// The worktree directory name is the session label, mission-<slug>.
+		const rexRoot = mkdtempSync(join(tempRoot, "rex-wt-"));
+		const rexWt = join(rexRoot, "mission-fix-x");
+		const nested = join(rexWt, "sub");
+		mkdirSync(nested, { recursive: true });
+		const rexFacts = { ...stepOrderFacts, worktreePath: rexWt, mainPath: rexRoot };
+		const bound = { handle: "dotfiles/fix-x", unfinished: [] };
+
+		// The label is `mission-<slug of the handle>`; a handle that names nothing
+		// has no label, so the step refuses instead of guessing.
+		assert.equal(ext.missionSessionLabel("dotfiles/cleanup-rex-sessions"), "mission-cleanup-rex-sessions");
+		assert.equal(ext.missionSessionLabel("dotfiles/Fix X"), "mission-fix-x");
+		assert.equal(ext.missionSessionLabel("dotfiles/..."), null);
+		assert.equal(ext.missionSessionLabel(""), null);
+		// No derivation can produce the army, so it is never a target.
+		assert.notEqual(ext.missionSessionLabel("dotfiles/army"), "army");
+
+		// Only the worktree's own mission label is a target, and only by exact name.
+		assert.deepEqual(ext.rexTarget(rexFacts, null), {
+			ok: false,
+			reason: "no mission record is bound to this worktree, so no session label is known",
+		});
+		assert.deepEqual(ext.rexTarget(rexFacts, bound), { ok: true, label: "mission-fix-x" });
+		assert.deepEqual(ext.rexTarget(rexFacts, { handle: "dotfiles/other", unfinished: [] }), {
+			ok: false,
+			reason: "session mission-other does not match worktree mission-fix-x",
+		});
+
+		// The environment picks the session and the binary; no session, no Rex.
+		const fromEnv = ext.rexContext({ REX_SESSION: "mission-fix-x", REX_BIN: "/opt/rex" });
+		assert.equal(fromEnv.session, "mission-fix-x");
+		assert.equal(fromEnv.bin, "/opt/rex");
+		const outsideRex = ext.rexContext({});
+		assert.equal(outsideRex.session, null);
+		assert.equal(outsideRex.bin, "rex");
+
+		const inspected = (overrides = {}) =>
+			JSON.stringify({
+				session_id: "rex-1",
+				label: "mission-fix-x",
+				windows: [{ layers: [{ blocks: [{ block_id: "b1" }, { block_id: "b2" }] }] }],
+				...overrides,
+			});
+		const blockProcess = (cwd, ancestors = []) =>
+			JSON.stringify({ foreground: { cwd }, ancestors: ancestors.map((dir) => ({ cwd: dir })) });
+		// Injected Rex runner: records every argv and answers from the case.
+		const rexStub = (answers) => {
+			const calls = [];
+			const run = (bin, args) => {
+				calls.push([bin, args.join(" ")]);
+				const answer = answers(args);
+				if (answer instanceof Error) throw answer;
+				return answer;
+			};
+			return {
+				calls,
+				ctx: (extra = {}) => ({ session: "mission-fix-x", bin: "rex", run, ...extra }),
+			};
+		};
+		const kills = (calls) => calls.filter(([, cmd]) => cmd.startsWith("session kill")).length;
+
+		{
+			// The matching mission session is inspected, checked block by block,
+			// then killed by the id that inspect printed.
+			const stub = rexStub((args) =>
+				args[0] === "session" ? inspected() : blockProcess(nested),
+			);
+			const result = ext.closeRexSession(rexFacts, bound, stub.ctx());
+			assert.deepEqual(result, { ok: true, already: false });
+			assert.deepEqual(stub.calls, [
+				["rex", "session inspect mission-fix-x --json"],
+				// A block's cwd comes from `rex block call … process`, not inspect.
+				["rex", "block call -b b1 process"],
+				["rex", "block call -b b2 process"],
+				["rex", "session kill rex-1"],
+			]);
+			assert.equal(ext.describeRexStep(result), "Rex session destroyed");
+		}
+
+		{
+			// The army session is never destroyed: its label is not this worktree's
+			// mission label, so the kill never runs.
+			const stub = rexStub((args) =>
+				args[0] === "session" ? inspected({ label: "army", session_id: "army-1" }) : blockProcess(nested),
+			);
+			const result = ext.closeRexSession(rexFacts, bound, stub.ctx({ session: "army" }));
+			assert.equal(result.ok, false);
+			assert.equal(result.error, 'session army is labelled "army", not "mission-fix-x"');
+			assert.equal(kills(stub.calls), 0);
+			assert.deepEqual(stub.calls, [["rex", "session inspect army --json"]]);
+			assert.match(ext.describeRexStep(result), /^Rex session not destroyed: session army is labelled/);
+		}
+
+		{
+			// A session that holds a block running in another checkout is refused,
+			// because this session does not own every window in it.
+			const stub = rexStub((args) =>
+				args[0] === "session" ? inspected() : blockProcess(otherDir),
+			);
+			const result = ext.closeRexSession(rexFacts, bound, stub.ctx());
+			assert.equal(result.ok, false);
+			assert.equal(
+				result.error,
+				`the session holds a block running in ${otherDir}, outside ${rexWt}`,
+			);
+			assert.equal(kills(stub.calls), 0);
+		}
+
+		{
+			// A missing binary is a soft failure: a report line, never a throw.
+			const stub = rexStub(() => {
+				const error = new Error("spawnSync rex ENOENT");
+				error.code = "ENOENT";
+				return error;
+			});
+			const result = ext.closeRexSession(rexFacts, bound, stub.ctx());
+			assert.deepEqual(result, { ok: false, already: false, error: "rex not found" });
+			assert.equal(kills(stub.calls), 0);
+			assert.equal(ext.describeRexStep(result), "Rex session not destroyed: rex not found");
+		}
+
+		{
+			// An already-gone session and unreadable output are both soft failures.
+			const gone = rexStub(
+				() => new Error('rex session inspect mission-fix-x --json: {"error":{"message":"session mission-fix-x not found"}}'),
+			);
+			assert.deepEqual(ext.closeRexSession(rexFacts, bound, gone.ctx()), {
+				ok: true,
+				already: true,
+			});
+			assert.equal(ext.describeRexStep({ ok: true, already: true }), "Rex session was already gone");
+
+			const garbage = rexStub(() => "not json");
+			assert.deepEqual(ext.closeRexSession(rexFacts, bound, garbage.ctx()), {
+				ok: false,
+				already: false,
+				error: "rex session inspect printed no JSON",
+			});
+
+			// A block whose directory cannot be read blocks the kill as well.
+			const unreadable = rexStub((args) => {
+				if (args[0] === "session") return inspected();
+				return new Error("rex block call -b b1 process: boom");
+			});
+			const unreadableResult = ext.closeRexSession(rexFacts, bound, unreadable.ctx());
+			assert.equal(unreadableResult.ok, false);
+			assert.match(unreadableResult.error, /the session holds block b1, which cannot be checked/);
+			assert.equal(kills(unreadable.calls), 0);
+		}
+
+		{
+			// No Rex session means the step says nothing at all; a session that
+			// hosts the main checkout is named but never destroyed.
+			const noSession = rexStub(() => assert.fail("no session must not run rex"));
+			assert.deepEqual(ext.closeRexSession(rexFacts, bound, noSession.ctx({ session: null })), {
+				ok: true,
+				already: false,
+				skipped: true,
+			});
+			assert.deepEqual(noSession.calls, []);
+			assert.equal(ext.describeRexStep({ ok: true, already: false, skipped: true }), "");
+			assert.deepEqual(
+				ext.closeRexSession({ ...rexFacts, worktreePath: rexRoot, mainPath: rexRoot }, bound, noSession.ctx()),
+				{ ok: true, already: false, reason: "the session hosts the main checkout" },
+			);
+		}
+
+		{
+			// A deferred close runs nothing here and reports `pending`, so the report
+			// says the session closes next; the worktree is already gone by then.
+			const stub = rexStub(() => assert.fail("a deferred rex close must not run"));
+			const report = ext.executeCleanup(
+				rexFacts,
+				() => {},
+				herdrStep(null, []),
+				{ binding: bound, run: () => JSON.stringify({ ok: true, data: {} }) },
+				stub.ctx({ deferClose: true }),
+			);
+			assert.deepEqual(stub.calls, []);
+			assert.deepEqual(report.rex, { ok: true, already: false, pending: true });
+			assert.equal(report.rexSessionDestroyed, false);
+			assert.match(ext.describeCleanupReport(report), /Rex session closes next\.$/);
+
+			// Without a Rex context the step is skipped, and the report stays silent.
+			const plain = ext.executeCleanup(rexFacts, () => {}, herdrStep(null, []));
+			assert.deepEqual(plain.rex, { ok: true, already: false, skipped: true });
+			assert.doesNotMatch(ext.describeCleanupReport(plain), /\bRex\b/);
+		}
+	}
+
 	// --- collectCleanupFacts against a real temp repository --------------------
 
 	{
@@ -790,6 +1074,8 @@ try {
 			workspace: process.env.HERDR_WORKSPACE_ID,
 			bin: process.env.HERDR_BIN,
 			subagent: process.env.PI_SUBAGENT_SESSION,
+			name: process.env.PI_SUBAGENT_NAME,
+			rex: process.env.REX_SESSION,
 		};
 		try {
 			run(repo, ["init", "-q", "-b", "main"]);
@@ -805,6 +1091,12 @@ try {
 			process.env.HERDR_WORKSPACE_ID = "wTEST";
 			process.env.HERDR_BIN = stubHerdr;
 			delete process.env.PI_SUBAGENT_SESSION;
+			// This suite can itself run inside a subagent; the spawn guard would then
+			// refuse before any teardown and break every assertion below.
+			delete process.env.PI_SUBAGENT_NAME;
+			// Inside a Rex captain this suite inherits REX_SESSION; the handler would
+			// then append a Rex line and break the report anchor asserted below.
+			delete process.env.REX_SESSION;
 
 			const commands = new Map();
 			ext.default({ registerCommand: (name, command) => commands.set(name, command) });
@@ -848,6 +1140,10 @@ try {
 			else process.env.HERDR_BIN = saved.bin;
 			if (saved.subagent === undefined) delete process.env.PI_SUBAGENT_SESSION;
 			else process.env.PI_SUBAGENT_SESSION = saved.subagent;
+			if (saved.name === undefined) delete process.env.PI_SUBAGENT_NAME;
+			else process.env.PI_SUBAGENT_NAME = saved.name;
+			if (saved.rex === undefined) delete process.env.REX_SESSION;
+			else process.env.REX_SESSION = saved.rex;
 			rmSync(repo, { recursive: true, force: true });
 		}
 	}
@@ -917,11 +1213,17 @@ try {
 			workspace: process.env.HERDR_WORKSPACE_ID,
 			missionBin: process.env.MISSION_BIN,
 			subagent: process.env.PI_SUBAGENT_SESSION,
+			name: process.env.PI_SUBAGENT_NAME,
+			rex: process.env.REX_SESSION,
 		};
 		try {
 			delete process.env.HERDR_WORKSPACE_ID;
 			delete process.env.MISSION_BIN;
 			delete process.env.PI_SUBAGENT_SESSION;
+			// A suite that runs inside a subagent carries PI_SUBAGENT_NAME, which
+			// would refuse the cleanup; REX_SESSION would add a report line.
+			delete process.env.PI_SUBAGENT_NAME;
+			delete process.env.REX_SESSION;
 
 			// Case 1: a bound mission with an unfinished step is named, then closed.
 			{
@@ -999,6 +1301,227 @@ try {
 			else process.env.MISSION_BIN = saved.missionBin;
 			if (saved.subagent === undefined) delete process.env.PI_SUBAGENT_SESSION;
 			else process.env.PI_SUBAGENT_SESSION = saved.subagent;
+			if (saved.name === undefined) delete process.env.PI_SUBAGENT_NAME;
+			else process.env.PI_SUBAGENT_NAME = saved.name;
+			if (saved.rex === undefined) delete process.env.REX_SESSION;
+			else process.env.REX_SESSION = saved.rex;
+		}
+	}
+
+	// --- /cleanup handler: the Rex session teardown ----------------------------
+	//
+	// The kill is `rex session kill <session_id>`, on the id printed by
+	// `rex session inspect <REX_SESSION> --json`, and it runs from the shutdown
+	// callback after the worktree is gone. A stub `rex` on PATH logs every argv,
+	// so no real session can be touched and every path stays offline.
+	{
+		// A stub `rex`: logs its argv, answers inspect and block call from files,
+		// and records whether the worktree was still there when the kill ran.
+		const stubRex = ({ inspect, blockCwd, worktree }) => {
+			const dir = mkdtempSync(join(tempRoot, "rex-bin-"));
+			const log = join(dir, "rex-calls.log");
+			const inspectFile = join(dir, "inspect.json");
+			const blockFile = join(dir, "block.json");
+			writeFileSync(inspectFile, JSON.stringify(inspect));
+			writeFileSync(blockFile, JSON.stringify({ foreground: { cwd: blockCwd }, ancestors: [] }));
+			writeFileSync(
+				join(dir, "rex"),
+				[
+					"#!/bin/sh",
+					`printf '%s\\n' "$*" >> "${log}"`,
+					`if [ "$1" = "session" ] && [ "$2" = "inspect" ]; then cat "${inspectFile}"; exit 0; fi`,
+					`if [ "$1" = "block" ] && [ "$2" = "call" ]; then cat "${blockFile}"; exit 0; fi`,
+					`if [ "$1" = "session" ] && [ "$2" = "kill" ]; then`,
+					`  if [ -d "${worktree}" ]; then printf 'worktree=present\\n' >> "${log}"; else printf 'worktree=gone\\n' >> "${log}"; fi`,
+					"  exit 0",
+					"fi",
+					"exit 0",
+					"",
+				].join("\n"),
+			);
+			chmodSync(join(dir, "rex"), 0o755);
+			return { dir, log };
+		};
+		// A stub `mission`: answers `--json list` for this worktree and the close.
+		const stubMission = (records) => {
+			const dir = mkdtempSync(join(tempRoot, "rex-mission-bin-"));
+			const log = join(dir, "mission-calls.log");
+			const listFile = join(dir, "mission-list.json");
+			writeFileSync(listFile, JSON.stringify({ ok: true, data: records }));
+			writeFileSync(
+				join(dir, "mission"),
+				[
+					"#!/bin/sh",
+					`printf '%s\\n' "$*" >> "${log}"`,
+					`if [ "$2" = "list" ]; then cat "${listFile}"; exit 0; fi`,
+					`printf '%s' '{"ok":true,"data":{"status":"closed"}}'`,
+					"",
+				].join("\n"),
+			);
+			chmodSync(join(dir, "mission"), 0o755);
+			return { dir, log };
+		};
+		const runHandler = async (wt) => {
+			const commands = new Map();
+			ext.default({ registerCommand: (name, command) => commands.set(name, command) });
+			const events = [];
+			const notifications = [];
+			await commands.get("cleanup").handler("", {
+				cwd: wt,
+				ui: {
+					notify: (message, level) => {
+						events.push("notify");
+						notifications.push([message, level]);
+					},
+					confirm: async () => {
+						events.push("confirm");
+						return true;
+					},
+				},
+				shutdown: () => events.push("shutdown"),
+			});
+			// The Rex kill and the workspace close run from the timer.
+			await new Promise((resolveDelay) => setTimeout(resolveDelay, 1000));
+			return { events, notifications };
+		};
+		const saved = {
+			path: process.env.PATH,
+			workspace: process.env.HERDR_WORKSPACE_ID,
+			missionBin: process.env.MISSION_BIN,
+			rex: process.env.REX_SESSION,
+			rexBin: process.env.REX_BIN,
+			subagent: process.env.PI_SUBAGENT_SESSION,
+			name: process.env.PI_SUBAGENT_NAME,
+		};
+		const restorePath = () => {
+			if (saved.path === undefined) delete process.env.PATH;
+			else process.env.PATH = saved.path;
+		};
+		try {
+			delete process.env.HERDR_WORKSPACE_ID;
+			delete process.env.MISSION_BIN;
+			delete process.env.PI_SUBAGENT_SESSION;
+			// The suite can itself run inside a subagent, and inside a Rex session.
+			delete process.env.PI_SUBAGENT_NAME;
+
+			// Case 1: the matching mission session is inspected, then killed by id,
+			// after the worktree is gone.
+			{
+				const { repo, wt, branch } = tempRepo("cleanup-rex-", "mission-fix-x");
+				const missionStub = stubMission([listedRecord(realpathSync(wt), "dotfiles/fix-x")]);
+				const rex = stubRex({
+					inspect: {
+						session_id: "rex-42",
+						label: "mission-fix-x",
+						windows: [{ layers: [{ blocks: [{ block_id: "b1" }] }] }],
+					},
+					blockCwd: realpathSync(wt),
+					worktree: wt,
+				});
+				process.env.PATH = `${rex.dir}:${missionStub.dir}:${saved.path}`;
+				delete process.env.REX_BIN;
+				process.env.REX_SESSION = "mission-fix-x";
+				try {
+					const { events, notifications } = await runHandler(wt);
+					assert.equal(events.at(-1), "shutdown");
+					assert.equal(notifications[0][1], "info");
+					// Deferred: the report says the session closes next.
+					assert.match(notifications[0][0], /Mission record dotfiles\/fix-x closed/);
+					assert.match(notifications[0][0], /Rex session closes next\./);
+					assert.equal(
+						notifications.some(([message]) => /Rex session not destroyed/.test(message)),
+						false,
+					);
+					// The real argv, in order, and no other Rex call.
+					assert.deepEqual(readFileSync(rex.log, "utf8").trim().split("\n"), [
+						"session inspect mission-fix-x --json",
+						"block call -b b1 process",
+						"session kill rex-42",
+						"worktree=gone",
+					]);
+					assert.equal(existsSync(wt), false);
+					assert.equal(gitRun(repo, ["branch", "--list", branch]), "");
+				} finally {
+					restorePath();
+					rmSync(repo, { recursive: true, force: true });
+				}
+			}
+
+			// Case 2: the army session is never destroyed: its label is not this
+			// worktree's mission label, so no kill argv exists at all.
+			{
+				const { repo, wt } = tempRepo("cleanup-rex-army-", "mission-fix-x");
+				const missionStub = stubMission([listedRecord(realpathSync(wt), "dotfiles/fix-x")]);
+				const rex = stubRex({
+					inspect: {
+						session_id: "army-1",
+						label: "army",
+						windows: [{ layers: [{ blocks: [{ block_id: "b1" }] }] }],
+					},
+					blockCwd: realpathSync(wt),
+					worktree: wt,
+				});
+				process.env.PATH = `${rex.dir}:${missionStub.dir}:${saved.path}`;
+				delete process.env.REX_BIN;
+				process.env.REX_SESSION = "army";
+				try {
+					const { events, notifications } = await runHandler(wt);
+					assert.equal(events.at(-1), "shutdown");
+					const calls = readFileSync(rex.log, "utf8").trim().split("\n");
+					assert.deepEqual(calls, ["session inspect army --json"]);
+					assert.equal(calls.filter((call) => call.startsWith("session kill")).length, 0);
+					assert.equal(
+						notifications.some(
+							([message, level]) =>
+								level === "warning" &&
+								message ===
+									'Rex session not destroyed: session army is labelled "army", not "mission-fix-x"',
+						),
+						true,
+					);
+					assert.equal(existsSync(wt), false);
+				} finally {
+					restorePath();
+					rmSync(repo, { recursive: true, force: true });
+				}
+			}
+
+			// Case 3: a missing `rex` binary is a soft failure — a warning line and a
+			// clean shutdown, never a throw.
+			{
+				const { repo, wt } = tempRepo("cleanup-rex-missing-", "mission-fix-x");
+				const missionStub = stubMission([listedRecord(realpathSync(wt), "dotfiles/fix-x")]);
+				const missing = join(mkdtempSync(join(tempRoot, "rex-missing-")), "rex-does-not-exist");
+				process.env.PATH = `${missionStub.dir}:${saved.path}`;
+				process.env.REX_SESSION = "mission-fix-x";
+				process.env.REX_BIN = missing;
+				try {
+					const { events, notifications } = await runHandler(wt);
+					assert.equal(events.at(-1), "shutdown");
+					assert.equal(
+						notifications.some(([message, level]) => level === "warning" && message === `Rex session not destroyed: ${missing} not found`),
+						true,
+					);
+					assert.equal(existsSync(wt), false);
+				} finally {
+					restorePath();
+					rmSync(repo, { recursive: true, force: true });
+				}
+			}
+		} finally {
+			restorePath();
+			if (saved.workspace === undefined) delete process.env.HERDR_WORKSPACE_ID;
+			else process.env.HERDR_WORKSPACE_ID = saved.workspace;
+			if (saved.missionBin === undefined) delete process.env.MISSION_BIN;
+			else process.env.MISSION_BIN = saved.missionBin;
+			if (saved.rex === undefined) delete process.env.REX_SESSION;
+			else process.env.REX_SESSION = saved.rex;
+			if (saved.rexBin === undefined) delete process.env.REX_BIN;
+			else process.env.REX_BIN = saved.rexBin;
+			if (saved.subagent === undefined) delete process.env.PI_SUBAGENT_SESSION;
+			else process.env.PI_SUBAGENT_SESSION = saved.subagent;
+			if (saved.name === undefined) delete process.env.PI_SUBAGENT_NAME;
+			else process.env.PI_SUBAGENT_NAME = saved.name;
 		}
 	}
 
