@@ -643,13 +643,16 @@ func TestDeploySeatsTheSamePlanInEitherMux(t *testing.T) {
 	}
 	// The captain itself is the same in both seats: one exec line builder over
 	// one plan, so each seat is exactly what that builder makes of its own plan.
-	// Only the seat identity around the argv is the mux's.
+	// Only the seat identity around the argv is the mux's. Rex names the session
+	// label, because mission identities are labels; it does not name REX_BLOCK,
+	// because Rex sets that in the block's own environment, and a window command
+	// cannot carry an id that does not exist until the window has been created.
 	rexLine, herdrLine := rexFakeServer.execLine(), herdrFakeServer.execLine()
 	// Deploy re-renders the brief with the intent it reserved, so the plan a seat
 	// is built from is the plan with that intent in it.
 	rexSeated := rexPlan
 	rexSeated.CaptainBrief = captainPrompt(rexHandle, rexPlan.SubagentSession, rexDeployment.LaunchID)
-	if want := seatExecLine(rexSeated, "REX_SESSION="+armySession, "REX_BLOCK="+rexDeployment.Pane); rexLine != want {
+	if want := seatExecLine(rexSeated, "REX_SESSION="+armySession); rexLine != want {
 		t.Fatalf("the rex seat is not the shared exec line:\n got %s\nwant %s", rexLine, want)
 	}
 	herdrSeated := herdrPlan
@@ -657,13 +660,13 @@ func TestDeploySeatsTheSamePlanInEitherMux(t *testing.T) {
 	if want := seatExecLine(herdrSeated); herdrLine != want {
 		t.Fatalf("the herdr seat is not the shared exec line:\n got %s\nwant %s", herdrLine, want)
 	}
-	if !strings.Contains(rexLine, "'REX_BLOCK=") || strings.Contains(herdrLine, "REX_") {
+	if !strings.Contains(rexLine, "'REX_SESSION=army'") || strings.Contains(rexLine, "REX_BLOCK") || strings.Contains(herdrLine, "REX_") {
 		t.Fatalf("the seat identity is not the mux's own:\nrex   %s\nherdr %s", rexLine, herdrLine)
 	}
 	// One shape: the same argv and brief, and exactly the seat identity Rex needs
-	// and Herdr supplies for itself.
+	// as an argument and Herdr supplies for itself.
 	herdrArgs, rexArgs := strings.Split(herdrLine, " "), strings.Split(rexLine, " ")
-	if len(rexArgs)-len(herdrArgs) != 2 {
+	if len(rexArgs)-len(herdrArgs) != 1 {
 		t.Fatalf("the two seats are different shapes:\nrex   %v\nherdr %v", rexArgs, herdrArgs)
 	}
 	if herdrArgs[len(herdrArgs)-1] != rexArgs[len(rexArgs)-1] {
