@@ -85,6 +85,11 @@ nix/modules/
   it), since a NixOS user is a system user and not a Home Manager assumption,
 - `programs.zsh.enable`, `environment.systemPackages = [ ]` (tools stay in the
   user layer; the system layer carries only what a user cannot own),
+- `go` and `nodejs` in the `home.packages` of that layer's Home Manager user.
+  `nix/modules/shared` carries lazygit and herdr but neither of these, and the
+  Ubuntu hosts took both from apt, so every NixOS host declares them here rather
+  than in `shared` (which the Ubuntu and macOS profiles also import) or in a
+  per-host module,
 - a gc policy mirroring `nix/modules/macbook/default.nix:23-31`.
 
 `nix/modules/nixos/probe.nix` (S02) carries only: `networking.hostName = "probe"`,
@@ -128,7 +133,7 @@ NixOS module, and the existing `shared` module is imported as
 users = {
   homelab = "avirus";
   devbox = "aviral";
-  probe = "ubuntu";
+  probe = "aviral";
 };
 
 mkNixos = host: nixpkgs.lib.nixosSystem {
@@ -394,6 +399,12 @@ aarch64 Mac needs no x86_64 builder for this step. `--disk /dev/nvme0n1` is the
 Nitro root device the Ubuntu AMI boots from; `nix/modules/nixos/probe.nix` uses
 the same device for grub. `t3.micro` and the default 30 minutes are too small for
 an install, which is why the command names `--minutes 90 --type t3.medium`.
+
+Step 2 dials the Ubuntu image's `ubuntu` user, which is the login the sandbox
+writes into the alias. After step 3 the box runs the S02 configuration, and the
+account `mkNixos` manages there is `aviral` — so the `probe` alias needs `User
+aviral` (same hostname, same `IdentityFile`) for every later command and for the
+evidence below.
 
 ### Evidence S03 must capture
 
