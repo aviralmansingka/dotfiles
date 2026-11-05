@@ -96,6 +96,12 @@ in
         rsync
         rustup
         uv
+        # The 1Password CLI is how any host fetches the admin age key from
+        # 1Password. Only the CLI is managed here, not the 1Password desktop
+        # app. nixpkgs spells the attribute `_1password-cli` (leading
+        # underscore) though the package name is plain `1password-cli`, and it
+        # is unfree; both flake constructors set config.allowUnfree.
+        _1password-cli
       ]
     );
 
