@@ -54,6 +54,10 @@ test-deploy:
 #   just secrets-check                         # offline: rules vs files, no keys
 #   just secrets-import pi-telegram=/tmp/x.env # move a plaintext env file into sops
 #   just secrets-import-dry                    # the same, printing no value
+#   just secrets-probe-recipient               # the probe's public age key
+#   just secrets-probe-add                     # rule + updatekeys, no value printed
+#   just secrets-probe-decrypt                 # decrypt one value on the probe
+#   just secrets-probe-verify                  # offline: refusals + hash round trip
 #
 # The recipients are in .sops.yaml and the runbook is docs/nix-profiles.md.
 # Editing needs the admin age key at ~/.config/sops/age/keys.txt; checking does
@@ -90,6 +94,35 @@ secrets-import *sources:
 # The same import, reading and hashing only (`~/.config/<name>.env` by default).
 secrets-import-dry *sources:
     python3 scripts/sops-import-env.py --dry-run {{sources}}
+
+# ---- secrets: the S03 decryption probe ----
+#
+# Prove a fresh EC2 box can read secrets/probe.yaml. The three steps are
+# separate on purpose: getting the key out of the instance and re-wrapping the
+# file fail for different reasons, and the artifact has to say which half broke.
+# The instance itself is ops/terraform/probe.tf (t3.micro, count-gated on
+# probe_enabled) and the exact apply/destroy block lives in the S03 artifact.
+# Nothing here prints a value: only recipients, sha256 and byte counts.
+
+# Print the probe's public age recipient. Needs the instance up; the host
+# defaults to `terraform output probe_ip` and the key is minted on first boot.
+secrets-probe-recipient *args:
+    python3 scripts/sops-probe.py recipient {{args}}
+
+# Add that recipient to the .sops.yaml rule and re-wrap the file for it, then
+# verify the file really wraps it. --dry-run prints the plan and changes nothing.
+secrets-probe-add *args:
+    python3 scripts/sops-probe.py add-recipient {{args}}
+
+# Copy secrets/probe.yaml to the probe, decrypt one value there, print only its
+# sha256 and byte count. The value never reaches this machine.
+secrets-probe-decrypt *args:
+    python3 scripts/sops-probe.py decrypt-check {{args}}
+
+# Offline proof: the script refuses bad recipients, plaintext files and probes
+# that answer with nothing, and a known value hashes to its pinned digest.
+secrets-probe-verify:
+    python3 scripts/sops-probe.py self-test
 
 # ---- from main: the build recipes ----
 

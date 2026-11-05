@@ -57,8 +57,8 @@ systemd file gets parse, repo-paths, and verify, plus the interpreter check
 for `.service` units and timer-target for `.timer` units. Each plist gets
 parse, keys, and repo-paths.
 
-- `ops/terraform` (7): dns.tf, github.tf, iam.tf, main.tf, oidc.tf,
-  providers.tf, variables.tf.
+- `ops/terraform` (8): dns.tf, github.tf, iam.tf, main.tf, oidc.tf,
+  probe.tf, providers.tf, variables.tf.
 - `ops/devbox` (3): devbox.tf, providers.tf, variables.tf.
 - `systemd/.config/systemd/user` (6): dotfiles-auto-sync.service,
   pi-stt-worker.service, pi-telegram.service, pi-whatsapp.service,
