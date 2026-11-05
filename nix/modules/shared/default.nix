@@ -1,6 +1,7 @@
 # Shared user environment. Every host and every profile imports this module, so
 # anything here must be true on Ubuntu 24.04 and on macOS alike.
 {
+  config,
   pkgs,
   lib,
   rataflowSrc ? null,
@@ -89,5 +90,12 @@ in
     VISUAL = "nvim";
     PAGER = "less";
     LESS = "-R";
+
+    # Each profile declared these three before, and the MacBook copy hardcoded
+    # /Users/aviral. Building them from the home directory is what lets one
+    # declaration hold on both platforms.
+    GOPATH = "${config.home.homeDirectory}/go";
+    RUSTUP_HOME = "${config.home.homeDirectory}/.rustup";
+    CARGO_HOME = "${config.home.homeDirectory}/.cargo";
   };
 }
