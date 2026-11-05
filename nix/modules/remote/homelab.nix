@@ -12,6 +12,31 @@
   home.username = lib.mkDefault "avirus";
   home.homeDirectory = lib.mkDefault "/home/avirus";
 
+  # This host's secrets file. The rule in .sops.yaml carries the admin age key
+  # plus this host's SSH-host-key recipient, so `sops.secrets.<name>` on any
+  # module below needs only its key name.
+  sops.defaultSopsFile = ../../../secrets/homelab.yaml;
+
+  # The three units that used to read a plaintext env file under ~/.config now
+  # read a sops-deployed copy. One sops key per file, holding that file's whole
+  # text, so the unit contract does not change: systemd still parses KEY=value
+  # lines, and the daemons never learn where their environment came from.
+  #
+  # The key name is the file name, so the deployed path is
+  # ~/.config/sops-nix/secrets/<name>; nix/services/default.nix names exactly
+  # that path in EnvironmentFile.
+  #
+  # `mode` is declared rather than inherited: 0400 is the acceptance item, and
+  # sops-install-secrets writes the file with precisely this mode in
+  # `%r/secrets.d/<generation>/<name>`. The ~/.config path is a symlink to that
+  # file, so `stat "$(readlink -f ~/.config/sops-nix/secrets/pi-telegram.env)"`
+  # is the check that it holds.
+  sops.secrets = {
+    "pi-stt-worker.env".mode = "0400";
+    "pi-telegram.env".mode = "0400";
+    "pi-whatsapp.env".mode = "0400";
+  };
+
   home.packages = with pkgs; [
     kubectl
     kubernetes-helm
