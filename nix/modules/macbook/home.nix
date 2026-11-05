@@ -6,10 +6,10 @@
   home.username = "aviral";
   home.homeDirectory = "/Users/aviral";
 
-  # `node` comes from ../shared and must not be pinned per platform here: two
-  # node derivations in the profile collide on bin/node in buildEnv.
+  # `go` and `node` come from ../shared and are pinned in neither place: two
+  # node derivations in the profile collide on bin/node in buildEnv. `bun` stays
+  # local because ../shared does not carry it.
   home.packages = with pkgs; [
-    go
     bun
   ];
 
