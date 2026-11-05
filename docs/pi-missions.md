@@ -235,42 +235,47 @@ intent, so the captain attaches with the id the record holds. The ack lands last
 with the plan's derived token beside the reserved intent.
 
 Both adapters seat the captain the same way, because the seat is the plan's and
-not the mux's: a window opens on the human's login shell, deploy writes the exec
-line into it, and it verifies that pi took the foreground, retrying the submit
-once. What differs is only the seat's own identity and the calls underneath.
+not the mux's: a login shell reads the plan's `exec env …` line, and deploy then
+verifies that pi took the foreground. What differs is only how the line reaches
+the shell and what seat identity it carries.
 
-Seating is two phases, because a block's id exists only after its window does. A
-window therefore opens on the human's login shell, deploy reads the block id
-from the `session.new_window` result, and it writes one `exec env …` line into
-that block through `block.method` with method `write`. That line starts the
-plan's absolute pi with `REX_SESSION=army`, `REX_BLOCK=<its own block>`,
+A Rex window takes the captain as its own command, so that seat is one phase:
+`session.new_window` is asked for a window whose command is
+`$SHELL -l -c <exec line>`, and Rex runs it. There is no prompt, no readiness
+wait, no write, and no submit — zsh reads the line as its `-c` argument, and
+`exec` replaces it with pi, so the block's foreground is pi from the start. The
+line starts the plan's absolute pi with `REX_SESSION=army`,
 `PI_SUBAGENT_SESSION=<mission-<slug>>`, and `PI_SUBAGENT_CWD=<worktree>`; the
-brief arrives as pi's first message. The exec line is the only place a captain
-learns its own seat, so a captain started by deploy passes the subagent gate
-without any adapter help.
+brief arrives as pi's first message. It does not name `REX_BLOCK`: Rex sets that
+in the environment of the program it starts in a block, so the captain already
+reads its own block, and a window command cannot carry an id that does not exist
+until the window has been created.
 
-The write waits for the shell. Deploy used to write the moment the window
-existed, while `zsh -l` was still sourcing profile files: the tail of the line
-went missing, the shell sat inside an unterminated quote, and the mission stayed
-`ready` with no attempt. So the seat polls the block's own `pwd` method until a
-live process answers it, writes the exec line without a trailing newline, and
-then sends the newline as its own write. A line that arrives in two writes
-cannot be left half-quoted by a dropped tail. After the newline, deploy polls
-the block's `process` until the foreground is no longer the login shell (pi, or
-the node running pi); if it still reports the shell, deploy re-sends the newline
-once and polls again, then fails with the block, the window, and the foreground
-it saw. It never opens a second window, because the label would name two. Both
-waits are bounded by a short interval and a few seconds, so a shell that never
-listens and a captain that never starts are errors a human reads, not races
-deploy sleeps through.
+This replaced a typed line, and the reason is measured. Deploy used to open a
+window on `zsh -l`, poll the block's `pwd` method for readiness, then type the
+exec line and send the newline as its own write. But Rex answers `pwd` with an
+empty object about 0.02 s after the window exists, before the shell has a working
+cwd, so the gate passed instantly and the line was typed into a still-starting
+`zsh -l`: written in that window it was dropped or truncated, the shell ended up
+inside an open quote, and the mission stayed `ready` with no attempt. Four
+deploys failed that way. A window command cannot race a prompt.
+
+The verification stays, because Rex accepting the window says only that the
+window exists, not that pi came up in it. Deploy polls the block's `process`
+until it reports pi (the foreground, or an ancestor under the login shell), and
+retries that bounded wait once; then it fails with the block, the window, and the
+foreground it saw. The retry repeats the check, not a submit, because a window
+command cannot be re-sent. It never opens a second window, because the label
+would name two.
 
 ### Seating a captain
 
-The captain's block opens the human's login shell, `$SHELL -l` (`/bin/sh -l`
-when `$SHELL` is unset, or is not a runnable absolute path), so the shell reads
-the account's profile before the exec line replaces it with pi. The captain's
-environment is then the human's environment: `PATH` comes from the login
-profile, not from the multiplexer and not from a list the seat carries.
+The captain's window runs the human's login shell, `$SHELL -l` (`/bin/sh -l`
+when `$SHELL` is unset, or is not a runnable absolute path), with the exec line
+as its `-c` argument on Rex. The shell reads the account's profile before `exec`
+replaces it with pi. The captain's environment is then the human's environment:
+`PATH` comes from the login profile, not from the multiplexer and not from a list
+the seat carries.
 
 That parity is the point of the shape. A captain seated from the multiplexer's
 minimal `PATH` lost `mission` (`spawn mission ENOENT`, so mission tracking was
@@ -301,19 +306,21 @@ inventing names:
 | captain window `captain-<slug>` | a window in army | a tab in the army workspace, cwd the mission worktree |
 | subagent session `mission-<slug>` | a Rex session troopers open windows in | the seat's `PI_SUBAGENT_SESSION`: Herdr has no session object, and troopers are tabs beside their captain |
 
-Seating is two phases here too. `tab create` opens a tab on the human's login
-shell and names its pane; deploy polls `pane process-info` until that pane reports
-a foreground process, writes the exec line with `pane send-text`, submits it with
-`pane send-keys enter`, and polls the foreground until it is pi. If the shell is
-still the foreground it re-sends the Enter once, then fails with the pane, the
-tab, and what the foreground still reports. A Herdr tab can be brought up while
-its shell is still starting, so the readiness poll is what keeps a write from
-landing in a shell that does not yet read its terminal.
+Seating is two phases here, unlike Rex. `tab create` opens a tab on the human's
+login shell and names its pane; deploy polls `pane process-info` until that pane
+reports a foreground process, writes the exec line with `pane send-text`,
+submits it with `pane send-keys enter`, and polls the foreground until it is pi.
+If the shell is still the foreground it re-sends the Enter once, then fails with
+the pane, the tab, and what the foreground still reports. A Herdr tab has no
+window command of its own, so the tab can be brought up while its shell is still
+starting, and the readiness poll is what keeps a write from landing in a shell
+that does not yet read its terminal.
 
 The Herdr exec line carries no seat identity: Herdr sets `HERDR_PANE_ID` and
 `HERDR_WORKSPACE_ID` on the pane itself, so the captain reads its own seat from
-its environment. The Rex line has to name `REX_SESSION` and `REX_BLOCK`, because
-a Rex block starts with neither. Everything else is the one `seatExecLine`:
+its environment. The Rex line names `REX_SESSION=army`, the session's label,
+because mission identities are labels; `REX_BLOCK` is Rex's own answer in the
+block's environment. Everything else is the one `seatExecLine`:
 `PI_SUBAGENT_SESSION`, `PI_SUBAGENT_CWD`, the plan's absolute pi, its `--tools`
 allowlist, and the brief last.
 

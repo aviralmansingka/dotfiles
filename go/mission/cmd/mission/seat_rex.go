@@ -191,16 +191,23 @@ func captainRuns(sessionID, blockID string) (bool, error) {
 	if v["last_exit"] != nil {
 		return false, nil // the captain's program exited, so no captain is left
 	}
+	return reportsPi(v), nil
+}
+
+// reportsPi is whether a process report shows pi in the block: the foreground
+// first, then its ancestors, because the login shell Rex runs a window command
+// through can still be the reported foreground on some hosts.
+func reportsPi(v map[string]any) bool {
 	procs := []any{v["foreground"]}
 	if a, ok := v["ancestors"].([]any); ok {
 		procs = append(procs, a...)
 	}
 	for _, p := range procs {
 		if m, ok := p.(map[string]any); ok && isPiProcess(m) {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 // isRexNotFound marks a Rex answer that says the thing asked for is gone, as
@@ -220,11 +227,16 @@ func shellLayout(cwd string) map[string]any {
 	return map[string]any{"block": map[string]any{"flavor": terminalFlavor, "options": options}}
 }
 
-// captainLayout opens the captain's window on the human's login shell. A
-// block's id does not exist until the window is created, so the captain cannot
-// receive its own REX_BLOCK in a spawn environment. The window therefore starts
-// a login shell reading commands from its terminal, and seatCaptain writes the
-// exec line that replaces that shell with pi once the id is known.
+// captainLayout opens the captain's window on the captain itself: the window's
+// own command is the human's login shell running one `-c` line that execs pi.
+//
+// It used to open a bare login shell and type the exec line into it. That was a
+// race the readiness gate could not see: Rex answers `block.method "pwd"` with an
+// empty object about 0.02 s after the window exists, before the shell has a cwd,
+// so the line was typed into a `zsh -l` still sourcing its profile. Written then,
+// the line was dropped or truncated and the shell ended up inside an open quote.
+// A window command has no prompt to race: zsh reads the line as its argument,
+// `exec` replaces it with pi, and the block's foreground is pi from the start.
 //
 // The shell is a login shell on purpose: it reads the account's profile, so the
 // captain inherits the human's environment instead of the multiplexer's minimal
@@ -240,58 +252,22 @@ func captainLayout(p Plan) map[string]any {
 	return map[string]any{"block": map[string]any{
 		"flavor":  terminalFlavor,
 		"label":   p.CaptainWindow,
-		"options": map[string]any{"command": loginShellArgv(), "cwd": p.Cwd, "shell": filepath.Base(loginShell())},
+		"options": map[string]any{"command": captainCommand(p), "cwd": p.Cwd, "shell": filepath.Base(loginShell())},
 	}}
 }
 
-// waitForShell polls one block until it answers for itself, and reports the last
-// failure when the deadline passes. Rex's `pwd` method is the readiness probe:
-// the process that owns the block answers it, so it stays unanswered while the
-// login shell is still starting. The view is not a probe, because the view says a
-// block exists, not that anything is listening in it.
-func waitForShell(sessionID, blockID string) error {
-	deadline := time.Now().Add(seatShellWait)
-	for {
-		if _, e := rexAPI("block.method", map[string]any{
-			"session_id": sessionID,
-			"block_id":   blockID,
-			"method":     "pwd",
-		}); e == nil {
-			return nil
-		} else if !time.Now().Before(deadline) {
-			return mission.Problem("rex_error", "the seat's shell never started: block %s in session %s did not answer pwd within %s, so nothing was written into it: %v", blockID, sessionID, seatShellWait, e)
-		}
-		time.Sleep(seatPoll)
-	}
+// captainCommand is the captain window's own command: the login shell, reading
+// the exec line as its `-c` argument. Command is an argv, not a shell string, so
+// the line's quotes, spaces, and the brief's apostrophes reach the shell exactly
+// as seatExecLine built them; a shell reading its terminal cannot do that safely.
+func captainCommand(p Plan) []any {
+	return []any{loginShell(), "-l", "-c", captainExecLine(p)}
 }
 
-// writeSeat writes exactly one piece of text into the captain's block. The
-// exec line and the newline that submits it are separate writes: a line that
-// arrives in one piece can lose its tail, and with it the quote that closes the
-// brief, so the shell sits in quote continuation and never runs anything.
-func writeSeat(sessionID, blockID, data string) error {
-	_, e := rexAPI("block.method", map[string]any{
-		"session_id": sessionID,
-		"block_id":   blockID,
-		"method":     "write",
-		"args":       map[string]any{"data": data},
-	})
-	if e != nil {
-		return rexProblem("block.method", e)
-	}
-	return nil
-}
-
-// submitSeat sends the newline that makes the shell run the exec line. It is its
-// own write, never the tail of the line's write, so a dropped tail cannot take
-// the submit with it.
-func submitSeat(sessionID, blockID string) error { return writeSeat(sessionID, blockID, "\n") }
-
-// waitForCaptain polls one block's foreground process until the login shell the
-// window opened on is gone. The last foreground it saw comes back with false, so
-// a caller that gives up can say what the block still runs.
+// waitForCaptain polls one block's process report until pi holds the block. The
+// last foreground it saw comes back with false, so a caller that gives up can say
+// what the block still runs.
 func waitForCaptain(sessionID, blockID string) (map[string]any, bool, error) {
-	shell := filepath.Base(loginShell())
 	deadline := time.Now().Add(seatStartWait)
 	var last map[string]any
 	for {
@@ -304,7 +280,7 @@ func waitForCaptain(sessionID, blockID string) (map[string]any, bool, error) {
 			return last, false, rexProblem("block.method", e)
 		}
 		last, _ = v["foreground"].(map[string]any)
-		if captainStarted(last, shell) {
+		if reportsPi(v) {
 			return last, true, nil
 		}
 		if !time.Now().Before(deadline) {
@@ -315,25 +291,25 @@ func waitForCaptain(sessionID, blockID string) (map[string]any, bool, error) {
 }
 
 // seatFailure is the error a seat reports when the captain never took the
-// foreground: the block, the window, and what the block still runs, because that
-// is what a reader needs to look at the window themselves.
+// foreground: the block, the window it is in, and what the block still runs,
+// because that is what a reader needs to look at the window themselves.
 func seatFailure(block, window string, fg map[string]any) error {
-	return mission.Problem("rex_error", "the captain never took the seat: block %s in window %s still runs %s after the submit was sent twice", block, window, foregroundName(fg))
+	return mission.Problem("rex_error", "the captain never took the seat: block %s in window %s still runs %s after the window ran its command", block, window, foregroundName(fg))
 }
 
-// seatCaptain creates the captain's window, reads the block id Rex assigned it,
-// then writes the exec line that turns that block into the captain. Two phases
-// are the only shape that works: the id arrives in the window-creation result,
-// so no process started with the window can already own it. The exec line keeps
-// the plan's argv and the brief, so pi starts exactly as it would have.
-//
-// The wait before the write is the fix for a lost captain: deploy used to write
-// the moment the window existed, while `zsh -l` was still sourcing profile
-// files, and the tail of the line arrived nowhere. The shell then waited inside
-// an open quote and the seat never started. So the seat waits for the shell to
-// answer, writes the line and its newline separately, and verifies that pi took
-// the foreground. One retry of the submit covers a shell that read its line
-// late; a second window is never the answer, because the label would name two.
+// seatVerifyTries is how many bounded waits the seat gives the captain's
+// foreground: the first, and one retry. The retry repeats the check, not a
+// submit, because a window command cannot be re-sent; it covers a process report
+// that lags the window it describes. A second window is never the answer,
+// because the label would name two.
+const seatVerifyTries = 2
+
+// seatCaptain creates the captain's window with the captain as its command, then
+// verifies that the block really runs pi. Rex assigns the block id as it creates
+// the window, and it sets REX_BLOCK in the environment of the program it starts
+// there, so the exec line needs no id of its own: the mux names the seat. The
+// verification stays because Rex accepting the window says only that the window
+// exists, not that pi came up in it.
 func seatCaptain(p Plan, sessionID string) (string, string, error) {
 	v, e := rexAPI("session.new_window", map[string]any{
 		"session_id":   sessionID,
@@ -351,31 +327,26 @@ func seatCaptain(p Plan, sessionID string) (string, string, error) {
 	if block == "" {
 		return "", "", mission.Problem("rex_error", "rex created window %q without returning its block id", p.CaptainWindow)
 	}
-	if e := waitForShell(sessionID, block); e != nil {
+	if e := verifyCaptain(sessionID, block, window); e != nil {
 		return "", "", e
-	}
-	if e := writeSeat(sessionID, block, captainExecLine(p, block)); e != nil {
-		return "", "", e
-	}
-	if e := submitSeat(sessionID, block); e != nil {
-		return "", "", e
-	}
-	fg, started, e := waitForCaptain(sessionID, block)
-	if e != nil {
-		return "", "", e
-	}
-	if !started {
-		if e := submitSeat(sessionID, block); e != nil {
-			return "", "", e
-		}
-		if fg, started, e = waitForCaptain(sessionID, block); e != nil {
-			return "", "", e
-		}
-		if !started {
-			return "", "", seatFailure(block, window, fg)
-		}
 	}
 	return window, block, nil
+}
+
+// verifyCaptain waits for the block to report pi, and retries that wait once.
+func verifyCaptain(sessionID, block, window string) error {
+	var fg map[string]any
+	for attempt := 0; attempt < seatVerifyTries; attempt++ {
+		started := false
+		var e error
+		if fg, started, e = waitForCaptain(sessionID, block); e != nil {
+			return e
+		}
+		if started {
+			return nil
+		}
+	}
+	return seatFailure(block, window, fg)
 }
 
 // seatedBlock is the block id in a window-creation result. Rex answers with
@@ -390,10 +361,14 @@ func seatedBlock(v map[string]any) string {
 	return rootBlock(v)
 }
 
-// captainExecLine is the one line that replaces the login shell with the
-// captain, with the seat identity a Rex block has: its session and its own block.
-func captainExecLine(p Plan, block string) string {
-	return seatExecLine(p, "REX_SESSION="+p.Session, "REX_BLOCK="+block)
+// captainExecLine is the one line the captain's window runs, with the seat
+// identity a Rex block has. It names the session's label, not the id Rex put in
+// REX_SESSION, because mission identities are labels. It does not name REX_BLOCK:
+// Rex sets it in the environment of the program it starts in a block, so the
+// captain already reads its own block, and a window command cannot carry an id
+// that does not exist until the window has been created.
+func captainExecLine(p Plan) string {
+	return seatExecLine(p, "REX_SESSION="+p.Session)
 }
 
 // rexProblem wraps a Rex failure so the JSON envelope carries a code a caller

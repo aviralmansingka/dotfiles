@@ -32,8 +32,10 @@ type seat interface {
 	focus(sessionID, windowID string) error
 	// clear closes a window whose captain is gone, so one label never names two.
 	clear(sessionID, windowID string) error
-	// place creates the captain's window, waits for its shell, writes the exec
-	// line, and verifies that the captain took the seat.
+	// place seats the captain in a new window or tab and verifies that pi runs
+	// there. A Rex deployment starts the captain as the window's own command; a
+	// Herdr deployment opens a tab on a login shell and types the exec line into
+	// it, because a Herdr tab has no command of its own.
 	place(p Plan, sessionID string) (seatIdentity, error)
 }
 
@@ -68,12 +70,13 @@ func seatFor(mux string) (seat, error) {
 	return nil, mission.Problem("mux_unsupported", "deploy seats one plan in rex or herdr; --mux %q is neither", mux)
 }
 
-// The seat's waits are bounded: a login shell sources the human's profile before
-// it reads its terminal (about three seconds on this machine), and pi takes the
-// foreground once the exec line runs. Neither wait may run forever, because a
-// shell that never listens and a captain that never starts are failures deploy
-// reports, not races it sleeps through. Both adapters share them, so one mux's
-// seat cannot wait twice as long as the other's.
+// The seat's waits are bounded: pi reaches the foreground once the login shell
+// has read the exec line, and a Herdr tab's shell has to be ready before the line
+// is typed into it. Neither wait may run forever, because a shell that never
+// listens and a captain that never starts are failures deploy reports, not races
+// it sleeps through. seatPoll and seatStartWait are shared, so one mux's seat
+// cannot wait twice as long as the other's; seatShellWait belongs to the Herdr
+// adapter, which is the only seat that still types into a shell.
 var (
 	seatPoll      = 100 * time.Millisecond
 	seatShellWait = 10 * time.Second
@@ -109,16 +112,11 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
-// loginShellArgv is the command that opens the captain's block: the human's own
-// shell as a login shell, so its startup files run and the exec line that
-// follows reaches pi with the human's PATH. $SHELL names that shell; a relative
-// or missing value falls back to /bin/sh, which every Unix has. Pooling a PATH
-// list here instead would be a second, drifting copy of the human's profile.
-func loginShellArgv() []string { return []string{loginShell(), "-l"} }
-
 // loginShell is the account's shell, as an absolute path that exists. A Rex
 // window resolves a command against the server's own PATH, so the seat names the
-// shell by path and never by name.
+// shell by path and never by name. $SHELL names that shell; a relative or missing
+// value falls back to /bin/sh, which every Unix has. Pooling a PATH list in the
+// seat instead would be a second, drifting copy of the human's profile.
 func loginShell() string {
 	if sh := os.Getenv("SHELL"); filepath.IsAbs(sh) {
 		if st, e := os.Stat(sh); e == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
