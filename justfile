@@ -52,6 +52,8 @@ test-deploy:
 #   just secrets-edit secrets/homelab.yaml     # open in $EDITOR, re-encrypt on save
 #   just secrets-rotate secrets/homelab.yaml   # fresh data key for every value
 #   just secrets-check                         # offline: rules vs files, no keys
+#   just secrets-import pi-telegram=/tmp/x.env # move a plaintext env file into sops
+#   just secrets-import-dry                    # the same, printing no value
 #
 # The recipients are in .sops.yaml and the runbook is docs/nix-profiles.md.
 # Editing needs the admin age key at ~/.config/sops/age/keys.txt; checking does
@@ -69,6 +71,20 @@ secrets-rotate file:
 # Check secret files offline: one rule per file, plaintext rejected.
 secrets-check:
     python3 scripts/sops-check.py
+
+# Move plaintext env files into the host's secrets file, one sops key per file
+# named after it (`pi-telegram` -> key `pi-telegram.env`). A bare name reads
+# ~/.config/<name>.env; NAME=PATH reads that path instead, which is how a file
+# pulled from the homelab gets in. No value is printed: the script reports the
+# name, byte count and sha256 and verifies the decrypt round trip.
+#
+#   just secrets-import pi-stt-worker=/tmp/pi-stt-worker.env
+secrets-import *sources:
+    python3 scripts/sops-import-env.py {{sources}}
+
+# The same import, reading and hashing only (`~/.config/<name>.env` by default).
+secrets-import-dry *sources:
+    python3 scripts/sops-import-env.py --dry-run {{sources}}
 
 # ---- from main: the build recipes ----
 

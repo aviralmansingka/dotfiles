@@ -295,11 +295,14 @@ REPORT
 
 # The deploy tree is the flake plus the recipe and this script, plus the
 # directories the flake reads at evaluation time: rataflow/ (the crate) and
-# zsh/ (the source of ~/.zshenv and ~/.zshrc). Nothing else travels: the
-# checkout stays where stow already reads it.
+# zsh/ (the source of ~/.zshenv and ~/.zshrc). `secrets/` travels because the
+# profile's sops module reads `secrets/<host>.yaml` at evaluation time
+# (sops.defaultSopsFile is a path in the flake source), so a staged tree
+# without it cannot evaluate — the switch would fail before it started.
+# Nothing else travels: the checkout stays where stow already reads it.
 deploy_tree() {
   printf '%s\n' flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo \
-    zsh scripts/stow-packages scripts/stow-packages-darwin
+    zsh secrets scripts/stow-packages scripts/stow-packages-darwin
 }
 
 plan() {
