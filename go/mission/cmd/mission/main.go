@@ -30,6 +30,10 @@ const help = `mission — work that survives the agent
       --checks nonempty-artifact,json-valid --output result.json
   mission checks                          List registered check presets
   mission verify [REPO/SLUG]               Run checks for the current attempt context
+  mission ask REPO/SLUG --text QUESTION [--step S02] [--attempt ID]
+      [--kind blocked|question|decision]
+      Ask the commander one question and stop. No token needed.
+  mission ask --list REPO/SLUG             Pending and delivered asks
   mission claim REPO/SLUG --agent scout    Claim a research step; returns token
   mission pickup --repo dotfiles --agent scout   Claim ready research work
   mission run REPO/SLUG --agent worker --cwd WORKTREE -- COMMAND ARGS...
@@ -178,6 +182,8 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdVerify(a, s)
 	case "next", "ready":
 		return s.ready(a.Get("repo"))
+	case "ask":
+		return cmdAsk(a, s)
 	case "claim":
 		return cmdClaim(a, s)
 	case "pickup":
