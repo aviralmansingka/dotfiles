@@ -11,7 +11,7 @@
 
 local M = {}
 
-local COLUMN = 100 -- wanted text columns
+local COLUMN = 100 -- fallback when the buffer wraps at no set width
 local MIN_COLUMN = 40 -- a column below this width gains nothing
 local MARGIN = 8 -- cells kept free for the two filler windows
 
@@ -21,15 +21,26 @@ local function notify(message)
   vim.notify("Reader: " .. message, vim.log.levels.INFO)
 end
 
+--- The width the buffer wraps prose at: 'textwidth', else the fallback column.
+--- The formatter and `gq` use the same number, so the column matches the text.
+function M.text_width(buf)
+  buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
+  local tw = vim.bo[buf].textwidth
+  if tw ~= nil and tw > 0 then
+    return tw
+  end
+  return COLUMN
+end
+
 --- Wanted text width for a window that offers `width` cells.
-function M.column_width(width)
-  return math.min(COLUMN, width - MARGIN)
+function M.column_width(width, preferred)
+  return math.min(preferred or COLUMN, width - MARGIN)
 end
 
 --- Auto-enable rule. The column is the default for reading markdown. Auto-enable
 --- it wherever it fits: the window must hold MIN_COLUMN cells or more.
-function M.should_auto(width)
-  return M.column_width(width) >= MIN_COLUMN
+function M.should_auto(width, preferred)
+  return M.column_width(width, preferred) >= MIN_COLUMN
 end
 
 --- A prose buffer can use the reader column.
@@ -96,7 +107,7 @@ end
 -- window: 'statuscolumn' and the sign column stay in the left margin.
 local function metrics(win, avail)
   local off = text_offset(win)
-  local column = M.column_width(avail)
+  local column = M.column_width(avail, M.text_width(vim.api.nvim_win_get_buf(win)))
   if column < MIN_COLUMN then
     return nil
   end
@@ -245,7 +256,7 @@ function M.maybe_auto(win)
   if not M.eligible(vim.api.nvim_win_get_buf(win)) then
     return
   end
-  if M.should_auto(vim.api.nvim_win_get_width(win)) then
+  if M.should_auto(vim.api.nvim_win_get_width(win), M.text_width(vim.api.nvim_win_get_buf(win))) then
     M.enable(win)
   end
 end
