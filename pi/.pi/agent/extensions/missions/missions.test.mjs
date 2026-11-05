@@ -892,6 +892,49 @@ test("mission launch registers a Herdr worktree and adopts its workspace",needsC
   const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(f.started.length,1);
 });
 
+test("a Rex block is a mission seat when it runs in the mission checkout", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const calls=[];
+  // A Rex captain carries no Herdr pane, so any Herdr or Rex call would need a
+  // live session: the cwd the block reports is the whole binding.
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},
+    run:async binary=>{calls.push(binary);throw Error("no live session in a test")}});
+  bridge.seatCwd=async()=>root;
+  assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"rex-pi")),{workspace:"rex-session",pane:"block-1"});
+  assert.equal(bridge.surfaceSession,"rex-pi");assert.deepEqual(calls,[]);
+});
+
+test("a Rex block outside the mission checkout is refused", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const mission=join(root,"mission"),other=join(root,"other");mkdirSync(mission);mkdirSync(other);
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},
+    run:async()=>{throw Error("no live session in a test")}});
+  bridge.seatCwd=async()=>other;
+  await assert.rejects(bridge.assertSurface(context(mission,join(mission,"session.jsonl"))),
+    /Missions need a Herdr pane or a Rex block, running in the mission worktree/);
+  assert.equal(bridge.surfaceSession,null);
+});
+
+test("a Herdr pane still binds by pane cwd and never asks Rex", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-herdr-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const calls=[];
+  const bridge=new MissionBridge({env:{HERDR_ENV:"1",HERDR_PANE_ID:"repo:p2",REX_BLOCK:"block-1"},run:async(binary,args)=>{
+    calls.push(binary);
+    if(binary!=="herdr") throw Error(`unexpected ${binary} in a Herdr seat`);
+    const result=args[0]==="workspace"
+      ? {workspaces:[{workspace_id:"w-mission",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}]}
+      : {panes:[{pane_id:"repo:p2",cwd:root,foreground_cwd:root}]};
+    return JSON.stringify({result});
+  }});
+  bridge.common=async()=>"/git/repo";
+  bridge.seatCwd=async()=>{throw Error("a Herdr seat never asks Rex")};
+  assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"herdr-pi")),{workspace:"w-mission",pane:"repo:p2"});
+  assert.equal(bridge.surfaceSession,"herdr-pi");assert.equal(calls.includes("rex"),false);
+});
+
 test("a driver pane inherits the launcher configuration and no credential", () => {
   assert.deepEqual(driverEnv({ PI_CODING_AGENT_DIR: "/cfg", MISSION_VAULT: "/vault", MISSION_BIN: "/bin/mission", MISSION_STATE_DIR: "/state", MISSION_TOKEN: "secret", MISSION_ATTEMPT: "attempt-1", EMPTY: "" }),
     [["PI_CODING_AGENT_DIR", "/cfg"], ["MISSION_VAULT", "/vault"], ["MISSION_BIN", "/bin/mission"], ["MISSION_STATE_DIR", "/state"]]);
