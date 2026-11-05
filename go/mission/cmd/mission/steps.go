@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,7 +29,6 @@ func stepIndex(m mission.Mission, id string) (int, error) {
 	}
 	return -1, mission.Problem("not_found", "step %s not found", id)
 }
-func definitionHash(s mission.Step) string { b, _ := json.Marshal(s); return mission.Digest(b) }
 func (s *App) steps(h string) ([]StepView, error) {
 	r, e := s.load(h)
 	if e != nil {
@@ -361,7 +359,7 @@ func (s *App) adoptOrphans(r *mission.Record) (int, error) {
 		if a.Status != "succeeded" || len(a.Verifications) == 0 || r.State.Steps[a.Step].Status == "passed" {
 			continue
 		}
-		if allPassed(a.Verifications[len(a.Verifications)-1], attemptDefinition(*r, a)) {
+		if mission.AllPassed(a.Verifications[len(a.Verifications)-1], attemptDefinition(*r, a)) {
 			r.State.Steps[a.Step] = mission.StepState{Status: "passed", Attempt: a.ID, Evidence: a.Artifact}
 		}
 	}
