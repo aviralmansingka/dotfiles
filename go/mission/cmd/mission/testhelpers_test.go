@@ -30,6 +30,40 @@ func must(t *testing.T, e error) {
 	}
 }
 
+// deskOn builds the desk and opens the lane that holds handle, so a test that
+// is not about the filter lane still sees the record it seeded. The desk
+// itself opens on the lane's first entry, ACTIVE.
+func deskOn(t *testing.T, s *Store, handle string) *desk {
+	t.Helper()
+	m := newDesk(s)
+	m.refresh()
+	selectHandle(t, m, handle)
+	return m
+}
+
+// selectHandle moves the desk to the lane that holds handle and puts the marker
+// on its row. A test that changes a record's state between refreshes calls it
+// again, because refresh keeps the lane and drops a record the lane no longer
+// matches.
+func selectHandle(t *testing.T, m *desk, handle string) {
+	t.Helper()
+	r, e := m.store.load(handle)
+	must(t, e)
+	for i, f := range deskFilters {
+		if !f.Match(r) {
+			continue
+		}
+		m.setFilter(i)
+		for j, v := range m.view {
+			if v.Handle == handle {
+				m.selected = j
+				return
+			}
+		}
+	}
+	t.Fatalf("no filter holds %s (status %s)", handle, r.State.Status)
+}
+
 func wantCode(t *testing.T, e error, code string) {
 	t.Helper()
 	d, ok := e.(*mission.DomainError)

@@ -3,11 +3,14 @@ package main
 import (
 	tea "charm.land/bubbletea/v2"
 	lg "charm.land/lipgloss/v2"
+	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 // layoutSizes are the terminal sizes the desk must fill without clipping.
@@ -88,8 +91,7 @@ func TestDeskFillsTerminalAtThreeSizes(t *testing.T) {
 	result(t, s, c, "Review this")
 	_, e := s.finish(h, c.Attempt.ID, c.Token, false, "", false, 0)
 	must(t, e)
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, h)
 	for _, size := range layoutSizes {
 		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		if m.width != size[0] || m.height != size[1] {
@@ -112,8 +114,7 @@ func TestEveryFormFillsTerminalAtThreeSizes(t *testing.T) {
 	result(t, s, c, "Review this")
 	_, e := s.finish(h, c.Attempt.ID, c.Token, false, "", false, 0)
 	must(t, e)
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, h)
 	m.startBuilder()
 	for _, size := range layoutSizes {
 		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
@@ -167,8 +168,7 @@ func TestRenderFitsAndNavigationChangesViews(t *testing.T) {
 	result(t, s, c, "Review this")
 	_, e := s.finish(h, c.Attempt.ID, c.Token, false, "", false, 0)
 	must(t, e)
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, h)
 	for _, size := range [][2]int{{128, 42}, {80, 24}, {60, 24}} {
 		m.width = size[0]
 		m.height = size[1]
@@ -234,6 +234,7 @@ func TestStaticFormCaptureContainsFields(t *testing.T) {
 	_, e := s.finish(h, c.Attempt.ID, c.Token, false, "", false, 0)
 	must(t, e)
 	m.refresh()
+	selectHandle(t, m, h)
 	m.startReview()
 	m.prepareFormRender()
 	if !strings.Contains(stripANSI(m.render()), "Decision note") {
@@ -243,8 +244,7 @@ func TestStaticFormCaptureContainsFields(t *testing.T) {
 
 func TestStepsViewAndEditorSaveCustomization(t *testing.T) {
 	s, h := fixture(t)
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, h)
 	m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	if m.tab != detailTabs-1 || !strings.Contains(stripANSI(m.render()), "nonempty-artifact") {
 		t.Fatal("step list missing defaults")
@@ -377,8 +377,8 @@ func TestFloorFrameKeepsTheLegendLast(t *testing.T) {
 	}
 }
 
-// stateVault seeds one mission per status the desk filters, so every filter tab
-// has a row to show and the ALL tab has both open and finished work.
+// stateVault seeds one mission per status the desk filters, so every lane entry
+// has a row to show and DONE holds both finished and retired work.
 func stateVault(t *testing.T) (*Store, map[string]string) {
 	t.Helper()
 	s, e := openStore(t.TempDir())
@@ -437,32 +437,37 @@ func handlesOf(records []mission.Record) []string {
 	return out
 }
 
-// TestFilterTabsNarrowTheMissionList pins the list pane's tabs: ALL keeps every
-// mission ever created, each later tab holds exactly the states it names, and
-// the lane leads with the tab that owns the list.
+// TestFilterTabsNarrowTheMissionList pins the list pane's tabs: the desk opens
+// on ACTIVE, each of the five lanes holds exactly the states it names in lane
+// order, and the lane leads with the tab that owns the list.
 func TestFilterTabsNarrowTheMissionList(t *testing.T) {
 	s, handles := stateVault(t)
 	m := newDesk(s)
 	m.refresh()
-	if len(m.records) != 7 || len(m.view) != 7 {
-		t.Fatalf("ALL holds %d of %d missions", len(m.view), len(m.records))
+	// There is no ALL tab: the desk opens narrow, on the work that moves.
+	if got := handlesOf(m.view); len(got) != 1 || got[0] != handles["running"] {
+		t.Fatalf("the desk opened on %v, want only %s", got, handles["running"])
+	}
+	if deskFilters[m.filter].Label != "ACTIVE" {
+		t.Fatalf("the desk opened on %s, want ACTIVE", deskFilters[m.filter].Label)
+	}
+	order := []string{"ACTIVE", "YOURS", "READY", "FAILED", "DONE"}
+	if len(deskFilters) != len(order) {
+		t.Fatalf("the lane holds %d filters, want %d", len(deskFilters), len(order))
 	}
 	want := map[string][]string{
-		"READY":  {handles["ready"]},
 		"ACTIVE": {handles["running"]},
 		"YOURS":  {handles["waiting"], handles["review"]},
-		"DONE":   {handles["done"], handles["closed"]},
+		"READY":  {handles["ready"]},
 		"FAILED": {handles["failed"]},
+		"DONE":   {handles["done"], handles["closed"]},
 	}
 	for index, filter := range deskFilters {
+		if filter.Label != order[index] {
+			t.Fatalf("lane entry %d is %s, want %s", index, filter.Label, order[index])
+		}
 		m.setFilter(index)
 		got := handlesOf(m.view)
-		if filter.Label == "ALL" {
-			if len(got) != len(m.records) {
-				t.Fatalf("ALL hides missions: %v", got)
-			}
-			continue
-		}
 		if len(got) != len(want[filter.Label]) {
 			t.Fatalf("%s holds %v, want %v", filter.Label, got, want[filter.Label])
 		}
@@ -472,13 +477,13 @@ func TestFilterTabsNarrowTheMissionList(t *testing.T) {
 			}
 		}
 	}
-	m.setFilter(3)
+	m.setFilter(1)
 	lane := stripANSI(m.filterLane(60))
 	if !strings.HasPrefix(lane, "YOURS 2") {
 		t.Fatalf("lane %q does not lead with the active tab", lane)
 	}
-	if !strings.Contains(lane, "ALL 7") {
-		t.Fatalf("lane %q hides the ALL count", lane)
+	if !strings.Contains(lane, "ACTIVE 1") {
+		t.Fatalf("lane %q hides the ACTIVE count", lane)
 	}
 	// One key walks the list tabs while the details keep their own tab.
 	m.setFilter(0)
@@ -498,7 +503,7 @@ func TestFilterTabsNarrowTheMissionList(t *testing.T) {
 	// A filter never leaves the marker on a hidden mission, and j/k stays
 	// inside the rows the filter shows.
 	m.selected = 4
-	m.setFilter(3)
+	m.setFilter(1)
 	if m.selected != 0 {
 		t.Fatalf("filter kept the marker on row %d", m.selected)
 	}
@@ -507,6 +512,232 @@ func TestFilterTabsNarrowTheMissionList(t *testing.T) {
 	m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	if m.selected != 1 {
 		t.Fatalf("j walked past the YOURS rows: %d", m.selected)
+	}
+}
+
+// laneLabels is the whole filter lane in cycle order, spelled out so a test
+// fails when an entry is renamed, reordered, or added.
+const laneLabels = "ACTIVE, YOURS, READY, FAILED, DONE"
+
+// TestFilterLanePinsFiveLabels pins the lane itself: exactly five entries with
+// the five state labels in cycle order, filterLabels naming them all, and the
+// lane row drawing them in that order with no wildcard chip.
+func TestFilterLanePinsFiveLabels(t *testing.T) {
+	s, _ := stateVault(t)
+	m := newDesk(s)
+	m.refresh()
+	if len(deskFilters) != 5 {
+		t.Fatalf("the lane holds %d filters, want 5", len(deskFilters))
+	}
+	if got := filterLabels(); got != laneLabels {
+		t.Fatalf("filterLabels() = %q, want %q", got, laneLabels)
+	}
+	for index, label := range strings.Split(laneLabels, ", ") {
+		if got := deskFilters[index].Label; got != label {
+			t.Fatalf("lane entry %d is %s, want %s", index, got, label)
+		}
+		if strings.EqualFold(label, "ALL") {
+			t.Fatalf("lane entry %d is a wildcard: %s", index, label)
+		}
+		if idx, ok := filterIndex(label); !ok || idx != index {
+			t.Fatalf("filterIndex(%q) = %d, %v; want %d, true", label, idx, ok, index)
+		}
+	}
+	// The lane row draws the five chips in cycle order, active chip first, and
+	// a wide row needs no counter.
+	m.setFilter(0)
+	lane := stripANSI(m.filterLane(200))
+	if strings.Contains(lane, "ALL") {
+		t.Fatalf("lane %q still carries a wildcard chip", lane)
+	}
+	if !strings.HasPrefix(lane, "ACTIVE 1") {
+		t.Fatalf("lane %q does not lead with the active chip", lane)
+	}
+	at := -1
+	for _, label := range strings.Split(laneLabels, ", ") {
+		pos := strings.Index(lane[at+1:], label)
+		if pos < 0 {
+			t.Fatalf("lane %q lost %s", lane, label)
+		}
+		at += pos + 1
+	}
+	if strings.Contains(lane, "/5") {
+		t.Fatalf("a row wide enough for every chip still draws a counter: %q", lane)
+	}
+}
+
+// TestNoFilterIsAWildcard pins that every entry narrows: each lane holds
+// exactly the records its own match accepts, ACTIVE is a strict subset of the
+// vault, and an index outside the lane falls back to ACTIVE instead of widening
+// the list.
+func TestNoFilterIsAWildcard(t *testing.T) {
+	s, handles := stateVault(t)
+	m := newDesk(s)
+	m.refresh()
+	if len(m.records) != 7 {
+		t.Fatalf("the vault holds %d missions, want 7", len(m.records))
+	}
+	if len(filterRecords(m.records, 0)) == len(m.records) {
+		t.Fatalf("filterRecords keeps all %d records: the first entry is a wildcard", len(m.records))
+	}
+	for index, filter := range deskFilters {
+		got := filterRecords(m.records, index)
+		want := 0
+		for _, r := range m.records {
+			if filter.Match(r) {
+				want++
+			}
+		}
+		if len(got) != want {
+			t.Fatalf("%s holds %d records, want the %d its match accepts", filter.Label, len(got), want)
+		}
+		// No entry may hide a record it does not match, and none may show one
+		// it does not name.
+		for _, r := range m.records {
+			listed := false
+			for _, v := range got {
+				if v.Handle == r.Handle {
+					listed = true
+				}
+			}
+			if listed != filter.Match(r) {
+				t.Fatalf("%s lists %s = %v for a %s mission", filter.Label, r.Handle, listed, r.State.Status)
+			}
+		}
+	}
+	active := handlesOf(filterRecords(m.records, 0))
+	if len(active) != 1 || active[0] != handles["running"] {
+		t.Fatalf("ACTIVE holds %v, want only %s", active, handles["running"])
+	}
+	// An index outside the lane falls back to ACTIVE, so no caller can widen
+	// the list by passing a bad index.
+	for _, index := range []int{-1, -7, len(deskFilters), 99} {
+		if got := handlesOf(filterRecords(m.records, index)); strings.Join(got, " ") != strings.Join(active, " ") {
+			t.Fatalf("filterRecords(index %d) = %v, want the ACTIVE rows %v", index, got, active)
+		}
+	}
+	m.setFilter(len(deskFilters) + 3)
+	if m.filter != 0 || strings.Join(handlesOf(m.view), " ") != strings.Join(active, " ") {
+		t.Fatalf("setFilter past the lane left entry %d with rows %v", m.filter, handlesOf(m.view))
+	}
+}
+
+// TestFilterCycleWrapsAtBothEnds pins the cycle ends: one ] on the last entry
+// (DONE) wraps to ACTIVE, one [ on ACTIVE wraps back to DONE, and neither key
+// skips an entry on the way.
+func TestFilterCycleWrapsAtBothEnds(t *testing.T) {
+	s, _ := stateVault(t)
+	m := newDesk(s)
+	m.refresh()
+	press := func(key string) {
+		m.Update(tea.KeyPressMsg{Code: []rune(key)[0], Text: key})
+	}
+	m.setFilter(len(deskFilters) - 1)
+	if got := deskFilters[m.filter].Label; got != "DONE" {
+		t.Fatalf("the last lane entry is %s, want DONE", got)
+	}
+	press("]")
+	if m.filter != 0 || deskFilters[m.filter].Label != "ACTIVE" {
+		t.Fatalf("] on DONE landed on %s (entry %d), want ACTIVE", deskFilters[m.filter].Label, m.filter)
+	}
+	press("[")
+	if m.filter != len(deskFilters)-1 || deskFilters[m.filter].Label != "DONE" {
+		t.Fatalf("[ on ACTIVE landed on %s (entry %d), want DONE", deskFilters[m.filter].Label, m.filter)
+	}
+	// Forward from the open position: one press steps one entry, no skipping.
+	m.setFilter(0)
+	for _, want := range []string{"YOURS", "READY", "FAILED", "DONE"} {
+		press("]")
+		if got := deskFilters[m.filter].Label; got != want {
+			t.Fatalf("] stepped to %s, want %s", got, want)
+		}
+	}
+}
+
+// TestFilterLaneCounterShowsPositionAndTotal pins the chip counter: on a row
+// too narrow for every chip the lane says where the cycle stands, 1/5 on the
+// opening entry and 5/5 on the last one, and the active chip still leads.
+func TestFilterLaneCounterShowsPositionAndTotal(t *testing.T) {
+	s, _ := stateVault(t)
+	m := newDesk(s)
+	m.refresh()
+	m.setFilter(0)
+	narrow := stripANSI(m.filterLane(20))
+	if !strings.Contains(narrow, "1/5") || !strings.HasPrefix(narrow, "ACTIVE") {
+		t.Fatalf("the lane at open reads %q, want the active chip and a 1/5 counter", narrow)
+	}
+	m.setFilter(len(deskFilters) - 1)
+	narrow = stripANSI(m.filterLane(20))
+	if !strings.Contains(narrow, "5/5") || !strings.HasPrefix(narrow, "DONE") {
+		t.Fatalf("the lane on DONE reads %q, want the active chip and a 5/5 counter", narrow)
+	}
+	// Every chip carries the number of missions it holds.
+	wide := stripANSI(m.filterLane(200))
+	for _, chip := range []string{"ACTIVE 1", "YOURS 2", "READY 1", "FAILED 1", "DONE 2"} {
+		if !strings.Contains(wide, chip) {
+			t.Fatalf("the lane %q lost the %q chip", wide, chip)
+		}
+	}
+	if strings.Contains(wide, "/5") {
+		t.Fatalf("a row wide enough for every chip still draws a counter: %q", wide)
+	}
+}
+
+// captureStdout runs fn with os.Stdout pointed at a pipe and hands back what
+// the command printed, so a test can read the JSON envelope emit writes.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	r, w, e := os.Pipe()
+	if e != nil {
+		t.Fatal(e)
+	}
+	saved := os.Stdout
+	os.Stdout = w
+	read := make(chan string, 1)
+	go func() {
+		b, _ := io.ReadAll(r)
+		read <- string(b)
+	}()
+	defer func() { os.Stdout = saved }()
+	fn()
+	must(t, w.Close())
+	os.Stdout = saved
+	return <-read
+}
+
+// TestUnknownFilterLabelIsRefused pins the refusal path: a label that names no
+// lane entry resolves to the ACTIVE fallback with ok=false, and the render
+// command refuses it, naming all five labels instead of widening the list.
+func TestUnknownFilterLabelIsRefused(t *testing.T) {
+	s, _ := stateVault(t)
+	for _, label := range []string{"all", "ALL", "", "done!", "everything"} {
+		index, ok := filterIndex(label)
+		if ok {
+			t.Fatalf("filterIndex(%q) resolved lane entry %d", label, index)
+		}
+		if index != 0 {
+			t.Fatalf("filterIndex(%q) = %d, want the ACTIVE fallback 0", label, index)
+		}
+	}
+	if index, ok := filterIndex("done"); !ok || index != len(deskFilters)-1 {
+		t.Fatalf("filterIndex(done) = %d, %v; want %d, true", index, ok, len(deskFilters)-1)
+	}
+	a := platform.Args{Pos: []string{"render"}, Flags: map[string][]string{"filter": {"all"}}}
+	var code int
+	out := captureStdout(t, func() { code = cmdRender(a, s) })
+	if code != 2 {
+		t.Fatalf("render --filter all exited %d, want the usage code 2", code)
+	}
+	if !strings.Contains(out, "unknown filter all") {
+		t.Fatalf("the refusal does not name the bad label: %q", out)
+	}
+	if !strings.Contains(out, "use one of "+laneLabels) {
+		t.Fatalf("the refusal does not list the five labels: %q", out)
+	}
+	for _, label := range strings.Split(laneLabels, ", ") {
+		if !strings.Contains(out, label) {
+			t.Fatalf("the refusal %q does not name %s", out, label)
+		}
 	}
 }
 
@@ -616,9 +847,9 @@ func TestBracketsWalkEachPaneTabsAndWrap(t *testing.T) {
 	press := func(key string) {
 		m.Update(tea.KeyPressMsg{Code: []rune(key)[0], Text: key})
 	}
-	// The list walks its state tabs forward, then wraps back to ALL.
-	m.focus, m.filter, m.tab = 0, filterAll, 2
-	for _, want := range []string{"READY", "ACTIVE", "YOURS", "DONE", "FAILED", "ALL"} {
+	// The list walks its five state tabs forward, then wraps back to ACTIVE.
+	m.focus, m.filter, m.tab = 0, 0, 2
+	for _, want := range []string{"YOURS", "READY", "FAILED", "DONE", "ACTIVE"} {
 		press("]")
 		if got := deskFilters[m.filter].Label; got != want {
 			t.Fatalf("] walked to %s, want %s", got, want)
@@ -627,8 +858,8 @@ func TestBracketsWalkEachPaneTabsAndWrap(t *testing.T) {
 			t.Fatalf("] moved the focus or the detail tab: focus %d tab %d", m.focus, m.tab)
 		}
 	}
-	// And backwards, wrapping from ALL to FAILED.
-	for _, want := range []string{"FAILED", "DONE", "YOURS", "ACTIVE", "READY", "ALL"} {
+	// And backwards, wrapping from ACTIVE to DONE.
+	for _, want := range []string{"DONE", "FAILED", "READY", "YOURS", "ACTIVE"} {
 		press("[")
 		if got := deskFilters[m.filter].Label; got != want {
 			t.Fatalf("[ walked to %s, want %s", got, want)
@@ -658,9 +889,9 @@ func TestBracketsWalkEachPaneTabsAndWrap(t *testing.T) {
 		}
 	}
 	// The arrow keys are the same two moves: they cannot disagree with [ and ].
-	m.focus, m.filter, m.tab = 0, filterAll, 0
+	m.focus, m.filter, m.tab = 0, 0, 0
 	m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
-	if deskFilters[m.filter].Label != "READY" {
+	if deskFilters[m.filter].Label != "YOURS" {
 		t.Fatalf("right did not walk the list tabs: %s", deskFilters[m.filter].Label)
 	}
 	m.focus = 1
@@ -682,8 +913,7 @@ func TestDetailTabStripOrderPinsTheFiveViews(t *testing.T) {
 		t.Fatalf("detailTabs is %d, want 5", detailTabs)
 	}
 	s, _ := fixture(t)
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, "dotfiles/test-mission")
 	for tab := 0; tab < detailTabs; tab++ {
 		m.tab = tab
 		plain := stripANSI(m.render())
@@ -725,8 +955,7 @@ func TestTroopersViewRendersReports(t *testing.T) {
 	must(t, e)
 	_, e = s.progress(h, c.Attempt.ID, c.Token, "scout-2", mission.Progress{ID: "e2", Status: "blocked", Summary: "Waiting on review", Blocker: "human gate"}, nil)
 	must(t, e)
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, h)
 	m.width, m.height = 128, 42
 	m.focus, m.tab = 1, 1
 	plain := stripANSI(m.render())
@@ -772,8 +1001,7 @@ func TestReportAttemptFallsBackToNewestReported(t *testing.T) {
 // reaches the view, and a narrow pane clips the summary without overflowing.
 func TestTroopersViewEmptyAndNarrow(t *testing.T) {
 	s, h := fixture(t)
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, h)
 	m.width, m.height = 128, 42
 	m.focus, m.tab = 1, 1
 	if plain := stripANSI(m.render()); !strings.Contains(plain, "No trooper reports yet") {
@@ -784,6 +1012,7 @@ func TestTroopersViewEmptyAndNarrow(t *testing.T) {
 	_, e := s.progress(h, c.Attempt.ID, c.Token, "trooper-with-a-long-name", mission.Progress{ID: "e1", Status: "ready", Summary: "A summary long enough to need clipping in any narrow detail pane"}, nil)
 	must(t, e)
 	m.refresh()
+	selectHandle(t, m, h)
 	// Narrow desk: one pane at a time, detailW under the split floor. The
 	// frame stops shrinking at minCols, so the smallest case sits on the floor.
 	for _, size := range [][2]int{{60, 24}, {48, 20}} {
@@ -889,11 +1118,11 @@ func TestHeaderBlockedDiffersFromWorking(t *testing.T) {
 	s, h := fixture(t)
 	c := claimTest(t, s, h)
 	result(t, s, c, "Review this")
-	m := newDesk(s)
-	m.refresh()
+	m := deskOn(t, s, h)
 	m.width, m.height = 128, 42
 	line := func() string {
 		m.refresh()
+		selectHandle(t, m, h)
 		lines := headerPlain(t, m)
 		return lines[len(lines)-1]
 	}
