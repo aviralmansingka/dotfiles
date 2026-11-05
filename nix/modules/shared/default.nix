@@ -51,6 +51,7 @@ in
         curl
         wget
         unzip
+        lazygit
       ]
       # Owner batch two (S06): the headless browser and the tailscale CLI come
       # from the profile. The tailscaled daemon stays with apt (root service);
