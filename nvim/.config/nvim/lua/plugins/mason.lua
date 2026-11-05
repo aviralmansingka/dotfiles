@@ -30,6 +30,11 @@ return {
       "gomodifytags",
       "impl",
       "delve",
+
+      -- Markdown (conform runs prettier, then markdownlint-cli2 — see
+      -- lua/plugins/conform.lua and after/ftplugin/markdown.lua)
+      "prettier",
+      "markdownlint-cli2",
     },
   },
 }
