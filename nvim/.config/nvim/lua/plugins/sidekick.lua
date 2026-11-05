@@ -7,6 +7,11 @@ local internal = require("plugins.sidekick.internal")
 return {
   "folke/sidekick.nvim",
   opts = {
+    -- No next edit suggestions: markdown and code editing are user-driven
+    -- here, and NES pops diff hunks on its own.
+    nes = {
+      enabled = false,
+    },
     cli = {
       win = {
         config = function(terminal)
@@ -36,6 +41,7 @@ return {
   config = function(_, opts)
     require("plugins.sidekick.herdr_backend").apply()
     require("sidekick").setup(opts)
+    require("plugins.sidekick.nes_off").apply()
     require("plugins.sidekick.view_focus").setup()
     local config = require("sidekick.config")
     for tool in pairs(config.cli.tools) do
