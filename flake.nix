@@ -112,9 +112,5 @@
       fleet.ownedTools = builtins.mapAttrs (
         _: pkg: pkg.outPath
       ) (import ./nix/lib/owned-tools.nix { pkgs = nixpkgs.legacyPackages.x86_64-linux; });
-
-      # The nine libvirt domains the homelab runs. Definitions live outside the
-      # repo; this table pins each dump by sha256 so a new host can define them.
-      fleet.libvirtDomains = (import ./nix/lib/libvirt-domains.nix).domains;
     };
 }

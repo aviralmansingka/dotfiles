@@ -1,6 +1,6 @@
-# Homelab deltas only. S01 proved the homelab is a bare-metal lab (MAAS, Ironic,
-# a Redfish emulator, eight libvirt domains) with an RTX 3060. The lab daemons,
-# GPU driver, Docker and k3s stay with apt; the profile carries the user side.
+# Homelab deltas only. The lab has no libvirt guests today: libvirtd, QEMU and the
+# kernel modules stay with apt, and the profile carries only the client package.
+# The lab daemons, GPU driver, Docker and k3s stay with apt as well.
 { pkgs, lib, ... }:
 
 {
@@ -17,9 +17,8 @@
     kubernetes-helm
     k9s
 
-    # The libvirt client side. The daemon, QEMU and the kernel modules stay with
-    # apt (root system service); `virsh` reads and defines the domains from the
-    # profile, and nix/lib/libvirt-domains.nix pins all nine of them.
+    # The libvirt client side, kept as a capability. The daemon, QEMU and the
+    # kernel modules stay with apt; guest definitions are no longer tracked here.
     libvirt
   ];
 }
