@@ -53,13 +53,57 @@ function hasCommand(command: string): boolean {
   return available;
 }
 
+/** Optional injection for tests: the env and the PATH probe. */
+type RexInputCheck = {
+  env?: Record<string, string | undefined>;
+  commandAvailable?: (command: string) => boolean;
+};
+
+/**
+ * Which of the three Rex inputs are missing, in a fixed order:
+ * `REX_SESSION`, `REX_BLOCK`, `rex on PATH`.
+ *
+ * Reads the environment on every call — a session can gain its Rex identity
+ * after load, and a cached environment answer is what left sessions unable to
+ * spawn children until they restarted. The PATH probe is the only cached
+ * input (`hasCommand`).
+ */
+export function missingRexInputs(options: RexInputCheck = {}): string[] {
+  const env = options.env ?? process.env;
+  const present = options.commandAvailable ?? hasCommand;
+  const missing: string[] = [];
+  if (!env.REX_SESSION) missing.push("REX_SESSION");
+  if (!env.REX_BLOCK) missing.push("REX_BLOCK");
+  if (!present("rex")) missing.push("rex on PATH");
+  return missing;
+}
+
+function listInputs(inputs: string[]): string {
+  if (inputs.length <= 1) return inputs.join("");
+  return `${inputs.slice(0, -1).join(", ")} and ${inputs[inputs.length - 1]}`;
+}
+
+/**
+ * One sentence naming exactly which Rex input is missing, or null when the
+ * identity is complete (nothing to report) or wholly absent (no Rex identity
+ * at all, so this is not a Rex session and the caller's generic multiplexer
+ * hint is the right one).
+ */
+export function rexRefusalDetail(options: RexInputCheck = {}): string | null {
+  const env = options.env ?? process.env;
+  if (!env.REX_SESSION && !env.REX_BLOCK) return null;
+  const missing = missingRexInputs(options);
+  if (missing.length === 0) return null;
+  return `Rex is not fully available: missing ${listInputs(missing)}.`;
+}
+
 /**
  * True when running inside Rex with the `rex` binary on PATH.
  * Rex sets `REX_SESSION` and `REX_BLOCK` on every process in a block;
  * `REX_BLOCK` is the parent pi's own block, the analogue of `TMUX_PANE`.
  */
 export function isRexAvailable(): boolean {
-  return !!process.env.REX_SESSION && !!process.env.REX_BLOCK && hasCommand("rex");
+  return missingRexInputs().length === 0;
 }
 
 /** Surface-agnostic gate (matches the ./tmux.ts `isMuxAvailable` contract). */
@@ -72,9 +116,11 @@ export function muxSetupHint(): string {
 }
 
 function requireRex(): void {
-  if (!isRexAvailable()) {
-    throw new Error(`rex is required for subagents. ${muxSetupHint()}`);
-  }
+  const missing = missingRexInputs();
+  if (missing.length === 0) return;
+  throw new Error(
+    `rex is required for subagents; missing ${listInputs(missing)}. ${muxSetupHint()}`,
+  );
 }
 
 // ── Shell helpers ──
