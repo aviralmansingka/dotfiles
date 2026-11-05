@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 # Deploy a fleet profile to a target host.
 #
-# Local target: switches in place (home-manager switch, or darwin-rebuild switch
-# for the macbook profile). Remote target: copies only the deploy tree (nix/,
-# justfile, this script) to a staging directory on the host and runs the switch
-# there. It never syncs the dotfiles checkout: `stow` owns those files on the
-# host, and a second copy of a working tree is how machines drift.
+# Local target: switches in place with `home-manager switch`; every host is a
+# standalone Home Manager configuration, so there is no system rebuild and no
+# sudo. The macbook profile differs only in that it prebuilds its activation
+# package first: a Mac that has not had a Home Manager profile yet bootstraps
+# once with `nix run .#home-manager -- switch --flake .#macbook`, after which the
+# profile in `~/.nix-profile/bin` (already first on the PATH below) carries the
+# tool.
+# Remote target: copies only the deploy tree (nix/, justfile, this script) to a
+# staging directory on the host and runs the switch there. It never syncs the
+# dotfiles checkout: `stow` owns those files on the host, and a second copy of a
+# working tree is how machines drift.
 #
 # Usage:
 #   scripts/nix-deploy <profile> <target> [--dry-run]
@@ -168,7 +174,7 @@ if [ "$ADHOC" = 1 ]; then
   }
   HOST="$ADHOC_SSH"
   SSH_TARGET="$TARGET"
-  KIND="home-manager"
+  TARGET_SYSTEM="x86_64-linux"
   TARGET_ATTR="remote-probe"
   REMOTE_USER="$ADHOC_USER"
 else
@@ -186,28 +192,29 @@ fi
 
 if [ "$ADHOC" = 0 ]; then
   SSH_TARGET="$(target_field "$TARGETS_JSON" "$HOST" ssh)"
-  KIND="$(target_field "$TARGETS_JSON" "$HOST" kind)"
+  TARGET_SYSTEM="$(target_field "$TARGETS_JSON" "$HOST" system)"
   TARGET_ATTR="$(target_field "$TARGETS_JSON" "$HOST" attr)"
   REMOTE_USER="$(target_field "$TARGETS_JSON" "$HOST" managedUser)"
 fi
 
-# The profile decides the constructor; the target table decides the host.
+# Every target is a standalone Home Manager configuration, so what separates the
+# two profiles is the platform a target is built for, not the output kind.
 case "$PROFILE" in
 remote)
-  [ "$KIND" = "home-manager" ] || {
-    echo "nix-deploy: profile 'remote' does not apply to target '$HOST' (it is $KIND)" >&2
+  [ "$TARGET_SYSTEM" = "x86_64-linux" ] || {
+    echo "nix-deploy: profile 'remote' does not apply to target '$HOST' (it is $TARGET_SYSTEM)" >&2
     exit 3
   }
   ATTR="$TARGET_ATTR"
   ATTR_PATH="homeConfigurations.$ATTR"
   ;;
 macbook)
-  [ "$KIND" = "darwin" ] || {
-    echo "nix-deploy: profile 'macbook' does not apply to target '$HOST' (it is $KIND)" >&2
+  [ "$TARGET_SYSTEM" = "aarch64-darwin" ] || {
+    echo "nix-deploy: profile 'macbook' does not apply to target '$HOST' (it is $TARGET_SYSTEM)" >&2
     exit 3
   }
-  ATTR="macbook"
-  ATTR_PATH="darwinConfigurations.$ATTR"
+  ATTR="$TARGET_ATTR"
+  ATTR_PATH="homeConfigurations.$ATTR"
   ;;
 *)
   echo "nix-deploy: unknown profile '$PROFILE'" >&2
@@ -220,9 +227,10 @@ LOCAL_HOST="$(resolve_target local "$TARGETS_JSON" "$THIS_HOST")"
 IS_LOCAL=0
 [ "$LOCAL_HOST" = "$HOST" ] && IS_LOCAL=1
 
-# The macbook profile captures machine-private defaults from the live Mac before
-# its switch. That capture cannot run against a different machine over ssh, so a
-# macbook deploy is local-only: anything else is refused before staging.
+# The macbook switch activates a user-level Home Manager generation on the Mac
+# itself; there is no system profile and no sudo, so a deploy onto any other
+# machine would activate in the wrong place. Anything but the Mac is refused
+# before staging.
 if [ "$PROFILE" = "macbook" ] && [ "$IS_LOCAL" = 0 ]; then
   echo "nix-deploy: the macbook profile deploys on the Mac itself (this host is $LOCAL_HOST)" >&2
   exit 3
@@ -231,7 +239,7 @@ fi
 # --------------------------------------------------------------- switching ---
 switch_command() { # $1 flake dir, $2 attr -> argv printed on one line
   if [ "$PROFILE" = "macbook" ]; then
-    printf 'sudo darwin-rebuild switch --flake %q#%s' "$1" "$2"
+    printf 'home-manager switch --flake %q#%s' "$1" "$2"
   else
     printf 'nix run %q#home-manager -- switch --flake %q#%s' "$1" "$1" "$2"
   fi
@@ -239,10 +247,12 @@ switch_command() { # $1 flake dir, $2 attr -> argv printed on one line
 
 # `home-manager` is not on a fresh host, and installing a second copy is how the
 # binary and the profile drift apart. The flake pins its own home-manager, so
-# the switch runs that one: same revision locally and over ssh.
+# the switch runs that one: same revision locally and over ssh. On the Mac the
+# profile's own `home-manager` is the pinned one already, so the macbook switch
+# is a plain `home-manager switch` as aviral, with no sudo.
 run_switch() { # $1 flake dir, $2 attr
   if [ "$PROFILE" = "macbook" ]; then
-    ( cd "$1" && sudo darwin-rebuild switch --flake "$1#$2" )
+    ( cd "$1" && home-manager switch --flake "$1#$2" )
   else
     ( cd "$1" && nix --extra-experimental-features "nix-command flakes" run "$1#home-manager" -- switch --flake "$1#$2" )
   fi
@@ -335,50 +345,30 @@ if [ ! -f "$ROOT/flake.nix" ]; then
   exit 2
 fi
 
-# The generated defaults module is machine-private: it is not committed, so a
-# switch regenerates it first. A capture failure must not stop a deploy (the
-# module falls back to an empty set), but the run says so.
-generate_defaults() {
-  [ "$PROFILE" = "macbook" ] || return 0
-  if ! command -v python3 >/dev/null 2>&1; then
-    echo "==> no python3; keeping the existing system-defaults module"
-    return 0
-  fi
-  echo "==> regenerating $ROOT/nix/darwin/system-defaults.nix from the live Mac"
-  python3 "$ROOT/scripts/capture-macos-defaults.py" --quiet \
-    --nix-out "$ROOT/nix/darwin/system-defaults.nix" >/dev/null || {
-    echo "    capture failed; the profile keeps the previous defaults" >&2
-  }
-}
+# The macbook prebuild targets a standalone Home Manager generation. The old
+# system layer's generated defaults module is gone, so there is nothing to
+# capture from the live Mac before a switch.
 
 if [ "$IS_LOCAL" = 1 ]; then
-  generate_defaults
   if [ "$PROFILE" = "macbook" ]; then
-    # Two macOS facts force a staged copy here:
-    #   1. nix/darwin/system-defaults.nix is machine-private and gitignored, and
-    #      Nix's git filter refuses to see ignored files in a git tree;
-    #   2. a first switch has no /run/current-system, so there is no
-    #      `darwin-rebuild` on PATH yet.
-    # Staging into a plain directory (no .git) fixes (1); building the system
-    # and running the darwin-rebuild it contains fixes (2) with the pinned
-    # nix-darwin rather than a moving master.
+    # The macbook switch runs against a staged copy for two reasons:
+    #   1. the stage is a plain directory (no .git), so Nix evaluates every file
+    #      in it rather than only what git tracks;
+    #   2. the prebuild and the switch then name the same tree, so a broken
+    #      evaluation fails before anything on the Mac is activated.
     stage="$HOME/$STAGE_ROOT/$PROFILE-$ATTR"
     echo "==> staging the deploy tree at $stage"
     rm -rf "$stage"
     mkdir -p "$stage"
     # shellcheck disable=SC2046 # deploy_tree is a newline-separated list
     tar -C "$ROOT" -cf - $(deploy_tree) | tar -C "$stage" -xf -
-    echo "==> building the system"
-    if ! nix_flake build "$stage#darwinConfigurations.$ATTR.system" -o "$stage/result"; then
+    echo "==> building the activation package"
+    if ! nix_flake build "$stage#homeConfigurations.$ATTR.activationPackage" -o "$stage/result"; then
       echo "nix-deploy: build failed; nothing was switched" >&2
       exit 5
     fi
-    echo "==> switching with the freshly built darwin-rebuild"
-    # sudo drops the environment, and a first switch may have no /etc/nix/nix.conf
-    # yet (nix-darwin owns that file), so enable flakes explicitly for the
-    # evaluation this command performs.
-    if ! sudo env NIX_CONFIG="experimental-features = nix-command flakes" \
-      "$stage/result/sw/bin/darwin-rebuild" switch --flake "$stage#$ATTR"; then
+    echo "==> switching with the freshly built activation package"
+    if ! home-manager switch --flake "$stage#$ATTR"; then
       echo "nix-deploy: switch failed; the previous generation is still active" >&2
       exit 5
     fi
@@ -458,7 +448,7 @@ if [ -n "$REMOTE_USER" ] && [ "$ADHOC" = 0 ]; then
 else
   REMOTE_ROOT="\$HOME/$STAGE_DIR"
   if [ "$PROFILE" = "macbook" ]; then
-    REMOTE_CMD="cd \"$REMOTE_ROOT\" && sudo darwin-rebuild switch --flake \"$REMOTE_ROOT#$ATTR\""
+    REMOTE_CMD="cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" home-manager switch --flake \"$REMOTE_ROOT#$ATTR\""
   else
     REMOTE_CMD="cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" nix --extra-experimental-features \"nix-command flakes\" run \"$REMOTE_ROOT#home-manager\" -- switch --flake \"$REMOTE_ROOT#$ATTR\""
   fi

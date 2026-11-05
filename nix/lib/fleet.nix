@@ -4,7 +4,6 @@
 {
   nixpkgs,
   home-manager,
-  nix-darwin,
   sops-nix,
   rataflowSrc,
   lib,
@@ -29,12 +28,15 @@ let
   # a flake input, so it is not reachable as a relative path from a module.
   crateArgs = { inherit rataflowSrc; };
 
-  # The managed user for a NixOS target. `users.users.<name>` in the per-host
-  # module must name the same account, and so must the Home Manager user layer.
-  users = {
-    homelab = "avirus";
-    devbox = "aviral";
-    probe = "aviral";
+  # Every host that is not a Linux `remote` profile: the system its packages are
+  # built for, and the one module that carries the host delta. A standalone Home
+  # Manager configuration has no system layer to put anything else in, so this
+  # stays a small explicit table rather than a hierarchy.
+  homeHosts = {
+    macbook = {
+      system = systems.mac;
+      module = modules + "/macbook/home.nix";
+    };
   };
 in
 rec {
@@ -50,8 +52,9 @@ rec {
     host:
     home-manager.lib.homeManagerConfiguration {
       # google-chrome is unfree. The flag belongs where pkgs is instantiated,
-      # not in a module: under nix-darwin Home Manager uses the global pkgs, so
-      # `nixpkgs.config` in a module is an assertion failure.
+      # not in a module: a standalone Home Manager configuration evaluates one
+      # pkgs set, so `nixpkgs.config` in a module would be a second, ignored
+      # decision.
       pkgs = import nixpkgs {
         system = systems.${host};
         config.allowUnfree = true;
@@ -74,61 +77,25 @@ rec {
       ++ lib.optional (builtins.pathExists ../adhoc/identity.nix) ../adhoc/identity.nix;
     };
 
-  mkMacbook = nix-darwin.lib.darwinSystem {
-    system = systems.mac;
-    specialArgs = crateArgs;
-    modules = [
-      # google-chrome is unfree; the Mac gets the same allowance the Linux
-      # profile gets, declared where nix-darwin instantiates pkgs.
-      { nixpkgs.config.allowUnfree = true; }
-      # System layer: fonts, captured defaults, launchd, macOS settings.
-      (modules + "/macbook")
-      home-manager.darwinModules.home-manager
-      {
-        home-manager.useGlobalPkgs = true;
-        home-manager.useUserPackages = true;
-        home-manager.extraSpecialArgs = crateArgs;
-        home-manager.users.aviral = {
-          imports = [
-            sops-nix.homeManagerModules.sops
-            (modules + "/shared")
-            (modules + "/macbook/home.nix")
-          ];
-        };
-      }
-    ];
-  };
-
-  # NixOS: the system layer is the NixOS module tree, the user layer is the
-  # same `shared` module the other profiles import, reached through
-  # `home-manager.nixosModules.home-manager` instead of the standalone tool.
-  mkNixos =
+  # A macOS host: the same user layer as the Linux profile, built as a standalone
+  # Home Manager configuration. Nothing is left for a system profile to own — no
+  # fonts, no captured defaults, no per-user system profile — so the switch is a
+  # plain `home-manager switch` as aviral, never a system activation.
+  mkHome =
     host:
-    nixpkgs.lib.nixosSystem {
-      system = systems.${host};
-      specialArgs = crateArgs;
+    home-manager.lib.homeManagerConfiguration {
+      pkgs = import nixpkgs {
+        system = homeHosts.${host}.system;
+        config.allowUnfree = true;
+      };
+      extraSpecialArgs = crateArgs;
       modules = [
-        # System layer: boot, users, networking, the host's daemons.
-        (modules + "/nixos")
-        (modules + "/nixos/${host}.nix")
-        # User layer: Home Manager as a NixOS module, same shape as mkMacbook.
-        home-manager.nixosModules.home-manager
-        {
-          # One system-level pkgs decision (nixpkgs.config.allowUnfree) instead
-          # of a per-user package set, and the user's packages installed into
-          # the profile by the system activation.
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.extraSpecialArgs = crateArgs;
-          home-manager.users.${users.${host}} = {
-            imports = [ (modules + "/shared") ];
-            # Generic Linux support exists to teach Home Manager how to reach a
-            # non-NixOS box; on NixOS the system already answers those
-            # questions. Pinned here so `shared` needs no edit and the Ubuntu
-            # hosts keep their default.
-            targets.genericLinux.enable = lib.mkForce false;
-          };
-        }
+        # The sops module is a constructor argument, not something `shared`
+        # pulls in, so it is listed here for the same reason mkRemote lists it:
+        # nix/modules/shared/sops.nix sets `sops.*` options.
+        sops-nix.homeManagerModules.sops
+        (modules + "/shared")
+        homeHosts.${host}.module
       ];
     };
 
