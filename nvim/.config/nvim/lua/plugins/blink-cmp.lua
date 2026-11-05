@@ -14,6 +14,12 @@ return {
     version = "*",
     opts = {
       enabled = function()
+        -- Markdown is prose, not code: no suggestion popup while typing
+        -- (covers markdown.mdx and friends). Command-line completion still
+        -- works, because blink checks cmdline.enabled before this function.
+        if vim.startswith(vim.bo.filetype, "markdown") then
+          return false
+        end
         -- Disable completion in terminal buffers and in any buffer that
         -- opts out via `vim.b.completion = false` (e.g. the sidekick ask prompt).
         if vim.bo.buftype == "terminal" then

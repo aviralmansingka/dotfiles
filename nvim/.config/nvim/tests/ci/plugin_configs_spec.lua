@@ -21,6 +21,8 @@
 --   * obsidian.lua (the PLUGIN spec): note_id_func kebab-case ids; shape.
 --   * blink-cmp.lua: enabled()/should_show_items() pure; no phantom "git"
 --     source (a nonexistent git source once broke :checkhealth).
+--   * sidekick.lua + sidekick/nes_off.lua: NES (next edit suggestions)
+--     disabled in opts, live flag and `:Sidekick nes` groups stripped.
 --   * spring-boot.lua: shape.
 
 local here = debug.getinfo(1, "S").source
@@ -710,11 +712,11 @@ H.run("plugin_configs/blink-cmp", function()
   H.eq(cmp[1], "saghen/blink.cmp", "blink.cmp name")
   H.eq(cmp.event, { "InsertEnter", "CmdlineEnter" }, "blink loads on insert/cmdline enter")
 
-  -- enabled(): pure gate over vim.bo.buftype + vim.b.completion. A real
-  -- terminal buftype cannot be set by user code in 0.13-dev (E474), so the
-  -- gate runs against fake vim.bo / vim.b tables instead.
+  -- enabled(): pure gate over vim.bo.buftype/filetype + vim.b.completion. A
+  -- real terminal buftype cannot be set by user code in 0.13-dev (E474), so
+  -- the gate runs against fake vim.bo / vim.b tables instead.
   local enabled = cmp.opts.enabled
-  local function fake_ctx(bt, comp)
+  local function fake_ctx(bt, comp, ft)
     return setmetatable({}, {
       __index = function(_, k)
         if k == "buftype" then
@@ -722,6 +724,9 @@ H.run("plugin_configs/blink-cmp", function()
         end
         if k == "completion" then
           return comp
+        end
+        if k == "filetype" then
+          return ft or ""
         end
         return nil
       end,
@@ -737,6 +742,15 @@ H.run("plugin_configs/blink-cmp", function()
   H.eq(enabled(), false, "vim.b.completion = false opts out (sidekick ask prompt)")
   H.replace(vim, "b", fake_ctx("", nil))
   H.eq(enabled(), true, "opt-out is per buffer")
+
+  -- Markdown: no auto-suggestion popup while typing prose.
+  H.replace(vim, "bo", fake_ctx("", nil, "markdown"))
+  H.eq(enabled(), false, "markdown buffer: completion off")
+  H.replace(vim, "bo", fake_ctx("", nil, "markdown.mdx"))
+  H.eq(enabled(), false, "markdown.mdx buffer: completion off")
+  H.replace(vim, "bo", fake_ctx("", nil, "lua"))
+  H.eq(enabled(), true, "code buffer keeps completion")
+
   r_b()
   r_bo()
 
@@ -805,6 +819,31 @@ H.run("plugin_configs/blink-cmp", function()
 end)
 
 -- ── spring-boot.lua: shape ────────────────────────────────────────────────
+-- ── sidekick: NES (next edit suggestions) removed entirely ───────────────
+H.run("plugin_configs/sidekick nes off", function()
+  local spec = plugin("sidekick")
+  H.eq(spec[1], "folke/sidekick.nvim", "sidekick plugin name")
+  H.eq(spec.opts.nes.enabled, false, "nes disabled in opts (setup skips NES)")
+
+  -- config() also strips the live flag and the command groups, so
+  -- `:Sidekick nes enable` cannot re-arm the feature at runtime.
+  local fake_config = { nes = { enabled = true } }
+  local commands = {
+    nes = { apply = function() end, enable = function() end },
+    cli = { show = function() end },
+    debug = { nes = { add = function() end } },
+  }
+  package.loaded["sidekick.config"] = fake_config
+  package.loaded["sidekick.commands"] = { commands = commands }
+  require("plugins.sidekick.nes_off").apply()
+  H.eq(fake_config.nes.enabled, false, "live nes config flag off")
+  H.eq(commands.nes, nil, ":Sidekick nes subcommands unregistered")
+  H.eq(commands.debug.nes, nil, ":Sidekick debug nes subcommands unregistered")
+  H.eq(type(commands.cli.show), "function", "cli subcommands untouched")
+  package.loaded["sidekick.config"] = nil
+  package.loaded["sidekick.commands"] = nil
+end)
+
 H.run("plugin_configs/spring-boot", function()
   local spec = plugin("spring-boot")
   H.eq(spec[1], "JavaHello/spring-boot.nvim", "spring-boot plugin name")

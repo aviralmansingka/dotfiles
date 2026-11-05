@@ -8,7 +8,7 @@
 # modules (neotest-java.model.path, jdtls.setup, lspconfig.util) are faked
 # via package.preload, and vim.fn/vim.system boundaries are stubbed.
 #
-# Paths: nvim/.config/nvim/lua/plugins/java.lua nvim/.config/nvim/lua/plugins/neovide.lua nvim/.config/nvim/lua/plugins/mason.lua nvim/.config/nvim/lua/plugins/conform.lua nvim/.config/nvim/lua/plugins/lsp.lua nvim/.config/nvim/lua/plugins/c.lua nvim/.config/nvim/lua/plugins/build-files.lua nvim/.config/nvim/lua/plugins/jdtls.lua nvim/.config/nvim/lua/plugins/obsidian.lua nvim/.config/nvim/lua/plugins/blink-cmp.lua nvim/.config/nvim/lua/plugins/spring-boot.lua
+# Paths: nvim/.config/nvim/lua/plugins/java.lua nvim/.config/nvim/lua/plugins/neovide.lua nvim/.config/nvim/lua/plugins/mason.lua nvim/.config/nvim/lua/plugins/conform.lua nvim/.config/nvim/lua/plugins/lsp.lua nvim/.config/nvim/lua/plugins/c.lua nvim/.config/nvim/lua/plugins/build-files.lua nvim/.config/nvim/lua/plugins/jdtls.lua nvim/.config/nvim/lua/plugins/obsidian.lua nvim/.config/nvim/lua/plugins/blink-cmp.lua nvim/.config/nvim/lua/plugins/sidekick.lua nvim/.config/nvim/lua/plugins/sidekick/nes_off.lua nvim/.config/nvim/lua/plugins/spring-boot.lua
 #
 # Dual mode: when nvim cannot be found, the entry SKIPs (exit 0) by default;
 # STRICT=1 turns the missing binary into a FAIL (exit 1).
