@@ -75,6 +75,22 @@ binding, so re-attach after the move; without it every call warns `Restore the
 mission's Herdr attachment before continuing`. Full contract:
 `docs/pi-missions.md` § Seating a captain.
 
+## Ask the commander
+
+A captain pane has no watcher, and `ask_user_question` is not in the captain's
+tool list. When a captain is blocked on a decision, a missing credential, or
+anything only the human can settle, it writes one durable question and stops:
+
+```sh
+mission ask REPO/SLUG --text "Which branch name?" --step S02 --kind decision
+```
+
+The ask lands in the mission record, and the commander's own Pi session drains it
+into that conversation. No token is needed. Kinds are `blocked`, `question`, and
+`decision`; a decision ask renders the checkpoint command that answers it. Check
+what is waiting with `mission ask --list REPO/SLUG`, which lists pending and
+delivered asks. Full contract: `docs/pi-missions.md` § Ask the commander.
+
 ## Launch or attach in Pi
 
 Discover the deferred `mission` tool through `tool_search`. Humans can use
@@ -241,5 +257,5 @@ mission --json close dotfiles/session-progress --note "Shipped in #430"
 `close` sets `status: closed`, `closed_at`, and the note. It refuses open work:
 an active attempt, or a step that is not `passed`. Add `--force` to close anyway.
 A second close is safe and returns `already: true`. A closed mission refuses
-`claim`, `pickup`, `launch`, `plan`, `workspace`, `attach`, `next`, `finish`,
+`ask`, `claim`, `pickup`, `launch`, `plan`, `workspace`, `attach`, `next`, `finish`,
 `retry`, and `repair`. Start a new mission instead.
