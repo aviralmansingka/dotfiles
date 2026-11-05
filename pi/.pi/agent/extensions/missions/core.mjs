@@ -347,6 +347,37 @@ export function droppableReportError(message) {
   return DROPPABLE_REPORT_CODES.has(/^([a-z_]+): /.exec(String(message ?? ""))?.[1] ?? "");
 }
 
+/** The path of a block's `pwd` answer: `file://<host>/<abs path>`, or a bare
+ *  path. Only the path names the seat, so the scheme and the answering host go. */
+function pwdPath(answer) {
+  const text = String(answer ?? "").trim();
+  if (!text) return null;
+  const path = text.startsWith("file://") ? text.replace(/^file:\/\/[^/]*/, "") : text;
+  if (!path.startsWith("/")) return null;
+  try { return decodeURIComponent(path); } catch { return path; }
+}
+
+/** Why this session is not a mission seat. Three causes used to share one
+ *  sentence — no seat at all, a Rex block that reports no cwd, and a seat in
+ *  another checkout — so a captain refused in 57 ms could not say which one
+ *  happened: a process environment is unreadable from outside on macOS. Each
+ *  answer names the seat it saw, the cwd it reported, and the cwd this session
+ *  runs in. `paneCwd` and `blockCwd` are only set when that seat answered. */
+function seatRefusal({ paneID, herdrSeat, blockID, paneCwd, blockCwd, cwd }) {
+  if (herdrSeat) return paneCwd === undefined
+    ? `Herdr pane ${paneID} is in no workspace of this repository. Move this session into the mission worktree's pane before attaching.`
+    : `Herdr pane ${paneID} reports ${paneCwd} but this session runs in ${cwd}. Move this session into the mission worktree's pane before attaching.`;
+  if (blockCwd !== undefined) return blockCwd === null
+    ? `Rex block ${blockID} reports no cwd, and this session runs in ${cwd}. Check the block still runs a shell in the mission worktree, or resume this session there.`
+    : `Rex block ${blockID} reports ${blockCwd} but this session runs in ${cwd}. Resume this session in ${blockCwd}.`;
+  // Neither seat was reachable, so the inputs themselves are the answer.
+  const seen = [
+    paneID ? `HERDR_PANE_ID=${paneID} is set without HERDR_ENV=1` : "no Herdr pane (HERDR_PANE_ID empty)",
+    blockID ? `REX_BLOCK=${blockID} stays unread while HERDR_PANE_ID is set` : "no Rex block (REX_BLOCK empty)",
+  ];
+  return `No mission seat: ${seen.join(" and ")}. Start this session in the mission worktree's Herdr pane, or in a Rex block there.`;
+}
+
 /** Credentials and an unacknowledged hook outbox are local transport state.
  * Canonical mission facts, transcripts, and attempts live only in the CLI vault.
  * No credentials are put in a prompt, tool result, or a child's environment.
@@ -490,21 +521,28 @@ export class MissionBridge {
   }
   async assertSurface(ctx) {
     const cwd = realpathSync(ctx.cwd);
+    const paneID = this.env.HERDR_PANE_ID || "";
     // Only a session that carries a Herdr pane can ask Herdr about it: `herdr()`
     // refuses for every other session, so the Rex seat below must be reachable
     // without it.
-    if (this.env.HERDR_ENV === "1" && this.env.HERDR_PANE_ID) {
+    const herdrSeat = this.env.HERDR_ENV === "1" && Boolean(paneID);
+    // What the pane reported when it is not this checkout: the refusal below
+    // names it, so a mismatch reads without a live probe of the process.
+    let paneCwd;
+    if (herdrSeat) {
       const common = await this.common(ctx.cwd);
       const workspaces = repositoryWorkspaces((await this.herdr(["workspace", "list"])).workspaces, common);
-      if (!workspaces.length) throw new Error("Open the repository's Herdr workspace first; missions register their worktree from it.");
+      if (!workspaces.length) throw new Error(`Herdr pane ${paneID} is in no workspace of this repository. Open the mission worktree's Herdr workspace first; missions register their worktree from it.`);
       // A mission session lives in its own worktree workspace. Missions bound
       // before worktree workspaces existed still sit in the primary workspace, so
       // accept any workspace of this repository whose pane sits in the mission
       // checkout — the pane cwd, not the workspace count, is the binding.
       for (const w of workspaces) {
         const result = await this.herdr(["pane", "list", "--workspace", w.workspace_id]);
-        const pane = result.panes?.find(p => p.pane_id === this.env.HERDR_PANE_ID);
-        if (!pane || realpathSync(pane.foreground_cwd || pane.cwd) !== cwd) continue;
+        const pane = result.panes?.find(p => p.pane_id === paneID);
+        if (!pane) continue;
+        const here = realpathSync(pane.foreground_cwd || pane.cwd);
+        if (here !== cwd) { paneCwd ??= here; continue; }
         this.surfaceSession = ctx.sessionManager.getSessionId();
         this.surface = { workspace: w.workspace_id, pane: pane.pane_id };
         return this.surface;
@@ -512,15 +550,21 @@ export class MissionBridge {
     }
     // A Rex block is a seat too: the CLI accepts a session id and a block id
     // as workspace and pane, so bind on the cwd the block reports.
-    if (!this.env.HERDR_PANE_ID && this.env.REX_BLOCK) {
+    const blockID = this.env.REX_BLOCK || "";
+    const rexSeat = !paneID && Boolean(blockID);
+    if (rexSeat) {
       const info = await this.seatCwd();
-      if (info && realpathSync(info) === cwd) {
+      // The refusal names the same form the decision compares, so a symlinked
+      // block path never reads as a third directory.
+      const here = info ? realpathSync(info) : null;
+      if (here === cwd) {
         this.surfaceSession = ctx.sessionManager.getSessionId();
-        this.surface = { workspace: this.env.REX_SESSION, pane: this.env.REX_BLOCK };
+        this.surface = { workspace: this.env.REX_SESSION, pane: blockID };
         return this.surface;
       }
+      throw new Error(seatRefusal({ paneID, herdrSeat, blockID, paneCwd, blockCwd: here, cwd }));
     }
-    throw new Error("Missions need a Herdr pane or a Rex block, running in the mission worktree. Move or resume this session there before attaching.");
+    throw new Error(seatRefusal({ paneID, herdrSeat, blockID, paneCwd, cwd }));
   }
   async restore(ctx) {
     this.hint = null; this.error = null; this.surfaceSession = null; this.expectedAttachment = false;
@@ -810,11 +854,27 @@ export class MissionBridge {
         : String(await this.run("readlink", [`/proc/${pid}/cwd`], { env: this.env })).trim() || null;
     } catch { return null; }
   }
-  /** The cwd of this process's own Rex block, via `rex block call … process`.
-   *  `mission deploy` starts a captain through the login shell, and Rex reports
-   *  only two process levels, so both are the wrapper and carry no cwd: walk
-   *  down it to the process that owns the seat and read that one's cwd. */
+  /** The cwd the block itself reports. `rex block call -b <block> pwd` answers
+   *  `{"pwd":"file://<host>/<path>"}` for the host the block runs on: one call
+   *  and no process tree, so a seat that answers needs no walk below. A block
+   *  that cannot answer — a dead seat, an older Rex — returns null, and the
+   *  process probe asks the terminal instead. */
+  async blockCwd() {
+    try {
+      const out = String(await this.run("rex", ["block", "call", "-b", this.env.REX_BLOCK, "pwd"], { env: this.env }));
+      let answer = out;
+      try { answer = JSON.parse(out)?.pwd ?? out; } catch { /* plain text: the answer is the path */ }
+      return pwdPath(answer);
+    } catch { return null; }
+  }
+  /** The cwd of this process's own Rex block: the block's own `pwd` first, then
+   *  `rex block call … process`. `mission deploy` starts a captain through the
+   *  login shell, and Rex reports only two process levels, so both are the
+   *  wrapper and carry no cwd: walk down it to the process that owns the seat
+   *  and read that one's cwd. */
   async seatCwd() {
+    const own = await this.blockCwd();
+    if (own) return own;
     try {
       const out = await this.run("rex", ["block", "call", "-b", this.env.REX_BLOCK, "process"], { env: this.env });
       const info = JSON.parse(out);
