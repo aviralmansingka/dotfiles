@@ -70,15 +70,27 @@ func (s *Store) subject(r mission.Record, a mission.Attempt, st mission.Step) su
 		value = "unavailable:" + e.Error()
 	}
 	values := []string{a.ID, definitionHash(st), value}
+	goTestDeclared, cmdDeclared := false, false
 	for _, name := range mission.StepChecks(st) {
 		if name == "go-test" {
-			h, e := repositoryHash(a.Cwd)
-			snap.RepoErr = e
-			if e != nil {
-				h = "unavailable:" + e.Error()
-			}
-			values = append(values, h)
+			goTestDeclared = true
 		}
+		if strings.HasPrefix(name, cmdCheckPrefix) {
+			cmdDeclared = true
+		}
+	}
+	if goTestDeclared || cmdDeclared {
+		// A cmd: check binds to the same repository fingerprint as go-test, so a
+		// change to the checkout invalidates its evidence too. Only go-test owns
+		// RepoErr; a cmd: check runs in any checkout it is given.
+		h, e := repositoryHash(a.Cwd)
+		if goTestDeclared {
+			snap.RepoErr = e
+		}
+		if e != nil {
+			h = "unavailable:" + e.Error()
+		}
+		values = append(values, h)
 	}
 	snap.Hash = mission.Digest([]byte(strings.Join(values, "\n")))
 	return snap

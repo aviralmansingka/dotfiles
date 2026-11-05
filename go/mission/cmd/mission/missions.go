@@ -37,6 +37,9 @@ func validateMission(m mission.Mission) error {
 		}
 		for _, name := range mission.StepChecks(st) {
 			if !knownCheck(name) {
+				if strings.HasPrefix(name, cmdCheckPrefix) {
+					return mission.Problem("invalid_check", "check %q needs a shell command after the cmd: prefix", name)
+				}
 				return mission.Problem("invalid_check", "unknown check %q; use mission checks to list presets", name)
 			}
 		}
@@ -358,10 +361,17 @@ type CheckPreset struct {
 	Description string `json:"description"`
 }
 
+// cmdCheckPrefix marks a preset that carries its own command, so its name is
+// data, not a catalog entry.
+const cmdCheckPrefix = "cmd:"
+
 func checkCatalog() []CheckPreset {
-	return []CheckPreset{{"nonempty-artifact", "1", "Required: a nonempty UTF-8 result, limited to 16 MiB"}, {"json-valid", "1", "Parse the result as exactly one JSON value"}, {"go-test", "1", "Run go test ./... in the Go module under the attempt checkout, with a two-minute deadline"}}
+	return []CheckPreset{{"nonempty-artifact", "1", "Required: a nonempty UTF-8 result, limited to 16 MiB"}, {"json-valid", "1", "Parse the result as exactly one JSON value"}, {"go-test", "1", "Run go test ./... in the Go module under the attempt checkout, with a two-minute deadline"}, {"cmd:<shell command>", "1", "Run the shell command in the attempt checkout, with a two-minute deadline"}}
 }
 func knownCheck(name string) bool {
+	if cmd, ok := strings.CutPrefix(name, cmdCheckPrefix); ok {
+		return strings.TrimSpace(cmd) != ""
+	}
 	for _, c := range checkCatalog() {
 		if c.Name == name {
 			return true
