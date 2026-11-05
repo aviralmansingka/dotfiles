@@ -230,25 +230,24 @@ type deskFilter struct {
 	Match func(mission.Record) bool
 }
 
-// filterAll is the opening filter: every mission ever created, complete and
-// retired ones included. The rest name one state group the human acts on, and
-// YOURS follows the header's "need you" count.
-const filterAll = 0
-
+// deskFilters is the whole lane: five state groups the human acts on, in the
+// order the desk opens and cycles. The first entry is the opening filter, so a
+// desk left alone shows the work that is moving. There is no ALL tab: every
+// entry narrows the list, and DONE is one key away at the end of the cycle.
 var deskFilters = []deskFilter{
-	{Label: "ALL", Match: func(mission.Record) bool { return true }},
-	{Label: "READY", Match: func(r mission.Record) bool { return r.State.Status == "ready" }},
 	{Label: "ACTIVE", Match: func(r mission.Record) bool { return r.State.Status == "running" }},
 	{Label: "YOURS", Match: func(r mission.Record) bool { return r.State.Status == "waiting" || r.State.Status == "review" }},
-	{Label: "DONE", Match: func(r mission.Record) bool { return r.State.Status == "done" || r.State.Status == closedStatus }},
+	{Label: "READY", Match: func(r mission.Record) bool { return r.State.Status == "ready" }},
 	{Label: "FAILED", Match: func(r mission.Record) bool { return r.State.Status == "failed" }},
+	{Label: "DONE", Match: func(r mission.Record) bool { return r.State.Status == "done" || r.State.Status == closedStatus }},
 }
 
-// filterRecords keeps the missions one filter names, in vault order. The ALL
-// filter hands back the same slice: the desk never copies the whole list.
+// filterRecords keeps the missions one filter names, in vault order. Every
+// index filters: an index outside the lane falls back to the first entry, so no
+// caller can widen the list by accident.
 func filterRecords(records []mission.Record, index int) []mission.Record {
-	if index <= filterAll || index >= len(deskFilters) {
-		return records
+	if index < 0 || index >= len(deskFilters) {
+		index = 0
 	}
 	match := deskFilters[index].Match
 	out := make([]mission.Record, 0, len(records))
@@ -268,7 +267,7 @@ func filterIndex(label string) (int, bool) {
 			return i, true
 		}
 	}
-	return filterAll, false
+	return 0, false
 }
 
 // filterLabels lists every filter label once, in cycle order.
@@ -329,7 +328,7 @@ func (m *desk) current() (mission.Record, bool) {
 // first row, so a filter never leaves the marker on a hidden mission.
 func (m *desk) setFilter(index int) {
 	if index < 0 || index >= len(deskFilters) {
-		index = filterAll
+		index = 0
 	}
 	m.filter = index
 	m.view = filterRecords(m.records, index)
@@ -793,7 +792,7 @@ func (m *desk) detailText(w, h int) string {
 	}
 	r, ok := m.current()
 	if !ok {
-		return paint(muted, "No mission passes the "+deskFilters[m.filter].Label+" filter.\n\nPress ] to widen the list.")
+		return paint(muted, "No mission passes the "+deskFilters[m.filter].Label+" filter.\n\nPress ] for the next state.")
 	}
 	detail := m.detail(r, max(16, w))
 	lines := strings.Split(detail, "\n")
