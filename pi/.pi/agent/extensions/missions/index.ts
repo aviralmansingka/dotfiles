@@ -93,6 +93,17 @@ export default function missions(pi: ExtensionAPI, options = {}) {
     const reason = missionToolBlock({ toolName: event.toolName, action: event.input?.action, current });
     return reason ? { block: true, reason } : undefined;
   });
+  // One line the outbox owes the model: an item set aside after repeated
+  // failures, or a judge report that carried no session. The tool call that
+  // flushed it still succeeds, and the notice rides the result that follows.
+  pi.on("tool_result", (event: any) => {
+    const notices = bridge.takeNotices();
+    if (!notices.length) return;
+    const patch: any = { content: [...(event.content || []), ...notices.map((text: string) => ({ type: "text", text }))] };
+    // Content and structured content must stay in step, so keep the latter.
+    if (event.structuredContent !== undefined) patch.structuredContent = event.structuredContent;
+    return patch;
+  });
   pi.on("agent_start", guarded(async (_e: any, ctx: any) => { await bridge.record(ctx, { type: "agent-start", summary: "Pi turn started" }); }));
   // A press in the desk lands between turns, so poll for it: a captain that sits
   // idle still starts a mission the human asked for. Two seconds is fast enough
