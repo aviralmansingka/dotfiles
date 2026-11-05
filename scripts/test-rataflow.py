@@ -404,13 +404,18 @@ def check_install_wiring():
     problems = []
     if "buildRustPackage" not in text:
         problems.append(f"{pkg}: does not use buildRustPackage")
-    # The crate arrives as a flake input (path:./rataflow) and is passed to the
-    # derivation as rataflowSrc, because a module cannot reach outside the flake.
+    # The crate is a tracked directory in the flake's own tree and reaches the
+    # derivation as `rataflowSrc`, because a module cannot reach outside the
+    # flake. A `path:` input was rejected: Nix rewrote the lock entry for it on
+    # every evaluation, so flake.lock was not stable.
     if "rataflowSrc" not in text:
         problems.append(f"{pkg}: src does not take the rataflow flake input")
     flake = (REPO / "flake.nix").read_text()
-    if "path:./rataflow" not in flake:
-        problems.append("flake.nix: rataflow input does not point at ./rataflow")
+    if "rataflowSrc = ./rataflow" not in flake:
+        problems.append("flake.nix: does not hand rataflowSrc = ./rataflow to the fleet module")
+    fleet = (REPO / "nix/lib/fleet.nix").read_text()
+    if "rataflowSrc," not in fleet:
+        problems.append("nix/lib/fleet.nix: does not take the rataflowSrc argument")
     shared = (REPO / "nix/modules/shared/default.nix").read_text()
     if "rataflow-view" not in shared:
         problems.append("nix/modules/shared/default.nix: does not install rataflow-view")
