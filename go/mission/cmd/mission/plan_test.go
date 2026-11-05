@@ -70,7 +70,7 @@ func TestPlanDescribesTheArmy(t *testing.T) {
 	if p.Cwd != r.State.Runtime.Cwd || p.Branch != r.State.Runtime.Branch {
 		t.Fatalf("worktree = %s on %s", p.Cwd, p.Branch)
 	}
-	// The captain starts as pi with an allowlist: the profile's six tools, and
+	// The captain starts as pi with an allowlist: the profile's five tools, and
 	// nothing an editor or a shell would need. The first element is the resolved
 	// binary, never the bare name: a window does not see this PATH.
 	if want := []string{captainPi(), "--tools", captainLoadout}; !reflect.DeepEqual(p.CaptainArgv, want) {
@@ -251,7 +251,7 @@ func TestPlanAcceptsAMuxWithoutDependingOnIt(t *testing.T) {
 
 // captainProfile is the bundled interactive-subagents profile that describes a
 // captain seat, and captainLoadout is the flag a launch passes. They are two
-// copies of one six-tool list, so they drift the first time an edit touches one
+// copies of one five-tool list, so they drift the first time an edit touches one
 // of them: this test reads the profile from the repository and fails when they
 // disagree. The path is repo-relative, and go test runs a package binary in its
 // own source directory.

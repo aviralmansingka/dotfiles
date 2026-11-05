@@ -850,3 +850,146 @@ export class MissionBridge {
       message: p.action === "finish" || p.action === "fail" ? "Completion reported. Ownership remains until the turn settles; checks and checkpoints still apply." : undefined };
   }
 }
+
+/** The window label that marks the commander seat. A session is the commander
+ *  when its own block sits in this window of its own Rex session, so a captain
+ *  window that happens to run beside the commander is never mistaken for it. */
+export const COMMANDER_WINDOW = "commander";
+
+/** How often a cached commander answer is re-resolved. Role detection gates the
+ *  ask drain and nothing else, so a slow re-check costs one Rex call a minute
+ *  and no other behavior may depend on it. */
+export const COMMANDER_RECHECK_MS = 60_000;
+
+/** How many asks one drain delivers: a handful, oldest first. A backlog waits
+ *  for the next tick instead of arriving as one wall of text. */
+export const ASKS_PER_DRAIN = 5;
+
+/** One ask as the commander reads it: the mission, the step, and the kind come
+ *  from the record, so a line can be answered without opening the vault. */
+export function askLine(ask) {
+  return `[mission ${[ask.handle, ask.step, ask.kind].filter(Boolean).join(" · ")}] ${ask.text}`;
+}
+
+/** The command that answers a decision ask, beside the question it settles.
+ *  Blocked and question asks need a reply, not a checkpoint decision, so they
+ *  render no command. */
+export function askAnswer(ask) {
+  return ask.kind === "decision"
+    ? `Answer with: mission checkpoint accept|revise ${ask.handle} C01 --note "…"`
+    : null;
+}
+
+/** One commander message for one batch of asks: a line each, then the decision
+ *  command that settles it. */
+export function askMessage(asks) {
+  return asks.flatMap(ask => [askLine(ask), askAnswer(ask)].filter(Boolean)).join("\n");
+}
+
+/** The ask channel's receiving half. A captain writes `asks/<stamp>-<id>.json`
+ *  and stops; this drains those files into the commander's own session. The
+ *  files are the queue, so nothing is lost while the commander is absent and a
+ *  restart delivers each ask once, because delivery is recorded in the file.
+ *
+ *  Role detection is cached and re-checked slowly: `commander()` answers
+ *  whether this session's block is the block of the window labeled `commander`
+ *  in its own Rex session. It gates only the drain. */
+export class CommanderInbox {
+  constructor({ vault, env = process.env, run, send, now = () => new Date().toISOString() }) {
+    this.vault = vault;
+    this.env = env;
+    this.run = run;
+    this.send = send;
+    this.now = now;
+    this.asksPerDrain = ASKS_PER_DRAIN;
+    this.role = undefined;
+    this.roleAt = 0;
+    this.draining = null;
+  }
+
+  /** Forget a cached role answer: a fresh session resolves it again. */
+  reset() { this.role = undefined; this.roleAt = 0; }
+
+  async isCommander(force = false) {
+    const at = Date.now();
+    if (!force && this.role !== undefined && at - this.roleAt < COMMANDER_RECHECK_MS) return this.role;
+    this.role = await this.resolveCommander();
+    this.roleAt = at;
+    return this.role;
+  }
+
+  /** Resolve the seat through the Rex API the extension already reaches: the
+   *  block reports its window, and that window's label decides. A Herdr seat,
+   *  a session with no Rex block, or a Rex that cannot answer is not the
+   *  commander — the answer is false, never an error that stops a session. */
+  async resolveCommander() {
+    const session = this.env.REX_SESSION || "";
+    const block = this.env.REX_BLOCK || "";
+    if (!session || !block || this.env.HERDR_ENV === "1") return false;
+    try {
+      const view = JSON.parse(await this.run("rex", ["block", "inspect", block, "--json"], { env: this.env }));
+      const windowID = view?.block?.window_id;
+      if (!windowID) return false;
+      const windows = JSON.parse(await this.run("rex", ["window", "ls", "-s", session, "--json"], { env: this.env }))?.windows || [];
+      return windows.some(window => window.window_id === windowID && window.label === COMMANDER_WINDOW);
+    } catch { return false; }
+  }
+
+  /** Every undelivered ask under the vault, oldest first. The filename starts
+   *  with a fixed-width UTC stamp, so readdir order is the order asks were
+   *  written. A file that is not a readable ask is skipped, not fatal. */
+  pending() {
+    const out = [];
+    const entries = directory => {
+      try { return readdirSync(directory, { withFileTypes: true }); } catch { return []; }
+    };
+    for (const repo of entries(join(this.vault, "6_missions"))) {
+      if (!repo.isDirectory()) continue;
+      for (const mission of entries(join(this.vault, "6_missions", repo.name))) {
+        if (!mission.isDirectory()) continue;
+        const dir = join(this.vault, "6_missions", repo.name, mission.name, "asks");
+        for (const file of entries(dir)) {
+          if (!file.isFile() || !file.name.endsWith(".json")) continue;
+          const path = join(dir, file.name);
+          try {
+            const ask = JSON.parse(readFileSync(path, "utf8"));
+            if (ask?.id && ask?.handle && !ask.delivered_at) out.push({ ask, path, name: file.name });
+          } catch { /* a torn or foreign file is not an ask */ }
+        }
+      }
+    }
+    return out.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  }
+
+  /** Deliver consecutive asks from one handle as one message, then record the
+   *  delivery in each ask's own file. A send that throws leaves the asks
+   *  undelivered, so the next tick retries instead of losing the question. */
+  async drain(sessionID) {
+    if (!(await this.isCommander())) return [];
+    if (this.draining) return this.draining;
+    this.draining = (async () => {
+      const batch = this.pending().slice(0, this.asksPerDrain);
+      const delivered = [];
+      for (let i = 0; i < batch.length;) {
+        const handle = batch[i].ask.handle;
+        const group = [];
+        while (i < batch.length && batch[i].ask.handle === handle) group.push(batch[i++]);
+        this.send({ customType: "mission-ask", content: askMessage(group.map(f => f.ask)), display: true },
+          { deliverAs: "followUp", triggerTurn: true });
+        for (const file of group) this.markDelivered(file, sessionID);
+        delivered.push(...group.map(f => f.ask));
+      }
+      return delivered;
+    })();
+    try { return await this.draining; } finally { this.draining = null; }
+  }
+
+  /** Record delivery in the ask's own file, written beside it and renamed, so a
+   *  reader sees either the pending ask or the delivered one, never a fragment. */
+  markDelivered({ ask, path }, sessionID) {
+    const delivered = { ...ask, delivered_at: this.now(), delivered_to: sessionID };
+    const temp = path + "." + randomUUID();
+    writeFileSync(temp, JSON.stringify(delivered, null, 2) + "\n", { mode: 0o600 });
+    renameSync(temp, path);
+  }
+}
