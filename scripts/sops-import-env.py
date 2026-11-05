@@ -15,7 +15,12 @@ success. It never prints a value — only the name, the byte count and the hash.
         pi-whatsapp=/tmp/pi-whatsapp.env
 
 A bare name (no `=`) means `~/.config/<name>.env`, which is the shape to use
-when the plaintext already lives on this machine:
+when the plaintext already lives on this machine — i.e. when this runs on the
+same host as the unit. The files a remote host's units read live *on that host*,
+so a run from anywhere else has to copy them over and pass `NAME=PATH`; a bare
+name there would either miss the file or import this machine's unrelated copy of
+it. Every source is checked before any of them is read, so that case is one
+message listing all the missing files.
 
     python3 scripts/sops-import-env.py pi-telegram
 
@@ -66,7 +71,7 @@ NIX_SOPS_ATTR = "nixpkgs#sops"
 
 
 def fail(message: str) -> None:
-    print(f"sops-import-env: {message}", file=sys.stderr)
+    print(f"sops-import-env: {message}", file=sys.stderr, flush=True)
     sys.exit(1)
 
 
@@ -167,7 +172,7 @@ def sops_bin() -> str:
         looked.append(f"{path} ({how})")
         if path.is_file() and os.access(path, os.X_OK):
             sops = str(path)
-            print(f"sops: {sops} ({sops_version(sops)}) via {how}")
+            print(f"sops: {sops} ({sops_version(sops)}) via {how}", flush=True)
             return sops
     if shutil.which("nix"):
         found = nix_sops()
@@ -175,7 +180,7 @@ def sops_bin() -> str:
             how, path = found
             looked.append(f"{path} ({how})")
             sops = str(path)
-            print(f"sops: {sops} ({sops_version(sops)}) via {how}")
+            print(f"sops: {sops} ({sops_version(sops)}) via {how}", flush=True)
             return sops
         looked.append(f"{NIX_SOPS_ATTR} via nix build (no result)")
     fail(
@@ -233,14 +238,26 @@ def main(argv: list[str]) -> int:
         name, _, path = spec.partition("=")
         pairs.append(resolve(name, path or None))
 
+    # Check every source before reading any of them: a bare NAME resolves to this
+    # machine's ~/.config copy, and the files for the unit's host live on that
+    # host, so the wrong-machine case has to be one message, not one per file.
+    absent = [(key_name(name), source) for name, source in pairs if not source.exists()]
+    if absent and not args.allow_missing:
+        first, path = absent[0]
+        others = ", ".join(key for key, _ in absent)
+        fail(
+            f"no source at {path} (missing: {others}) — a bare NAME reads this "
+            "machine's ~/.config copy, and the env files for a remote host live on "
+            "that host, so copy them here and pass NAME=PATH for each."
+        )
+
     planned = 0
     for name, source in pairs:
         key = key_name(name)
         if not source.exists():
-            if args.allow_missing:
-                print(f"skip {key}: no source at {source}")
-                continue
-            fail(f"no source at {source}")
+            # Only reachable with --allow-missing.
+            print(f"skip {key}: no source at {source}")
+            continue
         value = source.read_text()
         planned += 1
         if args.dry_run:
