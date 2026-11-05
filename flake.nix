@@ -55,6 +55,11 @@
       # launchd) with Home Manager for the user layer.
       darwinConfigurations.macbook = fleet.mkMacbook;
 
+      # NixOS, one attribute per host the migration has reached. The Ubuntu
+      # outputs above stay until each host's cutover commit, so the probe is the
+      # first box described by both constructors at once.
+      nixosConfigurations.probe = fleet.mkNixos "probe";
+
       # The deploy tool, pinned to the flake's home-manager input. A host with no
       # `home-manager` binary runs it from here, so the switch uses the revision
       # the lock names instead of whatever nixpkgs ships that day.
