@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"mission.local/prototype/internal/domain/mission"
@@ -97,10 +99,36 @@ func captainPrompt(h, subagentSession, launchID string) string {
 // it instead of inheriting every default tool.
 const captainLoadout = "mission,subagent,subagent_message,read,ask_user_question,tool_search"
 
+// captainPi resolves the pi binary at plan time. A window's command is resolved
+// against the mux server's own PATH, not the caller's, and that PATH holds the
+// app directory plus /usr/bin, /bin, /usr/sbin and /sbin. A bare "pi" is not
+// found there, so deploy fails before it seats anything:
+//
+//	creating "com.superlogical.terminal.shell": executable "pi" not found in
+//	PATH "...Rex Server.app/Contents/MacOS:/usr/bin:/bin:/usr/sbin:/sbin"
+//	(status=400 code=bad_request)
+//
+// LookPath resolves pi on the PATH this process holds. When the plan runs inside
+// pi itself, os.Executable is the same binary, so it answers too. The bare name
+// is the last resort: it keeps the old behaviour rather than failing the plan.
+func captainPi() string {
+	if path, e := exec.LookPath("pi"); e == nil {
+		if abs, e := filepath.Abs(path); e == nil {
+			return abs
+		}
+		return path
+	}
+	if exe, e := os.Executable(); e == nil && strings.TrimSuffix(filepath.Base(exe), filepath.Ext(exe)) == "pi" {
+		return exe
+	}
+	return "pi"
+}
+
 // captainArgv starts a captain in its window. It is a list, not a string, so an
 // adapter appends its own seat flags instead of quoting: the window's cwd is
-// Cwd, and the brief reaches the agent through the adapter's prompt call.
-func captainArgv() []string { return []string{"pi", "--tools", captainLoadout} }
+// Cwd, and the brief reaches the agent through the adapter's prompt call. The
+// first element is absolute, because the window resolves it without this PATH.
+func captainArgv() []string { return []string{captainPi(), "--tools", captainLoadout} }
 
 // Plan is the mux-neutral launch description of one mission. It describes a
 // deployment without performing any part of it: an adapter turns the labels into

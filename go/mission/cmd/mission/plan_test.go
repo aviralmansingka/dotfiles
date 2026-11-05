@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -70,8 +71,9 @@ func TestPlanDescribesTheArmy(t *testing.T) {
 		t.Fatalf("worktree = %s on %s", p.Cwd, p.Branch)
 	}
 	// The captain starts as pi with an allowlist: the profile's six tools, and
-	// nothing an editor or a shell would need.
-	if want := []string{"pi", "--tools", captainLoadout}; !reflect.DeepEqual(p.CaptainArgv, want) {
+	// nothing an editor or a shell would need. The first element is the resolved
+	// binary, never the bare name: a window does not see this PATH.
+	if want := []string{captainPi(), "--tools", captainLoadout}; !reflect.DeepEqual(p.CaptainArgv, want) {
 		t.Fatalf("captain argv = %v", p.CaptainArgv)
 	}
 	for _, banned := range []string{"edit", "write", "bash"} {
@@ -308,8 +310,38 @@ func TestCaptainProfileMatchesTheLoadout(t *testing.T) {
 	}
 	// The argv is the only channel that reaches a launched Pi, so it must carry
 	// the same allowlist the profile declares.
-	if want := []string{"pi", "--tools", profile}; !reflect.DeepEqual(captainArgv(), want) {
+	if want := []string{captainPi(), "--tools", profile}; !reflect.DeepEqual(captainArgv(), want) {
 		t.Fatalf("captain argv = %v, want %v", captainArgv(), want)
+	}
+}
+
+// TestCaptainArgvResolvesPiAbsolutely pins the reason the plan resolves pi here.
+// A Rex server runs a window's command against its own PATH, which holds its app
+// directory plus /usr/bin, /bin, /usr/sbin and /sbin. A bare pi is not there, so
+// deploy fails before it seats anything:
+//
+//	creating "com.superlogical.terminal.shell": executable "pi" not found in
+//	PATH "...Rex Server.app/Contents/MacOS:/usr/bin:/bin:/usr/sbin:/sbin"
+//	(status=400 code=bad_request)
+//
+// So argv[0] must carry a path separator whenever pi resolves on this machine,
+// and the flags after it must not change.
+func TestCaptainArgvResolvesPiAbsolutely(t *testing.T) {
+	path, e := exec.LookPath("pi")
+	if e != nil {
+		t.Skip("pi is not on PATH on this machine, so there is nothing to resolve")
+	}
+	abs, e := filepath.Abs(path)
+	must(t, e)
+	argv := captainArgv()
+	if argv[0] != abs {
+		t.Fatalf("captain argv[0] = %q, want the resolved binary %q", argv[0], abs)
+	}
+	if !strings.ContainsRune(argv[0], filepath.Separator) {
+		t.Fatalf("captain argv[0] = %q: a window cannot resolve a bare name", argv[0])
+	}
+	if want := []string{"--tools", captainLoadout}; !reflect.DeepEqual(argv[1:], want) {
+		t.Fatalf("captain flags = %v, want %v", argv[1:], want)
 	}
 }
 
