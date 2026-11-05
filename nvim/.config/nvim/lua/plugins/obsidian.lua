@@ -102,7 +102,6 @@ return {
     -- Note finding and creation
     { "<leader>of", "<cmd>ObsidianQuickSwitch<cr>", desc = "Find note" },
     { "<leader>og", "<cmd>ObsidianSearch<cr>", desc = "Grep notes" },
-    { "<leader>oi", "<cmd>edit ~/vault/0_inbox/0.inbox.md<cr>", desc = "Open inbox" },
     { "<leader>on", "<cmd>ObsidianNew<cr>", desc = "New note" },
 
     -- Backlinks and links: handled by custom Snacks picker in markdown.lua
