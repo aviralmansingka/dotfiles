@@ -29,10 +29,10 @@ const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 
 // Every surface is simulated explicitly below (fake herdr/tmux binaries on
-// PATH), and ./surface.ts resolves its surface once at module load. A real Rex
-// shell that launches this suite exports REX_SESSION/REX_BLOCK, which would
-// make ./rex.ts win that load and starve every fake. Clear them before the
-// first surface import so the suite is hermetic.
+// PATH). ./surface.ts selects its surface per call from the environment, so a
+// real Rex shell that launches this suite exports REX_SESSION/REX_BLOCK and
+// would make ./rex.ts win every dispatch. Clear them up front so the suite is
+// hermetic.
 const savedRexSession = process.env.REX_SESSION;
 const savedRexBlock = process.env.REX_BLOCK;
 delete process.env.REX_SESSION;
@@ -1425,7 +1425,7 @@ try {
 	const herdrMatrix = createJiti(import.meta.url, { moduleCache: false })(
 		"./interactive-subagents/pi-extension/subagents/surface.ts",
 	);
-	assert.equal(herdrMatrix.activeSurface, "herdr");
+	assert.equal(herdrMatrix.activeSurface(), "herdr");
 	assert.equal(herdrMatrix.isMuxAvailable(), true);
 	assert.equal(herdrMatrix.createSurface("matrix-herdr"), "w50:p7");
 	assert.deepEqual(matrixCalls(matrixHerdrCapture), [
@@ -1445,7 +1445,7 @@ try {
 	const tmuxMatrix = createJiti(import.meta.url, { moduleCache: false })(
 		"./interactive-subagents/pi-extension/subagents/surface.ts",
 	);
-	assert.equal(tmuxMatrix.activeSurface, "tmux");
+	assert.equal(tmuxMatrix.activeSurface(), "tmux");
 	assert.equal(tmuxMatrix.isMuxAvailable(), true);
 	const tmuxPane = tmuxMatrix.createSurface("matrix-tmux");
 	assert.equal(tmuxPane, "%12");
@@ -1506,7 +1506,7 @@ try {
 	const noneMatrix = createJiti(import.meta.url, { moduleCache: false })(
 		"./interactive-subagents/pi-extension/subagents/surface.ts",
 	);
-	assert.equal(noneMatrix.activeSurface, "none");
+	assert.equal(noneMatrix.activeSurface(), "none");
 	assert.equal(noneMatrix.isMuxAvailable(), false);
 	const noneHint = noneMatrix.muxSetupHint();
 	assert.match(noneHint, /Herdr/);
@@ -2784,7 +2784,7 @@ esac
 		process.env.REX_BLOCK = "block:test";
 		process.env.PATH = `${rexSelectionBin}:${savedRexSelectionEnv.PATH ?? ""}`;
 		const rexSelection = loadSurface();
-		assert.equal(rexSelection.activeSurface, "rex");
+		assert.equal(rexSelection.activeSurface(), "rex");
 		assert.equal(rexSelection.isMuxAvailable(), true);
 		assert.match(rexSelection.muxSetupHint(), /Rex/);
 
@@ -2792,12 +2792,12 @@ esac
 		// the innermost multiplexer, so the outer tmux owns the panes.
 		process.env.TMUX = "/tmp/tmux-501/default,1,0";
 		process.env.TERM = "tmux-256color";
-		assert.equal(loadSurface().activeSurface, "tmux");
+		assert.equal(loadSurface().activeSurface(), "tmux");
 
 		// Rex running inside tmux splits with Rex (xterm-rex is innermost).
 		process.env.TMUX = "/tmp/tmux-501/default,1,0";
 		process.env.TERM = "xterm-rex";
-		assert.equal(loadSurface().activeSurface, "rex");
+		assert.equal(loadSurface().activeSurface(), "rex");
 
 		// Herdr still wins when it owns the pane and no other surface is set.
 		delete process.env.REX_SESSION;
@@ -2806,7 +2806,7 @@ esac
 		delete process.env.TERM;
 		process.env.HERDR_ENV = "1";
 		process.env.HERDR_PANE_ID = "w44:p2";
-		assert.equal(loadSurface().activeSurface, "herdr");
+		assert.equal(loadSurface().activeSurface(), "herdr");
 	} finally {
 		for (const [key, value] of Object.entries(savedRexSelectionEnv)) {
 			if (value === undefined) delete process.env[key];
@@ -2942,6 +2942,107 @@ esac
 			delete process.env[key];
 		}
 		rmSync(rexRoot, { recursive: true, force: true });
+	}
+}
+
+// --- The mux gate is lazy: the surface follows the environment per call ---
+{
+	const savedGateEnv = {
+		REX_SESSION: process.env.REX_SESSION,
+		REX_BLOCK: process.env.REX_BLOCK,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		TMUX: process.env.TMUX,
+		TERM: process.env.TERM,
+		PATH: process.env.PATH,
+	};
+	// Selection needs `rex` on PATH and no competing surface. Stub the binary
+	// and neutralise Herdr/tmux *before* the single load below, so the one
+	// cached PATH probe sees it.
+	const gateRoot = mkdtempSync(join(tmpdir(), "mux-gate-test-"));
+	const gateBin = join(gateRoot, "bin");
+	mkdirSync(gateBin, { recursive: true });
+	writeFileSync(join(gateBin, "rex"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+	try {
+		process.env.PATH = `${gateBin}:${savedGateEnv.PATH ?? ""}`;
+		delete process.env.HERDR_ENV;
+		delete process.env.HERDR_PANE_ID;
+		delete process.env.TMUX;
+		delete process.env.REX_SESSION;
+		delete process.env.REX_BLOCK;
+		process.env.TERM = "xterm-mux-gate";
+
+		// One load for the whole block: the gate must follow the environment
+		// without a reload, which a load-time constant cannot do.
+		const gate = createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/surface.ts",
+		);
+		assert.equal(gate.isMuxAvailable(), false, "no REX_SESSION/REX_BLOCK → unavailable");
+		assert.equal(gate.activeSurface(), "none");
+		// With no Rex identity at all the hint names every supported surface.
+		const noIdentityHint = gate.muxSetupHint();
+		assert.match(noIdentityHint, /Rex/);
+		assert.match(noIdentityHint, /Herdr/);
+		assert.match(noIdentityHint, /tmux/);
+
+		// Half an identity: the refusal names the exact missing inputs in turn.
+		process.env.REX_SESSION = "session:gate";
+		assert.equal(gate.isMuxAvailable(), false);
+		const halfHint = gate.muxSetupHint();
+		assert.match(halfHint, /missing REX_BLOCK/, "names the missing REX_BLOCK");
+		assert.doesNotMatch(halfHint, /REX_SESSION/, "does not blame the variable that is set");
+
+		// The identity completes; the same module instance now spawns.
+		process.env.REX_BLOCK = "block:gate";
+		assert.equal(gate.isMuxAvailable(), true, "same module load, now available");
+		assert.equal(gate.activeSurface(), "rex");
+
+		// Losing the identity flips it back: nothing about the environment is cached.
+		delete process.env.REX_BLOCK;
+		assert.equal(gate.isMuxAvailable(), false);
+
+		// Each of the three inputs named in turn, with no PATH change and no session.
+		const rexModule = jiti("./interactive-subagents/pi-extension/subagents/rex.ts");
+		const noCommand = () => false;
+		const yesCommand = () => true;
+		assert.deepEqual(
+			rexModule.missingRexInputs({ env: { REX_BLOCK: "b" }, commandAvailable: yesCommand }),
+			["REX_SESSION"],
+		);
+		assert.deepEqual(
+			rexModule.missingRexInputs({ env: { REX_SESSION: "s" }, commandAvailable: yesCommand }),
+			["REX_BLOCK"],
+		);
+		assert.deepEqual(
+			rexModule.missingRexInputs({
+				env: { REX_SESSION: "s", REX_BLOCK: "b" },
+				commandAvailable: noCommand,
+			}),
+			["rex on PATH"],
+		);
+		for (const [env, wanted] of [
+			[{ REX_BLOCK: "b" }, /REX_SESSION/],
+			[{ REX_SESSION: "s" }, /REX_BLOCK/],
+			[{ REX_SESSION: "s", REX_BLOCK: "b" }, /rex on PATH/],
+		]) {
+			const detail = rexModule.rexRefusalDetail({ env, commandAvailable: noCommand });
+			assert.match(detail, wanted, `refusal names ${wanted}`);
+		}
+		// A wholly absent identity is not a Rex shortfall: no detail to report.
+		assert.equal(rexModule.rexRefusalDetail({ env: {}, commandAvailable: yesCommand }), null);
+
+		// The requireRex refusal carries the same detail, before it runs `rex`.
+		assert.throws(
+			() => rexModule.createSurface("gate-refusal"),
+			/rex is required for subagents; missing REX_BLOCK/,
+			"requireRex names the missing input",
+		);
+	} finally {
+		for (const [key, value] of Object.entries(savedGateEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		rmSync(gateRoot, { recursive: true, force: true });
 	}
 }
 
