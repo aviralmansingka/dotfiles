@@ -173,7 +173,7 @@ func ackToken(vault, h, branch string) string {
 // plan describes how to deploy one mission and changes nothing: no worktree, no
 // attempt, no launch record. A missing worktree is reported instead of created,
 // because the captain needs an existing checkout to work in.
-func (s *Store) plan(h, mux, launchID string) (Plan, error) {
+func (s *App) plan(h, mux, launchID string) (Plan, error) {
 	r, e := s.load(h)
 	if e != nil {
 		return Plan{}, e
@@ -197,7 +197,7 @@ func (s *Store) plan(h, mux, launchID string) (Plan, error) {
 	if next, e := mission.NextStep(r.Mission, r.State); e == nil {
 		step = next.ID
 	}
-	ack := ackToken(s.Vault, h, b.Branch)
+	ack := ackToken(s.Repo.VaultPath(), h, b.Branch)
 	if launchID == "" {
 		launchID = ack
 	}

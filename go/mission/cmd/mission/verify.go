@@ -103,7 +103,7 @@ func goTest(cwd string) (string, string, []byte) {
 // reports the same verdicts as go-test: passed on exit 0, failed with the exit
 // code in the summary, and inconclusive when the deadline stops the process.
 func cmdCheck(name, cwd string) (string, string, []byte) {
-	body := strings.TrimSpace(strings.TrimPrefix(name, cmdCheckPrefix))
+	body := strings.TrimSpace(strings.TrimPrefix(name, mission.CmdCheckPrefix))
 	v := runGrouped(cwd, nil, "sh", "-c", body)
 	if v.leftover {
 		return "inconclusive", "Check process left background work; group stopped", v.log
@@ -123,13 +123,13 @@ func cmdCheck(name, cwd string) (string, string, []byte) {
 	}
 	return "passed", summary, v.log
 }
-func (s *Store) verify(h, id, token string) (mission.Record, error) {
+func (s *App) verify(h, id, token string) (mission.Record, error) {
 	var current mission.Record
 	var attempt mission.Attempt
 	var st mission.Step
 	var before subjectSnapshot
 	run := mission.Verification{ID: mission.UID("verify-"), Started: mission.Now(), Runner: "mission/checks@" + platform.Machine()}
-	_, e := s.mutate(h, func(r *mission.Record) error {
+	_, e := s.update(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return e
@@ -143,7 +143,7 @@ func (s *Store) verify(h, id, token string) (mission.Record, error) {
 		if a.Verifying != "" {
 			return mission.Problem("verification_busy", "check run %s already owns verification; inspect an interrupted runner before recovery", a.Verifying)
 		}
-		d, _ := s.dir(h)
+		d, _ := s.Repo.Dir(h)
 		b, e := os.ReadFile(filepath.Join(d, "mission.md"))
 		if e != nil {
 			return e
@@ -169,7 +169,7 @@ func (s *Store) verify(h, id, token string) (mission.Record, error) {
 	}
 	// Check processes run without the vault lock so other missions can make progress.
 	logs := executeChecks(st, attempt.Cwd, before, &run)
-	return s.mutate(h, func(r *mission.Record) error {
+	return s.update(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return e
@@ -225,7 +225,7 @@ func executeChecks(st mission.Step, cwd string, before subjectSnapshot, run *mis
 				res.Verdict, res.Summary, logs[i] = goTest(module)
 			}
 		default:
-			if strings.HasPrefix(res.Check, cmdCheckPrefix) {
+			if strings.HasPrefix(res.Check, mission.CmdCheckPrefix) {
 				res.Verdict, res.Summary, logs[i] = cmdCheck(res.Check, cwd)
 			}
 		}
@@ -237,7 +237,7 @@ func executeChecks(st mission.Step, cwd string, before subjectSnapshot, run *mis
 }
 
 // recordVerification finalizes one check run on an attempt.
-func (s *Store) recordVerification(r *mission.Record, a *mission.Attempt, st mission.Step, run *mission.Verification, before subjectSnapshot, logs [][]byte) error {
+func (s *App) recordVerification(r *mission.Record, a *mission.Attempt, st mission.Step, run *mission.Verification, before subjectSnapshot, logs [][]byte) error {
 	after := s.subject(*r, *a, st)
 	if after.Hash != before.Hash {
 		for i := range run.Results {
@@ -251,13 +251,13 @@ func (s *Store) recordVerification(r *mission.Record, a *mission.Attempt, st mis
 	for i := range run.Results {
 		res := &run.Results[i]
 		rel := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", a.Sequence), "checks", run.ID, checkLogName(res.Check)))
-		p, e := s.path(r.Mission.Repo, r.Mission.Slug, rel)
+		p, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, rel)
 		if e != nil {
 			return e
 		}
 		b := []byte(fmt.Sprintf("check: %s\nversion: %s\nverdict: %s\nsubject: %s\nrunner: %s\nsummary: %s\n\n", res.Check, res.Version, res.Verdict, run.SubjectHash, run.Runner, res.Summary))
 		b = append(b, logs[i]...)
-		if e = atomicWrite(p, b); e != nil {
+		if e = platform.AtomicWrite(p, b); e != nil {
 			return e
 		}
 		res.Evidence = []mission.Evidence{{Path: rel, Hash: mission.Digest(b)}}
@@ -272,7 +272,7 @@ func (s *Store) recordVerification(r *mission.Record, a *mission.Attempt, st mis
 	}
 	a.Verifying = ""
 	a.Updated = mission.Now()
-	a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "checks-completed", At: mission.Now(), Summary: verificationSummary(*run)})
+	a.Events = append(a.Events, mission.Event{ID: mission.UID("event-"), Type: "checks-completed", At: mission.Now(), Summary: mission.VerificationSummary(*run)})
 	return nil
 }
 

@@ -1,4 +1,4 @@
-package main
+package vaultfs
 
 import (
 	"os"
@@ -8,9 +8,11 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
-func (s *Store) addRepo(slug, checkout, remote string) (mission.Repo, error) {
+// AddRepo registers one checkout binding for a repository slug, refreshing the
+// binding this machine already had.
+func (s *Store) AddRepo(slug, checkout, remote string) (mission.Repo, error) {
 	var r mission.Repo
-	if !validSlug(slug) {
+	if !mission.ValidSlug(slug) {
 		return r, mission.Problem("invalid_slug", "repository slug must be 3–64 lowercase letters/digits/hyphens")
 	}
 	c, e := filepath.Abs(checkout)
@@ -26,12 +28,12 @@ func (s *Store) addRepo(slug, checkout, remote string) (mission.Repo, error) {
 		return r, mission.Problem("invalid_checkout", "checkout must be an existing directory")
 	}
 	err := s.locked(func() error {
-		p, e := s.path(slug, "repository.md")
+		p, e := s.Path(slug, "repository.md")
 		if e != nil {
 			return e
 		}
 		if b, e := os.ReadFile(p); e == nil {
-			if _, e = parseMarkdown(b, &r); e != nil {
+			if _, e = platform.ParseMarkdown(b, &r); e != nil {
 				return e
 			}
 			if r.Bindings == nil {
@@ -46,16 +48,18 @@ func (s *Store) addRepo(slug, checkout, remote string) (mission.Repo, error) {
 		if remote != "" {
 			r.Remote = remote
 		}
-		b, e := markdown(r, "# "+slug+"\n\nRepository registration for local mission execution. Checkout bindings are machine-specific.")
+		b, e := platform.Markdown(r, "# "+slug+"\n\nRepository registration for local mission execution. Checkout bindings are machine-specific.")
 		if e != nil {
 			return e
 		}
-		return atomicWrite(p, b)
+		return platform.AtomicWrite(p, b)
 	})
 	return r, err
 }
-func (s *Store) repos() ([]mission.Repo, error) {
-	p, e := s.path()
+
+// Repos is every registered repository, by slug.
+func (s *Store) Repos() ([]mission.Repo, error) {
+	p, e := s.Path()
 	if e != nil {
 		return nil, e
 	}
@@ -68,10 +72,10 @@ func (s *Store) repos() ([]mission.Repo, error) {
 	}
 	var out []mission.Repo
 	for _, v := range entries {
-		if !v.IsDir() || !validSlug(v.Name()) {
+		if !v.IsDir() || !mission.ValidSlug(v.Name()) {
 			continue
 		}
-		r, e := s.repo(v.Name())
+		r, e := s.Repo(v.Name())
 		if e != nil {
 			return nil, e
 		}
@@ -79,9 +83,11 @@ func (s *Store) repos() ([]mission.Repo, error) {
 	}
 	return out, nil
 }
-func (s *Store) repo(slug string) (mission.Repo, error) {
+
+// Repo is one registered repository.
+func (s *Store) Repo(slug string) (mission.Repo, error) {
 	var r mission.Repo
-	p, e := s.path(slug, "repository.md")
+	p, e := s.Path(slug, "repository.md")
 	if e != nil {
 		return r, e
 	}
@@ -89,6 +95,6 @@ func (s *Store) repo(slug string) (mission.Repo, error) {
 	if e != nil {
 		return r, mission.Problem("repo_not_registered", "register %s with mission repo add first", slug)
 	}
-	_, e = parseMarkdown(b, &r)
+	_, e = platform.ParseMarkdown(b, &r)
 	return r, e
 }

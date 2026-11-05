@@ -68,7 +68,7 @@ func TestPiShutdownAndReloadPreserveOwnership(t *testing.T) {
 	must(t, e)
 	_, e = s.hook(h, c.Attempt.ID, p.Token, mission.Event{Type: "session-end", SessionID: p.SessionID})
 	must(t, e)
-	s2, e := openStore(s.Vault)
+	s2, e := openApp(t, s.Repo.VaultPath())
 	must(t, e)
 	r, e := s2.load(h)
 	must(t, e)
@@ -144,7 +144,7 @@ func TestProgressWithActorRecordsOneTrooperReport(t *testing.T) {
 	must(t, e)
 	// A replayed call after a reload finds the existing progress entry and adds
 	// no second report either.
-	s2, e := openStore(s.Vault)
+	s2, e := openApp(t, s.Repo.VaultPath())
 	must(t, e)
 	_, e = s2.progress(h, c.Attempt.ID, p.Token, "trooper-S01", report, nil)
 	must(t, e)
@@ -246,7 +246,7 @@ func TestTrooperReportsStayBackwardCompatible(t *testing.T) {
 // shared Herdr worktree root, marked with this mission's ownership key.
 func TestMissionWorkspaceOwnsMissionSlugBranch(t *testing.T) {
 	root := t.TempDir()
-	s, e := openStore(t.TempDir())
+	s, e := openApp(t, t.TempDir())
 	must(t, e)
 	repo := filepath.Join(root, "dotfiles")
 	must(t, os.MkdirAll(repo, 0700))
@@ -283,7 +283,7 @@ func TestMissionWorkspaceOwnsMissionSlugBranch(t *testing.T) {
 	if b.BaseCommit == "" {
 		t.Fatal("base commit not recorded")
 	}
-	if mark := git(repo, "config", "--get", "branch.mission/worktree-branch.missionOwner"); mark != s.Vault+":"+r.Handle {
+	if mark := git(repo, "config", "--get", "branch.mission/worktree-branch.missionOwner"); mark != s.Repo.VaultPath()+":"+r.Handle {
 		t.Fatalf("ownership marker = %q", mark)
 	}
 	// A second visit reuses the same checkout and branch instead of creating one.
@@ -303,7 +303,7 @@ func TestMissionWorkspaceOwnsMissionSlugBranch(t *testing.T) {
 
 func TestMissionWorkspaceRevivesDeletedCheckout(t *testing.T) {
 	root := t.TempDir()
-	s, e := openStore(t.TempDir())
+	s, e := openApp(t, t.TempDir())
 	must(t, e)
 	repo := filepath.Join(root, "dotfiles")
 	must(t, os.MkdirAll(repo, 0700))
@@ -371,9 +371,9 @@ func TestMissionWorkspaceRevivesDeletedCheckout(t *testing.T) {
 
 // missionRepo registers one repository with a tracked file and returns the
 // store, the primary checkout, and the shared worktree root.
-func missionRepo(t *testing.T) (*Store, string, string) {
+func missionRepo(t *testing.T) (*App, string, string) {
 	t.Helper()
-	s, e := openStore(t.TempDir())
+	s, e := openApp(t, t.TempDir())
 	must(t, e)
 	root := t.TempDir()
 	repo := filepath.Join(root, "dotfiles")
@@ -401,7 +401,7 @@ func gitFixture(t *testing.T, dir string, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
-func addMission(t *testing.T, s *Store, slug string) string {
+func addMission(t *testing.T, s *App, slug string) string {
 	t.Helper()
 	m := mission.Mission{Repo: "dotfiles", Slug: slug, Title: "Adopt a checkout", Goal: "Reuse the existing mission checkout", Kind: "implementation", Steps: []mission.Step{{Title: "Inspect", Output: "result.md"}}}
 	r, e := s.create(m)
@@ -412,14 +412,14 @@ func addMission(t *testing.T, s *Store, slug string) string {
 // missionCheckout pre-creates mission/<slug> and a linked checkout at the path
 // workspace expects. It commits a sentinel file so the tree starts clean and
 // adoption is provably in-place.
-func missionCheckout(t *testing.T, s *Store, h, repo, worktrees, slug string, mark bool) string {
+func missionCheckout(t *testing.T, s *App, h, repo, worktrees, slug string, mark bool) string {
 	t.Helper()
 	branch := missionBranch(slug)
 	cwd := filepath.Join(worktrees, "mission-"+slug)
 	gitFixture(t, repo, "branch", branch, "main")
 	gitFixture(t, repo, "worktree", "add", cwd, branch)
 	if mark {
-		gitFixture(t, repo, "config", "branch."+branch+".missionOwner", s.Vault+":"+h)
+		gitFixture(t, repo, "config", "branch."+branch+".missionOwner", s.Repo.VaultPath()+":"+h)
 	}
 	must(t, os.WriteFile(filepath.Join(cwd, "sentinel.txt"), []byte("untouched"), 0600))
 	gitFixture(t, cwd, "add", "sentinel.txt")
@@ -526,8 +526,8 @@ func TestMissionWorkspaceAdoptsUnmarkedCheckout(t *testing.T) {
 	if b.Cwd != realPath(t, cwd) || b.Branch != missionBranch("unmarked-slug") {
 		t.Fatalf("adoption binding = %+v", b)
 	}
-	if mark := gitFixture(t, repo, "config", "--get", "branch."+b.Branch+".missionOwner"); mark != s.Vault+":"+h {
-		t.Fatalf("ownership marker = %q, want %s:%s", mark, s.Vault, h)
+	if mark := gitFixture(t, repo, "config", "--get", "branch."+b.Branch+".missionOwner"); mark != s.Repo.VaultPath()+":"+h {
+		t.Fatalf("ownership marker = %q, want %s:%s", mark, s.Repo.VaultPath(), h)
 	}
 	again, e := s.workspace(h, "", "main", worktrees)
 	must(t, e)

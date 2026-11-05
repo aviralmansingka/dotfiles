@@ -1,13 +1,14 @@
 package main
 
 import (
-	tea "charm.land/bubbletea/v2"
-	lg "charm.land/lipgloss/v2"
 	"io"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	tea "charm.land/bubbletea/v2"
+	lg "charm.land/lipgloss/v2"
 
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -269,7 +270,7 @@ func TestStepsViewAndEditorSaveCustomization(t *testing.T) {
 	}
 }
 func TestEmptyDeskNavigationDoesNotPanic(t *testing.T) {
-	s, e := openStore(t.TempDir())
+	s, e := openApp(t, t.TempDir())
 	must(t, e)
 	m := newDesk(s)
 	m.refresh()
@@ -379,9 +380,9 @@ func TestFloorFrameKeepsTheLegendLast(t *testing.T) {
 
 // stateVault seeds one mission per status the desk filters, so every lane entry
 // has a row to show and DONE holds both finished and retired work.
-func stateVault(t *testing.T) (*Store, map[string]string) {
+func stateVault(t *testing.T) (*App, map[string]string) {
 	t.Helper()
-	s, e := openStore(t.TempDir())
+	s, e := openApp(t, t.TempDir())
 	must(t, e)
 	_, e = s.addRepo("dotfiles", t.TempDir(), "")
 	must(t, e)

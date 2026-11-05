@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
-func (s *Store) hook(h, id, token string, ev mission.Event) (mission.Record, error) {
+func (s *App) hook(h, id, token string, ev mission.Event) (mission.Record, error) {
 	allowed := map[string]bool{"session-start": true, "agent-start": true, "agent-end": true, "agent-settled": true, "tool-start": true, "tool-end": true, "session-end": true, "process-start": true, "process-exit": true, "note": true, "question": true}
 	if !allowed[ev.Type] {
 		return mission.Record{}, mission.Problem("invalid_event", "unsupported lifecycle event %s", ev.Type)
@@ -26,7 +27,7 @@ func (s *Store) hook(h, id, token string, ev mission.Event) (mission.Record, err
 	ev.Fingerprint = ""
 	b, _ := json.Marshal(ev)
 	finger := mission.Digest(b)
-	return s.mutate(h, func(r *mission.Record) error {
+	return s.update(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return e
@@ -99,7 +100,7 @@ func (s *Store) hook(h, id, token string, ev mission.Event) (mission.Record, err
 		return nil
 	})
 }
-func (s *Store) snapshotTranscript(r *mission.Record, a *mission.Attempt) error {
+func (s *App) snapshotTranscript(r *mission.Record, a *mission.Attempt) error {
 	if a.SessionFile == "" {
 		return nil
 	}
@@ -116,17 +117,17 @@ func (s *Store) snapshotTranscript(r *mission.Record, a *mission.Attempt) error 
 		return mission.Problem("transcript_too_large", "transcript exceeds prototype's 16 MiB preservation limit")
 	}
 	rel := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", a.Sequence), "session.jsonl"))
-	p, e := s.path(r.Mission.Repo, r.Mission.Slug, rel)
+	p, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, rel)
 	if e != nil {
 		return e
 	}
-	if e = atomicWrite(p, b); e != nil {
+	if e = platform.AtomicWrite(p, b); e != nil {
 		return e
 	}
 	a.Transcript = rel
 	return nil
 }
-func (s *Store) finish(h, id, token string, failed bool, note string, observedExit bool, code int, piSettlement ...bool) (mission.Record, error) {
+func (s *App) finish(h, id, token string, failed bool, note string, observedExit bool, code int, piSettlement ...bool) (mission.Record, error) {
 	settled := len(piSettlement) > 0 && piSettlement[0]
 	opening, e := s.load(h)
 	if e != nil {
@@ -163,11 +164,11 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 				if len(v.Results) > 0 && v.Results[0].Verdict == "failed" {
 					return r, mission.Problem("missing_artifact", "required result check failed; inspect verification evidence")
 				}
-				return r, mission.Problem("checks_failed", "required checks did not pass: %s", verificationSummary(v))
+				return r, mission.Problem("checks_failed", "required checks did not pass: %s", mission.VerificationSummary(v))
 			}
 		}
 	}
-	return s.mutate(h, func(r *mission.Record) error {
+	return s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}
@@ -215,7 +216,7 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 			if !s.verified(*r, *a) {
 				return mission.Problem("evidence_changed", "checked input changed; run checks again before finishing")
 			}
-			d, _ := s.dir(h)
+			d, _ := s.Repo.Dir(h)
 			spec, e := os.ReadFile(filepath.Join(d, "mission.md"))
 			if e != nil {
 				return e
@@ -223,7 +224,7 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 			if mission.Digest(spec) != a.SpecHash {
 				return mission.Problem("brief_changed", "brief changed during this attempt; successful completion refused")
 			}
-			p, e := s.path(r.Mission.Repo, r.Mission.Slug, a.Artifact)
+			p, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, a.Artifact)
 			if e != nil {
 				return e
 			}
@@ -278,8 +279,8 @@ func (s *Store) finish(h, id, token string, failed bool, note string, observedEx
 		return nil
 	})
 }
-func (s *Store) retry(h string) (mission.Record, error) {
-	return s.mutate(h, func(r *mission.Record) error {
+func (s *App) retry(h string) (mission.Record, error) {
+	return s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}

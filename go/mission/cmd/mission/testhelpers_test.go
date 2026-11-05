@@ -7,13 +7,26 @@ import (
 	"strings"
 	"testing"
 
+	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
-// fixture builds a vault with one registered repository and one mission.
-func fixture(t *testing.T) (*Store, string) {
+// openApp builds one core over a real vault, with the writer a test command
+// makes its saves under.
+func openApp(t *testing.T, vault string) (*App, error) {
 	t.Helper()
-	s, e := openStore(t.TempDir())
+	store, e := vaultfs.Open(vault)
+	if e != nil {
+		return nil, e
+	}
+	return newApp(store, "mission"), nil
+}
+
+// fixture builds a vault with one registered repository and one mission.
+func fixture(t *testing.T) (*App, string) {
+	t.Helper()
+	s, e := openApp(t, t.TempDir())
 	must(t, e)
 	_, e = s.addRepo("dotfiles", t.TempDir(), "")
 	must(t, e)
@@ -33,7 +46,7 @@ func must(t *testing.T, e error) {
 // deskOn builds the desk and opens the lane that holds handle, so a test that
 // is not about the filter lane still sees the record it seeded. The desk
 // itself opens on the lane's first entry, ACTIVE.
-func deskOn(t *testing.T, s *Store, handle string) *desk {
+func deskOn(t *testing.T, s *App, handle string) *desk {
 	t.Helper()
 	m := newDesk(s)
 	m.refresh()
@@ -72,21 +85,21 @@ func wantCode(t *testing.T, e error, code string) {
 	}
 }
 
-func claimTest(t *testing.T, s *Store, h string) mission.Claim {
+func claimTest(t *testing.T, s *App, h string) mission.Claim {
 	t.Helper()
 	c, e := s.claim(h, "scout", "session-test", "", false)
 	must(t, e)
 	return c
 }
 
-func result(t *testing.T, s *Store, c mission.Claim, text string) {
+func result(t *testing.T, s *App, c mission.Claim, text string) {
 	t.Helper()
-	must(t, atomicWrite(artifactPath(s, c), []byte(text)))
+	must(t, platform.AtomicWrite(s.Artifacts(c), []byte(text)))
 }
 
 // piFixture builds a real Git worktree for a mission and a session file whose
 // header matches it.
-func piFixture(t *testing.T) (*Store, string, mission.PiAttachment) {
+func piFixture(t *testing.T) (*App, string, mission.PiAttachment) {
 	t.Helper()
 	s, h := fixture(t)
 	root := t.TempDir()

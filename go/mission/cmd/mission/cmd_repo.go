@@ -5,15 +5,15 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
-func cmdRepo(a platform.Args, s *Store) (any, error) {
+func cmdRepo(a platform.Args, s *App) (any, error) {
 	switch a.At(1) {
 	case "add":
 		if !a.Has("checkout") {
 			return nil, mission.Problem("usage", "repo add requires --checkout")
 		}
-		return s.addRepo(a.At(2), a.Get("checkout"), a.Get("remote"))
+		return s.Repo.AddRepo(a.At(2), a.Get("checkout"), a.Get("remote"))
 	case "list":
-		return s.repos()
+		return s.Repo.Repos()
 	}
 	return nil, mission.Problem("usage", "use repo add or repo list")
 }

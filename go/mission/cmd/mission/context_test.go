@@ -40,7 +40,7 @@ func named(text string) []string { return attemptID.FindAllString(text, -1) }
 // reClaim ends the attempt a claim opened, the way a dead owner leaves it, and
 // claims the same step again. It returns both claims, so a test can compare the
 // text each one emitted.
-func reClaim(t *testing.T, s *Store, h string) (mission.Claim, mission.Claim) {
+func reClaim(t *testing.T, s *App, h string) (mission.Claim, mission.Claim) {
 	t.Helper()
 	first := claimTest(t, s, h)
 	_, e := s.finish(h, first.Attempt.ID, first.Token, true, "owner tab closed", false, 1)

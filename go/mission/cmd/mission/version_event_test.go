@@ -18,7 +18,7 @@ func stampBuild(t *testing.T, revision, at, herdr string) {
 }
 
 // versionEventsOf returns every version event the attempt carries.
-func versionEventsOf(t *testing.T, s *Store, handle, attempt string) []mission.Event {
+func versionEventsOf(t *testing.T, s *App, handle, attempt string) []mission.Event {
 	t.Helper()
 	r, e := s.load(handle)
 	must(t, e)

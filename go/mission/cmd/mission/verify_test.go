@@ -14,7 +14,7 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
-func lastAttempt(t *testing.T, s *Store, h string) (*mission.Record, *mission.Attempt) {
+func lastAttempt(t *testing.T, s *App, h string) (*mission.Record, *mission.Attempt) {
 	t.Helper()
 	r, e := s.load(h)
 	must(t, e)
@@ -89,14 +89,14 @@ func TestVerifyRunsRegisteredChecksInOrder(t *testing.T) {
 // catalog, accepted with a command body, and refused when the body is empty or
 // the name is an unknown preset.
 func TestCmdCheckPresetAndNameRules(t *testing.T) {
-	var entry *CheckPreset
-	for i := range checkCatalog() {
-		if c := checkCatalog()[i]; c.Name == "cmd:<shell command>" {
+	var entry *mission.CheckPreset
+	for i := range mission.CheckCatalog() {
+		if c := mission.CheckCatalog()[i]; c.Name == "cmd:<shell command>" {
 			entry = &c
 		}
 	}
 	if entry == nil {
-		t.Fatalf("cmd preset missing from catalog: %+v", checkCatalog())
+		t.Fatalf("cmd preset missing from catalog: %+v", mission.CheckCatalog())
 	}
 	if entry.Version != "1" {
 		t.Fatalf("cmd preset version = %q, want 1", entry.Version)
@@ -114,8 +114,8 @@ func TestCmdCheckPresetAndNameRules(t *testing.T) {
 		"arbitrary-shell":     false,
 		"go-test":             true,
 	} {
-		if got := knownCheck(name); got != want {
-			t.Fatalf("knownCheck(%q) = %v, want %v", name, got, want)
+		if got := mission.KnownCheck(name); got != want {
+			t.Fatalf("mission.KnownCheck(%q) = %v, want %v", name, got, want)
 		}
 	}
 
@@ -165,9 +165,9 @@ func commandCheckMission(check string) mission.Mission {
 func TestCommandCheck(t *testing.T) {
 	v, e := cmdChecks(platform.Args{}, nil)
 	must(t, e)
-	presets, ok := v.([]CheckPreset)
+	presets, ok := v.([]mission.CheckPreset)
 	if !ok {
-		t.Fatalf("mission checks returned %T, want []CheckPreset", v)
+		t.Fatalf("mission checks returned %T, want []mission.CheckPreset", v)
 	}
 	listed := false
 	for _, c := range presets {
@@ -178,7 +178,7 @@ func TestCommandCheck(t *testing.T) {
 	if !listed {
 		t.Fatalf("mission checks does not list cmd:<shell command>: %+v", presets)
 	}
-	if e := validateMission(commandCheckMission("cmd:exit 0")); e != nil {
+	if e := mission.Validate(commandCheckMission("cmd:exit 0")); e != nil {
 		t.Fatalf("validateMission refused the name mission checks lists: %v", e)
 	}
 
@@ -249,7 +249,7 @@ func TestCommandCheck(t *testing.T) {
 // wantCommandResult asserts one check's verdict, summary, and evidence log: the
 // log sits under artifacts/<n>/checks/<verify>/, its name is one safe path
 // component, and it repeats the verdict and the summary it recorded.
-func wantCommandResult(t *testing.T, s *Store, r mission.Record, res mission.CheckResult, verdict, summary string) {
+func wantCommandResult(t *testing.T, s *App, r mission.Record, res mission.CheckResult, verdict, summary string) {
 	t.Helper()
 	if res.Verdict != verdict || res.Summary != summary {
 		t.Fatalf("%s result = %s %q, want %s %q", res.Check, res.Verdict, res.Summary, verdict, summary)
@@ -274,7 +274,7 @@ func wantCommandResult(t *testing.T, s *Store, r mission.Record, res mission.Che
 // store, handle, and that checkout. The cmd: subject carries a repository hash,
 // so the test needs a real checkout to prove the binding; the command itself
 // runs in the checkout root, not the module.
-func cmdCheckCheckout(t *testing.T) (*Store, string, string) {
+func cmdCheckCheckout(t *testing.T) (*App, string, string) {
 	t.Helper()
 	s, h := fixture(t)
 	dir := t.TempDir()
@@ -286,7 +286,7 @@ func cmdCheckCheckout(t *testing.T) (*Store, string, string) {
 
 // cmdCheckStep replaces S01's checks with the given cmd: checks, claims the
 // step in the checkout, and writes a result.
-func cmdCheckStep(t *testing.T, s *Store, h, dir string, checks ...string) mission.Claim {
+func cmdCheckStep(t *testing.T, s *App, h, dir string, checks ...string) mission.Claim {
 	t.Helper()
 	r, e := s.load(h)
 	must(t, e)
@@ -303,7 +303,7 @@ func cmdCheckStep(t *testing.T, s *Store, h, dir string, checks ...string) missi
 }
 
 // checkLog reads one result's evidence log back from the vault.
-func checkLog(t *testing.T, s *Store, r mission.Record, res mission.CheckResult) (string, string) {
+func checkLog(t *testing.T, s *App, r mission.Record, res mission.CheckResult) (string, string) {
 	t.Helper()
 	if len(res.Evidence) == 0 {
 		t.Fatalf("%s recorded no evidence", res.Check)

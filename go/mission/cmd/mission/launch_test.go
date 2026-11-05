@@ -51,7 +51,7 @@ func TestLaunchRequestIsWrittenOnce(t *testing.T) {
 	}
 	// A claimed request still owns the launch: the press that follows it is a
 	// duplicate, not a second launch.
-	must(t, atomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","requested_at":"2026-01-01T00:00:00Z","state":"claimed"}`)))
+	must(t, platform.AtomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","requested_at":"2026-01-01T00:00:00Z","state":"claimed"}`)))
 	if _, created, e = requestLaunch(dir, launchOwner{}, handle, "dotfiles", at); e != nil || created {
 		t.Fatalf("claimed request: created=%v err=%v", created, e)
 	}
@@ -63,7 +63,7 @@ func TestFailedLaunchCanBeRequestedAgain(t *testing.T) {
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_, _, e := requestLaunch(dir, launchOwner{}, handle, "dotfiles", at)
 	must(t, e)
-	must(t, atomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","state":"failed","error":"Herdr is not running"}`)))
+	must(t, platform.AtomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","state":"failed","error":"Herdr is not running"}`)))
 	if _, created, e := requestLaunch(dir, launchOwner{}, handle, "dotfiles", at.Add(time.Minute)); e != nil || !created {
 		t.Fatalf("a failed request must be retryable: created=%v err=%v", created, e)
 	}
@@ -127,7 +127,7 @@ func TestLaunchStateReachesTheFrame(t *testing.T) {
 	}
 	// The extension reports back through the same file, so the next refresh
 	// shows a started mission and a failure the human can read.
-	must(t, atomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","state":"failed","error":"Herdr is not running"}`)))
+	must(t, platform.AtomicWrite(launchFile(dir, handle), []byte(`{"handle":"`+handle+`","repo":"dotfiles","state":"failed","error":"Herdr is not running"}`)))
 	m.refresh()
 	frame = stripANSI(m.render())
 	if !strings.Contains(frame, "LAUNCH FAILED") || !strings.Contains(frame, "Herdr is not running") {
@@ -215,7 +215,7 @@ func TestStartedLaunchShowsItsHerdrAgent(t *testing.T) {
 	l.State, l.Workspace, l.Pane = launchStarted, "w42", "w42:p1"
 	b, e := json.Marshal(l)
 	must(t, e)
-	must(t, atomicWrite(launchFile(dir, handle), b))
+	must(t, platform.AtomicWrite(launchFile(dir, handle), b))
 	m.refresh()
 	frame := stripANSI(m.render())
 	if !strings.Contains(frame, "Herdr agent in w42") {

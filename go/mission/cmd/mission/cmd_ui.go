@@ -10,7 +10,7 @@ import (
 
 // cmdUI runs the interactive mission desk. It owns the terminal, so it returns
 // an exit code instead of a value for emit.
-func cmdUI(a platform.Args, s *Store) int {
+func cmdUI(a platform.Args, s *App) int {
 	if !platform.Terminal() {
 		return emit(nil, mission.Problem("usage", "interactive UI requires a terminal; use list, show, next, or render"))
 	}
@@ -21,7 +21,7 @@ func cmdUI(a platform.Args, s *Store) int {
 }
 
 // cmdRender prints one static frame of the desk and returns an exit code.
-func cmdRender(a platform.Args, s *Store) int {
+func cmdRender(a platform.Args, s *App) int {
 	w := 128
 	h := 42
 	var e error

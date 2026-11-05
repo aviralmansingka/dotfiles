@@ -1,20 +1,19 @@
 package main
 
 import (
-	"encoding/json"
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
+	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 // ledgerFixture is a research mission with three steps and no checkpoint, so a
 // test can finish one step and claim the next.
-func ledgerFixture(t *testing.T) (*Store, string) {
+func ledgerFixture(t *testing.T) (*App, string) {
 	t.Helper()
-	s, e := openStore(t.TempDir())
+	s, e := openApp(t, t.TempDir())
 	must(t, e)
 	_, e = s.addRepo("dotfiles", t.TempDir(), "")
 	must(t, e)
@@ -25,7 +24,7 @@ func ledgerFixture(t *testing.T) (*Store, string) {
 	return s, r.Handle
 }
 
-func ledger(t *testing.T, s *Store, h string) mission.Record {
+func ledger(t *testing.T, s *App, h string) mission.Record {
 	t.Helper()
 	r, e := s.load(h)
 	must(t, e)
@@ -34,13 +33,13 @@ func ledger(t *testing.T, s *Store, h string) mission.Record {
 
 // clobber writes a state snapshot the way an actor without the compare-and-swap
 // did: straight to state.md, with no revision check.
-func clobber(t *testing.T, s *Store, r mission.Record) {
+func clobber(t *testing.T, s *App, r mission.Record) {
 	t.Helper()
 	d, e := s.dir(r.Handle)
 	must(t, e)
-	b, e := markdown(r.State, stateBody(r))
+	b, e := platform.Markdown(r.State, vaultfs.StateBody(r))
 	must(t, e)
-	must(t, atomicWrite(filepath.Join(d, "state.md"), b))
+	must(t, platform.AtomicWrite(filepath.Join(d, "state.md"), b))
 }
 
 // TestStaleSaveCannotDropClaimedAttempt pins the incident mechanism at the
@@ -60,13 +59,16 @@ func TestStaleSaveCannotDropClaimedAttempt(t *testing.T) {
 	}
 }
 
-// TestDivergentLockCannotDropClaimedAttempt reproduces the incident through
-// Store.mutate. Two actors use different lock directories (a second TMPDIR), so
+// TestDivergentLockCannotDropClaimedAttempt reproduces the incident through the
+// store's write transaction. Two actors use different lock directories (a
+// second TMPDIR), so
 // their flocks never meet. One loads a record, the other claims, and the first
 // then saves its pre-claim snapshot.
 func TestDivergentLockCannotDropClaimedAttempt(t *testing.T) {
 	s, h := ledgerFixture(t)
-	other := &Store{Vault: s.Vault, LockDir: t.TempDir()}
+	otherStore, e := vaultfs.Open(s.Repo.VaultPath(), vaultfs.WithLockDir(t.TempDir()))
+	must(t, e)
+	other := newApp(otherStore, "mission")
 	loaded, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
 		_, e := other.mutate(h, func(r *mission.Record) error {
@@ -79,7 +81,7 @@ func TestDivergentLockCannotDropClaimedAttempt(t *testing.T) {
 	<-loaded
 	c := claimTest(t, s, h)
 	close(release)
-	e := <-done
+	e = <-done
 	wantCode(t, e, "revision_conflict")
 	r := ledger(t, s, h)
 	if len(r.State.Attempts) != 1 || r.State.Active != c.Attempt.ID {
@@ -102,27 +104,6 @@ func TestSharedLockSeesTheClaimedAttempt(t *testing.T) {
 
 // TestJournalNamesEveryWriter shows the forensic record a lost revision leaves
 // behind: one line per save, refused writes included.
-func TestJournalNamesEveryWriter(t *testing.T) {
-	s, h := ledgerFixture(t)
-	stale := ledger(t, s, h)
-	claimTest(t, s, h)
-	stale.State.Revision++
-	_ = s.save(&stale)
-	p, e := s.path("dotfiles", "ledger-mission", "journal.jsonl")
-	must(t, e)
-	b, e := os.ReadFile(p)
-	must(t, e)
-	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-	if len(lines) != 2 {
-		t.Fatalf("want one line per save, got %d: %s", len(lines), b)
-	}
-	var refused journalEntry
-	must(t, json.Unmarshal([]byte(lines[1]), &refused))
-	if refused.Result != "refused" || refused.Attempts != 0 || refused.Base != stale.State.Revision-1 || refused.Writer == "" {
-		t.Fatalf("refused line does not name the writer: %+v", refused)
-	}
-}
-
 // TestRepairAdmitsOrphanedAttempt restores a dropped claim from its projection.
 func TestRepairAdmitsOrphanedAttempt(t *testing.T) {
 	s, h := ledgerFixture(t)

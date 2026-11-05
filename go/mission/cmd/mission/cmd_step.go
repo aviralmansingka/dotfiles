@@ -8,9 +8,9 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
-func cmdSteps(a platform.Args, s *Store) (any, error) { return s.steps(a.At(1)) }
+func cmdSteps(a platform.Args, s *App) (any, error) { return s.steps(a.At(1)) }
 
-func cmdStep(a platform.Args, s *Store) (any, error) {
+func cmdStep(a platform.Args, s *App) (any, error) {
 	switch a.At(1) {
 	case "list":
 		return s.steps(a.At(2))
@@ -22,7 +22,7 @@ func cmdStep(a platform.Args, s *Store) (any, error) {
 	return nil, mission.Problem("usage", "use step list, show, or edit")
 }
 
-func editStepFromArgs(s *Store, a platform.Args) (mission.Record, error) {
+func editStepFromArgs(s *App, a platform.Args) (mission.Record, error) {
 	h, id := a.At(2), a.At(3)
 	r, e := s.load(h)
 	if e != nil {

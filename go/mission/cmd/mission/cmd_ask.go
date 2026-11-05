@@ -7,7 +7,7 @@ import (
 // cmdAsk writes one durable question for the commander, or lists the mission's
 // asks. A captain holds no mission token, so this command asks for none: the
 // ask file is the channel, and the commander's session drains it.
-func cmdAsk(a platform.Args, s *Store) (any, error) {
+func cmdAsk(a platform.Args, s *App) (any, error) {
 	if a.Has("list") {
 		return s.asks(a.At(1))
 	}

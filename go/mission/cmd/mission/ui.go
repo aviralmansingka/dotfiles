@@ -288,7 +288,7 @@ type draft struct {
 	First, Final                         bool
 }
 type desk struct {
-	store                        *Store
+	store                        *App
 	records                      []mission.Record
 	view                         []mission.Record // records that pass the filter
 	selected, tab, width, height int
@@ -312,7 +312,7 @@ type desk struct {
 	launches                     map[string]Launch
 }
 
-func newDesk(s *Store) *desk {
+func newDesk(s *App) *desk {
 	return &desk{store: s, width: 128, height: 42, launchDir: launchStateDir(), launches: map[string]Launch{}}
 }
 
@@ -603,7 +603,7 @@ func (m *desk) headerLines(w int) []string {
 		counts[r.State.Status]++
 	}
 	bar := paint(aqua, fmt.Sprintf("%02d active", counts["running"])) + paint(muted, "   ·   ") + paint(yellow, fmt.Sprintf("%02d need you", counts["waiting"]+counts["review"])) + paint(muted, "   ·   ") + paint(green, fmt.Sprintf("%02d ready", counts["ready"]))
-	out := []string{fitLines(title, w), paint(muted, "VAULT  ") + clip(m.store.Vault, max(8, w-8)), "", fitLines(bar, w)}
+	out := []string{fitLines(title, w), paint(muted, "VAULT  ") + clip(m.store.Repo.VaultPath(), max(8, w-8)), "", fitLines(bar, w)}
 	// The trooper line is a header row only when a report exists; bodyHeight
 	// spends rows from len(headerLines), so the quiet header gives the rows
 	// back to the panels instead of holding a placeholder.
@@ -1047,7 +1047,7 @@ func (m *desk) prepareFormRender() {
 	m.sizeForm()
 }
 func (m *desk) startBuilder() {
-	repos, e := m.store.repos()
+	repos, e := m.store.Repo.Repos()
 	if e != nil || len(repos) == 0 {
 		m.err = mission.Problem("repo_not_registered", "Register a checkout first: mission repo add REPO --checkout PATH")
 		return
@@ -1155,8 +1155,8 @@ func (m *desk) commitForm() {
 		m.err = formErr
 	}
 }
-func runUI(s *Store) error { _, e := tea.NewProgram(newDesk(s)).Run(); return e }
-func runUIBuilder(s *Store) error {
+func runUI(s *App) error { _, e := tea.NewProgram(newDesk(s)).Run(); return e }
+func runUIBuilder(s *App) error {
 	m := newDesk(s)
 	m.startBuilder()
 	if m.err != nil {
