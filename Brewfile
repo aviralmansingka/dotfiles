@@ -24,9 +24,11 @@ cask "terminal-browser"
 cask "docker-desktop"
 
 # Fonts
+# Fonts stay Homebrew-owned: a user-level ~/Library/Fonts symlink is not reliable for every app.
 cask "font-jetbrains-mono-nerd-font"
 cask "font-meslo-lg-nerd-font"
 cask "font-fira-code-nerd-font"
+cask "font-symbols-only-nerd-font"
 
 # Applications
 cask "superhuman"

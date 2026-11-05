@@ -1,16 +1,11 @@
 {
-  description = "Two-profile fleet: remote (Linux) and macbook (nix-darwin)";
+  description = "Dotfiles for the fleet, deployed by Home Manager on Linux and macOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     home-manager = {
       url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nix-darwin = {
-      url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -31,7 +26,6 @@
       self,
       nixpkgs,
       home-manager,
-      nix-darwin,
       sops-nix,
     }:
     let
@@ -40,7 +34,6 @@
         inherit
           nixpkgs
           home-manager
-          nix-darwin
           sops-nix
           lib
           ;
@@ -48,15 +41,14 @@
       };
     in
     {
+      # Every host is a standalone Home Manager configuration: no system layer,
+      # no NixOS, no macOS system module.
       homeConfigurations = {
         remote = fleet.mkRemote "homelab";
         remote-devbox = fleet.mkRemote "devbox";
         remote-probe = fleet.mkRemote "probe";
+        macbook = fleet.mkHome "macbook";
       };
-
-      darwinConfigurations.macbook = fleet.mkMacbook;
-
-      nixosConfigurations.probe = fleet.mkNixos "probe";
 
       packages = {
         x86_64-linux.home-manager = home-manager.packages.x86_64-linux.home-manager;
@@ -89,7 +81,7 @@
           localNames = [ "probe" ];
         };
         mac = {
-          kind = "darwin";
+          kind = "home-manager";
           attr = "macbook";
           system = "aarch64-darwin";
           ssh = "mac";
