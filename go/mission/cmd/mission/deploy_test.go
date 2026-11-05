@@ -303,8 +303,14 @@ func TestDeploySeatsTheArmy(t *testing.T) {
 	if !strings.HasPrefix(d.LaunchID, "launch-") || !strings.Contains(line, "launch_id="+d.LaunchID) {
 		t.Fatalf("launch id %q, line = %q", d.LaunchID, line)
 	}
-	if opts["cwd"] != p.Cwd || opts["shell"] != "none" {
-		t.Fatalf("captain options = %v", opts)
+	// The seat names the shell and opens it as a login shell. Naming it matters:
+	// "none" makes Rex run the command through /usr/bin/login, and login reports
+	// no cwd, so the mission extension cannot bind the seat to this plan.
+	if opts["cwd"] != p.Cwd {
+		t.Fatalf("captain cwd = %v, want the plan cwd %q", opts["cwd"], p.Cwd)
+	}
+	if want := filepath.Base(loginShell()); opts["shell"] != want {
+		t.Fatalf("captain shell = %v, want the login shell %q: a named shell is the shape that reports a cwd", opts["shell"], want)
 	}
 	// The ack is the plan's derived token, recorded beside the intent it did not
 	// replace, so a reader sees both what was reserved and what was seated.
@@ -403,14 +409,14 @@ func TestDeploySeatsTheCaptainUnderTheLoginShell(t *testing.T) {
 	win := f.args["session.new_window"]
 	opts, _ := win["layout"].(map[string]any)["block"].(map[string]any)["options"].(map[string]any)
 	argv, _ := opts["command"].([]string)
-	if len(argv) != 2 || argv[1] != "-l" {
-		t.Fatalf("the captain's block runs %v, want a login shell: no profile, no PATH", argv)
+	if want := loginShellArgv(); len(argv) != len(want) || argv[0] != want[0] || argv[1] != want[1] {
+		t.Fatalf("the captain's block runs %v, want the absolute login shell %v: no profile, no PATH", argv, want)
 	}
 	if !filepath.IsAbs(argv[0]) {
 		t.Fatalf("the captain's block runs %q: a window resolves its command against rex's own PATH", argv[0])
 	}
-	if opts["shell"] != "none" {
-		t.Fatalf("the captain's block starts a second shell over the login one: %v", opts)
+	if opts["shell"] != filepath.Base(loginShell()) {
+		t.Fatalf("the captain's block names shell %v, want %q: an unnamed shell starts a login wrapper over the seat: %v", opts["shell"], filepath.Base(loginShell()), opts)
 	}
 	if _, ok := opts["path_prepend"]; ok {
 		t.Fatalf("the captain's block prepends a PATH of its own: %v", opts)
