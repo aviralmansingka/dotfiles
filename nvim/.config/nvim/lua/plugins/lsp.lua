@@ -11,6 +11,9 @@ return {
     -- Custom server configurations using LazyVim's approach
     opts.servers = opts.servers or {}
 
+    -- Copilot is unwanted here, and a stray Mason package must not resurrect it.
+    opts.servers.copilot = { enabled = false }
+
     -- Lua language server configuration
     opts.servers.lua_ls = {
       filetypes = { "lua" },
