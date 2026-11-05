@@ -12,6 +12,7 @@ local GLYPHS = {
 local VAULT = vim.fn.expand("~/vault")
 local DRIVE_CREDENTIALS = vim.env.LINK_PICKER_GOOGLE_CREDENTIALS
   or vim.fn.expand("~/.google_workspace_mcp/credentials")
+local NOTION_TOKEN_FILE = vim.env.NOTION_TOKEN_FILE or vim.fn.expand("~/.config/notion-token")
 
 local drive_token -- { value = string, expires = unix seconds }
 
@@ -118,10 +119,23 @@ local function notion_title(item)
   end
 end
 
+local function notion_token()
+  local env = vim.env.NOTION_TOKEN
+  if env and env ~= "" then
+    return env
+  end
+  if vim.fn.filereadable(NOTION_TOKEN_FILE) == 1 then
+    local line = vim.fn.readfile(NOTION_TOKEN_FILE)[1]
+    if line and line ~= "" then
+      return vim.trim(line)
+    end
+  end
+end
+
 local function fetch_notion(cb)
-  local token = vim.env.NOTION_TOKEN
-  if not token or token == "" then
-    return cb(nil, "Set NOTION_TOKEN to search Notion")
+  local token = notion_token()
+  if not token then
+    return cb(nil, "Set NOTION_TOKEN or write " .. NOTION_TOKEN_FILE)
   end
 
   run_json({
