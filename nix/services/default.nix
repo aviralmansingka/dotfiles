@@ -1,4 +1,12 @@
-# The user units, owned by the flake instead of stow.
+# The Linux renderer for the user units, owned by the flake instead of stow.
+#
+# Two of these units are folds of nix/services/jobs.nix, the shared job
+# declaration the Mac's launchd renderer (nix/services/launchd.nix) reads too.
+# The four remaining units (the pi-* daemons and the WhatsApp bridge) are
+# Linux-only and stay declared here. Rendering the shared jobs from that file
+# must not change a single byte of what this module emitted before — `nix eval`
+# of `systemd.user.services` diffs empty, and that is the safety net for the
+# port to one declaration.
 #
 # S05 moved the eight units out of `systemd/.config/systemd/user` (a stow
 # package) into this module; S06 split them: the six that run for aviral on
@@ -33,6 +41,46 @@ let
   # would silently fall back to the apt copy. This is what makes retiring the
   # apt copies safe.
   unitPath = "%h/.nix-profile/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin";
+
+  # The two auto-sync jobs, declared once in nix/services/jobs.nix.
+  jobs = import ./jobs.nix;
+
+  # @home@ is the shared placeholder for the user's home; systemd spells it %h.
+  toHome = lib.replaceStrings [ "@home@" ] [ "%h" ];
+
+  # The systemd half of a job record. `enable.linux` is three-valued:
+  # "host" follows the per-host enablement switch, a boolean pins it.
+  render =
+    job:
+    let
+      wantedBy =
+        if job.enable.linux == "host" then
+          lib.optional config.fleet.services.enableUnits "default.target"
+        else if job.enable.linux then
+          [ "default.target" ]
+        else
+          [ ];
+    in
+    {
+      Unit = {
+        Description = job.description;
+        After = [ "network-online.target" ];
+        Wants = [ "network-online.target" ];
+      };
+      Service = {
+        Type = "simple";
+        WorkingDirectory = toHome job.workingDirectory;
+        # PATH first, then the job's own variables in declared order.
+        Environment = [ "PATH=${unitPath}" ]
+          ++ map (e: "${e.name}=${toHome e.value}") job.environment;
+        ExecStart = "${job.interpreter.linux} ${lib.concatStringsSep " " (map toHome job.argv)}";
+        Restart = job.restart.policy;
+        RestartSec = toString job.restart.delaySeconds;
+        StandardOutput = "journal";
+        StandardError = "journal";
+      };
+      Install.WantedBy = wantedBy;
+    };
 in
 
 {
@@ -46,61 +94,9 @@ in
     default = true;
   };
 
-  config.systemd.user.services = {
-    dotfiles-auto-sync = {
-      Unit = {
-        Description = "Auto-sync dotfiles with remote every 5 minutes";
-        After = [ "network-online.target" ];
-        Wants = [ "network-online.target" ];
-      };
-      Service = {
-        Type = "simple";
-        WorkingDirectory = "%h/dotfiles";
-        Environment = [
-          "PATH=${unitPath}"
-          "REPO_DIR=%h/dotfiles"
-          "TARGET_BRANCH=main"
-          "SYNC_INTERVAL_SECONDS=300"
-          "STATE_DIR=%h/.local/state/auto-git-sync/dotfiles"
-        ];
-        # Explicit interpreter: avoids the 203/EXEC failure class when the exec
-        # bit is absent on the host.
-        ExecStart = "/bin/bash %h/dotfiles/scripts/auto-git-sync --daemon";
-        Restart = "always";
-        RestartSec = "15";
-        StandardOutput = "journal";
-        StandardError = "journal";
-      };
-      # Deliberately no [Install] enablement: the unit was `linked`, not
-      # `enabled`, before the move, and nothing on the host pulled it.
-      Install.WantedBy = [ ];
-    };
-
-    vault-auto-sync = {
-      Unit = {
-        Description = "Auto-sync Obsidian vault with remote every 5 minutes";
-        After = [ "network-online.target" ];
-        Wants = [ "network-online.target" ];
-      };
-      Service = {
-        Type = "simple";
-        WorkingDirectory = "%h/dotfiles";
-        Environment = [
-          "PATH=${unitPath}"
-          "REPO_DIR=%h/vault"
-          "TARGET_BRANCH=main"
-          "SYNC_INTERVAL_SECONDS=300"
-          "STATE_DIR=%h/.local/state/auto-git-sync/vault"
-        ];
-        ExecStart = "/bin/bash %h/dotfiles/scripts/auto-git-sync --daemon";
-        Restart = "always";
-        RestartSec = "15";
-        StandardOutput = "journal";
-        StandardError = "journal";
-      };
-      Install.WantedBy = lib.optional config.fleet.services.enableUnits "default.target";
-    };
-
+  config.systemd.user.services = lib.mapAttrs' (
+    _label: job: lib.nameValuePair job.name (render job)
+  ) jobs // {
     pi-stt-worker = {
       Unit = {
         Description = "Pi speech-to-text worker";

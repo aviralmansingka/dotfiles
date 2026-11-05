@@ -4,6 +4,10 @@
   imports = [
     ./fonts.nix
     ./system-defaults.nix
+    # The per-user launch agents, rendered from nix/services/jobs.nix — the same
+    # job declaration the Linux systemd renderer folds. nix-darwin writes them
+    # into ~/Library/LaunchAgents, which is why that path is no longer stowed.
+    ../../services/launchd.nix
   ];
 
   system.stateVersion = 6;
