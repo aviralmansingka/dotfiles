@@ -1,5 +1,3 @@
-# The shared `remote` profile: everything the homelab and the devbox agree on.
-# The per-host modules add only the differences the S01 audit proved.
 {
   pkgs,
   lib,
@@ -7,7 +5,6 @@
 }:
 
 let
-  # apt name -> Nix package, shared with the flake's `fleet.ownedTools` output.
   ownedTools = import ../../lib/owned-tools.nix { inherit pkgs; };
 in
 
