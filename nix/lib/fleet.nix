@@ -5,6 +5,7 @@
   nixpkgs,
   home-manager,
   nix-darwin,
+  sops-nix,
   rataflowSrc,
   lib,
 }:
@@ -49,6 +50,9 @@ rec {
       };
       extraSpecialArgs = crateArgs;
       modules = [
+        # Fleet secrets: the Home Manager module owns decryption at activation,
+        # and nix/modules/shared/sops.nix says where the age identity is.
+        sops-nix.homeManagerModules.sops
         # Shared user environment: shell, editor defaults, common CLI tools.
         (modules + "/shared")
         # Everything the two Linux hosts agree on.
@@ -78,6 +82,7 @@ rec {
         home-manager.extraSpecialArgs = crateArgs;
         home-manager.users.aviral = {
           imports = [
+            sops-nix.homeManagerModules.sops
             (modules + "/shared")
             (modules + "/macbook/home.nix")
           ];

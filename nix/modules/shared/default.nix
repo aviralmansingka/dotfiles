@@ -20,6 +20,8 @@ let
 in
 
 {
+  imports = [ ./sops.nix ];
+
   home.stateVersion = "24.11";
 
   # Generic Linux support tells Home Manager how to reach the system on a
