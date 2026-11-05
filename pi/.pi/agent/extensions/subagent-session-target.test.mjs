@@ -97,6 +97,32 @@ test("an explicit session argument wins over the environment", () => {
 	});
 });
 
+test("an explicit target session carries the child's later sends and captures", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	// The caller is the captain, seated in the army session. The trooper it
+	// deploys is named the mission session, so the tab lands there.
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, REX_SESSION: "session:army" }, () => {
+		delete process.env.PI_SUBAGENT_SESSION;
+		const child = rex.createSurface("trooper-S05", { session: "mission-rex-army" });
+		assert.equal(child, "block:child");
+		const created = fake.calls().find(line => line.includes("window new"));
+		assert.match(created, /-s session:mission/);
+		assert.doesNotMatch(created, /-s session:army/);
+		// Every later call the captain makes on that block resolves inside the
+		// session that owns it: rex refuses a block target from another session.
+		rex.sendCommand(child, "echo hello");
+		rex.readScreen(child, 5);
+		const scoped = fake.calls().filter(line => /^(send|send-key|capture)\b/.test(line));
+		assert.equal(scoped.length, 3);
+		for (const line of scoped) {
+			assert.match(line, /-s session:mission/, `not scoped to the child's session: ${line}`);
+			assert.match(line, /-b block:child/, `no block target: ${line}`);
+			assert.doesNotMatch(line, /-s session:army/, `the caller's session leaked into ${line}`);
+		}
+	});
+});
+
 test("an unknown session name fails and names the live sessions", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");

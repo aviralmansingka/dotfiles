@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissionBridge, agentCollisionReport, driverEnv, driverStatus, driverTask, droppableReportError, herdrError, judgeTask, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, takenAgentName, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus, workerAgentName } from "./core.mjs";
+import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, agentCollisionReport, driverEnv, driverStatus, driverTask, droppableReportError, herdrError, judgeTask, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, seatArgs, takenAgentName, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus, usablePlan, workerAgentName } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -276,7 +276,7 @@ async function fixture(t, checkpoint=false) {
   delete env.PI_SUBAGENT_NAME;
   // Parent credentials must not leak into requests or any spawned child.
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
-  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportCalls:[], tabs:[], closes:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], paneBusy:0, prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
+  const f={ env, hookFailures:0, planFailures:0, planAnswer:null, hookIDs:[], reportFailures:0, reportCalls:[], tabs:[], closes:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], paneBusy:0, prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
   /** The Herdr failure envelope herdr prints on stderr when a call fails. */
   const herdrFails=(code,message)=>Error(`Command failed: herdr agent\n${JSON.stringify({error:{code,message},id:"cli:agent:start"})}`);
   const takenErr=name=>herdrFails("agent_name_taken",`agent name ${name} is already used; candidates: pane_id=w-other:p1 workspace_id=w-other status=working`);
@@ -338,6 +338,12 @@ async function fixture(t, checkpoint=false) {
     if(binary===bin && args.includes("hook")) {
       f.hookIDs.push(args[args.indexOf("--event-id")+1]);
       if(f.hookFailures-->0) throw Error("Temporary CLI failure");
+    }
+    // `mission plan` is the launch's one optional read: a failed call and an
+    // unusable answer are the same degradation, so both are injectable here.
+    if(binary===bin && args[args.indexOf("--vault")+2]==="plan") {
+      if(f.planFailures>0) { f.planFailures--; throw Error('unknown command "plan" for "mission"'); }
+      if(f.planAnswer!==null) return JSON.stringify({ok:true,data:f.planAnswer});
     }
     // A trooper report rides `progress --actor`; the fixture can lose one call
     // so the outbox retry is exercised against the real CLI.
@@ -714,26 +720,134 @@ test("the driver answers a status prompt from the ledger and steers a step edit 
   assert.equal((await b.call(["steps",f.handle])).find(v=>v.step.id==="S02").status,"pending");
 });
 
+test("a launched seat is a captain, and a plan with no argv keeps the defaults", needsCLI, async t=>{
+  const f=await fixture(t);
+  // The plan's tool reach travels as the AGENT_ARG tail Herdr passes to Pi;
+  // everything before it is the executable, which Herdr starts itself.
+  const plan=await f.bridge.call(["plan",f.handle]);
+  assert.equal(plan.captain_argv[0],"pi");
+  assert.deepEqual(seatArgs(plan.captain_argv),["--tools","mission,subagent,subagent_message,read,ask_user_question,tool_search"]);
+  assert.deepEqual(seatArgs([]),[]);assert.deepEqual(seatArgs(undefined),[]);assert.deepEqual(seatArgs(["pi"]),[]);
+  // A seat with no argv passes no `--` tail: Herdr still starts a bare Pi.
+  const manual=await f.bridge.attach(f.ctx,f.handle,undefined,undefined);
+  assert.equal(manual.handle,f.handle);
+  const attachArgs=()=>f.calls.filter(c=>c.binary===bin&&c.args.includes("attach")).at(-1).args;
+  assert.equal(attachArgs()[attachArgs().indexOf("--agent")+1],WORKER_AGENT,"a self-attached session is a trooper");
+  // A launch intent means the brief this session answers is the captain brief,
+  // so the attempt records the captain, not the trooper whose body it would
+  // contradict.
+  const launched=await fixture(t);
+  await launched.bridge.attach(launched.ctx,launched.handle,"launch-fixture-1",undefined);
+  const la=launched.calls.filter(c=>c.binary===bin&&c.args.includes("attach")).at(-1).args;
+  assert.equal(la[la.indexOf("--agent")+1],CAPTAIN_AGENT);
+  assert.equal((await launched.bridge.call(["show",launched.handle])).state.attempts[0].agent,CAPTAIN_AGENT);
+});
+
 test("a launch starts one full agent in the mission pane",needsCLI,async t=>{
   const f=await fixture(t);
   // The launch needs no subagent extension: the worker is a full Pi agent.
   assert.equal(globalThis.__pi_interactive_subagents,undefined);
   const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
   const launch=(await f.bridge.call(["show",f.handle])).state.runtime.launch_id;
-  // The whole worker launch: a mission-derived name, one readiness wait, one
-  // task prompt, and one session read.
+  // The launch prompt has one owner: plan renders the captain contract, so the
+  // test reads that text instead of holding a second copy of it.
+  const plan=(await f.bridge.call(["plan",f.handle,"--launch-id",launch]));
+  const brief=plan.captain_brief;
+  // The whole captain launch: a mission-derived name, the plan's argv tail, one
+  // readiness wait, one task prompt, and one session read. The seat's reach has
+  // one owner: it is the argv the plan emits, never a second list here.
   assert.deepEqual(f.agentCalls,[
-    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2"],
+    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2","--",...plan.captain_argv.slice(1)],
     ["agent","wait","w-mission:p2","--until","idle","--timeout","60000"],
-    ["agent","prompt","w-mission:p2",driverTask(f.handle,launch)],
+    ["agent","prompt","w-mission:p2",brief],
     ["agent","get","w-mission:p2"],
   ]);
+  // The seat holds no editor and no shell: the allowlist the plan names is the
+  // one the launched Pi receives.
+  for(const banned of ["edit","write","bash"]) assert.equal(seatArgs(plan.captain_argv).join(",").split(",").includes(banned),false,`the launched seat is granted ${banned}`);
   // The agent session file is recorded on the launch.
   assert.equal(r.session_file,f.file);
   assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
-  // No subagent environment and no loadout travels to the worker.
+  // The seat's reach is the plan's argv: no loadout file and no allowlist
+  // variable reaches it. The one environment variable it does carry is the
+  // plan's subagent session, the label every trooper tab scopes to.
   const sent=JSON.stringify(f.calls.filter(c=>c.binary==="herdr").map(c=>c.args));
-  assert.equal(sent.includes("PI_SUBAGENT"),false);assert.equal(sent.includes("loadout"),false);
+  assert.equal(sent.includes("loadout"),false);assert.equal(sent.includes("PI_SUBAGENT_ALLOWED"),false);
+  assert.ok(f.tabs[0].includes(`PI_SUBAGENT_SESSION=${plan.subagent_session}`),"the seat carries no plan subagent session");
+  assert.equal(plan.subagent_session,"mission-session-progress");
+});
+
+test("a launch whose plan fails starts #441's driver seat instead of failing hard",needsCLI,async t=>{
+  const f=await fixture(t);
+  // A CLI that predates `mission plan`: the read is the launch's one optional
+  // step, so this failure degrades the seat instead of aborting the launch.
+  f.planFailures=1;
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+  const launchID=r.runtime.launch_id;
+  // No plan answer, no argv tail: the seat is #441's bare Pi with #441's own
+  // driver contract, and the ack answers the intent the reservation holds.
+  assert.deepEqual(f.agentCalls,[
+    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2"],
+    ["agent","wait","w-mission:p2","--until","idle","--timeout","60000"],
+    ["agent","prompt","w-mission:p2",driverTask(f.handle,launchID)],
+    ["agent","get","w-mission:p2"],
+  ]);
+  assert.equal(f.agentCalls[0].includes("--"),false,"a planless seat passes no allowlist tail");
+  // The fallback prompt is real: it names the same launch id, so the seat can
+  // attach to the intent this launch reserved.
+  assert.ok(f.prompts.at(-1).text.includes(`action=attach, handle=${f.handle}, launch_id=${launchID}`));
+  assert.match(f.prompts.at(-1).text,/Duty 2 — subagents do all step work/);
+  // A plan that answered nothing would have carried this one value; a degraded
+  // launch sets no session, so no trooper tab is scoped by it.
+  assert.equal(JSON.stringify(f.tabs[0]).includes("PI_SUBAGENT_SESSION"),false);
+  // One reservation, one ack, no release: the plan's failure changed neither.
+  const reserving=f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&!c.args.includes("--session-file"));
+  assert.equal(reserving.length,1);assert.equal(f.calls.some(c=>c.binary===bin&&c.args.includes("--release")),false);
+  const ack=f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&c.args.includes("--session-file"));
+  assert.equal(ack.length,1);
+  assert.equal(ack[0].args[ack[0].args.indexOf("--launch-id")+1],launchID);
+  assert.equal(ack[0].args[ack[0].args.indexOf("--session-file")+1],realpathSync(f.file));
+  assert.equal(r.session_file,f.file);
+  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.launch_id,launchID,"the same intent is acked");
+  // The human can see that this launch ran on the fallback.
+  assert.match(r.plan_degraded,/Mission CLI unavailable: unknown command "plan"/);
+});
+
+test("an unusable plan answer degrades the seat the same way a failed plan call does",needsCLI,async t=>{
+  const f=await fixture(t);
+  // The call succeeds and answers an object that names no brief, no argv, and
+  // no session: nothing a launch can use, so the same fallback applies.
+  f.planAnswer={};
+  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
+  assert.deepEqual(f.agentCalls[0][1],"start");
+  assert.equal(f.agentCalls[0].includes("--"),false);
+  assert.equal(f.prompts.at(-1).text,driverTask(f.handle,r.runtime.launch_id));
+  assert.equal(r.plan_degraded,"mission plan answered nothing usable");
+});
+
+test("a degraded launch that fails before its seat still releases the intent",needsCLI,async t=>{
+  const f=await fixture(t);
+  f.planFailures=1;
+  f.waitError=Error('Command failed: herdr agent wait\n'+JSON.stringify({error:{code:"timeout",message:"agent wait timed out after 60000ms"},id:"cli:agent:wait"}));
+  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/The launch intent is released/);
+  // The fallback seat never reached its prompt, so the intent is released and
+  // the next press can launch again — the same rule as a plan-backed launch.
+  assert.equal(f.prompts.length,0);
+  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
+  f.waitError=null;
+  f.planFailures=1;
+  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,true);
+  assert.equal(f.prompts.at(-1).text,driverTask(f.handle,again.runtime.launch_id));
+});
+
+test("a plan answer is usable only when it names a brief, an argv, or a session",()=>{
+  assert.equal(usablePlan(null),false);assert.equal(usablePlan(undefined),false);
+  assert.equal(usablePlan({}),false);assert.equal(usablePlan("plan"),false);assert.equal(usablePlan([]),false);
+  assert.equal(usablePlan({captain_brief:""}),false);assert.equal(usablePlan({captain_argv:[]}),false);
+  assert.equal(usablePlan({subagent_session:""}),false);
+  assert.equal(usablePlan({captain_brief:"You are the captain"}),true);
+  assert.equal(usablePlan({captain_argv:["pi"]}),true);
+  assert.equal(usablePlan({subagent_session:"mission-x"}),true);
 });
 
 test("no subagent extension is needed to start a mission",needsCLI,async t=>{
@@ -817,9 +931,12 @@ test("a taken name takes a hashed name once and never renames the holder",needsC
   const retry=f.started[0];
   assert.equal(retry,workerAgentName(f.handle,hashOf(f.handle)));
   assert.match(retry,/^mission-session-progress-[0-9a-f]{6}$/);
+  const plan=await f.bridge.call(["plan",f.handle]);
+  // The retry carries the same reach as the first attempt: one plan argv.
+  const seat=["--kind","pi","--pane","w-mission:p2","--",...plan.captain_argv.slice(1)];
   assert.deepEqual(f.agentCalls.slice(0,2),[
-    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2"],
-    ["agent","start",retry,"--kind","pi","--pane","w-mission:p2"],
+    ["agent","start","mission-session-progress",...seat],
+    ["agent","start",retry,...seat],
   ]);
   // The holder keeps its name and the launch continues on the same pane.
   assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
@@ -878,6 +995,21 @@ test("a failed launch stays retryable when no worker can own it",needsCLI,async 
   assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
   await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
   assert.equal(f.startErrors.length,0);
+});
+
+test("a degraded launch leaves its reason on the desk receipt", async t => {
+  const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
+  t.after(()=>rmSync(cache,{recursive:true,force:true}));
+  const bridge=new MissionBridge({env:captainEnv({MISSION_STATE_DIR:cache}),run:async()=>"[]"});
+  bridge.sessionRepo=async()=>"dotfiles";
+  // The desk's request is started by a launch that ran without a plan: the
+  // receipt the human reads keeps that fact instead of hiding it.
+  bridge.start=async()=>({launched:true,runtime:{launch_id:"launch-2"},plan_degraded:"Mission CLI unavailable: unknown command \"plan\""});
+  const file=launchRequest(cache,"dotfiles/desk-degraded","dotfiles");
+  await bridge.sweepLaunches(context("/tmp","/tmp/pi"));
+  const receipt=JSON.parse(readFileSync(file,"utf8"));
+  assert.equal(receipt.state,"started");assert.equal(receipt.launch_id,"launch-2");
+  assert.match(receipt.plan_degraded,/unknown command "plan"/);
 });
 
 test("a launch keeps its intent while the launch pane hosts an agent",needsCLI,async t=>{

@@ -315,6 +315,10 @@ type RuntimeBinding struct {
 	Pane        string `yaml:"pane_id,omitempty" json:"pane_id,omitempty"`
 	Workspace   string `yaml:"workspace_id,omitempty" json:"workspace_id,omitempty"`
 	LaunchID    string `yaml:"launch_id,omitempty" json:"launch_id,omitempty"`
+	// LaunchAck is the plan's ack token once an adapter has deployed the
+	// reserved intent. It marks the seats as created, not the launch as owned:
+	// the launch id stays reserved until the captain attaches.
+	LaunchAck string `yaml:"launch_ack,omitempty" json:"launch_ack,omitempty"`
 }
 
 // A Report is one trooper's own line in the attempt: the subagent that did the

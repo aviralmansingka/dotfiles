@@ -1310,6 +1310,9 @@ assert.equal(
 	const knownTools = new Set([
 		"read", "write", "edit", "bash", "grep", "find", "ls",
 		"subagent", "subagent_message", "subagents_list", "ask_question",
+		// pi's tool search: how a deferred tool (mission) is reached without
+		// listing it, enabled through defaultTools in settings.json.
+		"tool_search",
 		"web_search", "web_fetch", "video_extract", "youtube_search",
 		"google_image_search", "tuicr", "tuicr_reply",
 	]);
