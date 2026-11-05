@@ -12,6 +12,11 @@
   home.username = lib.mkDefault "ubuntu";
   home.homeDirectory = lib.mkDefault "/home/ubuntu";
 
+  # The probe has its own file, so a short-lived EC2 box never holds the lab's
+  # ciphertext. Its recipient is added to that rule when the box exists (the
+  # prove-decryption step); until then only the admin key can read it.
+  sops.defaultSopsFile = ../../../secrets/probe.yaml;
+
   # Cloud work only: this host exists to prove the profile reproduces off the
   # lab, not to mirror the devbox's tooling.
   home.packages = with pkgs; [

@@ -1,0 +1,33 @@
+# sops recipients. One creation rule per secrets file, and the admin age key is
+# on every rule: that key is the only identity that can read the fleet from a
+# machine that is not a member, so losing it loses the fleet (see
+# docs/nix-profiles.md, "Secrets").
+#
+# Keys, by name:
+#   admin      one age key on the workstation, ~/.config/sops/age/keys.txt.
+#              Never committed. Every rule carries it. Re-minted on 2026-11-05
+#              after the original (age136tww…) was destroyed by an errant
+#              hostkey block that installed an empty ~/hostkey.age over it; the
+#              recipient below is the new key, and its only backup is 1Password.
+#              Back it up before use: losing it loses the fleet.
+#   homelab    a machine-local age identity minted on the lab,
+#              `age-keygen -o ~/.config/sops/age/keys.txt` (0400, avirus, never
+#              committed). The old host-key-derived recipient (age17swx…) is
+#              retired: host-key material is no longer fleet identity, so a
+#              compromise of the login user no longer yields the host's SSH key
+#              and the SSH key's exposure no longer yields the secrets.
+#
+# A host is added by appending its recipient to its rule and running
+# `just secrets-rotate secrets/<host>.yaml` (sops updatekeys), then editing.
+#
+# sops matches `path_regex` against the path as given on the command line, so
+# every regex is anchored at the file name, not at the repo root.
+creation_rules:
+  - path_regex: (^|/)secrets/homelab\.yaml$
+    age: >-
+      age1pnuqwh5esr7cfz6q7re5xf8rjch47twtrmfpgxtgsgclf9h50edshlf3hg,
+      age12yxjvnql2ecdrsd9jz465zhs3n6expd79jzksjf2ntjhxmsry90qmv85my
+
+  - path_regex: (^|/)secrets/probe\.yaml$
+    age: >-
+      age1pnuqwh5esr7cfz6q7re5xf8rjch47twtrmfpgxtgsgclf9h50edshlf3hg
