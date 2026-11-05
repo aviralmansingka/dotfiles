@@ -77,6 +77,22 @@ terraform -chdir=ops/devbox destroy \
   -var="ssh_public_key=$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
+## Build
+
+`mission` and `rataflow-view` build from this checkout with nothing but the Go and Rust toolchains: no
+`cargo install`, no `go install`, no network.
+
+```sh
+just build           # both binaries into ~/.local/bin
+just build-mission   # one of them
+BIN_DIR=/tmp/out just build
+```
+
+`just build` compiles each binary into its package's own gitignored build directory, then moves it into
+`BIN_DIR` (default `~/.local/bin`). The Go and Rust toolchains are the only requirements; `install.sh` still installs
+both binaries for a fresh machine. An older `cargo install`ed `~/.cargo/bin/rataflow-view` shadows the fresh copy
+(`~/.cargo/bin` comes first on `PATH`) — delete it once.
+
 ## Stow Packages
 
 | Package      | Description                                                                 |
