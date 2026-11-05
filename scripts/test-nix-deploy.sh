@@ -3,12 +3,13 @@
 #
 # Offline test for scripts/nix-deploy. No network, no switch, no real host: the
 # script runs with a stub PATH so `hostname`, `uname`, `ssh`, `tar`, `git`,
-# `stow`, `home-manager` and `darwin-rebuild` record their argv instead of doing
-# work. Each case runs against a throwaway $HOME, so the file phase's `rm -f`
-# and `stow` never touch the real one.
+# `stow` and `home-manager` record their argv instead of doing work. Each case
+# runs against a throwaway $HOME, so the file phase's `rm -f` and `stow` never
+# touch the real one.
 #
 # What it proves:
-#   - the plan for a local target names home-manager or darwin-rebuild
+#   - the plan for a local target names home-manager, never darwin-rebuild or
+#     sudo (every host is a standalone Home Manager configuration)
 #   - the plan for a remote target stages only the deploy tree
 #   - `--dry-run` never calls ssh or a switch
 #   - an unknown profile or target exits 3/2 before any work
@@ -109,7 +110,7 @@ if [ "${1:-}" = "eval" ]; then
   cat <<JSON
 {"devbox":{"attr":"remote-devbox","kind":"home-manager","localNames":["devbox","srv717581"],"managedUser":"aviral","ssh":"devbox","system":"x86_64-linux"},
  "homelab":{"attr":"remote","kind":"home-manager","localNames":["homelab"],"ssh":"homelab","system":"x86_64-linux"},
- "mac":{"attr":"macbook","kind":"darwin","localNames":["mac","macbook"],"ssh":"mac","system":"aarch64-darwin"},
+ "mac":{"attr":"macbook","kind":"home-manager","localNames":["mac","macbook"],"ssh":"mac","system":"aarch64-darwin"},
  "probe":{"attr":"remote-probe","kind":"home-manager","localNames":["probe"],"ssh":"probe","system":"x86_64-linux"}}
 JSON
   exit 0
@@ -119,12 +120,6 @@ if [ "${1:-}" = "run" ]; then
   [ "${1:-}" = "--" ] && shift
   exec "$BIN/home-manager" "$@"
 fi
-exit 0
-STUB
-
-cat > "$BIN/darwin-rebuild" <<'STUB'
-#!/usr/bin/env bash
-echo "darwin-rebuild $*" >> "$CALLS"
 exit 0
 STUB
 
@@ -181,8 +176,10 @@ expect_no_call() { # $1 case, $2 needle, $3 why
 echo "== dry run, local macbook target"
 STUB_HOSTNAME=testmac STUB_UNAME=Darwin run "dry local" macbook mac --dry-run
 expect_rc "dry local" 0 "exit 0"
-expect_contains "dry local" "darwinConfigurations.macbook" "names the macbook attribute"
-expect_contains "dry local" "darwin-rebuild switch" "names the switch command"
+expect_contains "dry local" "homeConfigurations.macbook" "names the macbook attribute"
+expect_contains "dry local" "home-manager switch" "names the switch command"
+expect_not_contains "dry local" "darwin-rebuild" "never names darwin-rebuild"
+expect_not_contains "dry local" "sudo" "never needs sudo"
 expect_no_call "dry local" "ssh " "never opens ssh for a local target"
 expect_no_call "dry local" "home-manager " "never calls a switch during a dry run"
 
@@ -223,7 +220,7 @@ expect_contains "local by cloud hostname" "attribute homeConfigurations.remote-d
 
 STUB_HOSTNAME=unknownbox STUB_UNAME=Darwin run "local by platform" macbook local --dry-run
 expect_rc "local by platform" 0 "exit 0"
-expect_contains "local by platform" "attribute darwinConfigurations.macbook" "an unclaimed hostname falls back to the platform"
+expect_contains "local by platform" "attribute homeConfigurations.macbook" "an unclaimed hostname falls back to the platform"
 
 STUB_HOSTNAME=testmac run "managed user" remote devbox
 expect_rc "managed user" 0 "exit 0"
@@ -260,7 +257,7 @@ expect_no_call "wrong pairing" "ssh " "no ssh on a refused pairing"
 STUB_HOSTNAME=homelab run "remote macbook" macbook mac
 expect_rc "remote macbook" 3 "refuses a macbook deploy from another host"
 expect_no_call "remote macbook" "ssh " "refuses before staging"
-expect_no_call "remote macbook" "darwin-rebuild " "never switches from the wrong host"
+expect_no_call "remote macbook" "home-manager " "never switches from the wrong host"
 
 echo "== the checkout never travels"
 TREE="$(cd "$REPO" && scripts/nix-deploy remote devbox --dry-run)"

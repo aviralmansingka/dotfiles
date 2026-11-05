@@ -1,7 +1,14 @@
 { pkgs, config, ... }:
 
 {
-  imports = [ ../shared ];
+  imports = [
+    ../shared
+    # The per-user launch agents, rendered from nix/services/jobs.nix — the same
+    # job declaration the Linux systemd renderer folds. Home Manager's launchd
+    # module writes them into ~/Library/LaunchAgents, which is why that path is
+    # no longer stowed.
+    ../../services/launchd.nix
+  ];
 
   home.username = "aviral";
   home.homeDirectory = "/Users/aviral";
