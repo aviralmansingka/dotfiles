@@ -144,9 +144,10 @@ another.
 
 ## Work and report
 
-Read the assigned brief returned by attachment. Stay within its scope and cwd.
-Use the mission tool to report meaningful changes; it sends structured records
-through the CLI without exposing credentials to the model:
+Read the context attachment returns: the assigned step brief followed by the
+attempt line, which names the attempt the ledger lists now. Stay within its scope
+and cwd. Use the mission tool to report meaningful changes; it sends structured
+records through the CLI without exposing credentials to the model:
 
 ```json
 {"action":"progress","status":"working","summary":"Attachment validates the session header","next":"Test restart recovery"}
@@ -237,7 +238,15 @@ On Pi reload, the extension replays unacknowledged hooks with their original IDs
 and restores the attempt. A session shutdown preserves its owner and transcript;
 resume the same session file. If attach committed before its acknowledgement was
 saved, repeat attach from that same session. After a failed terminal attempt,
-inspect evidence, use `mission retry`, then explicitly pick up next. Do not edit
+inspect evidence, use `mission retry`, then explicitly pick up next. When an
+attempt's process is gone and its owner is gone with it, end it with
+`mission abandon REPO/SLUG --attempt ID --note TEXT`, then `mission retry`: no
+attempt token is needed, but a live process or a session this host cannot inspect
+is refused. When the attempt is a Pi seat that reports no process, run
+`mission repair REPO/SLUG`: it ends an active attempt whose session file and
+event stream stayed quiet past ten minutes, then `mission retry` offers the step
+again. It refuses to judge an attempt recorded on another host, and it never
+demotes a step that already passed. Do not edit
 the ledger to clear a stuck verifier, launch, or owner. Surface these for recovery.
 
 The local credential/outbox directory must survive a restart. Its loss requires
@@ -258,4 +267,4 @@ mission --json close dotfiles/session-progress --note "Shipped in #430"
 an active attempt, or a step that is not `passed`. Add `--force` to close anyway.
 A second close is safe and returns `already: true`. A closed mission refuses
 `ask`, `claim`, `pickup`, `launch`, `plan`, `workspace`, `attach`, `next`, `finish`,
-`retry`, and `repair`. Start a new mission instead.
+`retry`, `repair`, and `abandon`. Start a new mission instead.

@@ -71,6 +71,12 @@ const help = `mission — work that survives the agent
   mission review reopen REPO/SLUG [C01] --note TEXT
       Rebind a review after its evidence changed
   mission retry REPO/SLUG | repair REPO/SLUG
+                                           Repair replays an edit, re-admits an
+      orphaned attempt, and ends one whose process is gone and whose session
+      file and event stream stayed quiet for ten minutes
+  mission abandon REPO/SLUG --attempt ID --note TEXT
+                                           End an attempt whose process is gone;
+                                           no attempt token, refuses a live one
   mission close REPO/SLUG [--note TEXT] [--force]
                                            Retire the record; refuses open work
   mission demo --vault ./demo-vault         Seed isolated, simulated records
@@ -85,6 +91,8 @@ With --json, ui/render return the underlying mission records (use --handle
 to select one). Human terminal rendering requires ui/render without --json.
 Hook context: MISSION_HANDLE, MISSION_ATTEMPT, MISSION_TOKEN, MISSION_VAULT.
 The run wrapper supplies these plus MISSION_ARTIFACT, MISSION_BRIEF, MISSION_STEP.
+Every emitted context names the attempt the ledger lists now: attach returns it
+as context and driver, and show renders both for each turn.
 Use --kind implementation for writers; run requires an existing linked worktree.
 `
 
@@ -232,6 +240,8 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdRetry(a, s)
 	case "repair":
 		return cmdRepair(a, s)
+	case "abandon":
+		return cmdAbandon(a, s)
 	case "run":
 		return cmdRun(a, s)
 	case "demo":

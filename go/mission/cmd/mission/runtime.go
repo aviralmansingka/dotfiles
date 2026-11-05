@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -486,7 +485,7 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 			return e
 		}
 		if a.Execution != "pi" || a.SessionID != p.SessionID {
-			return mission.Problem("session_owned", "an active attempt already owns this mission")
+			return mission.Problem("session_owned", "an active attempt already owns this mission; resume that session, or run mission repair %s if its session is gone", h)
 		}
 		if e = authorize(a, p.Token); e != nil {
 			return e
@@ -498,7 +497,10 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 		if e = s.save(&r); e != nil {
 			return e
 		}
-		c = s.piClaim(r, *a, p.Token)
+		c, e = s.emitClaim(r, *a, p.Token)
+		if e != nil {
+			return e
+		}
 		found = true
 		return nil
 	})
@@ -506,14 +508,6 @@ func (s *Store) attach(h string, p mission.PiAttachment) (mission.Claim, error) 
 		return c, e
 	}
 	return s.claim(h, platform.Fallback(p.Agent, "mission-worker"), p.SessionID, p.Cwd, true, &p)
-}
-
-func (s *Store) piClaim(r mission.Record, a mission.Attempt, token string) mission.Claim {
-	d, _ := s.dir(r.Handle)
-	return mission.Claim{Handle: r.Handle, Step: attemptDefinition(r, a), Attempt: a, Token: token, Environment: map[string]string{
-		"MISSION_VAULT": s.Vault, "MISSION_HANDLE": r.Handle, "MISSION_ATTEMPT": a.ID, "MISSION_TOKEN": token,
-		"MISSION_ARTIFACT": filepath.Join(d, filepath.FromSlash(a.Artifact)), "MISSION_BRIEF": filepath.Join(d, "artifacts", fmt.Sprintf("%03d", a.Sequence), "brief.md"), "MISSION_STEP": a.Step,
-	}}
 }
 
 // release drops one launch intent that its adapter could not use, so a later

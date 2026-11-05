@@ -212,10 +212,15 @@ type Record struct {
 	State   State   `json:"state"`
 }
 type Claim struct {
-	Handle      string            `json:"handle"`
-	Step        Step              `json:"step"`
-	Attempt     Attempt           `json:"attempt"`
-	Token       string            `json:"token"`
+	Handle  string  `json:"handle"`
+	Step    Step    `json:"step"`
+	Attempt Attempt `json:"attempt"`
+	Token   string  `json:"token"`
+	// Context and Driver are the injected step context and the driver lines,
+	// rendered from the ledger record when the claim is emitted. They name the
+	// attempt the ledger lists at that moment, so a re-claim names the new one.
+	Context     string            `json:"context,omitempty"`
+	Driver      []string          `json:"driver,omitempty"`
 	Environment map[string]string `json:"environment"`
 }
 type Work struct {
@@ -253,7 +258,10 @@ func StateFor(m Mission, hash string) State {
 }
 func NextStep(m Mission, s State) (Step, error) {
 	if s.Active != "" {
-		return Step{}, Problem("busy", "%s already has Active attempt %s", m.Slug, s.Active)
+		// The refusal names the escapes: resume the owner, end the attempt,
+		// or reconcile it when that owner is gone and left no trace.
+		return Step{}, Problem("busy", "%s already has Active attempt %s; resume that session, or run mission repair %s/%s if it is gone, or mission abandon to end the attempt",
+			m.Slug, s.Active, m.Repo, m.Slug)
 	}
 	for _, step := range m.Steps {
 		ss, ok := s.Steps[step.ID]
