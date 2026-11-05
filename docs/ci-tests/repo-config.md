@@ -64,9 +64,12 @@ Checked: the files listed above, plus the Brewfile and the three
 
 ## Known gaps
 
-The `STOW_GAP_ALLOWLIST` is empty: every stow-shaped directory has a
-`stow` line in `install.sh`. The former `kube/`, `tmuxinator/`,
-`neovide/`, and `claude/` gaps were removed together with their
+The `STOW_GAP_ALLOWLIST` holds one entry: `zsh`. Home Manager installs
+`~/.zshenv`, `~/.zprofile`, and `~/.zshrc` from `zsh/.zshenv` and
+`zsh/.zshrc` (mission zsh-to-nix S01), so the directory stays as the
+editable source while `install.sh` no longer stows it. Every other
+stow-shaped directory has a `stow` line. The former `kube/`,
+`tmuxinator/`, `neovide/`, and `claude/` gaps were removed with their
 packages (claude in the Claude Code uninstall, which also removed the
 stow-claude dry-run evidence check).
 

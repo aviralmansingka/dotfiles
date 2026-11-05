@@ -22,7 +22,7 @@ config_root="$repo_root/nvim/.config/nvim"
 spec_file="$config_root/tests/ci/plugin_configs_spec.lua"
 spec_name="plugin_configs_spec"
 
-# --- nvim discovery: PATH first, then the pinned dev build, then bob -------
+# --- nvim discovery: PATH first, then the pinned dev build -------
 find_nvim() {
   if command -v nvim >/dev/null 2>&1; then
     command -v nvim
@@ -31,16 +31,6 @@ find_nvim() {
   local pinned="$HOME/.local/bin/nvim"
   if [[ -x "$pinned" ]]; then
     printf '%s\n' "$pinned"
-    return 0
-  fi
-  local bob_nvim="$HOME/.local/share/bob/nightly/bin/nvim"
-  if [[ -x "$bob_nvim" ]]; then
-    printf '%s\n' "$bob_nvim"
-    return 0
-  fi
-  local bob_stable="$HOME/.local/share/bob/v0.12.2/bin/nvim"
-  if [[ -x "$bob_stable" ]]; then
-    printf '%s\n' "$bob_stable"
     return 0
   fi
   return 1
@@ -52,7 +42,7 @@ if [[ -z "$nvim_bin" ]]; then
     echo "test-nvim-plugin-configs: nvim not found; STRICT=1 → FAIL" >&2
     exit 1
   fi
-  echo "SKIP test-nvim-plugin-configs: nvim not found on PATH, ~/.local/bin, or in ~/.local/share/bob (STRICT=1 to fail)"
+  echo "SKIP test-nvim-plugin-configs: nvim not found on PATH or at ~/.local/bin/nvim (STRICT=1 to fail)"
   exit 0
 fi
 

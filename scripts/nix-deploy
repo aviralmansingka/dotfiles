@@ -293,11 +293,13 @@ files: still outside the deploy (by design)
 REPORT
 }
 
-# The deploy tree is the flake plus the recipe and this script. Nothing else
-# travels: the checkout stays where stow already reads it.
+# The deploy tree is the flake plus the recipe and this script, plus the
+# directories the flake reads at evaluation time: rataflow/ (the crate) and
+# zsh/ (the source of ~/.zshenv and ~/.zshrc). Nothing else travels: the
+# checkout stays where stow already reads it.
 deploy_tree() {
   printf '%s\n' flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo \
-    scripts/stow-packages scripts/stow-packages-darwin
+    zsh scripts/stow-packages scripts/stow-packages-darwin
 }
 
 plan() {

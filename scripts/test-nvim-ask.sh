@@ -17,7 +17,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 config_root="$repo_root/nvim/.config/nvim"
 
-# --- nvim discovery: PATH first, then the pinned 0.13-dev, then bob -----
+# --- nvim discovery: PATH first, then the pinned dev build -------
 find_nvim() {
   if command -v nvim >/dev/null 2>&1; then
     command -v nvim
@@ -28,23 +28,13 @@ find_nvim() {
     printf '%s\n' "$pinned"
     return 0
   fi
-  local bob_nvim="$HOME/.local/share/bob/nightly/bin/nvim"
-  if [[ -x "$bob_nvim" ]]; then
-    printf '%s\n' "$bob_nvim"
-    return 0
-  fi
-  local bob_stable="$HOME/.local/share/bob/v0.12.2/bin/nvim"
-  if [[ -x "$bob_stable" ]]; then
-    printf '%s\n' "$bob_stable"
-    return 0
-  fi
   return 1
 }
 
 nvim_bin="$(find_nvim || true)"
 if [[ -z "$nvim_bin" ]]; then
   if [[ "${STRICT:-0}" == "1" ]]; then
-    echo "test-nvim-ask: FAILED (STRICT=1): nvim not found on PATH, ~/.local/bin, or bob" >&2
+    echo "test-nvim-ask: FAILED (STRICT=1): nvim not found on PATH or at ~/.local/bin/nvim" >&2
     exit 1
   fi
   echo "test-nvim-ask: SKIP (nvim not found; set STRICT=1 to make this a failure)"

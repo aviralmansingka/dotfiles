@@ -666,7 +666,7 @@ feat/nvim-mermaid change; `docs/neovim-mermaid-render.md` owns the full details.
 ### Verification harness
 
 - A Neovim verification harness exists.
-- Verification resolves Neovim from PATH, Bob nightly, or Bob stable.
+- Verification resolves Neovim from PATH.
 - Verification runs headless checks from the dotfiles repository root.
 - Verification checks legacy agent keymaps stay removed.
 - Verification checks required Pi, Codex, local, and global mappings exist.

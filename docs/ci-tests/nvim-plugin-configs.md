@@ -27,7 +27,7 @@ This suite checks the small plugin-config contracts in `lua/plugins/`. It loads 
 
 ## How to run
 
-Run `scripts/test-nvim-plugin-configs.sh` from the repository root. It finds nvim on `PATH`, then in `~/.local/bin`, then in `~/.local/share/bob`, and runs the spec with `nvim --headless -u NONE`. It prints one PASS line per case and exits non-zero when a case fails. A missing nvim prints SKIP and exits zero; set `STRICT=1` to turn that into a failure. The shared entry `scripts/test-nvim-headless.sh` also finds this spec by glob.
+Run `scripts/test-nvim-plugin-configs.sh` from the repository root. It finds nvim on `PATH`, then at `~/.local/bin/nvim`, and runs the spec with `nvim --headless -u NONE`. It prints one PASS line per case and exits non-zero when a case fails. A missing nvim prints SKIP and exits zero; set `STRICT=1` to turn that into a failure. The shared entry `scripts/test-nvim-headless.sh` also finds this spec by glob.
 
 ## Runtime and SLA
 
