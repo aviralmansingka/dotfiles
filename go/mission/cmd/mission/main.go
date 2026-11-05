@@ -15,8 +15,8 @@ const help = `mission — work that survives the agent
   mission --json steps REPO/SLUG
   mission ui                              Optional human mission desk
       tab moves the focus, [ and ] walk the focused pane's tabs,
-      j/k moves the selection, q quits. The mission list opens on ALL:
-      every mission ever created, complete ones included.
+      j/k moves the selection, q quits. The mission list opens on ACTIVE:
+      the lane tabs narrow it by state: YOURS, READY, FAILED, DONE.
   mission repo add dotfiles --checkout ~/dotfiles
   mission new dotfiles/audit-hooks --title "Audit lifecycle hooks"
       --goal "Document gaps" --step "Inspect current hooks"
@@ -66,7 +66,7 @@ const help = `mission — work that survives the agent
                                            Retire the record; refuses open work
   mission demo --vault ./demo-vault         Seed isolated, simulated records
   mission render --view overview|attempts|activity|steps
-      [--filter ALL|READY|ACTIVE|YOURS|DONE|FAILED]
+      [--filter ACTIVE|YOURS|READY|FAILED|DONE]
       [--handle REPO/SLUG] [--width 128] [--height 42] [--color]
 
 Global: --vault PATH (default $MISSION_VAULT or ~/vault), --json
