@@ -534,8 +534,9 @@ fn an_oversized_canvas_opens_at_its_first_section() {
 
 #[test]
 fn enclosure_membership_is_reported_even_without_an_outline() {
-    // The boundary's world-to-screen mapping does not yet track the library's
-    // node transform, so the painted outline is opt-in. The MEMBERSHIP and the
+    // No boundary is painted: a container box draws containment, and the
+    // dotted outline was dropped when its world-to-screen mapping could not
+    // track the library's node transform. The MEMBERSHIP and the
     // entrance/run-along accounting must still be exact: they are what the
     // rubric measures.
     let text = std::fs::read_to_string("../docs/visualize-eval/rounds/14/c4-retry/specs/c4-canvas.json")

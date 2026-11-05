@@ -1207,7 +1207,7 @@ fn measure_near_misses(
             let mut closest: Option<(i32, (i32, i32))> = None;
             for cell in route_cells(&route.points) {
                 let ring = ring_of(node, cell.0, cell.1);
-                if ring < 1 || ring > NEAR_NODE_MARGIN {
+                if !(1..=NEAR_NODE_MARGIN).contains(&ring) {
                     continue;
                 }
                 cells += 1;
@@ -2520,7 +2520,7 @@ impl Grid {
                         continue;
                     }
                     let ring = ring_of(node, x, y);
-                    if ring < 1 || ring > NEAR_NODE_MARGIN {
+                    if !(1..=NEAR_NODE_MARGIN).contains(&ring) {
                         continue;
                     }
                     let (dx, dy) = box_offset(node, x, y);

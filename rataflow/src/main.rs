@@ -135,16 +135,7 @@ fn run() -> Result<()> {
         return check(&spec, &mut flow, &report);
     }
     if let Some(frames) = cli.frames {
-        return write_frames(
-            &mut flow,
-            &spec,
-            &report,
-            &cli.path,
-            frames,
-            cli.step_ms,
-            cli.select_all,
-            cli.frames_ansi,
-        );
+        return write_frames(&mut flow, &spec, &report, &cli, frames);
     }
 
     let (cols, area_rows) = measured_area();
@@ -270,11 +261,16 @@ fn check(spec: &Spec, flow: &mut Graph, report: &Report) -> Result<()> {
             if let Some(description) = section.description.as_deref() {
                 println!("  description: {description}");
             }
-            if !section.enclosures.is_empty() && !section.enclosure_outline {
-                println!("  enclosed: {} group(s), boundary not painted (enclosure_outline is off)", section.enclosures.len());
+            if !section.enclosures.is_empty() {
+                println!(
+                    "  enclosed: {} group(s), membership only - no boundary is painted (a container box draws containment)",
+                    section.enclosures.len()
+                );
             }
             for &(fx, fy, fw, fh) in &section.frames {
-                println!("  enclosed: dotted box={fw}x{fh} at {fx},{fy} (contents of a zoomed-in component)");
+                println!(
+                    "  enclosed rect: {fw}x{fh} at {fx},{fy} (route accounting geometry, not painted)"
+                );
             }
             if !section.focus.is_empty() {
                 println!(
@@ -286,13 +282,13 @@ fn check(spec: &Spec, flow: &mut Graph, report: &Report) -> Result<()> {
         }
         if report.enclosure_crossings > 0 {
             println!(
-                "enclosure-crossings: {} cell(s) of a route RUNNING ALONG a dotted boundary (a route may enter the box, never travel on its edge)",
+                "enclosure-crossings: {} cell(s) of a route RUNNING ALONG an enclosure boundary (a route may enter the box, never travel on its edge)",
                 report.enclosure_crossings
             );
         }
         if report.enclosure_entrances > 0 {
             println!(
-                "enclosure-entrances: {} route(s) enter or leave a dotted enclosure",
+                "enclosure-entrances: {} route(s) enter or leave an enclosure",
                 report.enclosure_entrances
             );
         }
@@ -583,17 +579,15 @@ fn write_frames(
     flow: &mut Graph,
     spec: &Spec,
     report: &Report,
-    path: &str,
+    cli: &Cli,
     frames: usize,
-    step_ms: u64,
-    select_all: bool,
-    ansi: bool,
 ) -> Result<()> {
+    let (step_ms, select_all, ansi) = (cli.step_ms, cli.select_all, cli.frames_ansi);
     fit_natural(flow);
     let (cols, area_rows) = measured_area();
     let rows = area_rows + HEADER_HEIGHT;
     println!("{}", viewport_line(cols, rows));
-    let header = header_line(flow, spec, report, path, cols, rows);
+    let header = header_line(flow, spec, report, &cli.path, cols, rows);
     let mut terminal = Terminal::new(TestBackend::new(cols, area_rows + HEADER_HEIGHT))
         .context("creating the offscreen frame buffer")?;
     let mut anchor_pending = true;
