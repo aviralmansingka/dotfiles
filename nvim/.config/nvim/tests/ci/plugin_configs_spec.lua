@@ -12,7 +12,8 @@
 --   * mason.lua pins (#25): basedpyright in, pyright out.
 --   * conform.lua (#31): no format_on_save key (LazyVim owns the handler);
 --     prettier prepend_args discovery shape; ruff venv discovery.
---   * lsp.lua: signatureHelp border wrap; lua_ls settings shape.
+--   * lsp.lua: signatureHelp border wrap; lua_ls settings shape; copilot
+--     removed (enabled=false plus a hard vim.lsp.enable call).
 --   * c.lua (#187-era): clangd args, clang-format on save, pure build
 --     helpers, DAP build+launch config, FileType keymap wiring.
 --   * build-files.lua: server opts shape; macOS-absolute JDK path is a
@@ -266,7 +267,14 @@ H.run("plugin_configs/lsp", function()
     end
   )
   local o = {}
+  -- Copilot removal: one hard vim.lsp.enable(name, false) call, recorded
+  -- before opts() runs so the real lsp.enable never registers anything.
+  local enable_calls = {}
+  local restore_enable = H.replace(vim.lsp, "enable", function(name, enable)
+    enable_calls[#enable_calls + 1] = { name, enable }
+  end)
   local ret = spec.opts(nil, o)
+  restore_enable()
   H.eq(ret, o, "lsp opts returns the same table")
   H.eq(
     type(vim.lsp.handlers["textDocument/signatureHelp"]),
@@ -282,6 +290,8 @@ H.run("plugin_configs/lsp", function()
   -- lua_ls settings table shape (dofile only — no LSP starts).
   local ls = o.servers.lua_ls
   H.truthy(ls, "lua_ls server configured")
+  H.eq(o.servers.copilot, { enabled = false }, "copilot server parked off")
+  H.eq(enable_calls, { { "copilot", false } }, "copilot hard-disabled through vim.lsp.enable")
   H.eq(ls.filetypes, { "lua" }, "lua_ls filetypes")
   local L = ls.settings.Lua
   H.eq(L.runtime.version, "LuaJIT", "lua_ls runtime version")

@@ -11,8 +11,12 @@ return {
     -- Custom server configurations using LazyVim's approach
     opts.servers = opts.servers or {}
 
-    -- Copilot is unwanted here, and a stray Mason package must not resurrect it.
+    -- Copilot is removed, not parked. The `enabled` flag keeps LazyVim from
+    -- registering the server, and vim.lsp.enable(..., false) also blocks the
+    -- config nvim-lspconfig ships, so a stray Mason package cannot start a
+    -- suggestion client behind your back.
     opts.servers.copilot = { enabled = false }
+    vim.lsp.enable("copilot", false)
 
     -- Lua language server configuration
     opts.servers.lua_ls = {
