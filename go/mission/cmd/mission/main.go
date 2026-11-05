@@ -65,9 +65,9 @@ const help = `mission — work that survives the agent
   mission close REPO/SLUG [--note TEXT] [--force]
                                            Retire the record; refuses open work
   mission demo --vault ./demo-vault         Seed isolated, simulated records
-  mission render --view overview|attempts|activity|steps
+  mission render --view inbox|table|repos|overview|troopers|attempts|activity|steps|step|call
       [--filter ACTIVE|YOURS|READY|FAILED|DONE]
-      [--handle REPO/SLUG] [--width 128] [--height 42] [--color]
+      [--handle REPO/SLUG] [--id S01] [--width 128] [--height 42] [--color]
 
 Global: --vault PATH (default $MISSION_VAULT or ~/vault), --json
 All data commands return one JSON envelope. No command specified: list missions.
