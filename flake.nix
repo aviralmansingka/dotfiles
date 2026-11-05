@@ -83,9 +83,5 @@
           localNames = [ "mac" "macbook" ];
         };
       };
-
-      fleet.ownedTools = builtins.mapAttrs (
-        _: pkg: pkg.outPath
-      ) (import ./nix/lib/owned-tools.nix { pkgs = nixpkgs.legacyPackages.x86_64-linux; });
     };
 }

@@ -99,10 +99,10 @@ in
   # The Home Manager user layer for a NixOS target is `shared` (mkNixos) plus
   # what every Linux host needs: the fleet's user units, which belong to the
   # fleet and not to a host (the same module `nix/modules/remote` imports for the
-  # Ubuntu profile), and the two tools `shared` does not carry. On Ubuntu both
-  # came from apt; `shared` has lazygit and herdr but neither of these.
-  # `sharedModules` applies them to whichever account mkNixos declared, which
-  # this file cannot name before evaluation.
+  # Ubuntu profile). The user tools are not listed here any more: `shared`
+  # carries go, nodejs and the rest of the old apt set, so this module adds only
+  # the units. `sharedModules` applies them to whichever account mkNixos
+  # declared, which this file cannot name before evaluation.
   environment.systemPackages = [ pkgs.bash ];
 
   home-manager.sharedModules = [
@@ -142,11 +142,5 @@ in
         }) fleetUnits;
       }
     )
-    {
-      home.packages = [
-        pkgs.go
-        pkgs.nodejs_22
-      ];
-    }
   ];
 }

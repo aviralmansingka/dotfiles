@@ -34,10 +34,10 @@ in
       with pkgs;
       [
         stow
-        # gh is a profile tool on both platforms: the remote profile already
-        # rendered it from nix/lib/owned-tools.nix, and the Mac used to get it
-        # from Homebrew. One package here covers both, and the `ghd` alias
-        # below assumes it is on PATH.
+        # gh is a profile tool on both platforms: the remote profile installed
+        # it from the apt-owned set, and the Mac used to get it from Homebrew.
+        # One package here covers both, and the `ghd` alias below assumes it is
+        # on PATH.
         gh
         git
         jq
@@ -61,6 +61,26 @@ in
         # User tools both profiles need; each profile used to declare its own
         # copy, and this module owns them once now.
         gnupg
+        # The set the fleet used to install with apt from a hand-kept list. The
+        # apt copies stay installed on the Ubuntu hosts, but these profile
+        # packages are the ones a shell resolves, so one declaration serves
+        # Ubuntu and NixOS alike. gh, git, jq, ripgrep, fd, fzf, bat and tmux
+        # are already above; `go` and `nodejs` are what the NixOS module used to
+        # add for itself.
+        tree
+        htop
+        pandoc
+        ffmpeg
+        imagemagick
+        vim
+        zsh
+        mosh
+        screen
+        byobu
+        go
+        nodejs
+        luarocks
+        jdk21_headless
         # The editor and the diff pager are profile tools, not version-managed
         # ones: the shell text calls plain `nvim`, and delta is on PATH on both
         # platforms.
