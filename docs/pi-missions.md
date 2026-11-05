@@ -243,6 +243,16 @@ in army. The captain window runs the plan's argv and a brief rendered from that
 reserved intent, so the captain attaches with the id the record holds. The ack
 lands last, with the plan's derived token beside the reserved intent.
 
+Seating is two phases, because a block's id exists only after its window does. A
+window therefore opens on a waiting shell (`/bin/sh -s`), deploy reads the block
+id from the `session.new_window` result, and it writes one `exec env …` line into
+that block through `block.method` with method `write`. That line starts the
+plan's absolute pi with `REX_SESSION=army`, `REX_BLOCK=<its own block>`, a `PATH`
+that resolves `rex`, `PI_SUBAGENT_SESSION=<mission-<slug>>`, and
+`PI_SUBAGENT_CWD=<worktree>`; the brief arrives as pi's first message. The exec
+line is the only place a captain learns its own seat, so a captain started by
+deploy passes the subagent gate without any adapter help.
+
 A repeated deploy focuses the live captain window and creates nothing, so one key
 press cannot seat two captains. A resumable deployment keeps its intent: a
 failure part way leaves the record unacknowledged, and the next press reserves
