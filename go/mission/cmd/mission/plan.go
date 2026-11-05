@@ -74,9 +74,8 @@ func seatLabel(prefix, slug string) string {
 // captainBrief is the captain contract, and the only copy of the launch prompt
 // text: the captain profiles hold no second version of it, so the duties are
 // edited here or nowhere. The first sentence is the token the captain attaches
-// with: the plan's ack token by default, or the launch intent an adapter has
-// already reserved (extension launches pass their own id so the brief names the
-// intent they will record). The three duties are the rank's whole division of
+// with: the plan's ack token by default, or the launch intent deploy reserved, so
+// the id a captain reads is the id the record holds. The three duties are the rank's whole division of
 // work: the captain keeps the claim and its hands off the files, a trooper does
 // each step and another judges it, and the captain answers the commander. The
 // session clause names where troopers work, because the captain is the only

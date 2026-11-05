@@ -49,15 +49,13 @@ credentials.
 
 ## Workspace and ownership
 
-A repository keeps its existing primary Herdr workspace. `start` registers the
-mission checkout as a Herdr **worktree workspace** with
-`herdr worktree open --cwd <primary checkout> --path <mission worktree> --no-focus`.
-That call is idempotent: it returns the workspace Herdr already links to the
-repository, and creates one on first launch. The launch then opens its own tab
-there and closes a fresh workspace's empty root tab, so the workspace holds one
-tab with the driver. Herdr groups per-worktree
-workspaces under the repository, so one repository still owns one repository
-workspace plus its linked worktree workspaces.
+A repository keeps its existing primary Herdr workspace. A mission checkout is
+its own worktree, and `mission workspace` is the only thing that creates or
+revives it. Seating is a separate step with one owner, the CLI: `start` hands the
+launch to `mission deploy --mux <rex|herdr>` (see `Deploy a mission`), and the
+Herdr adapter seats the captain's tab in the shared `army` workspace with the
+mission worktree as its cwd. The extension registers no worktree and opens no
+tab, so a Rex mission and a Herdr mission take the same path.
 
 Each mission gets `~/.herdr/worktrees/<repo>/mission-<slug>` on
 `mission/<slug>`, initially from local `main`. The CLI creates the checkout and
@@ -73,10 +71,9 @@ checkout is reported as `worktree_invalid` and never deleted. An existing branch
 with no marker and no checkout at the path is reported as `unowned_branch`; a
 branch checked out in another worktree as `worktree_in_use`.
 The same path and branch remain bound across steps, retries, and revisions.
-If the Herdr workspace or the checkout is deleted but the `mission/<slug>` branch
-remains, `start` recreates the checkout at the recorded path and re-registers it
-with `herdr worktree open`. It never creates a second branch or checkout. A
-branch checked out elsewhere is reported, not duplicated.
+If the checkout is deleted but the `mission/<slug>` branch remains, `start`
+recreates the checkout at the recorded path. It never creates a second branch or
+checkout. A branch checked out elsewhere is reported, not duplicated.
 A closed mission is refused instead: `/cleanup` closes the record when it removes
 the checkout, so a retired mission never revives it. Start a new mission for new
 work.
@@ -84,40 +81,29 @@ Ownership is single-host and exclusive across missions in that vault. Unrelated
 vaults do not share a lock or ownership index.
 
 For an already running Pi session, use `/mission attach REPO/SLUG` from the root
-of its non-main linked worktree in one of the repository's Herdr workspaces — the
-mission's own worktree workspace, or the repository's primary workspace for a
-mission bound before worktree workspaces existed. The CLI
+of its non-main linked worktree, in a Herdr pane whose cwd is that worktree (the
+shared `army` workspace holds every captain, so the pane's cwd is the binding, not
+the workspace shape) or in a Rex block there. The CLI
 checks the Pi session header, repository identity, cwd, durable owner, and active
 attempt. It adopts that worktree without copying code or moving the session.
 Attachment to main, a second mission in the same worktree, or a different owning
 session is refused. Herdr remains responsible for preventing duplicate live
 attachments to the same Pi session file.
 
-`start` persists a launch intent, registers the Herdr worktree, opens the driver
-tab, and starts the driver as a full Pi agent in that pane
-(`herdr agent start <name> --kind pi --pane <pane>`). The driver is not a
-subagent: it carries no subagent identity, loadout file, wall-clock timer, or
-watchdog. `start` then
-waits up to 60 s for the agent to reach its prompt (`herdr agent wait`), submits
-the first task (`herdr agent prompt`), and reads the session file from
-`herdr agent get` before it records the launch receipt. The task carries the
-driver contract and names that launch id, and the driver attaches with it
-through the tool.
+`start` first prepares the mission worktree (`mission workspace`), then asks the
+CLI to seat the mission: `mission deploy REPO/SLUG --mux rex|herdr`, where the mux
+is the one this session runs in (`herdr` when the session carries a Herdr pane,
+`rex` when it carries a Rex block). The CLI reserves the launch intent, seats the
+army session, the captain's window and the mission's subagent session, acks the
+launch, and reports the deployment. `start` then reads the runtime back from
+`mission show`: the record, not the launch, is the authority on where the captain
+runs. A repeat press finds the captain already seated and focuses it; `start`
+reports `launched: false` and the desk receipt says the seat is live.
 
-The driver pane inherits the launcher's configuration. Herdr sets a tab's
-environment only at creation and `worktree open` has no environment flag, so a
-launch always creates its own tab with `--env` and then closes a fresh
-workspace's empty root tab: the workspace keeps exactly one tab. The forwarded
-keys are `PI_CODING_AGENT_DIR`, `MISSION_VAULT`, `MISSION_BIN`, and
-`MISSION_STATE_DIR`. The attempt token never travels this way. This is what lets
-a checkout that is not installed (a preview or a mission worktree) hand its own
-extension to the driver. A tab Herdr just created can still be starting its
-shell, so a launch retries the `agent_pane_busy` refusal for 5 s before it fails.
-
-Herdr agent names are unique for the server. A launch names the driver
-`mission-<slug>`. A name that another session holds takes a short handle hash
-once; if that name is taken too, the launch fails and names the pane that holds
-it. The launch never renames another session's agent.
+The extension owns no mux command for a launch. It has no Herdr worktree, tab,
+agent, or prompt call: `herdr worktree open`, `tab create`, `agent start`,
+`agent wait`, `agent prompt`, and `agent get` are gone from the launch path, so
+the seat's behaviour is the CLI's for both muxes and cannot drift between them.
 
 A launch receipt stores its session
 file. Repeating start returns the recorded runtime instead of launching again.
@@ -140,12 +126,11 @@ touchpoint.
 > **Rank vocabulary.** The rank this mission deploys for that seat is the
 > **captain**, and the launch prompt has one owner: `mission plan` renders it as
 > `captain_brief` (`captainBrief` in `go/mission/cmd/mission/plan.go`), together
-> with `captain_argv` and the `subagent_session` its troopers work in. The
-> extension prompts the seat with that text (`core.mjs`), and `driverTask` in
-> `missions/core.mjs` is the fallback contract for a plan that carries no brief.
-> Both descriptions name the same seat and the same three duties; the sections
-> below that speak of the captain (`The launch description`, `Deploy into Rex`)
-> are the rank vocabulary for this seat.
+> with `captain_argv` and the `subagent_session` its troopers work in. `mission
+> deploy` writes that text into the seat as the exec line's last argument, so the
+> plan is the only description of the rank: the extension holds no second copy
+> and no fallback contract. The sections below that speak of the captain (`The
+> launch description`, `Deploy a mission`) are the rank vocabulary for this seat.
 
 1. **Hold the claim.** The driver session owns the attempt and keeps the `mission`
    tool. It reports structured progress and calls `verify` and `finish` only after
@@ -228,20 +213,31 @@ prefix plus the slug, cut to 32 characters with a short digest of the whole slug
 when it does not fit. Plan and deploy read that one label, so the same mission
 always gets the same name and two long slugs never share one.
 
-The launch prompt text lives in the CLI, not in the Pi extension. The extension
-reserves its own launch intent and asks `mission plan --launch-id <id>` for the
-brief, so one place owns the wording and the brief still names the intent the
-extension will record.
+The launch prompt text lives in the CLI, not in the Pi extension. `mission
+deploy` reserves the intent, renders the brief for it, and seats it in one call,
+so one place owns the wording and the id a captain reads is the id the record
+holds. `mission plan` stays the read-only description for a caller that only
+wants to look.
 
-## Deploy into Rex
+## Deploy a mission
 
-`mission deploy REPO/SLUG --mux rex` turns one plan into seats. It reads the plan,
-then reserves the launch intent (a `launch-<uid>` id, as the Pi extension does),
-then creates only what is missing: the `army` session with its `commander`
-window, the mission's `mission-<slug>` session, and its `captain-<slug>` window
-in army. The captain window runs the plan's argv and a brief rendered from that
-reserved intent, so the captain attaches with the id the record holds. The ack
-lands last, with the plan's derived token beside the reserved intent.
+`mission deploy REPO/SLUG --mux rex|herdr` turns one plan into seats. Deploy owns
+the decisions and the adapters own the mux vocabulary: a small `seat` interface in
+`go/mission/cmd/mission/seat.go` asks for the sessions, the captain window, focus,
+clear, and the captain's placement, and `rexSeat` and `herdrSeat` implement it. An
+unknown `--mux` is refused with `mux_unsupported` before deploy reads anything.
+
+Deploy reads the plan, then reserves the launch intent (a `launch-<uid>` id), then
+creates only what is missing: the `army` session with its `commander` window, the
+mission's `mission-<slug>` session, and its `captain-<slug>` window in army. The
+captain window runs the plan's argv and a brief rendered from that reserved
+intent, so the captain attaches with the id the record holds. The ack lands last,
+with the plan's derived token beside the reserved intent.
+
+Both adapters seat the captain the same way, because the seat is the plan's and
+not the mux's: a window opens on the human's login shell, deploy writes the exec
+line into it, and it verifies that pi took the foreground, retrying the submit
+once. What differs is only the seat's own identity and the calls underneath.
 
 Seating is two phases, because a block's id exists only after its window does. A
 window therefore opens on the human's login shell, deploy reads the block id
@@ -287,10 +283,44 @@ pi is still named by absolute path (`captainPi`), so the seat never relies on a
 profile to find it; the login shell supplies everything else.
 
 A repeated deploy focuses the live captain window and creates nothing, so one key
-press cannot seat two captains. A resumable deployment keeps its intent: a
-failure part way leaves the record unacknowledged, and the next press reserves
-nothing new and finishes the same deployment. `--mux` has one adapter today;
-another value answers `mux_unsupported`.
+press cannot seat two captains. Liveness is the seat's own foreground process in
+both muxes, so a captain that has just arrived is never mistaken for a dead one.
+A resumable deployment keeps its intent: a failure part way leaves the record
+unacknowledged, and the next press reserves nothing new and finishes the same
+deployment.
+
+### Seating in Herdr
+
+Herdr's units are not Rex's, so the adapter maps the plan onto them rather than
+inventing names:
+
+| Plan | Rex | Herdr |
+| --- | --- | --- |
+| army session `army` | a Rex session | a workspace labeled `army`, found by label and created once |
+| commander window `commander` | the army session's first window | the army workspace's root tab, renamed |
+| captain window `captain-<slug>` | a window in army | a tab in the army workspace, cwd the mission worktree |
+| subagent session `mission-<slug>` | a Rex session troopers open windows in | the seat's `PI_SUBAGENT_SESSION`: Herdr has no session object, and troopers are tabs beside their captain |
+
+Seating is two phases here too. `tab create` opens a tab on the human's login
+shell and names its pane; deploy polls `pane process-info` until that pane reports
+a foreground process, writes the exec line with `pane send-text`, submits it with
+`pane send-keys enter`, and polls the foreground until it is pi. If the shell is
+still the foreground it re-sends the Enter once, then fails with the pane, the
+tab, and what the foreground still reports. A Herdr tab can be brought up while
+its shell is still starting, so the readiness poll is what keeps a write from
+landing in a shell that does not yet read its terminal.
+
+The Herdr exec line carries no seat identity: Herdr sets `HERDR_PANE_ID` and
+`HERDR_WORKSPACE_ID` on the pane itself, so the captain reads its own seat from
+its environment. The Rex line has to name `REX_SESSION` and `REX_BLOCK`, because
+a Rex block starts with neither. Everything else is the one `seatExecLine`:
+`PI_SUBAGENT_SESSION`, `PI_SUBAGENT_CWD`, the plan's absolute pi, its `--tools`
+allowlist, and the brief last.
+
+Herdr reports the Pi session file for the agent it detects in the tab. Deploy
+records it on the reserved intent when Herdr answers with one, so a later launch
+or attach adopts that session instead of starting another; the captain records
+the same file itself when it attaches.
 
 `prefix+n` (`mission_deploy_pick`) opens the deployment picker: a floating layer
 listing `mission ready`, previewed with `mission show`. Enter deploys the chosen
@@ -386,16 +416,15 @@ with `state: pending`, `handle`, `repo`, and its owner seat.
 
 The desk has no launch path of its own. A Pi session in that repository claims the
 request and calls the same `start` action the `mission` tool uses, so the worktree,
-the launch reservation, and the driver tab come from one code path. That action
-opens the mission worktree as the repository's Herdr workspace, creates its tab,
-and starts the driver agent there.
+the launch reservation, and the captain's seat come from one code path: the
+action hands the launch to `mission deploy --mux rex|herdr`, and the CLI seats it.
 
 Each request carries the seat that asked: `owner_workspace` (`HERDR_WORKSPACE_ID`),
 `owner_label` (`HERDR_PANE_ID`), and `owner_common` (the absolute git common dir).
 The sweep picks one request per tick, in this order:
 
 1. A request addressed to this session's workspace. A captain that already owns a
-   mission still serves it, because the driver runs in its own worktree workspace.
+   mission still serves it, because its seat is a tab of that workspace.
 2. An unaddressed request, from a desk that ran outside Herdr. Any idle session of
    the repository may claim it.
 3. A request whose addressed workspace is gone. Only a session in the same checkout
@@ -521,7 +550,7 @@ driver can investigate its own tracking. Inactive steps block editing tools.
 Shutdown snapshots the transcript and parks the attempt without releasing its
 owner. Resume the same Pi session file in the mission worktree, in a seat of the
 same kind you left it in: a Rex block with `REX_SESSION` and `REX_BLOCK`, or a
-Herdr pane in the primary workspace. Export the original `MISSION_VAULT`,
+Herdr pane whose cwd is the mission worktree. Export the original `MISSION_VAULT`,
 `MISSION_BIN`, and `MISSION_STATE_DIR` there.
 A launched driver reads those paths from its own pane environment, so they must
 be exported there when the layout is not the default: `MISSION_VAULT` defaults

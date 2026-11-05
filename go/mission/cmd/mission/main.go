@@ -43,7 +43,8 @@ const help = `mission — work that survives the agent
                                            report on the attempt
   mission plan REPO/SLUG [--mux rex]       Read-only launch description: army
       session and window labels, captain argv and brief, worktree, ack token
-  mission deploy REPO/SLUG [--mux rex]     Seat the mission: army session, its
+  mission deploy REPO/SLUG [--mux rex|herdr]
+                                           Seat the mission: army session, its
       captain window, and the mission-<slug> session; a repeat focuses the seat
   mission launch REPO/SLUG                 Reserve one launch; adapters only
   mission launch REPO/SLUG --ack           Record the plan's ack token: the
