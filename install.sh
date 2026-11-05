@@ -137,6 +137,17 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     done
 fi
 
+####################
+#  4. gh dash      #
+####################
+# The gh binary comes from the profile or the Brewfile; the extension does
+# not, and the stowed gh-dash config is useless without `gh dash`.
+
+if command -v gh >/dev/null 2>&1; then
+    echo "==> Installing the GitHub CLI extension"
+    gh extension list 2>/dev/null | grep -q 'dlvhdr/gh-dash' || gh extension install dlvhdr/gh-dash || true
+fi
+
 echo "==> Bootstrap complete"
 echo "    Applications, casks and fonts: brew bundle --file \"$DOTFILES_DIR/Brewfile\""
 echo "    Offline checks:                 scripts/test-nix-deploy.sh"
