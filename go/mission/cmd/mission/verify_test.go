@@ -1,9 +1,8 @@
 package main
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -311,7 +310,7 @@ func checkLog(t *testing.T, s *App, r mission.Record, res mission.CheckResult) (
 	rel := res.Evidence[0].Path
 	p, e := s.path(r.Mission.Repo, r.Mission.Slug, rel)
 	must(t, e)
-	b, e := boundedFile(p, 1<<20)
+	b, e := platform.BoundedFile(p, 1<<20)
 	must(t, e)
 	return rel, string(b)
 }
@@ -336,18 +335,6 @@ func TestCmdCheckCapturesCombinedOutput(t *testing.T) {
 	}
 	if base := filepath.Base(rel); strings.ContainsAny(base, ":/") {
 		t.Fatalf("cmd log name is not one path component: %s", rel)
-	}
-}
-
-// TestCappedOutputKeepsOneMiB pins the cap itself through io.Copy, the path
-// os/exec uses for a pipe: an embedded bytes.Buffer would promote ReadFrom and
-// copy the whole stream past the cap.
-func TestCappedOutputKeepsOneMiB(t *testing.T) {
-	var out cappedOutput
-	n, e := io.Copy(&out, bytes.NewReader(bytes.Repeat([]byte("x"), 3<<20)))
-	must(t, e)
-	if n != 3<<20 || len(out.Bytes()) != 1<<20 || !out.truncated {
-		t.Fatalf("copied %d, kept %d bytes, truncated %v", n, len(out.Bytes()), out.truncated)
 	}
 }
 
@@ -387,4 +374,144 @@ func lastRun(t *testing.T, r mission.Record) *mission.Attempt {
 		t.Fatal(e)
 	}
 	return a
+}
+
+// fakeChecker is the checker port as a test holds it. It runs no process: the
+// snapshot it fingerprints and the verdict, summary, and log it reports are the
+// test's, so a verdict case proves the core's loop and not a shell.
+type fakeChecker struct {
+	hash     string            // the fingerprint before the checks ran
+	moved    string            // the fingerprint afterwards, when the input moved
+	repoErr  error             // what the checkout fingerprint failed with
+	fpErr    error             // a fingerprint the port could not complete at all
+	verdicts map[string]string // check name → the verdict it reports
+	errs     map[string]error  // check name → the failure it reports instead
+	logs     map[string]string // check name → the log bytes the record keeps
+	runs     []string          // every check the core sent here, in order
+}
+
+func (f *fakeChecker) Fingerprint(_ mission.Attempt, _ mission.Step, snap mission.Snapshot) (mission.Snapshot, error) {
+	if f.fpErr != nil {
+		return snap, f.fpErr
+	}
+	snap.RepoErr = f.repoErr
+	snap.Hash = f.hash
+	if f.moved != "" && len(f.runs) > 0 {
+		snap.Hash = f.moved
+	}
+	return snap, nil
+}
+
+func (f *fakeChecker) Run(name, _ string, _ mission.Snapshot) (mission.CheckResult, []byte, error) {
+	f.runs = append(f.runs, name)
+	if e := f.errs[name]; e != nil {
+		return mission.CheckResult{Check: name, Version: "1"}, nil, e
+	}
+	return mission.CheckResult{Check: name, Version: "1", Verdict: f.verdicts[name], Summary: name + " ran"}, []byte(f.logs[name]), nil
+}
+
+// fakeStepCheckout declares checks on S01 and returns the store, its handle, and
+// the claimed attempt with a result written, so every verdict case starts from
+// one frozen input.
+func fakeStepCheckout(t *testing.T, checks ...string) (*App, string, mission.Claim) {
+	t.Helper()
+	s, h := fixture(t)
+	r, e := s.load(h)
+	must(t, e)
+	view, e := s.step(h, "S01")
+	must(t, e)
+	st := view.Step
+	st.Checks = checks
+	_, e = s.editStep(h, "S01", st, r.State.Revision, false)
+	must(t, e)
+	c := claimTest(t, s, h)
+	result(t, s, c, "# Evidence\n\nThe port decided this.\n")
+	return s, h, c
+}
+
+// TestCheckerPortDecidesTheVerdicts pins the core's check loop against the port:
+// the declared order, the blocked-after-failure rule, the demotion of a passed
+// check whose input moved, a checker that refuses a check, and the evidence log
+// the record keeps. The port is a fake, so no process runs and no Git checkout
+// is needed: the local facts are the checker's business, not the loop's.
+func TestCheckerPortDecidesTheVerdicts(t *testing.T) {
+	t.Run("a check that did not pass blocks the ones after it", func(t *testing.T) {
+		s, h, c := fakeStepCheckout(t, mission.CmdCheckPrefix+"false", mission.CheckGoTest)
+		f := &fakeChecker{hash: "sha256:input", verdicts: map[string]string{mission.CmdCheckPrefix + "false": "failed", mission.CheckGoTest: "passed"}}
+		s.Checks = f
+		r, e := s.verify(h, c.Attempt.ID, c.Token)
+		must(t, e)
+		res := lastVerification(t, r).Results
+		if len(res) != 3 {
+			t.Fatalf("results = %+v", res)
+		}
+		if res[1].Verdict != "failed" || res[1].Summary != mission.CmdCheckPrefix+"false ran" {
+			t.Fatalf("failed check recorded %q %q", res[1].Verdict, res[1].Summary)
+		}
+		if res[2].Verdict != "not_run" || res[2].Summary != mission.BlockedSummary {
+			t.Fatalf("check after a failure = %+v", res[2])
+		}
+		if strings.Join(f.runs, ",") != mission.CmdCheckPrefix+"false" {
+			t.Fatalf("the loop ran %v, want only the first process check", f.runs)
+		}
+		if s.verified(r, *lastRun(t, r)) {
+			t.Fatal("a blocked run verified")
+		}
+	})
+
+	t.Run("a passed check becomes inconclusive when the input moved", func(t *testing.T) {
+		s, h, c := fakeStepCheckout(t, mission.CmdCheckPrefix+"ok", mission.CheckGoTest)
+		f := &fakeChecker{hash: "sha256:input", moved: "sha256:moved", verdicts: map[string]string{mission.CmdCheckPrefix + "ok": "passed", mission.CheckGoTest: "passed"}, logs: map[string]string{mission.CmdCheckPrefix + "ok": "ok output\n"}}
+		s.Checks = f
+		r, e := s.verify(h, c.Attempt.ID, c.Token)
+		must(t, e)
+		res := lastVerification(t, r).Results
+		for _, i := range []int{1, 2} {
+			if res[i].Verdict != "inconclusive" || res[i].Summary != "Checked input changed during verification; rerun checks" {
+				t.Fatalf("%s after a moved input = %q %q", res[i].Check, res[i].Verdict, res[i].Summary)
+			}
+		}
+		if s.verified(r, *lastRun(t, r)) {
+			t.Fatal("evidence from a moved input verified")
+		}
+	})
+
+	t.Run("an unmoved input keeps the run and its evidence", func(t *testing.T) {
+		s, h, c := fakeStepCheckout(t, mission.CmdCheckPrefix+"ok", mission.CheckGoTest)
+		f := &fakeChecker{hash: "sha256:input", verdicts: map[string]string{mission.CmdCheckPrefix + "ok": "passed", mission.CheckGoTest: "passed"}, logs: map[string]string{mission.CmdCheckPrefix + "ok": "ok output\n", mission.CheckGoTest: "go output\n"}}
+		s.Checks = f
+		r, e := s.verify(h, c.Attempt.ID, c.Token)
+		must(t, e)
+		res := lastVerification(t, r).Results
+		if strings.Join(f.runs, ",") != mission.CmdCheckPrefix+"ok,"+mission.CheckGoTest {
+			t.Fatalf("the loop ran %v, want the declared order", f.runs)
+		}
+		if res[1].Verdict != "passed" || res[2].Verdict != "passed" {
+			t.Fatalf("results = %+v", res)
+		}
+		rel, log := checkLog(t, s, r, res[1])
+		for _, want := range []string{"check: " + mission.CmdCheckPrefix + "ok", "version: 1", "verdict: passed", "summary: " + mission.CmdCheckPrefix + "ok ran", "ok output"} {
+			if !strings.Contains(log, want) {
+				t.Fatalf("evidence log %s lacks %q:\n%s", rel, want, log)
+			}
+		}
+		if !s.verified(r, *lastRun(t, r)) {
+			t.Fatal("a passed run over an unmoved input did not verify")
+		}
+	})
+
+	t.Run("a checker that refuses a check records why", func(t *testing.T) {
+		s, h, c := fakeStepCheckout(t, mission.CmdCheckPrefix+"boom")
+		f := &fakeChecker{hash: "sha256:input", errs: map[string]error{mission.CmdCheckPrefix + "boom": errors.New("cannot start the command")}}
+		s.Checks = f
+		r, e := s.verify(h, c.Attempt.ID, c.Token)
+		must(t, e)
+		res := lastVerification(t, r).Results
+		if res[1].Verdict != "inconclusive" || res[1].Summary != "cannot start the command" {
+			t.Fatalf("refused check recorded %q %q", res[1].Verdict, res[1].Summary)
+		}
+		if s.verified(r, *lastRun(t, r)) {
+			t.Fatal("a refused check verified")
+		}
+	})
 }

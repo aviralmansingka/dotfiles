@@ -18,7 +18,7 @@ func cmdVerify(a platform.Args, s *App) (any, error) {
 	}
 	attempt, _ := mission.FindAttempt(&r.State, id)
 	last := attempt.Verifications[len(attempt.Verifications)-1]
-	passed := allPassed(last, attemptDefinition(r, *attempt))
+	passed := mission.AllPassed(last, attemptDefinition(r, *attempt))
 	v := map[string]any{"handle": h, "attempt": id, "passed": passed, "verification": last}
 	if !passed {
 		return v, mission.Problem("checks_failed", "required checks did not pass: %s", mission.VerificationSummary(last))

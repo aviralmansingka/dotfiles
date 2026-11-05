@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"mission.local/prototype/internal/adapters/checks"
 	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -20,7 +21,7 @@ func openApp(t *testing.T, vault string) (*App, error) {
 	if e != nil {
 		return nil, e
 	}
-	return newApp(store, "mission"), nil
+	return newApp(store, checks.New(), "mission"), nil
 }
 
 // fixture builds a vault with one registered repository and one mission.

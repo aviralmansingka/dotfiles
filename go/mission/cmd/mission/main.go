@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"mission.local/prototype/internal/adapters/checks"
 	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -153,7 +154,7 @@ func execute(argv []string) int {
 	if e != nil {
 		return emit(nil, e)
 	}
-	s := newApp(store, writeVerb(cmd, a))
+	s := newApp(store, checks.New(), writeVerb(cmd, a))
 	// ui and render own their stdout, so they return an exit code directly.
 	switch cmd {
 	case "ui":

@@ -81,7 +81,7 @@ const CmdCheckPrefix = "cmd:"
 
 // CheckCatalog is every check a mission may name.
 func CheckCatalog() []CheckPreset {
-	return []CheckPreset{{"nonempty-artifact", "1", "Required: a nonempty UTF-8 result, limited to 16 MiB"}, {"json-valid", "1", "Parse the result as exactly one JSON value"}, {"go-test", "1", "Run go test ./... in the Go module under the attempt checkout, with a two-minute deadline"}, {"cmd:<shell command>", "1", "Run the shell command in the attempt checkout, with a two-minute deadline"}}
+	return []CheckPreset{{CheckNonemptyArtifact, "1", "Required: a nonempty UTF-8 result, limited to 16 MiB"}, {CheckJSONValid, "1", "Parse the result as exactly one JSON value"}, {CheckGoTest, "1", "Run go test ./... in the Go module under the attempt checkout, with a two-minute deadline"}, {CmdCheckPrefix + "<shell command>", "1", "Run the shell command in the attempt checkout, with a two-minute deadline"}}
 }
 
 // KnownCheck reports whether one step check names a registered preset or
