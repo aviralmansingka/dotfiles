@@ -24,13 +24,19 @@ type Vault interface {
 // writes no record itself; the store behind Repo owns both.
 type App struct {
 	Repo Vault
+	// Checks is the checker port: the fingerprint of an attempt's input and the
+	// presets that run a process. Tests install a fake.
+	Checks mission.Checker
 	// writer names the command that produced a save. The revision journal uses
 	// it to show which command wrote a revision.
 	writer string
 }
 
-// newApp wires the core to one store, with the writer every save it makes.
-func newApp(v Vault, writer string) *App { return &App{Repo: v, writer: writer} }
+// newApp wires the core to one store and one checker, with the writer every
+// save it makes.
+func newApp(v Vault, checks mission.Checker, writer string) *App {
+	return &App{Repo: v, Checks: checks, writer: writer}
+}
 
 // load reads one record and checks it against domain policy: a stored mission
 // must still be valid and must name the directory it was read from.

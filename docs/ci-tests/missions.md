@@ -101,6 +101,16 @@ One Go case pins the mission identity: branch `mission/<slug>`, a linked checkou
 under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
 and refusal of an unmarked `mission/<slug>` branch.
 
+The check cases are split by what they need. The core's verdict loop — the
+declared order, the blocked-after-failure rule, the demotion of a passed check
+whose input moved, a checker that refuses a check, and the evidence log it
+writes — runs against a fake `mission.Checker` in `cmd/mission`, so no process
+starts and no checkout is needed. The cases that need a real Git checkout, the
+module-root scope, and the 1 MiB output cap live in `internal/adapters/checks`
+with the presets they describe. Three cases still run real processes end to end
+through the ledger: the go-test case that holds the vault lock open, the two
+`cmd:` cases, and the truncation case.
+
 The deploy cases pin the seat seam. A recording Rex server and a recording Herdr
 server each satisfy one adapter, and every deploy case installs both: a `--mux
 rex` deployment makes no Herdr call and a `--mux herdr` one makes no Rex call, and
