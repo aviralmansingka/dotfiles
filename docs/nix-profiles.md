@@ -255,13 +255,17 @@ python3 scripts/capture-macos-defaults.py --out DIR --nix-out DIR/system-default
 
 ## Secrets
 
-No secret enters the repo or the Nix store. Name the file, never the value:
+No plaintext secret enters the repo or the Nix store. What the repo tracks is
+sops ciphertext (`secrets/*.yaml`) plus the recipients that open it
+(`.sops.yaml`); hosts decrypt at activation through sops-nix. The operations —
+add a host, rotate a value, rotate access, recover a lost key — are in
+`docs/secrets.md`. Everywhere else, name the file and never the value:
 
 | Path | Rule |
 | --- | --- |
 | `~/.env` | name and mode only |
 | `~/.ssh/id_*` | name only; `~/.ssh/config` contributes host names |
-| `~/.config/pi-*.env` | name only |
+| `~/.config/pi-*.env` | name only; three of these moved into `secrets/homelab.yaml` (S02) |
 | cloud-init `user-data.txt` | record path, mode, and hash |
 | `tailscale.state`, `/etc/sudoers.d/*` | per-host; never copied |
 
