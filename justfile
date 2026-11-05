@@ -47,6 +47,29 @@ targets:
 test-deploy:
     scripts/test-nix-deploy.sh
 
+# ---- secrets: sops over the encrypted files in secrets/ ----
+#
+#   just secrets-edit secrets/homelab.yaml     # open in $EDITOR, re-encrypt on save
+#   just secrets-rotate secrets/homelab.yaml   # fresh data key for every value
+#   just secrets-check                         # offline: rules vs files, no keys
+#
+# The recipients are in .sops.yaml and the runbook is docs/nix-profiles.md.
+# Editing needs the admin age key at ~/.config/sops/age/keys.txt; checking does
+# not, which is why the check is the one a CI job can run.
+
+# Open one secrets file in $EDITOR through sops; it stays encrypted on disk.
+secrets-edit file:
+    sops {{file}}
+
+# Re-encrypt every value in a file with a fresh data key (`sops updatekeys`
+# re-wraps the key for new recipients instead; see .sops.yaml).
+secrets-rotate file:
+    sops rotate --in-place {{file}}
+
+# Check secret files offline: one rule per file, plaintext rejected.
+secrets-check:
+    python3 scripts/sops-check.py
+
 # ---- from main: the build recipes ----
 
 # Build the repo's two CLI binaries straight from this checkout.

@@ -11,6 +11,9 @@
     ../../services
   ];
 
+  # A Linux host decrypts with the SSH host key it already has.
+  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+
   home.packages = [
     pkgs.google-chrome
     pkgs.tailscale
