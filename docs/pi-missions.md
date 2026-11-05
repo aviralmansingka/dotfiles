@@ -263,6 +263,62 @@ another value answers `mux_unsupported`.
 listing `mission ready`, previewed with `mission show`. Enter deploys the chosen
 mission; Escape exits 0 and changes neither the vault nor Rex.
 
+### Seating a captain
+
+A captain must start under the login shell. Its `PATH` then matches the human's,
+and the three binaries every captain needs resolve:
+
+| Binary | Why the captain needs it |
+| --- | --- |
+| `pi` | the seat is a pi process; deploy starts it by absolute path |
+| `rex` | the subagent gate checks it, so children can be spawned at all |
+| `mission` | every lifecycle call: attach, claim, progress, verify, finish |
+
+A non-login shell such as `/bin/sh -s` sees only the multiplexer's `PATH`, which
+holds none of the three. Seat through a login shell (`zsh -l`, or `sh -l`) and
+start pi by absolute path, so the environment is the human's and the binary is
+found even when the login profile is not read.
+
+Check that a captain can actually start before you trust the seat. Three
+commands, run in the captain's own block:
+
+```sh
+command -v pi rex mission          # all three must print a path
+mission --json show dotfiles/<slug> | jq -r '.data.state.active_attempt'
+rex capture -s mission-<slug> -b <block> --trim --unwrap | tail -5
+```
+
+A bound attempt and a live pane mean the seat works. The failure signatures name
+the missing half, so read them literally:
+
+| Message | What is missing |
+| --- | --- |
+| `spawn mission ENOENT` | `~/.local/bin` is not on the captain's `PATH` |
+| `Subagents require a terminal multiplexer` | `rex` is not on its `PATH`, or `REX_SESSION`/`REX_BLOCK` are unset |
+| `executable "pi" not found in PATH` | deploy passed a bare `pi` instead of an absolute path |
+| `Restore the mission's Herdr attachment before continuing` | the record still points at the old seat; re-attach |
+
+### Move a captain to another seat
+
+A seat is bound to a session id, and the extension checks that binding on every
+lifecycle call (`surfaceSession` in `core.mjs`). Moving a captain between Herdr
+and Rex therefore keeps the conversation but loses the binding, and the next
+lifecycle call refuses with `Restore the mission's Herdr attachment before
+continuing`.
+
+Move it in three steps:
+
+1. Stop the old process, so only one writer owns the session file.
+2. Resume that session file in the new block, with `REX_SESSION`, `REX_BLOCK`,
+   and `PI_SUBAGENT_CWD` set, under the login shell.
+3. Re-attach in the new seat: `mission attach REPO/SLUG --session-id … --cwd …
+   --workspace "$REX_SESSION" --pane "$REX_BLOCK" --agent mission-captain`.
+
+Step 3 is not optional. Without it the transcript survives and the mission does
+not: every lifecycle call fails, and the captain reports warnings instead of
+work. The attempt it held stays attached to the session id, so a re-attach lands
+in the same attempt rather than opening a second one.
+
 ## Launch from the desk
 
 `mission ui` is a Go TUI. Press `L` on the selected mission to ask for a launch.
@@ -405,16 +461,20 @@ blocks editing tools and degrades read and bash-class tools to a warning, so a
 driver can investigate its own tracking. Inactive steps block editing tools.
 
 Shutdown snapshots the transcript and parks the attempt without releasing its
-owner. Resume the same Pi session file in the mission worktree and primary Herdr
-workspace with the original MISSION_VAULT, MISSION_BIN, and MISSION_STATE_DIR.
+owner. Resume the same Pi session file in the mission worktree, in a seat of the
+same kind you left it in: a Rex block with `REX_SESSION` and `REX_BLOCK`, or a
+Herdr pane in the primary workspace. Export the original `MISSION_VAULT`,
+`MISSION_BIN`, and `MISSION_STATE_DIR` there.
 A launched driver reads those paths from its own pane environment, so they must
 be exported there when the layout is not the default: `MISSION_VAULT` defaults
 to `~/vault`, `MISSION_BIN` to `mission` on PATH, and `MISSION_STATE_DIR` to
 `~/.local/state/pi-missions`. The preview launcher supplies its CLI and config
 automatically. `/mission attach`
 recovers a claim whose acknowledgement was lost. The driver is not a subagent
-registry entry: steer it with `herdr agent prompt <pane> <text>`, or resume its
-session file in that pane with Herdr/Sidekick.
+registry entry: steer it with `rex send -s army -b <block> <text>` in Rex, or
+`herdr agent prompt <pane> <text>` in Herdr, or resume its session file in the
+same seat. A resume that changes seat kind, such as Herdr to Rex, also needs the
+re-attach described in [Seating a captain](#seating-a-captain).
 An operator must resolve a missing credential, abandoned launch, or crashed
 verifier; this version has no takeover or lease expiry command.
 
