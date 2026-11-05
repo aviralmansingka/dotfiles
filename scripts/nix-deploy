@@ -312,7 +312,11 @@ if [ "$IS_LOCAL" = 1 ]; then
       exit 5
     fi
     echo "==> switching with the freshly built darwin-rebuild"
-    if ! sudo "$stage/result/sw/bin/darwin-rebuild" switch --flake "$stage#$ATTR"; then
+    # sudo drops the environment, and a first switch may have no /etc/nix/nix.conf
+    # yet (nix-darwin owns that file), so enable flakes explicitly for the
+    # evaluation this command performs.
+    if ! sudo env NIX_CONFIG="experimental-features = nix-command flakes" \
+      "$stage/result/sw/bin/darwin-rebuild" switch --flake "$stage#$ATTR"; then
       echo "nix-deploy: switch failed; the previous generation is still active" >&2
       exit 5
     fi

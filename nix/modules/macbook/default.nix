@@ -21,6 +21,9 @@
     "nix-command"
     "flakes"
   ];
+  # The installer's /etc/nix/nix.conf carried this; nix-darwin has to keep
+  # declaring it or the daemon loses its build users on the next switch.
+  nix.settings.build-users-group = "nixbld";
 
   # Keep the store honest: the flake pins nixpkgs, so nothing else may write to
   # the user profile or to a second package manager's tree.
