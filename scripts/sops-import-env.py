@@ -23,8 +23,20 @@ when the plaintext already lives on this machine:
 finds: `SOPS_AGE_KEY_FILE`, else `~/.config/sops/age/keys.txt`. No key is passed
 through argv.
 
-Exit codes: 0 imported, 1 a failure (source missing, sops failed, verify
-mismatch), 2 usage.
+The sops binary is resolved in this order, and the resolution (path and version)
+is printed before any source file is read:
+
+  1. `$SOPS_BIN`            explicit override, a path or a name to look up
+  2. `~/.nix-profile/bin/sops`
+  3. `/etc/profiles/per-user/$USER/bin/sops`
+  4. `/run/current-system/sw/bin/sops`
+  5. `PATH`
+  6. `nix build --no-link --print-out-paths nixpkgs#sops`, last resort: a fresh
+     host has no sops until a switch installs the profile that carries it, and
+     this import runs *before* that switch.
+
+Exit codes: 0 imported, 1 a failure (source missing, no sops, sops failed,
+verify mismatch), 2 usage.
 """
 
 from __future__ import annotations
@@ -39,6 +51,18 @@ import sys
 from pathlib import Path
 
 DEFAULT_NAMES = ["pi-stt-worker", "pi-telegram", "pi-whatsapp"]
+
+# Where a Nix-managed host (or the Mac) puts a package on PATH. Checked before
+# PATH because `just` and other tools are frequently on PATH while the tool a
+# recipe needs is only in the profile a switch would install later.
+PROFILE_PATHS = [
+    "~/.nix-profile/bin/sops",
+    "/etc/profiles/per-user/$USER/bin/sops",
+    "/run/current-system/sw/bin/sops",
+]
+
+# Last resort, see the module docstring.
+NIX_SOPS_ATTR = "nixpkgs#sops"
 
 
 def fail(message: str) -> None:
@@ -86,11 +110,79 @@ def key_name(name: str) -> str:
     return name if name.endswith(".env") else f"{name}.env"
 
 
-def sops_bin() -> str:
+def candidates():
+    """Yield (how, path) in the documented order; the caller tests each path."""
+    override = os.environ.get("SOPS_BIN")
+    if override:
+        # A path, or a bare name to look up: both are reasonable in an override.
+        yield "SOPS_BIN", Path(shutil.which(override) or override).expanduser()
+    for raw in PROFILE_PATHS:
+        yield "nix profile", Path(os.path.expandvars(raw)).expanduser()
     found = shutil.which("sops")
-    if not found:
-        fail("no sops on PATH (on the homelab it is in ~/.nix-profile/bin)")
-    return found
+    if found:
+        yield "PATH", Path(found)
+
+
+def nix_sops() -> tuple[str, Path] | None:
+    """Ask nix for the sops store path; None when nix is absent or says no."""
+    nix = shutil.which("nix")
+    if not nix:
+        return None
+    result = subprocess.run(
+        [
+            nix,
+            "--extra-experimental-features",
+            "nix-command flakes",
+            "build",
+            "--no-link",
+            "--print-out-paths",
+            NIX_SOPS_ATTR,
+        ],
+        capture_output=True,
+        timeout=600,
+    )
+    if result.returncode != 0:
+        return None
+    out = result.stdout.decode().strip().splitlines()
+    if not out:
+        return None
+    return f"nix build {NIX_SOPS_ATTR}", Path(out[0]) / "bin" / "sops"
+
+
+def sops_version(sops: str) -> str:
+    result = subprocess.run([sops, "--version"], capture_output=True, timeout=60)
+    # sops 3.13 prints a deprecation note on stderr and the version on stdout.
+    lines = result.stdout.decode(errors="replace").strip().splitlines()
+    return lines[0] if lines else "version unknown"
+
+
+def sops_bin() -> str:
+    """Resolve sops, print where it came from, and say what to do if it is absent."""
+    override = os.environ.get("SOPS_BIN")
+    if override and not Path(shutil.which(override) or override).expanduser().is_file():
+        # A typo in the override should say so instead of silently falling back.
+        fail(f"SOPS_BIN={override} is not a file; unset it or point it at the sops binary")
+    looked = []
+    for how, path in candidates():
+        looked.append(f"{path} ({how})")
+        if path.is_file() and os.access(path, os.X_OK):
+            sops = str(path)
+            print(f"sops: {sops} ({sops_version(sops)}) via {how}")
+            return sops
+    if shutil.which("nix"):
+        found = nix_sops()
+        if found and found[1].is_file():
+            how, path = found
+            looked.append(f"{path} ({how})")
+            sops = str(path)
+            print(f"sops: {sops} ({sops_version(sops)}) via {how}")
+            return sops
+        looked.append(f"{NIX_SOPS_ATTR} via nix build (no result)")
+    fail(
+        "no sops binary. Run the recipe through nix: "
+        "`nix shell nixpkgs#sops -c just secrets-import …`, or set "
+        "SOPS_BIN=/path/to/sops.\n  looked at: " + ", ".join(looked)
+    )
 
 
 def sops_set(sops: str, sops_file: Path, key: str, value: str) -> None:
@@ -128,6 +220,10 @@ def digest(data: bytes) -> str:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    # Resolve (and report) the toolchain before reading anything: this is the
+    # first thing that can be wrong on a host the profile has not reached yet.
+    sops = sops_bin()
+
     sops_file = Path(args.sops_file)
     if not sops_file.exists():
         fail(f"no sops file at {sops_file}")
@@ -137,7 +233,6 @@ def main(argv: list[str]) -> int:
         name, _, path = spec.partition("=")
         pairs.append(resolve(name, path or None))
 
-    sops = None if args.dry_run else sops_bin()
     planned = 0
     for name, source in pairs:
         key = key_name(name)

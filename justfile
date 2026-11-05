@@ -78,6 +78,11 @@ secrets-check:
 # pulled from the homelab gets in. No value is printed: the script reports the
 # name, byte count and sha256 and verifies the decrypt round trip.
 #
+# sops comes from $SOPS_BIN, then ~/.nix-profile/bin, /etc/profiles/per-user/$USER/bin,
+# /run/current-system/sw/bin, PATH, and last `nix build nixpkgs#sops` — so this
+# works before a switch has installed the profile that carries sops. The script
+# prints which binary it picked and its version before it reads a file.
+#
 #   just secrets-import pi-stt-worker=/tmp/pi-stt-worker.env
 secrets-import *sources:
     python3 scripts/sops-import-env.py {{sources}}
