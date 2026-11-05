@@ -38,7 +38,10 @@ is printed before any source file is read:
   5. `PATH`
   6. `nix build --no-link --print-out-paths nixpkgs#sops`, last resort: a fresh
      host has no sops until a switch installs the profile that carries it, and
-     this import runs *before* that switch.
+     this import runs *before* that switch. That step prefers
+     `~/.nix-profile/bin/nix` and `/nix/var/nix/profiles/default/bin/nix` over
+     whatever `nix` the login shell resolves, because a system package's store is
+     not writable by this user.
 
 Exit codes: 0 imported, 1 a failure (source missing, no sops, sops failed,
 verify mismatch), 2 usage.
@@ -68,6 +71,15 @@ PROFILE_PATHS = [
 
 # Last resort, see the module docstring.
 NIX_SOPS_ATTR = "nixpkgs#sops"
+
+# The same two directories `scripts/nix-deploy` puts ahead of PATH before it runs
+# nix on a target: a login shell can resolve an old system package whose store
+# that user cannot write (`creating directory '/nix/store/tmp-…': Permission
+# denied`), while the profile's nix builds fine. Prefer the profile.
+NIX_PATHS = [
+    "~/.nix-profile/bin/nix",
+    "/nix/var/nix/profiles/default/bin/nix",
+]
 
 
 def fail(message: str) -> None:
@@ -128,9 +140,18 @@ def candidates():
         yield "PATH", Path(found)
 
 
+def nix_bin() -> str | None:
+    """The nix that can write the store, preferring the profile over PATH."""
+    for raw in NIX_PATHS:
+        path = Path(os.path.expandvars(raw)).expanduser()
+        if path.is_file() and os.access(path, os.X_OK):
+            return str(path)
+    return shutil.which("nix")
+
+
 def nix_sops() -> tuple[str, Path] | None:
     """Ask nix for the sops store path; None when nix is absent or says no."""
-    nix = shutil.which("nix")
+    nix = nix_bin()
     if not nix:
         return None
     result = subprocess.run(
@@ -174,7 +195,7 @@ def sops_bin() -> str:
             sops = str(path)
             print(f"sops: {sops} ({sops_version(sops)}) via {how}", flush=True)
             return sops
-    if shutil.which("nix"):
+    if nix_bin():
         found = nix_sops()
         if found and found[1].is_file():
             how, path = found
