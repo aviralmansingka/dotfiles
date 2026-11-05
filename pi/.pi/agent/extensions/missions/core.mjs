@@ -787,12 +787,40 @@ export class MissionBridge {
   /** The Herdr seat this session occupies. The desk writes the same two values
    *  into its request, so a request addressed to this workspace belongs here. */
   seat() { return { workspace: this.env.HERDR_WORKSPACE_ID || "", label: this.env.HERDR_PANE_ID || "" }; }
-  /** The cwd of this process's own Rex block, via `rex block call … process`. */
+  /** The working directory of one live process: `lsof` on macOS, `/proc` on
+   *  Linux. This reads the real seat; no environment value can stand in. */
+  async procCwd(pid) {
+    try {
+      return process.platform === "darwin"
+        ? String(await this.run("lsof", ["-a", "-p", String(pid), "-d", "cwd", "-Fn"], { env: this.env }))
+          .split("\n").find(line => line.startsWith("n/"))?.slice(1) || null
+        : String(await this.run("readlink", [`/proc/${pid}/cwd`], { env: this.env })).trim() || null;
+    } catch { return null; }
+  }
+  /** The cwd of this process's own Rex block, via `rex block call … process`.
+   *  `mission deploy` starts a captain through the login shell, and Rex reports
+   *  only two process levels, so both are the wrapper and carry no cwd: walk
+   *  down it to the process that owns the seat and read that one's cwd. */
   async seatCwd() {
     try {
       const out = await this.run("rex", ["block", "call", "-b", this.env.REX_BLOCK, "process"], { env: this.env });
       const info = JSON.parse(out);
-      return info?.foreground?.cwd || info?.child?.cwd || null;
+      const known = info?.foreground?.cwd || info?.child?.cwd;
+      // Most blocks answer directly, and that first call is the whole probe.
+      if (known) return known;
+      let pid = info?.foreground?.pid ?? info?.child?.pid;
+      // Shallowest first: the seat is the first process under the wrapper, so a
+      // deeper helper that happens to run elsewhere cannot hide its cwd.
+      for (let depth = 0; pid && depth < 3; depth++) {
+        let child = null;
+        try { child = String(await this.run("pgrep", ["-P", String(pid)], { env: this.env })).trim().split("\n")[0] || null; }
+        catch { child = null; }
+        if (!child || !/^\d+$/.test(child)) return null;
+        const cwd = await this.procCwd(child);
+        if (cwd) return cwd;
+        pid = child;
+      }
+      return null;
     } catch { return null; }
   }
   /** Whether an addressed Herdr workspace still exists. A request whose seat is

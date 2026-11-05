@@ -917,6 +917,80 @@ test("a Rex block outside the mission checkout is refused", async t => {
   assert.equal(bridge.surfaceSession,null);
 });
 
+test("a Rex seat behind the login wrapper reads the cwd of the process it starts", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-login-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const calls=[];
+  // `mission deploy` starts a captain through `/usr/bin/login`, and Rex reports
+  // only two levels: both are the wrapper, so neither carries a cwd. The seat is
+  // the process the wrapper starts, and only a process probe can name it.
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary,args)=>{
+    calls.push([binary,...args]);
+    if(binary==="rex") return JSON.stringify({foreground:{pid:34975,user:"root",name:"login",path:"/usr/bin/login"},child:{pid:34975,user:"root",name:"login",path:"/usr/bin/login"},home:"/Users/aviral"});
+    if(binary==="pgrep") return "34977\n";
+    if(binary==="lsof") return `p34977\nfcwd\nn${root}\n`;
+    if(binary==="readlink") return root+"\n";
+    throw Error(`unexpected ${binary} in a Rex seat`);
+  }});
+  assert.equal(await bridge.seatCwd(),root);
+  assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"rex-pi")),{workspace:"rex-session",pane:"block-1"});
+  assert.equal(bridge.surfaceSession,"rex-pi");
+  // The probe asks Rex for the block, then walks one level down to the process
+  // the login wrapper started: nothing else is needed to bind the seat.
+  assert.deepEqual([...new Set(calls.map(c=>JSON.stringify(c)))].sort(), [
+    JSON.stringify(["pgrep","-P","34975"]),
+    JSON.stringify(["rex","block","call","-b","block-1","process"]),
+    JSON.stringify(process.platform==="darwin"
+      ? ["lsof","-a","-p","34977","-d","cwd","-Fn"]
+      : ["readlink","/proc/34977/cwd"]),
+  ].sort());
+});
+
+test("a login wrapper with no readable child cwd leaves the Rex seat unbound", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-login-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary)=>{
+    if(binary==="rex") return JSON.stringify({foreground:{pid:34975,name:"login"},child:{pid:34975,name:"login"}});
+    if(binary==="pgrep") return "34977\n";
+    // A process that names no cwd (or cannot be read) answers nothing at all.
+    if(binary==="lsof"||binary==="readlink") return "";
+    throw Error(`unexpected ${binary} in a Rex seat`);
+  }});
+  assert.equal(await bridge.seatCwd(),null);
+  await assert.rejects(bridge.assertSurface(context(root,join(root,"session.jsonl"))),
+    /Missions need a Herdr pane or a Rex block, running in the mission worktree/);
+  assert.equal(bridge.surfaceSession,null);
+});
+
+test("a block that reports its cwd costs one Rex call and no process probe", async t => {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-rex-plain-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const calls=[];
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary)=>{
+    calls.push(binary);
+    if(binary==="rex") return JSON.stringify({foreground:{pid:75520,name:"node",cwd:root}});
+    throw Error(`a reported cwd needs no ${binary}`);
+  }});
+  assert.equal(await bridge.seatCwd(),root);
+  assert.deepEqual(calls,["rex"]);
+});
+
+test("a seat cwd reads lsof on macOS and /proc on Linux, never both", async () => {
+  const root="/repo/mission";
+  const darwin=process.platform==="darwin",seen=[];
+  const bridge=new MissionBridge({env:{REX_SESSION:"rex-session",REX_BLOCK:"block-1"},run:async(binary,args)=>{
+    seen.push(binary);
+    if(binary==="rex") return JSON.stringify({foreground:{pid:10,name:"login"}});
+    if(binary==="pgrep") return "11\n";
+    if(binary==="lsof") { assert.deepEqual(args,["-a","-p","11","-d","cwd","-Fn"]); return `p11\nfcwd\nn${root}\n`; }
+    if(binary==="readlink") { assert.deepEqual(args,["/proc/11/cwd"]); return root+"\n"; }
+    throw Error(`unexpected ${binary} in a Rex seat`);
+  }});
+  assert.equal(await bridge.seatCwd(),root);
+  assert.equal(seen.includes("lsof"),darwin);
+  assert.equal(seen.includes("readlink"),!darwin);
+});
+
 test("a Herdr pane still binds by pane cwd and never asks Rex", async t => {
   const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-herdr-")));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
