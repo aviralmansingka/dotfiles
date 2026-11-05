@@ -1,8 +1,55 @@
 package main
 
 import (
+	"context"
+	"os/exec"
+	"strings"
+	"time"
+
 	"mission.local/prototype/internal/domain/mission"
 )
+
+// herdrVersionArgs is the command that prints a Herdr version line. It is a
+// variable so a test answers instead of reaching an installed binary.
+var herdrVersionArgs = []string{"--version"}
+
+// herdrVersionRead reads the Herdr version. A test replaces it, so no test needs
+// Herdr on the host.
+var herdrVersionRead = herdrVersion
+
+// herdrVersionTimeout bounds the version read: the read is best effort, and a
+// wedged binary must never hold a launch.
+const herdrVersionTimeout = 2 * time.Second
+
+// herdrVersion names the Herdr a launch runs on, as one version token, or
+// unknown. Every failure — no herdr on this host, a refused command, the
+// deadline, unreadable output — reads unknown and is swallowed: a launch must
+// start without Herdr.
+func herdrVersion() string {
+	ctx, cancel := context.WithTimeout(context.Background(), herdrVersionTimeout)
+	defer cancel()
+	out, e := exec.CommandContext(ctx, "herdr", herdrVersionArgs...).CombinedOutput()
+	if e != nil {
+		return versionUnknown
+	}
+	return firstLine(string(out))
+}
+
+// firstLine keeps the first non-blank line of herdr's answer as the version, so
+// what a record quotes stays one line whatever the binary printed. The program
+// name is dropped, because the summary already says "on herdr".
+func firstLine(out string) string {
+	for _, l := range strings.Split(out, "\n") {
+		if l = strings.TrimSpace(l); l != "" {
+			l = strings.TrimSpace(strings.TrimPrefix(l, "herdr"))
+			if l == "" {
+				return versionUnknown
+			}
+			return l
+		}
+	}
+	return versionUnknown
+}
 
 // Deployment is what one deploy did, or found already done. The labels come from
 // the plan, so a reader sees the same names the captain brief carries.

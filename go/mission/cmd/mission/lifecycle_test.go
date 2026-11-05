@@ -22,7 +22,15 @@ func TestOwnershipAndIdempotentHooks(t *testing.T) {
 	must(t, e)
 	r, e := s.load(h)
 	must(t, e)
-	if len(r.State.Attempts[0].Events) != 1 || r.State.Active == "" {
+	// The attempt carries its own version event; the replayed hook must not add
+	// its event twice.
+	replayed := 0
+	for _, got := range r.State.Attempts[0].Events {
+		if got.ID == "stable-hook" {
+			replayed++
+		}
+	}
+	if replayed != 1 || r.State.Active == "" {
 		t.Fatal("agent-end completed attempt or duplicate event was appended")
 	}
 	ev.Summary = "different payload"
