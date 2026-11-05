@@ -253,6 +253,21 @@ brief arrives as pi's first message. The exec line is the only place a captain
 learns its own seat, so a captain started by deploy passes the subagent gate
 without any adapter help.
 
+The write waits for the shell. Deploy used to write the moment the window
+existed, while `zsh -l` was still sourcing profile files: the tail of the line
+went missing, the shell sat inside an unterminated quote, and the mission stayed
+`ready` with no attempt. So the seat polls the block's own `pwd` method until a
+live process answers it, writes the exec line without a trailing newline, and
+then sends the newline as its own write. A line that arrives in two writes
+cannot be left half-quoted by a dropped tail. After the newline, deploy polls
+the block's `process` until the foreground is no longer the login shell (pi, or
+the node running pi); if it still reports the shell, deploy re-sends the newline
+once and polls again, then fails with the block, the window, and the foreground
+it saw. It never opens a second window, because the label would name two. Both
+waits are bounded by a short interval and a few seconds, so a shell that never
+listens and a captain that never starts are errors a human reads, not races
+deploy sleeps through.
+
 ### Seating a captain
 
 The captain's block opens the human's login shell, `$SHELL -l` (`/bin/sh -l`
