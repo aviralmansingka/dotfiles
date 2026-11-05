@@ -33,7 +33,7 @@ func isJudge(actor string) bool { return strings.HasPrefix(strings.ToLower(actor
 // refused rather than recorded anonymously. The judge session is deliberately
 // not compared with the attempt's own session: the judge is a second session
 // watching the attempt, not the session it runs in.
-func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths []string, judges ...judgeRef) (mission.Record, error) {
+func (s *App) progress(h, id, token, actor string, p mission.Progress, paths []string, judges ...judgeRef) (mission.Record, error) {
 	actor = strings.TrimSpace(actor)
 	if p.ID == "" || p.Summary == "" || len(p.Summary)+len(p.Next)+len(p.Blocker) > 8000 || len(paths) > 16 {
 		return mission.Record{}, mission.Problem("usage", "progress needs a stable event-id, summary, and at most 16 evidence paths (8000 characters total)")
@@ -75,7 +75,7 @@ func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths [
 		Judge *judgeRef `json:",omitempty"`
 	}{p, paths, actor, judge})
 	finger := mission.Digest(request)
-	return s.mutate(h, func(r *mission.Record) error {
+	return s.update(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)
 		if e != nil {
 			return e
@@ -108,7 +108,7 @@ func (s *Store) progress(h, id, token, actor string, p mission.Progress, paths [
 			if !strings.HasPrefix(path, prefix) || filepath.ToSlash(filepath.Clean(path)) != path {
 				return mission.Problem("invalid_evidence", "evidence must be relative to this attempt: %s", prefix)
 			}
-			full, e := s.path(r.Mission.Repo, r.Mission.Slug, path)
+			full, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, path)
 			if e != nil {
 				return e
 			}
@@ -165,7 +165,7 @@ func appendReport(a *mission.Attempt, p mission.Progress, actor string) {
 
 // Only the adapter calls settle, after an explicit finish/fail report AND an
 // observed quiescent turn boundary. It does not claim that the process exited.
-func (s *Store) settle(h, id, token, session string) (mission.Record, error) {
+func (s *App) settle(h, id, token, session string) (mission.Record, error) {
 	r, e := s.load(h)
 	if e != nil {
 		return r, e

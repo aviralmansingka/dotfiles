@@ -10,7 +10,7 @@ import (
 )
 
 // judgeEventsOf returns every judge event the attempt carries.
-func judgeEventsOf(t *testing.T, s *Store, handle, attempt string) []mission.Event {
+func judgeEventsOf(t *testing.T, s *App, handle, attempt string) []mission.Event {
 	t.Helper()
 	r, e := s.load(handle)
 	must(t, e)
@@ -27,7 +27,7 @@ func judgeEventsOf(t *testing.T, s *Store, handle, attempt string) []mission.Eve
 
 // judgeProgress runs one CLI progress call with a judge actor, so the test
 // proves the flags reach the store and not only the store method.
-func judgeProgress(t *testing.T, s *Store, argv ...string) (any, error) {
+func judgeProgress(t *testing.T, s *App, argv ...string) (any, error) {
 	t.Helper()
 	a, e := platform.ParseArgs(argv)
 	must(t, e)

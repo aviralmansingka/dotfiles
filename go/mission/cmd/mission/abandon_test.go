@@ -27,7 +27,7 @@ func liveChild(t *testing.T) (int, func()) {
 
 // recordPID writes the tracked process onto the attempt, the way the run
 // wrapper does after it starts one.
-func recordPID(t *testing.T, s *Store, h, id string, pid int) {
+func recordPID(t *testing.T, s *App, h, id string, pid int) {
 	t.Helper()
 	_, e := s.mutate(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, id)

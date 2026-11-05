@@ -10,7 +10,7 @@ import (
 
 // completeFixture drives one mission through both steps and its checkpoint, so
 // its ledger ends in `done` exactly as a shipped mission does.
-func completeFixture(t *testing.T) (*Store, string) {
+func completeFixture(t *testing.T) (*App, string) {
 	t.Helper()
 	s, h := fixture(t)
 	c := claimTest(t, s, h)

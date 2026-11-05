@@ -12,7 +12,7 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
-func (s *Store) ready(repo string) ([]mission.Work, error) {
+func (s *App) ready(repo string) ([]mission.Work, error) {
 	recs, e := s.list()
 	if e != nil {
 		return nil, e
@@ -31,7 +31,7 @@ func (s *Store) ready(repo string) ([]mission.Work, error) {
 		if e != nil {
 			continue
 		}
-		rr, e := s.repo(r.Mission.Repo)
+		rr, e := s.Repo.Repo(r.Mission.Repo)
 		if e != nil {
 			return nil, e
 		}
@@ -39,7 +39,7 @@ func (s *Store) ready(repo string) ([]mission.Work, error) {
 	}
 	return out, nil
 }
-func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*mission.PiAttachment) (mission.Claim, error) {
+func (s *App) claim(h, agent, session, cwd string, managed bool, pi ...*mission.PiAttachment) (mission.Claim, error) {
 	var claim mission.Claim
 	if agent == "" {
 		return claim, mission.Problem("agent_required", "--agent identifies the claiming agent")
@@ -50,7 +50,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 		attachment = pi[0]
 		token = attachment.Token
 	}
-	r, e := s.mutate(h, func(r *mission.Record) error {
+	r, e := s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}
@@ -68,7 +68,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 				return mission.Problem("evidence_changed", "previous step's checked input or evidence changed; reset and rerun that step")
 			}
 		}
-		d, _ := s.dir(h)
+		d, _ := s.Repo.Dir(h)
 		b, e := os.ReadFile(filepath.Join(d, "mission.md"))
 		if e != nil {
 			return e
@@ -76,7 +76,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 		if mission.Digest(b) != r.State.SpecHash {
 			return mission.Problem("brief_changed", "mission brief changed; explicit reconciliation required")
 		}
-		repo, e := s.repo(r.Mission.Repo)
+		repo, e := s.Repo.Repo(r.Mission.Repo)
 		if e != nil {
 			return e
 		}
@@ -170,7 +170,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 		}
 		seq := len(r.State.Attempts) + 1
 		artifact := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", seq), st.Output))
-		if _, e = s.path(r.Mission.Repo, r.Mission.Slug, artifact); e != nil {
+		if _, e = s.Repo.Path(r.Mission.Repo, r.Mission.Slug, artifact); e != nil {
 			return e
 		}
 		a := mission.Attempt{ID: mission.UID("attempt-"), Sequence: seq, Step: st.ID, Agent: agent, Status: "running", Started: mission.Now(), Updated: mission.Now(), Machine: platform.Machine(), SessionID: session, Cwd: cwd, Branch: branch, Managed: managed, TokenHash: mission.Digest([]byte(token)), SpecHash: r.State.SpecHash, Brief: r.Mission.Body, Artifact: artifact, Events: []mission.Event{}}
@@ -205,7 +205,7 @@ func (s *Store) claim(h, agent, session, cwd string, managed bool, pi ...*missio
 	_ = r
 	return claim, e
 }
-func (s *Store) pickup(repo, agent, session, cwd string) (mission.Claim, error) {
+func (s *App) pickup(repo, agent, session, cwd string) (mission.Claim, error) {
 	if agent == "" {
 		return mission.Claim{}, mission.Problem("agent_required", "pickup requires --agent")
 	}

@@ -15,7 +15,7 @@ import (
 
 // The parent retains ownership until Wait proves that the tracked process exited.
 // Children must stay in the foreground: a detached writer cannot be tracked by this prototype.
-func runAgent(s *Store, handle, agent, cwd string, argv []string) (record mission.Record, err error) {
+func runAgent(s *App, handle, agent, cwd string, argv []string) (record mission.Record, err error) {
 	if len(argv) == 0 {
 		return mission.Record{}, mission.Problem("usage", "run requires -- COMMAND ARGS...")
 	}
@@ -29,7 +29,7 @@ func runAgent(s *Store, handle, agent, cwd string, argv []string) (record missio
 			_, _ = s.finish(handle, c.Attempt.ID, c.Token, true, "Launch setup failed: "+err.Error(), true, 127)
 		}
 	}()
-	output := artifactPath(s, c)
+	output := s.Repo.Artifacts(c)
 	if e = os.MkdirAll(filepath.Dir(output), 0700); e != nil {
 		return mission.Record{}, e
 	}
@@ -59,7 +59,7 @@ func runAgent(s *Store, handle, agent, cwd string, argv []string) (record missio
 		return r, mission.Problem("process_start_failed", "%v", e)
 	}
 	started = true
-	_, recordErr := s.mutate(handle, func(r *mission.Record) error {
+	_, recordErr := s.update(handle, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, c.Attempt.ID)
 		if e != nil {
 			return e
@@ -98,7 +98,7 @@ func runAgent(s *Store, handle, agent, cwd string, argv []string) (record missio
 		}
 	}
 	// Commit exit evidence before checking the artifact. A missing artifact must not erase process facts.
-	_, e = s.mutate(handle, func(r *mission.Record) error {
+	_, e = s.update(handle, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, c.Attempt.ID)
 		if e != nil {
 			return e

@@ -118,7 +118,7 @@ func attemptStamps(a mission.Attempt) []string {
 // is blocked. A step that already passed keeps its attempt, because a passed
 // step is never demoted; `mission abandon` ends such an attempt when a caller
 // needs that.
-func (s *Store) reconcileAttempts(r *mission.Record) int {
+func (s *App) reconcileAttempts(r *mission.Record) int {
 	ended := 0
 	for i := range r.State.Attempts {
 		a := &r.State.Attempts[i]

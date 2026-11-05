@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
 )
@@ -145,14 +146,14 @@ func execute(argv []string) int {
 		}
 	}
 	vault := platform.Fallback(a.Get("vault"), platform.Fallback(os.Getenv("MISSION_VAULT"), "~/vault"))
-	writer = writeVerb(cmd, a)
 	if cmd == "demo" && !a.Has("vault") {
 		return emit(nil, mission.Problem("usage", "demo requires an explicit --vault pointing to an isolated directory"))
 	}
-	s, e := openStore(vault)
+	store, e := vaultfs.Open(vault)
 	if e != nil {
 		return emit(nil, e)
 	}
+	s := newApp(store, writeVerb(cmd, a))
 	// ui and render own their stdout, so they return an exit code directly.
 	switch cmd {
 	case "ui":
@@ -164,8 +165,19 @@ func execute(argv []string) int {
 	return emit(v, e)
 }
 
+// writeVerb names one command and, for a group command, its subcommand. It is
+// the writer the revision journal records for every save that command makes.
+func writeVerb(cmd string, a platform.Args) string {
+	for _, group := range []string{"step", "checkpoint", "review", "repo"} {
+		if cmd == group && a.At(1) != "" {
+			return "mission " + cmd + " " + a.At(1)
+		}
+	}
+	return "mission " + cmd
+}
+
 // dispatch maps one CLI command to its handler. Groups live in cmd_*.go.
-func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
+func dispatch(cmd string, a platform.Args, s *App) (any, error) {
 	switch cmd {
 	case "repo":
 		return cmdRepo(a, s)

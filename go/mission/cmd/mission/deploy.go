@@ -92,7 +92,7 @@ type Deployment struct {
 // Seating has one owner: this command. The mux is the only thing the adapter
 // changes, so rex and herdr read the same plan and make the same decisions about
 // it; nothing below names a mux command.
-func (s *Store) deploy(h, mux string) (Deployment, error) {
+func (s *App) deploy(h, mux string) (Deployment, error) {
 	ad, e := seatFor(mux)
 	if e != nil {
 		return Deployment{}, e
@@ -175,7 +175,7 @@ func (s *Store) deploy(h, mux string) (Deployment, error) {
 // the record alone. A mission that already
 // recorded a session has no intent left to name, so it answers "" and the brief
 // falls back to the plan's derived ack.
-func (s *Store) reserveLaunch(h string) (string, error) {
+func (s *App) reserveLaunch(h string) (string, error) {
 	r, e := s.load(h)
 	if e != nil {
 		return "", e
@@ -191,7 +191,7 @@ func (s *Store) reserveLaunch(h string) (string, error) {
 		return b.LaunchID, nil
 	}
 	var id string
-	_, e = s.mutate(h, func(r *mission.Record) error {
+	_, e = s.update(h, func(r *mission.Record) error {
 		if e := requireOpen(*r); e != nil {
 			return e
 		}

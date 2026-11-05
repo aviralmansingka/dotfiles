@@ -13,15 +13,15 @@ import (
 // then appends both the structured progress and the trooper report, so the
 // sitrep can name who finished what. --session-id and --session-file name the
 // judge that reported, and a judge actor must supply the session id.
-func cmdProgress(a platform.Args, s *Store) (any, error) {
+func cmdProgress(a platform.Args, s *App) (any, error) {
 	return s.progress(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), a.Get("actor"), mission.Progress{ID: a.Get("event-id"), Status: a.Get("status"), Summary: a.Get("summary"), Next: a.Get("next"), Blocker: a.Get("blocker")}, a.Flags["evidence"], judgeRef{ID: a.Get("session-id"), File: a.Get("session-file")})
 }
 
-func cmdSettle(a platform.Args, s *Store) (any, error) {
+func cmdSettle(a platform.Args, s *App) (any, error) {
 	return s.settle(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), a.Get("session-id"))
 }
 
-func cmdHook(a platform.Args, s *Store) (any, error) {
+func cmdHook(a platform.Args, s *App) (any, error) {
 	ev := mission.Event{Type: a.At(1), ID: a.Get("event-id"), SessionID: a.Get("session-id"), SessionFile: a.Get("session-file"), Tool: a.Get("tool"), Summary: a.Get("message"), Model: a.Get("model"), Pane: a.Get("pane"), Workspace: a.Get("workspace"), Quiescent: a.Has("quiescent")}
 	if a.Has("stdin") {
 		b, e := io.ReadAll(io.LimitReader(os.Stdin, 65537))
@@ -42,20 +42,20 @@ func cmdHook(a platform.Args, s *Store) (any, error) {
 	return map[string]any{"handle": r.Handle, "revision": r.State.Revision, "attempt": platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), "event_type": ev.Type}, nil
 }
 
-func cmdFinish(cmd string, a platform.Args, s *Store) (any, error) {
+func cmdFinish(cmd string, a platform.Args, s *App) (any, error) {
 	return s.finish(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), platform.Fallback(a.Get("attempt"), os.Getenv("MISSION_ATTEMPT")), platform.Fallback(a.Get("token"), os.Getenv("MISSION_TOKEN")), cmd == "fail", a.Get("note"), false, 0)
 }
 
-func cmdRetry(a platform.Args, s *Store) (any, error) { return s.retry(a.At(1)) }
+func cmdRetry(a platform.Args, s *App) (any, error) { return s.retry(a.At(1)) }
 
-func cmdRepair(a platform.Args, s *Store) (any, error) { return s.repair(a.At(1)) }
+func cmdRepair(a platform.Args, s *App) (any, error) { return s.repair(a.At(1)) }
 
 // cmdAbandon ends an attempt whose process is gone. It reads no token: the
 // commander, not the lost process, is the caller.
-func cmdAbandon(a platform.Args, s *Store) (any, error) {
+func cmdAbandon(a platform.Args, s *App) (any, error) {
 	return s.abandon(platform.Fallback(a.At(1), os.Getenv("MISSION_HANDLE")), a.Get("attempt"), a.Get("note"))
 }
 
-func cmdRun(a platform.Args, s *Store) (any, error) {
+func cmdRun(a platform.Args, s *App) (any, error) {
 	return runAgent(s, a.At(1), a.Get("agent"), a.Get("cwd"), a.Command)
 }

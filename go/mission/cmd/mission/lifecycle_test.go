@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"mission.local/prototype/internal/domain/mission"
+	"mission.local/prototype/internal/platform"
 )
 
 func TestOwnershipAndIdempotentHooks(t *testing.T) {
@@ -89,7 +90,7 @@ func TestRevisionPreservesAttempts(t *testing.T) {
 	if again.Step.ID != "S01" || again.Attempt.ID == c.Attempt.ID || again.Attempt.Artifact == c.Attempt.Artifact {
 		t.Fatal("retry reused evidence or identity")
 	}
-	b, e := os.ReadFile(artifactPath(s, c))
+	b, e := os.ReadFile(s.Artifacts(c))
 	must(t, e)
 	if string(b) != "First evidence" {
 		t.Fatal("old evidence changed")
@@ -213,7 +214,7 @@ func TestBriefEditsAndReservedOutputAreRejected(t *testing.T) {
 	r, e := s.load(h)
 	must(t, e)
 	r.Mission.Steps[0].Output = "session.jsonl"
-	wantCode(t, validateMission(r.Mission), "invalid_output")
+	wantCode(t, mission.Validate(r.Mission), "invalid_output")
 }
 
 func TestWriterRequiresLinkedWorktree(t *testing.T) {
@@ -235,9 +236,9 @@ func TestWriterRequiresLinkedWorktree(t *testing.T) {
 	r, e := s.load(h)
 	must(t, e)
 	r.Mission.Kind = "implementation"
-	b, e := markdown(r.Mission, r.Mission.Body)
+	b, e := platform.Markdown(r.Mission, r.Mission.Body)
 	must(t, e)
-	must(t, atomicWrite(p, b))
+	must(t, platform.AtomicWrite(p, b))
 	_, e = s.mutate(h, func(r *mission.Record) error { r.State.SpecHash = mission.Digest(b); return nil })
 	must(t, e)
 	_, e = s.claim(h, "worker", "", root, false)
