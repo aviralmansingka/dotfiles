@@ -65,6 +65,9 @@ esac
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="${FLEET_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 SSH_CMD="${FLEET_SSH:-ssh}"
+# FLEET_SSH_KEY adds an identity for an ad-hoc destination whose key is not in
+# the ssh config. A normal `Host` block is still the better place for this.
+[ -n "${FLEET_SSH_KEY:-}" ] && SSH_CMD="$SSH_CMD -i $FLEET_SSH_KEY"
 STAGE_ROOT="${FLEET_STAGE_ROOT:-.cache/nix-fleet-deploy}"
 
 # A host can resolve `nix` from an old system package while the user profile
@@ -140,7 +143,32 @@ if [ -z "$TARGETS_JSON" ]; then
   exit 2
 fi
 
+ADHOC=0
+ADHOC_USER=""
+ADHOC_SSH=""
+case "$TARGET" in
+*@*)
+  ADHOC=1
+  ADHOC_USER="${TARGET%%@*}"
+  ADHOC_SSH="${TARGET#*@}"
+  ;;
+esac
+
+if [ "$ADHOC" = 1 ]; then
+  # Any reachable Linux box, no flake edit. The generic profile is `remote-probe`;
+  # the identity (username and home) is staged with the tree.
+  [ "$PROFILE" = "remote" ] || {
+    echo "nix-deploy: an ad-hoc target needs the remote profile, not '$PROFILE'" >&2
+    exit 3
+  }
+  HOST="$ADHOC_SSH"
+  SSH_TARGET="$TARGET"
+  KIND="home-manager"
+  TARGET_ATTR="remote-probe"
+  REMOTE_USER="$ADHOC_USER"
+else
 HOST="$(resolve_target "$TARGET" "$TARGETS_JSON" "$(this_hostname)")"
+fi
 if [ -z "$HOST" ] && [ "$TARGET" = "local" ]; then
   echo "nix-deploy: this host '$(this_hostname)' matches no target; name one explicitly:" >&2
   echo "            $(printf '%s' "$TARGETS_JSON" | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')" >&2
@@ -151,9 +179,12 @@ if [ -z "$HOST" ]; then
   exit 3
 fi
 
-KIND="$(target_field "$TARGETS_JSON" "$HOST" kind)"
-TARGET_ATTR="$(target_field "$TARGETS_JSON" "$HOST" attr)"
-REMOTE_USER="$(target_field "$TARGETS_JSON" "$HOST" managedUser)"
+if [ "$ADHOC" = 0 ]; then
+  SSH_TARGET="$(target_field "$TARGETS_JSON" "$HOST" ssh)"
+  KIND="$(target_field "$TARGETS_JSON" "$HOST" kind)"
+  TARGET_ATTR="$(target_field "$TARGETS_JSON" "$HOST" attr)"
+  REMOTE_USER="$(target_field "$TARGETS_JSON" "$HOST" managedUser)"
+fi
 
 # The profile decides the constructor; the target table decides the host.
 case "$PROFILE" in
@@ -227,7 +258,7 @@ plan() {
     echo "command : $(switch_command "$ROOT" "$ATTR")"
   else
     echo "mode    : remote switch over $SSH_CMD"
-    echo "stage   : $HOST:$STAGE_ROOT/$PROFILE-$ATTR"
+    echo "stage   : $SSH_TARGET:$STAGE_ROOT/$PROFILE-$ATTR"
     echo "copies  : $(deploy_tree | tr '\n' ' ')"
   fi
 }
@@ -298,6 +329,12 @@ if [ "$IS_LOCAL" = 1 ]; then
   exit 0
 fi
 
+if [ "$ADHOC" = 1 ]; then
+  ADHOC_HOME="/home/$ADHOC_USER"
+  [ "$ADHOC_USER" = "root" ] && ADHOC_HOME=/root
+  printf 'identity: %s at %s\n' "$ADHOC_USER" "$ADHOC_HOME"
+fi
+
 echo "==> $PROFILE on $HOST: staging the deploy tree"
 STAGE_DIR="$STAGE_ROOT/$PROFILE-$ATTR"
 # The devbox is ssh'd as root but its switch runs as aviral, so the tree must
@@ -308,9 +345,21 @@ STAGE_BASE='$(eval echo ~)'
 # owned by the target user. The checkout is excluded by construction.
 # shellcheck disable=SC2046 # deploy_tree is a newline-separated list
 if ! tar -C "$ROOT" -cf - $(deploy_tree) |
-  $SSH_CMD "$HOST" "mkdir -p \"$STAGE_BASE/$STAGE_DIR\" && tar -C \"$STAGE_BASE/$STAGE_DIR\" -xf -"; then
+  $SSH_CMD "$SSH_TARGET" "mkdir -p \"$STAGE_BASE/$STAGE_DIR\" && tar -C \"$STAGE_BASE/$STAGE_DIR\" -xf -"; then
   echo "nix-deploy: staging copy failed" >&2
   exit 4
+fi
+
+if [ "$ADHOC" = 1 ]; then
+  # The staged tree carries the identity; the flake imports it when present.
+  printf '  mkdir -p \"%s/%s/nix/adhoc\"\n' "$STAGE_BASE" "$STAGE_DIR" >/dev/null
+  $SSH_CMD "$SSH_TARGET" "mkdir -p \"$STAGE_BASE/$STAGE_DIR/nix/adhoc\" && cat > \"$STAGE_BASE/$STAGE_DIR/nix/adhoc/identity.nix\"" <<IDENTITY
+{ lib, ... }:
+{
+  home.username = lib.mkForce "$ADHOC_USER";
+  home.homeDirectory = lib.mkForce "$ADHOC_HOME";
+}
+IDENTITY
 fi
 
 echo "==> switching on $HOST"
@@ -319,7 +368,7 @@ echo "==> switching on $HOST"
 # so with `managedUser`; the tree lands in that user's cache, and the switch
 # runs in that user's login shell, where the multi-user Nix install has already
 # put /nix/var/nix/profiles/default/bin on PATH via /etc/profile.d/nix.sh.
-if [ -n "$REMOTE_USER" ]; then
+if [ -n "$REMOTE_USER" ] && [ "$ADHOC" = 0 ]; then
   REMOTE_ROOT="/home/$REMOTE_USER/$STAGE_DIR"
   REMOTE_CMD="chown -R $REMOTE_USER:$REMOTE_USER \"$REMOTE_ROOT\" && su - $REMOTE_USER -s /bin/bash -c 'cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" NIX_CONFIG=\"experimental-features = nix-command flakes\" nix run \"$REMOTE_ROOT#home-manager\" -- switch --flake \"$REMOTE_ROOT#$ATTR\"'"
 else
@@ -331,7 +380,7 @@ else
   fi
 fi
 
-if ! $SSH_CMD "$HOST" "$REMOTE_CMD"; then
+if ! $SSH_CMD "$SSH_TARGET" "$REMOTE_CMD"; then
   echo "nix-deploy: remote switch failed; $HOST keeps its previous generation" >&2
   exit 5
 fi

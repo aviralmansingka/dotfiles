@@ -6,6 +6,7 @@
   home-manager,
   nix-darwin,
   rataflowSrc,
+  lib,
 }:
 
 let
@@ -54,7 +55,11 @@ rec {
         (modules + "/remote")
         # Only what this host proves different, including username and home.
         (modules + "/remote/${host}.nix")
-      ];
+      ]
+      # A deploy to an ad-hoc ssh host stages its own identity module (the login
+      # user is only known at deploy time), so pick it up when it is there. It
+      # overrides the per-host defaults above.
+      ++ lib.optional (builtins.pathExists ../adhoc/identity.nix) ../adhoc/identity.nix;
     };
 
   mkMacbook = nix-darwin.lib.darwinSystem {

@@ -90,6 +90,38 @@ WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z][a-z]*|[a-z]+|\d+")
 # variant. Mirrors nix-darwin's own defaults-write module.
 # nix-darwin passes a CustomSystemPreferences attribute name straight to
 # `defaults write` in a root activation, so the name must be the full plist path
+# The domains a profile should declare. Capturing every domain writes ~320 KB of
+# Nix, which nix-darwin inlines into the activation script; the builder's
+# environment then passes macOS ARG_MAX (1 MB) and every switch dies with
+# "executing '.../bash': Undefined error: 0". `--all` still captures everything
+# for documentation.
+CURATED_DOMAINS = (
+    "NSGlobalDomain",
+    ".GlobalPreferences",
+    "com.apple.dock",
+    "com.apple.finder",
+    "com.apple.screencapture",
+    "com.apple.screensaver",
+    "com.apple.menuextra.clock",
+    "com.apple.menuextra.battery",
+    "com.apple.trackpad",
+    "com.apple.driver.AppleBluetoothMultitouch.trackpad",
+    "com.apple.driver.AppleBluetoothMultitouch.mouse",
+    "com.apple.AppleMultitouchTrackpad",
+    "com.apple.AppleMultitouchMouse",
+    "com.apple.symbolichotkeys",
+    "com.apple.HIToolbox",
+    "com.apple.universalaccess",
+    "com.apple.desktopservices",
+    "com.apple.WindowManager",
+    "com.apple.spaces",
+    "com.apple.ActivityMonitor",
+    "com.apple.terminal",
+    "com.apple.TimeMachine",
+    "com.apple.controlcenter",
+    "com.apple.systemuiserver",
+)
+
 # (see its own loginwindow/SoftwareUpdate/smb entries). A bare domain would land
 # in root's user domain instead of /Library/Preferences.
 SYSTEM_DOMAIN_PATHS = {
@@ -311,6 +343,11 @@ def main() -> int:
     parser.add_argument(
         "--allow-repo", action="store_true", help="permit an output path inside a git repo"
     )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="capture every domain instead of the curated set (large; mostly for documentation)",
+    )
     parser.add_argument("--quiet", action="store_true", help="print the summary only")
     args = parser.parse_args()
 
@@ -319,6 +356,11 @@ def main() -> int:
         return 1
 
     domains = list_domains()
+    if not args.all:
+        keep = {d for d in CURATED_DOMAINS}
+        filtered = [d for d in domains if d in keep]
+        if filtered:
+            domains = filtered
     if not domains:
         print("capture-macos-defaults: defaults reports no domains", file=sys.stderr)
         return 1
@@ -403,6 +445,21 @@ def main() -> int:
     nix_skipped: list[tuple[str, str, str]] = []
     nix_path = Path(args.nix_out).expanduser() if args.nix_out else out / "nix" / "system-defaults.nix"
     user_keys, system_keys = emit_nix_module(nix_path.resolve(), payloads, nix_skipped)
+
+    # nix-darwin inlines system.defaults into the activation script, which Nix
+    # passes in the builder's environment. macOS caps that at ARG_MAX (1 MB), so
+    # an oversized capture makes every switch fail with
+    # "executing '.../bash': Undefined error: 0". Refuse rather than emit it.
+    emitted = nix_path.stat().st_size
+    limit = 200_000
+    if emitted > limit:
+        print(
+            f"capture-macos-defaults: {nix_path} is {emitted} bytes, above the {limit}-byte "
+            "budget; nix-darwin would inline it into the activation script and a switch "
+            "would fail on macOS ARG_MAX. Trim the domain list or drop --all.",
+            file=sys.stderr,
+        )
+        return 3
 
     with (out / "index.tsv").open("w", encoding="utf-8") as handle:
         handle.write("domain\tstatus\tbytes\tsha256\tredactions\n")

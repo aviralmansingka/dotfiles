@@ -1,7 +1,7 @@
 # Homelab deltas only. S01 proved the homelab is a bare-metal lab (MAAS, Ironic,
 # a Redfish emulator, eight libvirt domains) with an RTX 3060. The lab daemons,
 # GPU driver, Docker and k3s stay with apt; the profile carries the user side.
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 {
   imports = [
@@ -9,8 +9,8 @@
     ../../services/homelab.nix
   ];
 
-  home.username = "avirus";
-  home.homeDirectory = "/home/avirus";
+  home.username = lib.mkDefault "avirus";
+  home.homeDirectory = lib.mkDefault "/home/avirus";
 
   home.packages = with pkgs; [
     kubectl

@@ -111,6 +111,27 @@ Rules that follow:
 4. A deployed host is reproducible from the flake plus `stow`. The bootstrap is
    the only step that needs the network before Nix exists.
 
+### The capture budget (learned the hard way)
+
+`scripts/capture-macos-defaults.py` writes a curated set of domains by default:
+the ones that define system behaviour (dock, finder, screencapture, keyboard and
+trackpad, hot corners, menubar, universal access, and so on). `--all` still
+captures every domain, but only for documentation.
+
+The reason is a hard limit, not taste. nix-darwin inlines `system.defaults` into
+the activation script, and Nix passes that script in the **builder's
+environment**. macOS caps a process environment at `ARG_MAX` (1 MB). A
+full capture produced a 1,256,749-byte activation script and 1,261,350 bytes of
+environment, so every switch died at once with:
+
+```
+error: executing '/nix/store/…-bash-5.3p20/bin/bash': Undefined error: 0
+```
+
+`Undefined error: 0` is `E2BIG` surfacing badly. The curated capture emits about
+37 KB of Nix and 228 KB of environment, and the system builds in seconds. The
+script now refuses to emit a module above 200 KB and explains why.
+
 ## How macOS settings become Nix
 
 The capture script turns the live Mac into a module, in one pass:

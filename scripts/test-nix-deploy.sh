@@ -195,6 +195,23 @@ STUB_HOSTNAME=testmac run "managed user" remote devbox
 expect_rc "managed user" 0 "exit 0"
 expect_call "managed user" "su - aviral" "the managed user comes from the table, not a host literal"
 
+echo "== an ad-hoc ssh destination needs no flake edit"
+STUB_HOSTNAME=testmac run "adhoc plan" remote ubuntu@10.0.0.5 --dry-run
+expect_rc "adhoc plan" 0 "exit 0"
+expect_contains "adhoc plan" "host 10.0.0.5" "the user@host form resolves to the host part"
+expect_contains "adhoc plan" "attribute homeConfigurations.remote-probe" "ad-hoc hosts use the generic Linux profile"
+
+STUB_HOSTNAME=testmac run "adhoc run" remote ubuntu@10.0.0.5
+expect_rc "adhoc run" 0 "exit 0"
+expect_call "adhoc run" "ssh ubuntu@10.0.0.5" "dials the user at the destination, not a table name"
+expect_no_call "adhoc run" "su - " "no user switch when the login user is the managed user"
+expect_call "adhoc run" "identity.nix" "stages an identity module with the tree"
+
+echo "== an ad-hoc destination still needs the right profile"
+STUB_HOSTNAME=testmac run "adhoc wrong profile" macbook ubuntu@10.0.0.5
+expect_rc "adhoc wrong profile" 3 "refused"
+expect_contains "adhoc wrong profile" "needs the remote profile" "says which profile an ad-hoc host takes"
+
 echo "== refusals happen before any work"
 run "unknown profile" nixos mac
 expect_rc "unknown profile" 2 "rejects an unknown profile"

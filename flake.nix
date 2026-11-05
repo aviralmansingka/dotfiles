@@ -29,11 +29,13 @@
       nix-darwin,
     }:
     let
+      lib = nixpkgs.lib;
       fleet = import ./nix/lib/fleet.nix {
         inherit
           nixpkgs
           home-manager
           nix-darwin
+          lib
           ;
         rataflowSrc = ./rataflow;
       };
