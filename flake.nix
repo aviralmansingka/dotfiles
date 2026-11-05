@@ -13,6 +13,17 @@
       url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Fleet secrets. The encrypted files live in `secrets/` and .sops.yaml names
+    # their recipients; the module decrypts them at Home Manager activation with
+    # the host's own age identity, so no plaintext enters the repo, the store, or
+    # the deploy tree. The in-repo rataflow crate needs no input: it is a tracked
+    # directory in this flake's own tree, passed as a plain path (`rataflowSrc`
+    # below), so the flake sits at the repo root.
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -21,6 +32,7 @@
       nixpkgs,
       home-manager,
       nix-darwin,
+      sops-nix,
     }:
     let
       lib = nixpkgs.lib;
@@ -29,6 +41,7 @@
           nixpkgs
           home-manager
           nix-darwin
+          sops-nix
           lib
           ;
         rataflowSrc = ./rataflow;

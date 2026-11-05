@@ -40,3 +40,9 @@ nix/adhoc/
 # tracked once by accident. Never committed.
 /result
 /result-*
+
+# sops: the private age keys and any hand-decrypted copy. The ciphertext in
+# secrets/*.yaml is tracked on purpose; its plaintext and the key that opens it
+# are not. `*.dec.*` is the shape `sops -d x.yaml > x.dec.yaml` writes.
+keys.txt
+*.dec.*

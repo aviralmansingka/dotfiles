@@ -43,13 +43,14 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | install.sh | test-install-smoke.sh | 46 | 2.9 s |
 | Repo config (skills frontmatter, stow parity, gh-dash, settings, Brewfile, herdr TOML) | test-repo-config.py | 10 | 0.20 s |
 | Repo parity (skills store, docs accuracy) | test-repo-parity.py | 3 suites | 0.37 s |
-| Terraform invariants | test-terraform.sh | 17 (19 w/ TF_VALIDATE=1) | 0.1–12.7 s |
+| Terraform invariants | test-terraform.sh | 18 (20 w/ TF_VALIDATE=1) | 0.1–22 s |
 | systemd + launchd units | test-service-units.py | 47 | ~0.5 s |
 | CI meta (structure, routing, gate matching, discovery) | test-ci-self.mjs | 20 synthetic gate cases | — |
 | Merge queue submit helper | test-gh-dash-enqueue-pr.sh | 8, fake gh boundary | 0.1 s |
 | Worktree pi runner | test-pi-dev.sh | 19, fake pi on PATH, no live session | 0.9 s |
 | rataflow-view + visualize/artifact skills | test-rataflow.py | 9 offline + 16 cargo (opt-in) | 0.05 s |
 | justfile build recipes | test-just-build.py | see docs/ci-tests/just-build.md | 0.02 s |
+| Fleet secrets (sops) | test-sops-secrets.py | see docs/ci-tests/sops-secrets.md | 0.07 s |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
 herdr-clean-handoff, herdr-flash-copy, herdr-annotate-install,
@@ -58,7 +59,7 @@ flow is `docs/merge-queue.md`.
 
 ## Totals
 
-81 discovered tests. Local serial run ≈ 44 s; CI critical path ≈ 2–3 min
+82 discovered tests. Local serial run ≈ 44 s; CI critical path ≈ 2–3 min
 (setup dominates) — inside the 5-minute SLA. Two consecutive full rounds
 showed zero flakes.
 
@@ -106,4 +107,5 @@ ci-meta · config-lint · install-smoke · journal · just-build · mermaid · n
 nvim-ask · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
 nvim-plugin-configs · nvim-send · nvim-ui-shape · nvim-workspaces · ops ·
 pi-dev · practice · python-tool · rataflow · renderer · repo-config · repo-parity ·
-run-command · subagents · telegram · terminal · tuicr · user-input · zsh
+run-command · sops-secrets · subagents · telegram · terminal · tuicr ·
+user-input · zsh
