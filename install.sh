@@ -1,246 +1,142 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Fleet bootstrap. Two roles only:
+#
+#   1. bootstrap Nix when it is absent, and
+#   2. run stow for this repository's file packages, with the stow binary the
+#      deployed profile provides.
+#
+# Every package and service install lives in the flake: see flake.nix and
+# docs/nix-profiles.md. Homebrew keeps applications, casks and fonts, and its
+# command (`brew bundle --file Brewfile`) is a documented separate step that
+# this script does not run.
+#
+# Usage:
+#   ./install.sh                 # bootstrap Nix, deploy the local profile, stow
+#   ./install.sh --stow-only     # skip the profile switch (stow already present)
+#   SKIP_DEPLOY=1 ./install.sh   # bootstrap Nix and stow without switching
 set -euo pipefail
 
-# Dotfiles installation script for macOS
-# Mirrors the provisioning pipeline in ops/packer/scripts/ adapted for macOS+Homebrew:
-#   1. System packages (Homebrew)
-#   2. CLI tools not in Homebrew (Herdr, mmdflux, grok-mermaid)
-#   3. Rust toolchain + cargo tools
-#   4. Dotfiles deployment via stow
-#   5. Shell plugins (Oh My Zsh, zsh plugins; TPM self-bootstraps from .tmux.conf)
-#   6. Terminfo
-#   7. Git config (deferred to avoid SSH URL rewrite during installs)
-#   8. Git hooks
-
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-####################
-#  1. Homebrew     #
-####################
-
-if ! command -v brew &> /dev/null; then
-    echo "==> Installing Homebrew"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-    # Add brew to PATH for the rest of the script
-    if [[ -f /opt/homebrew/bin/brew ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    elif [[ -f /usr/local/bin/brew ]]; then
-        eval "$(/usr/local/bin/brew shellenv)"
-    fi
-fi
-
-echo "==> Installing packages from Brewfile"
-brew bundle --file="$DOTFILES_DIR/Brewfile"
-
-# terminal-browser ships an agent skill and its first run (or `terminal-browser
-# setup`) symlinks ~/.agents/skills/terminal-browser into its own app dist.
-# This repo already vendors that skill (agents/.agents/skills/terminal-browser,
-# stowed into ~/.agents/skills), so decline the binary's own link to keep the
-# stow-managed symlink authoritative across upgrades.
-TB_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/terminal-browser"
-mkdir -p "$TB_STATE"
-printf 'no\n' > "$TB_STATE/skills-choice"
-
-####################
-#  2. CLI tools    #
-####################
-# Tools not available in Homebrew
-
-if ! command -v herdr >/dev/null 2>&1; then
-    echo "==> Installing Herdr"
-    curl -fsSL https://herdr.dev/install.sh | sh
-    export PATH="$HOME/.local/bin:$PATH"
-fi
-
-# Mermaid rendering tooling, mirroring ops/packer/scripts/install_cli_tools.sh:
-#   - mmdflux: pi mermaid-extension gates + nvim <leader>mm float. Pinned
-#     release binary (the Homebrew tap needs `brew trust` for untrusted taps,
-#     which breaks unattended installs). ~/.local/bin is the first candidate
-#     path in pi's mermaid extension and mermaid.corpus.mjs.
-#   - grok-mermaid: nvim inline mermaid render (npm root -g lookup).
-MMDFLUX_VERSION=v2.6.1
-if ! command -v mmdflux >/dev/null 2>&1; then
-    echo "==> Installing mmdflux ${MMDFLUX_VERSION} (pinned release binary)"
-    case "$(uname -m)" in
-        arm64) MMDFLUX_ASSET="darwin-arm64" ;;
-        x86_64) MMDFLUX_ASSET="darwin-x86_64" ;;
-        *) MMDFLUX_ASSET="" ;;
+STOW_ONLY=0
+for arg in "$@"; do
+    case "$arg" in
+        --stow-only) STOW_ONLY=1 ;;
+        -h | --help)
+            sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        *)
+            echo "install.sh: unknown argument $arg" >&2
+            exit 2
+            ;;
     esac
-    if [[ -n "$MMDFLUX_ASSET" ]]; then
-        curl -fsSL -o /tmp/mmdflux.tar.gz "https://github.com/kevinswiber/mmdflux/releases/download/mmdflux-${MMDFLUX_VERSION}/mmdflux-${MMDFLUX_VERSION}-${MMDFLUX_ASSET}.tar.gz"
-        tar xzf /tmp/mmdflux.tar.gz -C /tmp mmdflux
-        mkdir -p "$HOME/.local/bin"
-        install -m 0755 /tmp/mmdflux "$HOME/.local/bin/mmdflux"
-        rm -f /tmp/mmdflux.tar.gz /tmp/mmdflux
+done
+
+####################
+#  1. Nix          #
+####################
+# The only install that can run before Nix exists.
+
+if ! command -v nix >/dev/null 2>&1; then
+    echo "==> Installing Nix (multi-user daemon)"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        # Determinate Nix is the supported installer on current macOS; it keeps
+        # /nix writable by the daemon and enables flakes by default.
+        curl -fsSL https://install.determinate.systems/nix | sh -s -- install macos --no-confirm
     else
-        echo "    no mmdflux prebuilt for $(uname -m); skipping"
+        curl -fsSL https://install.determinate.systems/nix | sh -s -- install linux --init none --no-confirm
     fi
+    for profile in /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+        "$HOME/.nix-profile/etc/profile.d/nix.sh"; do
+        # shellcheck disable=SC1090
+        [[ -f "$profile" ]] && . "$profile" && break
+    done
 fi
 
-echo "==> Installing grok-mermaid (nvim inline mermaid engine)"
-npm install -g grok-mermaid
-
-####################
-#  3. Rust         #
-####################
-# Mirrors: ops/packer/scripts/install_rust.sh
-
-if ! command -v rustc &> /dev/null; then
-    echo "==> Installing Rust via rustup"
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source "$HOME/.cargo/env"
+if ! command -v nix >/dev/null 2>&1; then
+    echo "install.sh: Nix is still missing after the installer; open a new shell and rerun" >&2
+    exit 1
 fi
 
-echo "==> Installing cargo tools (bob-nvim; eza comes from the Brewfile)"
-cargo install bob-nvim
-
-echo "==> Installing rataflow-view (live node-graph viewer)"
-cargo install --path "$DOTFILES_DIR/rataflow" --locked
-
-echo "==> Installing neovim nightly via bob"
-bob use nightly
+# Flakes are the only interface this repo uses.
+mkdir -p "$HOME/.config/nix"
+if ! grep -qs 'experimental-features' "$HOME/.config/nix/nix.conf"; then
+    echo "experimental-features = nix-command flakes" >> "$HOME/.config/nix/nix.conf"
+fi
+export NIX_CONFIG="${NIX_CONFIG:-experimental-features = nix-command flakes}"
 
 ####################
-#  4. Stow         #
+#  2. Profile      #
 ####################
-# Mirrors: ops/packer/scripts/deploy_dotfiles.sh
+# The profile switch is what installs every package and every user service.
+
+if [[ "$STOW_ONLY" = 0 && "${SKIP_DEPLOY:-0}" != 1 ]]; then
+    case "$(uname -s)" in
+        Darwin) PROFILE=macbook ;;
+        *) PROFILE=remote ;;
+    esac
+    echo "==> Deploying the $PROFILE profile"
+    "$DOTFILES_DIR/scripts/nix-deploy" "$PROFILE" local
+else
+    echo "==> Skipping the profile switch (stow-only run)"
+fi
+
+####################
+#  3. Stow         #
+####################
+# Files are not a package: stow links them. The binary comes from the profile
+# (home-manager installs it); install it into the profile only when the first
+# switch has not happened yet.
+
+if ! command -v stow >/dev/null 2>&1 && [[ ! -x "$HOME/.nix-profile/bin/stow" ]]; then
+    echo "==> Installing stow into the Nix profile"
+    nix profile install nixpkgs#stow
+fi
+export PATH="$HOME/.nix-profile/bin:$PATH"
 
 echo "==> Removing conflicting files"
-rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.zprofile" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
+rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
 
 echo "==> Deploying dotfiles via stow"
-stow -d "$DOTFILES_DIR" -t "$HOME" zsh
-stow -d "$DOTFILES_DIR" -t "$HOME" profile
-stow -d "$DOTFILES_DIR" -t "$HOME" tmux
-stow -d "$DOTFILES_DIR" -t "$HOME" nvim
-stow -d "$DOTFILES_DIR" -t "$HOME" starship
-stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
-stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
-stow -d "$DOTFILES_DIR" -t "$HOME" rex
-stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
-stow -d "$DOTFILES_DIR" -t "$HOME" tuicr
-stow -d "$DOTFILES_DIR" -t "$HOME" agents
-"$DOTFILES_DIR/scripts/pi-settings-sync"
-stow -d "$DOTFILES_DIR" -t "$HOME" pi
-stow -d "$DOTFILES_DIR" -t "$HOME" herdr
+# The list lives in scripts/stow-packages so the deploy script links the same
+# set. `agents` must precede `pi` (settings materialize between them) and `git`
+# must come last.
+stow_list() {
+    local f
+    for f in $@; do
+        grep -vE '^\s*(#|$)' "$f" | while read -r pkg; do
+            printf '%s\n' "$pkg"
+        done
+    done
+}
 
-echo "==> Installing Pi extension dependencies"
-npm ci --ignore-scripts --no-fund --no-audit \
-    --prefix "$DOTFILES_DIR/pi/.pi/agent/extensions/web-fetch"
-
-echo "==> Installing gh-dash extension"
-if command -v gh >/dev/null 2>&1; then
-    gh extension install dlvhdr/gh-dash 2>/dev/null || true
-fi
-
-# Every herdr-dependent step sits behind one guard: on a host without
-# herdr (e.g. a partial install, or the section-2 installer failed
-# silently) these would abort under set -e (C36).
-if command -v herdr >/dev/null 2>&1; then
-    echo "==> Installing Herdr agent integrations"
-    herdr integration install pi
-    if command -v codex >/dev/null 2>&1; then
-        herdr integration install codex
-    fi
-
-    echo "==> Installing pinned Herdr Flash"
-    herdr plugin install youguanxinqing/herdr-flash \
-        --ref 233209cce0e91175aeb5d608778c859028a68a06 --yes
-    flash_root="$(herdr plugin list --plugin youguanxinqing.herdr-flash --json | jq -er '.result.plugins[0].plugin_root')"
-    [[ -x "$flash_root/bin/herdr-flash" ]] || {
-        echo "Herdr Flash installation failed" >&2
-        exit 1
-    }
-
-    echo "==> Installing pinned Terminal Browser plugin"
-    # The plugin's build step runs the binary installer; without
-    # TERMINAL_BROWSER_SKIP_SETUP that installer runs `terminal-browser setup`,
-    # which symlinks ~/.agents/skills/terminal-browser into the app dist and
-    # replaces the stow-managed symlink this repo owns. The skills-choice=no
-    # seed above only guards implicit first runs, not explicit setup.
-    TERMINAL_BROWSER_SKIP_SETUP=1 herdr plugin install \
-        zenbu-labs/terminal-browser/herdr-plugin \
-        --ref 2165ae76c9639e3996829ab0e6d54ddbd4f06ad8 --yes
-
-    echo "==> Pinning terminal-browser render.fps"
-    # Upstream issue zenbu-labs/terminal-browser#102: an fps of exactly 60
-    # silently disables throttling and renders at the display rate on
-    # high-refresh panels. Pin 30 (measured ~31 fps in-page) and keep the
-    # TERMINAL_BROWSER_FPS env var unset everywhere.
-    terminal-browser config set render.fps 30
-
-    echo "==> Installing Herdr Annotate and the protected custom reviewer"
-    "$DOTFILES_DIR/scripts/install-herdr-annotate"
-else
-    echo "==> Herdr not found; skipping Herdr integrations (pi, codex, Flash, annotate, Terminal Browser)"
-fi
+for pkg in $(stow_list "$DOTFILES_DIR/scripts/stow-packages"); do
+    case "$pkg" in
+    pi)
+        # Pi has no user-local overlay, so its settings are materialized from
+        # the repo base plus the live local preferences.
+        if [[ -x "$DOTFILES_DIR/scripts/pi-settings-sync" ]]; then
+            "$DOTFILES_DIR/scripts/pi-settings-sync"
+        fi
+        stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg"
+        ;;
+    git)
+        # Deferred to the end: git's url.insteadOf rewrites HTTPS to SSH, and an
+        # early rewrite breaks the installer-style fetches a fresh host may
+        # still need.
+        echo "==> Deploying git config"
+        stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg"
+        ;;
+    *) stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg" ;;
+    esac
+done
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    stow -d "$DOTFILES_DIR" -t "$HOME" launchd
+    for pkg in $(stow_list "$DOTFILES_DIR/scripts/stow-packages-darwin"); do
+        stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg"
+    done
 fi
 
-# Optional Linux-only systemd units
-if command -v systemctl >/dev/null 2>&1; then
-    stow -d "$DOTFILES_DIR" -t "$HOME" systemd
-fi
-
-####################
-#  5. Shell plugins #
-####################
-# Mirrors: ops/packer/scripts/install_shell_plugins.sh
-
-echo "==> Installing Oh My Zsh"
-if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
-    sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-fi
-
-echo "==> Removing Oh My Zsh generated .zshrc and restoring stowed version"
-rm -f "$HOME/.zshrc"
-stow -R -d "$DOTFILES_DIR" -t "$HOME" zsh
-
-echo "==> Installing zsh plugins"
-ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-[[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]] && \
-    git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-[[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]] && \
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-
-# TPM self-bootstraps: .tmux.conf clones it into
-# ~/.local/share/tmux/plugins (TMUX_PLUGIN_MANAGER_PATH) on first load.
-
-####################
-#  6. Terminfo     #
-####################
-
-if command -v tic &> /dev/null; then
-    echo "==> Installing custom terminfo entries"
-    mkdir -p ~/.terminfo
-    tic -x -w "$DOTFILES_DIR/terminfo/xterm-ghostty.terminfo"
-fi
-
-# Rex ships its own terminfo entry (xterm-rex) and an agent skill; both are
-# once-per-account and idempotent. Skip silently when Rex is not installed.
-if command -v rex &>/dev/null; then
-    echo "==> Setting up Rex terminfo and agent skill"
-    rex terminfo setup
-    rex skill setup
-fi
-
-####################
-#  7. Git config   #
-####################
-# Mirrors: ops/packer/scripts/cleanup.sh
-# Deferred to avoid SSH URL rewrite during installs
-
-echo "==> Deploying git config (deferred to avoid SSH URL rewrite during installs)"
-stow -d "$DOTFILES_DIR" -t "$HOME" git
-
-####################
-#  8. Git hooks    #
-####################
-
-echo "==> Installing git hooks"
-ln -sf "$DOTFILES_DIR/scripts/hooks/pre-commit" "$DOTFILES_DIR/.git/hooks/pre-commit"
-
-echo "==> Installation complete!"
+echo "==> Bootstrap complete"
+echo "    Applications, casks and fonts: brew bundle --file \"$DOTFILES_DIR/Brewfile\""
+echo "    Offline checks:                 scripts/test-nix-deploy.sh"

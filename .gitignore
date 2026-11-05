@@ -30,3 +30,13 @@ test-results/
 # c8 / coverage.py transient artifacts
 .coverage
 coverage/
+
+# Generated from the live Mac by scripts/capture-macos-defaults.py.
+# It holds machine-private preferences, so it is never committed.
+nix/darwin/system-defaults.nix
+nix/adhoc/
+
+# Nix build output symlinks: store-path pointers to this machine's build,
+# tracked once by accident. Never committed.
+/result
+/result-*

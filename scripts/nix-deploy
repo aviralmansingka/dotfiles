@@ -1,0 +1,474 @@
+#!/usr/bin/env bash
+# Deploy a fleet profile to a target host.
+#
+# Local target: switches in place (home-manager switch, or darwin-rebuild switch
+# for the macbook profile). Remote target: copies only the deploy tree (nix/,
+# justfile, this script) to a staging directory on the host and runs the switch
+# there. It never syncs the dotfiles checkout: `stow` owns those files on the
+# host, and a second copy of a working tree is how machines drift.
+#
+# Usage:
+#   scripts/nix-deploy <profile> <target> [--dry-run]
+#   scripts/nix-deploy remote homelab
+#   scripts/nix-deploy remote devbox
+#   scripts/nix-deploy macbook mac
+#
+# Environment overrides exist for the offline test and for unusual hosts:
+#   FLEET_ROOT        flake root (default: repo root of this script)
+#   FLEET_SSH         ssh command (default: ssh)
+#   FLEET_STAGE_ROOT  remote staging root (default: ~/.cache/nix-fleet-deploy)
+#   FLEET_STUB_BIN    directory prepended to PATH, used by the offline test
+#
+# Exit codes: 0 switch ok, 2 usage, 3 unknown target for the profile,
+# 4 build failed, 5 switch failed.
+set -uo pipefail
+
+PROFILE=""
+TARGET=""
+DRY_RUN=0
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: scripts/nix-deploy <profile> <target> [--dry-run]
+
+  profile  remote | macbook
+  target   a name from `just targets`, or `local` for this machine
+           (`just deploy <profile>` fills in `local` for you)
+USAGE
+  exit 2
+}
+
+DEPLOY_FILES=1
+CHECKOUT="${FLEET_CHECKOUT:-dotfiles}"
+REPO_URL="${FLEET_REPO:-https://github.com/aviralmansingka/dotfiles.git}"
+
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    --no-files) DEPLOY_FILES=0 ;;
+    -h | --help) usage ;;
+    -*) echo "nix-deploy: unknown flag $arg" >&2; usage ;;
+    *)
+      if [ -z "$PROFILE" ]; then PROFILE="$arg"
+      elif [ -z "$TARGET" ]; then TARGET="$arg"
+      else echo "nix-deploy: too many arguments" >&2; usage
+      fi
+      ;;
+  esac
+done
+
+[ -n "$PROFILE" ] && [ -n "$TARGET" ] || usage
+
+case "$PROFILE" in
+  remote | macbook) ;;
+  *)
+    echo "nix-deploy: unknown profile '$PROFILE' (expected remote or macbook)" >&2
+    exit 2
+    ;;
+esac
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${FLEET_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+SSH_CMD="${FLEET_SSH:-ssh}"
+# FLEET_SSH_KEY adds an identity for an ad-hoc destination whose key is not in
+# the ssh config. A normal `Host` block is still the better place for this.
+[ -n "${FLEET_SSH_KEY:-}" ] && SSH_CMD="$SSH_CMD -i $FLEET_SSH_KEY"
+STAGE_ROOT="${FLEET_STAGE_ROOT:-.cache/nix-fleet-deploy}"
+
+# A host can resolve `nix` from an old system package while the user profile
+# carries a current one. Prefer the profile: the lock file needs a Nix that can
+# read it, and the profile is where `nix profile` put the current release.
+PATH="$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:$PATH"
+export PATH
+
+# The stub directory goes on top last — after the profile paths above — so the
+# offline test keeps its own `nix` and `home-manager` on a machine that has a
+# real Nix installed.
+if [ -n "${FLEET_STUB_BIN:-}" ]; then
+  PATH="$FLEET_STUB_BIN:$PATH"
+  export PATH
+fi
+
+# Flake evaluation needs the features enabled on a stock Nix install; a host may
+# not have them in nix.conf yet.
+nix_flake() { nix --extra-experimental-features "nix-command flakes" "$@"; }
+
+# ------------------------------------------------------------------ mapping ---
+# The flake owns the target table (`fleet.targets`); this script reads it. One
+# entry per host means a new host is data, not four case statements that drift
+# apart.
+targets_json() {
+  nix_flake eval --json "$ROOT#fleet.targets"
+}
+
+# Print one field for a target, or nothing.
+target_field() { # $1 json, $2 target, $3 field
+  printf '%s' "$1" | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+name, field = sys.argv[1], sys.argv[2]
+value = data.get(name, {}).get(field, "")
+print(" ".join(value) if isinstance(value, list) else value)
+' "$2" "$3"
+}
+
+# The hostname this machine answers to, so `local` and a bare target can both
+# resolve without a hardcoded list.
+this_hostname() { hostname -s 2>/dev/null || echo unknown; }
+
+# Resolve a target name (or `local`) to a canonical target in the table.
+resolve_target() { # $1 requested, $2 targets json, $3 this hostname -> name or empty
+  local want="$1" json="$2" here="$3" name
+  if [ "$want" = "local" ]; then
+    for name in $(printf '%s' "$json" | python3 -c 'import json,sys; print(" ".join(json.load(sys.stdin)))'); do
+      if target_field "$json" "$name" localNames | tr ' ' '\n' | grep -qx -- "$here"; then
+        echo "$name"
+        return 0
+      fi
+    done
+    # A hostname no entry claims: fall back to the platform, so a deploy on a
+    # fresh machine still means "this machine" rather than "unknown target".
+    case "$(uname -s)" in
+    Darwin) echo mac ;;
+    *) : ;;
+    esac
+    return 0
+  fi
+  printf '%s' "$json" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+name = sys.argv[1]
+print(name if name in data else '')
+" "$want"
+}
+
+TARGETS_JSON="$(targets_json 2>/dev/null || true)"
+if [ -z "$TARGETS_JSON" ]; then
+  echo "nix-deploy: cannot read fleet.targets from $ROOT (is this a flake checkout with nix?)" >&2
+  exit 2
+fi
+
+ADHOC=0
+ADHOC_USER=""
+ADHOC_SSH=""
+case "$TARGET" in
+*@*)
+  ADHOC=1
+  ADHOC_USER="${TARGET%%@*}"
+  ADHOC_SSH="${TARGET#*@}"
+  ;;
+esac
+
+if [ "$ADHOC" = 1 ]; then
+  # Any reachable Linux box, no flake edit. The generic profile is `remote-probe`;
+  # the identity (username and home) is staged with the tree.
+  [ "$PROFILE" = "remote" ] || {
+    echo "nix-deploy: an ad-hoc target needs the remote profile, not '$PROFILE'" >&2
+    exit 3
+  }
+  HOST="$ADHOC_SSH"
+  SSH_TARGET="$TARGET"
+  KIND="home-manager"
+  TARGET_ATTR="remote-probe"
+  REMOTE_USER="$ADHOC_USER"
+else
+HOST="$(resolve_target "$TARGET" "$TARGETS_JSON" "$(this_hostname)")"
+fi
+if [ -z "$HOST" ] && [ "$TARGET" = "local" ]; then
+  echo "nix-deploy: this host '$(this_hostname)' matches no target; name one explicitly:" >&2
+  echo "            $(printf '%s' "$TARGETS_JSON" | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')" >&2
+  exit 3
+fi
+if [ -z "$HOST" ]; then
+  echo "nix-deploy: unknown target '$TARGET'; known: $(printf '%s' "$TARGETS_JSON" | python3 -c 'import json,sys; print(" ".join(sorted(json.load(sys.stdin))))')" >&2
+  exit 3
+fi
+
+if [ "$ADHOC" = 0 ]; then
+  SSH_TARGET="$(target_field "$TARGETS_JSON" "$HOST" ssh)"
+  KIND="$(target_field "$TARGETS_JSON" "$HOST" kind)"
+  TARGET_ATTR="$(target_field "$TARGETS_JSON" "$HOST" attr)"
+  REMOTE_USER="$(target_field "$TARGETS_JSON" "$HOST" managedUser)"
+fi
+
+# The profile decides the constructor; the target table decides the host.
+case "$PROFILE" in
+remote)
+  [ "$KIND" = "home-manager" ] || {
+    echo "nix-deploy: profile 'remote' does not apply to target '$HOST' (it is $KIND)" >&2
+    exit 3
+  }
+  ATTR="$TARGET_ATTR"
+  ATTR_PATH="homeConfigurations.$ATTR"
+  ;;
+macbook)
+  [ "$KIND" = "darwin" ] || {
+    echo "nix-deploy: profile 'macbook' does not apply to target '$HOST' (it is $KIND)" >&2
+    exit 3
+  }
+  ATTR="macbook"
+  ATTR_PATH="darwinConfigurations.$ATTR"
+  ;;
+*)
+  echo "nix-deploy: unknown profile '$PROFILE'" >&2
+  exit 2
+  ;;
+esac
+
+THIS_HOST="$(this_hostname)"
+LOCAL_HOST="$(resolve_target local "$TARGETS_JSON" "$THIS_HOST")"
+IS_LOCAL=0
+[ "$LOCAL_HOST" = "$HOST" ] && IS_LOCAL=1
+
+# The macbook profile captures machine-private defaults from the live Mac before
+# its switch. That capture cannot run against a different machine over ssh, so a
+# macbook deploy is local-only: anything else is refused before staging.
+if [ "$PROFILE" = "macbook" ] && [ "$IS_LOCAL" = 0 ]; then
+  echo "nix-deploy: the macbook profile deploys on the Mac itself (this host is $LOCAL_HOST)" >&2
+  exit 3
+fi
+
+# --------------------------------------------------------------- switching ---
+switch_command() { # $1 flake dir, $2 attr -> argv printed on one line
+  if [ "$PROFILE" = "macbook" ]; then
+    printf 'sudo darwin-rebuild switch --flake %q#%s' "$1" "$2"
+  else
+    printf 'nix run %q#home-manager -- switch --flake %q#%s' "$1" "$1" "$2"
+  fi
+}
+
+# `home-manager` is not on a fresh host, and installing a second copy is how the
+# binary and the profile drift apart. The flake pins its own home-manager, so
+# the switch runs that one: same revision locally and over ssh.
+run_switch() { # $1 flake dir, $2 attr
+  if [ "$PROFILE" = "macbook" ]; then
+    ( cd "$1" && sudo darwin-rebuild switch --flake "$1#$2" )
+  else
+    ( cd "$1" && nix --extra-experimental-features "nix-command flakes" run "$1#home-manager" -- switch --flake "$1#$2" )
+  fi
+}
+
+# The file half: clone the checkout if it is missing, then stow the list the
+# repo ships (scripts/stow-packages, plus the darwin file). Written as a shell
+# snippet so a local switch and a remote one run exactly the same commands.
+files_command() { # -> shell snippet, with the list from the deploy tree
+  # The checkout on the target may be older than this branch, so the package
+  # list travels with the deploy rather than being read from the checkout.
+  local linux_list darwin_list
+  linux_list="$(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/stow-packages" 2>/dev/null | tr '\n' ' ')"
+  darwin_list="$(grep -vE '^[[:space:]]*(#|$)' "$ROOT/scripts/stow-packages-darwin" 2>/dev/null | tr '\n' ' ')"
+  cat <<SNIPPET
+set -e
+checkout="\$HOME/${CHECKOUT}"
+if [ -d "\$checkout/.git" ]; then
+  echo "checkout: existing at \$checkout"
+  git -C "\$checkout" fetch -q origin || true
+else
+  echo "checkout: cloning into \$checkout"
+  git clone -q "${REPO_URL}" "\$checkout"
+fi
+echo "checkout: \$(git -C "\$checkout" log --oneline -1)"
+rm -f "\$HOME/.bashrc" "\$HOME/.bash_logout" "\$HOME/.profile"
+for pkg in ${linux_list}; do
+  echo "stow: \$pkg"
+  stow -d "\$checkout" -t "\$HOME" "\$pkg"
+done
+if [ "\$(uname -s)" = "Darwin" ]; then
+  for pkg in ${darwin_list}; do
+    echo "stow: \$pkg"
+    stow -d "\$checkout" -t "\$HOME" "\$pkg"
+  done
+fi
+SNIPPET
+}
+
+# What a fresh host still lacks once the profile and the files are down. Printed
+# so a deploy never reads as "fully equivalent" when it is not.
+files_report() {
+  cat <<'REPORT'
+files: still outside the deploy (by design)
+  secrets    ~/.config/*.env, SSH keys - not in the repo, not in the store
+  data       ~/vault, ~/projects/whatsapp-mcp
+  venvs      ~/.local/share/pi-*/.venv (uv, host state)
+REPORT
+}
+
+# The deploy tree is the flake plus the recipe and this script. Nothing else
+# travels: the checkout stays where stow already reads it.
+deploy_tree() {
+  printf '%s\n' flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo \
+    scripts/stow-packages scripts/stow-packages-darwin
+}
+
+plan() {
+  echo "profile : $PROFILE"
+  echo "target  : $TARGET (host $HOST, attribute $ATTR_PATH)"
+  echo "this host: $LOCAL_HOST"
+  if [ "$IS_LOCAL" = 1 ]; then
+    echo "mode    : local switch"
+    echo "command : $(switch_command "$ROOT" "$ATTR")"
+  else
+    echo "mode    : remote switch over $SSH_CMD"
+    echo "stage   : $SSH_TARGET:$STAGE_ROOT/$PROFILE-$ATTR"
+    echo "copies  : $(deploy_tree | tr '\n' ' ')"
+  fi
+  if [ "$DEPLOY_FILES" = 1 ]; then
+    echo "files   : clone the checkout if missing, then stow scripts/stow-packages"
+  fi
+}
+
+if [ "$DRY_RUN" = 1 ]; then
+  plan
+  exit 0
+fi
+
+if [ ! -f "$ROOT/flake.nix" ]; then
+  echo "nix-deploy: no flake at $ROOT/flake.nix" >&2
+  exit 2
+fi
+
+# The generated defaults module is machine-private: it is not committed, so a
+# switch regenerates it first. A capture failure must not stop a deploy (the
+# module falls back to an empty set), but the run says so.
+generate_defaults() {
+  [ "$PROFILE" = "macbook" ] || return 0
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "==> no python3; keeping the existing system-defaults module"
+    return 0
+  fi
+  echo "==> regenerating $ROOT/nix/darwin/system-defaults.nix from the live Mac"
+  python3 "$ROOT/scripts/capture-macos-defaults.py" --quiet \
+    --nix-out "$ROOT/nix/darwin/system-defaults.nix" >/dev/null || {
+    echo "    capture failed; the profile keeps the previous defaults" >&2
+  }
+}
+
+if [ "$IS_LOCAL" = 1 ]; then
+  generate_defaults
+  if [ "$PROFILE" = "macbook" ]; then
+    # Two macOS facts force a staged copy here:
+    #   1. nix/darwin/system-defaults.nix is machine-private and gitignored, and
+    #      Nix's git filter refuses to see ignored files in a git tree;
+    #   2. a first switch has no /run/current-system, so there is no
+    #      `darwin-rebuild` on PATH yet.
+    # Staging into a plain directory (no .git) fixes (1); building the system
+    # and running the darwin-rebuild it contains fixes (2) with the pinned
+    # nix-darwin rather than a moving master.
+    stage="$HOME/$STAGE_ROOT/$PROFILE-$ATTR"
+    echo "==> staging the deploy tree at $stage"
+    rm -rf "$stage"
+    mkdir -p "$stage"
+    # shellcheck disable=SC2046 # deploy_tree is a newline-separated list
+    tar -C "$ROOT" -cf - $(deploy_tree) | tar -C "$stage" -xf -
+    echo "==> building the system"
+    if ! nix_flake build "$stage#darwinConfigurations.$ATTR.system" -o "$stage/result"; then
+      echo "nix-deploy: build failed; nothing was switched" >&2
+      exit 5
+    fi
+    echo "==> switching with the freshly built darwin-rebuild"
+    # sudo drops the environment, and a first switch may have no /etc/nix/nix.conf
+    # yet (nix-darwin owns that file), so enable flakes explicitly for the
+    # evaluation this command performs.
+    if ! sudo env NIX_CONFIG="experimental-features = nix-command flakes" \
+      "$stage/result/sw/bin/darwin-rebuild" switch --flake "$stage#$ATTR"; then
+      echo "nix-deploy: switch failed; the previous generation is still active" >&2
+      exit 5
+    fi
+    echo "==> switch complete"
+    if [ "$DEPLOY_FILES" = 1 ]; then
+      echo "==> files: stowing the checkout on $HOST"
+      if ! bash -c "$(files_command)"; then
+        echo "nix-deploy: the file half failed; the profile is switched" >&2
+        files_report
+        exit 6
+      fi
+      files_report
+    fi
+    exit 0
+  fi
+  echo "==> $PROFILE on $HOST: local switch"
+  # shellcheck disable=SC2086 # switch_command builds an argv string on purpose
+  if ! run_switch "$ROOT" "$ATTR"; then
+    echo "nix-deploy: switch failed; the previous generation is still active" >&2
+    exit 5
+  fi
+  echo "==> switch complete"
+  if [ "$DEPLOY_FILES" = 1 ]; then
+    echo "==> files: stowing the checkout on $HOST"
+    if ! bash -c "$(files_command)"; then
+      echo "nix-deploy: the file half failed; the profile is switched" >&2
+      files_report
+      exit 6
+    fi
+    files_report
+  fi
+  exit 0
+fi
+
+if [ "$ADHOC" = 1 ]; then
+  ADHOC_HOME="/home/$ADHOC_USER"
+  [ "$ADHOC_USER" = "root" ] && ADHOC_HOME=/root
+  printf 'identity: %s at %s\n' "$ADHOC_USER" "$ADHOC_HOME"
+fi
+
+echo "==> $PROFILE on $HOST: staging the deploy tree"
+STAGE_DIR="$STAGE_ROOT/$PROFILE-$ATTR"
+# The devbox is ssh'd as root but its switch runs as aviral, so the tree must
+# land in aviral's cache rather than root's.
+STAGE_BASE='$(eval echo ~)'
+[ -n "$REMOTE_USER" ] && STAGE_BASE="/home/$REMOTE_USER"
+# tar over ssh copies exactly the deploy tree; --no-same-owner keeps the stage
+# owned by the target user. The checkout is excluded by construction.
+# shellcheck disable=SC2046 # deploy_tree is a newline-separated list
+if ! tar -C "$ROOT" -cf - $(deploy_tree) |
+  $SSH_CMD "$SSH_TARGET" "mkdir -p \"$STAGE_BASE/$STAGE_DIR\" && tar -C \"$STAGE_BASE/$STAGE_DIR\" -xf -"; then
+  echo "nix-deploy: staging copy failed" >&2
+  exit 4
+fi
+
+if [ "$ADHOC" = 1 ]; then
+  # The staged tree carries the identity; the flake imports it when present.
+  printf '  mkdir -p \"%s/%s/nix/adhoc\"\n' "$STAGE_BASE" "$STAGE_DIR" >/dev/null
+  $SSH_CMD "$SSH_TARGET" "mkdir -p \"$STAGE_BASE/$STAGE_DIR/nix/adhoc\" && cat > \"$STAGE_BASE/$STAGE_DIR/nix/adhoc/identity.nix\"" <<IDENTITY
+{ lib, ... }:
+{
+  home.username = lib.mkForce "$ADHOC_USER";
+  home.homeDirectory = lib.mkForce "$ADHOC_HOME";
+}
+IDENTITY
+fi
+
+echo "==> switching on $HOST"
+# A target's ssh login user can differ from the user its profile manages (the
+# devbox is dialled as root while the profile manages aviral). The table says
+# so with `managedUser`; the tree lands in that user's cache, and the switch
+# runs in that user's login shell, where the multi-user Nix install has already
+# put /nix/var/nix/profiles/default/bin on PATH via /etc/profile.d/nix.sh.
+if [ -n "$REMOTE_USER" ] && [ "$ADHOC" = 0 ]; then
+  REMOTE_ROOT="/home/$REMOTE_USER/$STAGE_DIR"
+  REMOTE_CMD="chown -R $REMOTE_USER:$REMOTE_USER \"$REMOTE_ROOT\" && su - $REMOTE_USER -s /bin/bash -c 'cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" NIX_CONFIG=\"experimental-features = nix-command flakes\" nix run \"$REMOTE_ROOT#home-manager\" -- switch --flake \"$REMOTE_ROOT#$ATTR\"'"
+else
+  REMOTE_ROOT="\$HOME/$STAGE_DIR"
+  if [ "$PROFILE" = "macbook" ]; then
+    REMOTE_CMD="cd \"$REMOTE_ROOT\" && sudo darwin-rebuild switch --flake \"$REMOTE_ROOT#$ATTR\""
+  else
+    REMOTE_CMD="cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" nix --extra-experimental-features \"nix-command flakes\" run \"$REMOTE_ROOT#home-manager\" -- switch --flake \"$REMOTE_ROOT#$ATTR\""
+  fi
+fi
+
+if ! $SSH_CMD "$SSH_TARGET" "$REMOTE_CMD"; then
+  echo "nix-deploy: remote switch failed; $HOST keeps its previous generation" >&2
+  exit 5
+fi
+
+echo "==> switch complete on $HOST"
+
+if [ "$DEPLOY_FILES" = 1 ]; then
+  echo "==> files: stowing the checkout on $HOST"
+  if ! $SSH_CMD "$SSH_TARGET" "$(files_command)"; then
+    echo "nix-deploy: the file half failed; the profile is switched" >&2
+    files_report
+    exit 6
+  fi
+  files_report
+fi

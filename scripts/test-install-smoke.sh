@@ -2,15 +2,15 @@
 # Paths: install.sh Brewfile nvim/**
 #
 # Sandbox smoke for install.sh. Drives the offline, Linux-runnable steps of
-# install.sh (the stow deployment of section 4, terminfo of section 6, the
+# install.sh (the stow deployment, the
 # git stow of section 7) against a mktemp fake HOME. Also pins the nvim
 # stow package's root shape: stray files at the package root get stowed
 # into $HOME root (C35), so only the config tree and the intentional
 # $HOME-root markdownlint pair may sit there. Never touches the real
 # $HOME, never runs stow into the real $HOME, and never contacts a network.
-# install.sh itself cannot run offline: section 1 bootstraps Homebrew and
-# sections 2-3 curl installers, so this smoke mirrors its commands instead
-# (the delta is documented in docs/ci-tests/install-smoke.md).
+# install.sh itself cannot run offline: it bootstraps Nix and then switches a
+# profile, so this smoke mirrors its stow commands instead (the delta is
+# documented in docs/ci-tests/install-smoke.md).
 #
 # Usage: scripts/test-install-smoke.sh        (missing stow/node -> SKIP)
 #        STRICT=1 scripts/test-install-smoke.sh   (missing tools -> FAIL)
@@ -63,7 +63,6 @@ rex=.config/rex
 agents=.agents
 pi=bin
 herdr=.config/herdr
-systemd=.config/systemd
 git=.config/git
 '
 
@@ -78,11 +77,19 @@ sentinel_for() { # $1 package -> sentinel target (empty when absent)
 # file order as "<flags>|<pkg>" (flags: N = --no-folding, R = restow,
 # "-" = none).
 extract_plan() {
-  awk '/^[[:space:]]*stow /{
-    flags=""; pkg=$NF;
-    for (i=2; i<NF; i++) { if ($i=="--no-folding") flags=flags"N"; if ($i=="-R") flags=flags"R" }
-    print (flags == "" ? "-" : flags) "|" pkg
-  }' "$INSTALL"
+  # install.sh loops over scripts/stow-packages (plus the darwin file), so the
+  # plan is read from those lists. A literal `stow ... <pkg>` line would mean
+  # the script and the list had drifted apart again.
+  local f
+  for f in "$REPO/scripts/stow-packages" "$REPO/scripts/stow-packages-darwin"; do
+    [ -f "$f" ] || continue
+    grep -vE '^[[:space:]]*(#|$)' "$f" | while read -r pkg; do
+      printf -- '-|%s\n' "$pkg"
+    done
+  done
+  if grep -qE '^[[:space:]]*stow -d "[^"]*" -t "[^"]*" [a-z]' "$INSTALL"; then
+    echo "DRIFT literal-stow-line" # surfaced by the plan/coverage gate below
+  fi
 }
 
 PLAN_FILE="$(newtmp)/plan"
@@ -98,9 +105,6 @@ gate_plan() {
       launchd)
         if [ "$(uname -s)" = "Darwin" ]; then echo "RUN $pkg $flags"
         else echo "SKIP $pkg macOS-only (Darwin guard)"; fi ;;
-      systemd)
-        if PATH=/usr/bin:/bin command -v systemctl >/dev/null 2>&1; then echo "RUN $pkg $flags"
-        else echo "SKIP $pkg systemctl absent"; fi ;;
       *)
         case "$flags" in *R*) echo "SKIP $pkg phase-5 omz restow (network phase, not smoked)" ;;
         *) echo "RUN $pkg $flags" ;; esac ;;  # flags "-" means no folding
@@ -169,12 +173,21 @@ phase_plan() {
 }
 
 # ------------------------------------------------------------- deploy ----
-# Mirror of install.sh's offline steps, in its exact order:
-#   pre-clean rm -f (line 77), stow lines of section 4, pi-settings-sync
-#   between `stow agents` and `stow pi` (line 90), terminfo (section 6)
-#   before `stow git` (section 7).
+# Mirror of install.sh's stow section, in its exact order:
+#   pre-clean rm -f, the stow lines, then pi-settings-sync between `stow agents`
+#   and `stow pi`. install.sh has no other offline step since S03: the package
+#   and service installs moved into the flake, and this smoke therefore checks
+#   the file-deployment half only.
 # On any failure it unstows the packages it already placed (no half-stowed
 # tree) and exits non-zero. Usage: run_deploy <dotfiles> <fakehome> <stubdir>
+stow_from_list() { # $1 repo, $2 home
+  local pkg
+  grep -vE '^[[:space:]]*(#|$)' "$1/scripts/stow-packages" | while read -r pkg; do
+    printf 'STOW %s\n' "$pkg"
+    stow -d "$1" -t "$2" "$pkg" 2>/dev/null || true
+  done
+}
+
 run_deploy() {
   local dep_d="$1" dep_h="$2" dep_stub="${3:-}"
   (
@@ -209,17 +222,6 @@ run_deploy() {
           echo "FAILSTEP pi-settings-sync: $out"; rollback; exit 1
         fi
         echo "OK pi-settings-sync"
-      fi
-      if [ "$p" = "git" ]; then
-        if command -v tic >/dev/null 2>&1; then
-          mkdir -p "$HOME/.terminfo"
-          if ! out=$(tic -x -w "$dep_d/terminfo/xterm-ghostty.terminfo" 2>&1); then
-            echo "FAILSTEP terminfo: $out"; rollback; exit 1
-          fi
-          echo "OK terminfo"
-        else
-          echo "SKIP terminfo tic absent"
-        fi
       fi
       stowit "$p" "$nf"
     # Third field "N" marks --no-folding (hunk); empty means default folding.
@@ -305,8 +307,14 @@ phase_deploy() {
   fi
   grep -q '^OK pi-settings-sync$' "$DEPLOY_OUT" && pass "deploy/pi-settings-sync" "ran offline against fake HOME" \
     || fail "deploy/pi-settings-sync" "did not run"
-  grep -q '^OK terminfo$' "$DEPLOY_OUT" && pass "deploy/terminfo" "tic wrote into fake HOME only" \
-    || skip "deploy/terminfo" "tic absent (guarded step in install.sh)"
+  # install.sh no longer compiles terminfo: the profile's activation owns it
+  # (nix/modules/shared/default.nix, home.activation.ghosttyTerminfo), so this
+  # phase must not mirror a step the script does not run.
+  if grep -q '^OK terminfo$' "$DEPLOY_OUT"; then
+    fail "deploy/terminfo" "the mirror still runs a step install.sh dropped"
+  else
+    pass "deploy/terminfo" "no terminfo step outside the profile"
+  fi
   check_containment "$FH"
   check_real_files "$FH"
   check_sentinels "$FH" "$GATED_FILE"
@@ -363,7 +371,12 @@ phase_idempotence() {
 }
 
 phase_guards() {
-  # Static: every optional step in install.sh must sit behind its guard.
+  # install.sh has exactly two roles since S03: bootstrap Nix, then run stow.
+  # Every package and service install moved into the flake (flake.nix), so
+  # the old per-step fragility guards now live in the flake, not in this file.
+  # What stays guarded here: the platform gates on the stow set, and the rule
+  # that no installer crept back into install.sh.
+
   local guard_line
   guard_line() { # $1 step pattern, $2 guard pattern, $3 look-back lines
     local n hit gn
@@ -373,42 +386,32 @@ phase_guards() {
     if [ -n "$gn" ]; then pass "guards/$1" "guarded by $2"
     else fail "guards/$1" "no $2 guard within ${3:-3} lines above (set -e abort risk)"; fi
   }
-  guard_line 'herdr integration install pi' 'command -v herdr'
-  guard_line 'gh extension install' 'command -v gh'
-  grep -E 'gh extension install' "$INSTALL" | grep -q '|| true' \
-    && pass "guards/gh-extension-soft-fail" "gh extension install has || true" \
-    || fail "guards/gh-extension-soft-fail" "gh extension install lacks || true"
-  guard_line 'herdr integration install codex' 'command -v codex'
-  guard_line 'stow .* launchd$' 'uname -s.*Darwin'
-  guard_line 'stow .* systemd$' 'command -v systemctl'
-  guard_line 'tic -x -w' 'command -v tic' 4
-  # Dynamic: with brew/gh/herdr/codex absent from a controlled PATH,
-  # the guarded snippets must skip and never abort under set -e.
-  local t absent=()
-  for t in brew gh herdr codex; do
-    if PATH=/usr/bin:/bin command -v "$t" >/dev/null 2>&1; then
-      skip "guards/dynamic-$t" "$t visible on controlled PATH; absence not testable here"
-    else absent+=("$t"); fi
-  done
-  if [ "${#absent[@]}" -eq 0 ]; then return; fi
-  local GH FH4 out
-  GH="$(newtmp)"
-  out=$(PATH=/usr/bin:/bin HOME="$GH" bash -euo pipefail -c '
-    D="$1"
-    if command -v herdr >/dev/null 2>&1; then herdr integration install pi; fi
-    if command -v gh >/dev/null 2>&1; then gh extension install dlvhdr/gh-dash 2>/dev/null || true; fi
-    if command -v codex >/dev/null 2>&1; then herdr integration install codex; fi
-  ' _ "$REPO" 2>&1); local rc=$?
-  if [ "$rc" -eq 0 ]; then
-    local names="${absent[*]}"
-    pass "guards/dynamic-no-abort" "with $names absent, guarded steps skipped without aborting (set -e)"
+  # launchd is Darwin-only; install.sh guards it with an uname check around the
+  # darwin list loop, so look for that guard instead of a literal stow line.
+  if grep -q 'uname -s.*Darwin' "$INSTALL" && grep -q 'stow-packages-darwin' "$INSTALL"; then
+    pass "guards/launchd" "guarded by the uname check around the darwin list"
   else
-    fail "guards/dynamic-no-abort" "guarded steps aborted under set -e (rc=$rc): $out"
+    fail "guards/launchd" "no Darwin guard around the launchd stow"
   fi
-  if [ -n "$(find "$GH" -type l 2>/dev/null)" ]; then
-    fail "guards/dynamic-no-writes" "a skipped step still wrote into fake HOME"
-  else pass "guards/dynamic-no-writes" "skipped steps wrote nothing"; fi
+
+  # The owner rule: installs belong to the flake. Only the Nix bootstrap may
+  # fetch an installer; brew bundle, npm/cargo/go installs, git clones and
+  # plugin installs must stay absent.
+  local leaks
+  # A line that only prints a hint inside an echo is documentation, not a step:
+  # require the token to start a command, not to sit inside a quoted string.
+  leaks=$(grep -nE '^[[:space:]]*(sudo[[:space:]]+)?(brew bundle|npm (install|ci)|cargo install|go install|git clone|herdr plugin install|rustup|pip install|snap install)' "$INSTALL" || true)
+  if [ -z "$leaks" ]; then
+    pass "guards/no-installers" "install.sh runs no package or plugin installer"
+  else
+    fail "guards/no-installers" "installer step returned to install.sh: $leaks"
+  fi
+
+  # The Nix bootstrap is the one allowed download, and it must stay guarded by
+  # a `command -v nix` test so a second run does nothing.
+  guard_line 'install\.determinate\.systems' 'command -v nix' 6
 }
+
 
 phase_conflict() {
   if [ -z "$REAL_STOW" ] || [ -z "$NODE_BIN" ]; then

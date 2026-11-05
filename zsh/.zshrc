@@ -125,6 +125,9 @@ export COLORTERM="truecolor"
 export EDITOR="bob run stable"
 export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git -g ""'
 
+# The Nix user profile owns the current Nix. It must win over /usr/bin/nix, which
+# a distribution package can leave behind at an older release.
+[ -d "$HOME/.nix-profile/bin" ] && export PATH="$HOME/.nix-profile/bin:$PATH"
 export PATH="$HOME/bin:$PATH"
 export PATH="/usr/local/bin:$PATH"
 export PATH="/usr/local/go/bin:$PATH"

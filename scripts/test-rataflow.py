@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Paths: rataflow/** agents/.agents/skills/visualize/** agents/.agents/skills/artifact/** install.sh scripts/test-rataflow.py
+# Paths: rataflow/** agents/.agents/skills/visualize/** agents/.agents/skills/artifact/** install.sh nix/** scripts/test-rataflow.py
 """rataflow-view suite — packaging, spec schema, and wiring checks for the
 live node-graph viewer (crate `rataflow/`, ratatui skill
 `agents/.agents/skills/visualize/`, vendored HTML skill
@@ -390,12 +390,34 @@ def check_cargo_lock():
 
 
 def check_install_wiring():
-    rel = "install.sh"
-    text = (REPO / rel).read_text()
-    wanted = 'cargo install --path "$DOTFILES_DIR/rataflow"'
-    if wanted not in text:
-        return False, [f"{rel}: does not build the crate ({wanted})"]
-    return True, []
+    """The binary is owned by the flake, not by install.sh.
+
+    S03 moved every package install out of install.sh: it bootstraps Nix and
+    runs stow only. The crate therefore has to be built by the flake, through a
+    derivation that points at the in-repo source, and install.sh must not carry
+    a cargo install line again.
+    """
+    pkg = "nix/pkgs/rataflow-view.nix"
+    if not (REPO / pkg).is_file():
+        return False, [f"{pkg}: missing"]
+    text = (REPO / pkg).read_text()
+    problems = []
+    if "buildRustPackage" not in text:
+        problems.append(f"{pkg}: does not use buildRustPackage")
+    # The crate arrives as a flake input (path:./rataflow) and is passed to the
+    # derivation as rataflowSrc, because a module cannot reach outside the flake.
+    if "rataflowSrc" not in text:
+        problems.append(f"{pkg}: src does not take the rataflow flake input")
+    flake = (REPO / "flake.nix").read_text()
+    if "path:./rataflow" not in flake:
+        problems.append("flake.nix: rataflow input does not point at ./rataflow")
+    shared = (REPO / "nix/modules/shared/default.nix").read_text()
+    if "rataflow-view" not in shared:
+        problems.append("nix/modules/shared/default.nix: does not install rataflow-view")
+    install = (REPO / "install.sh").read_text()
+    if "cargo install" in install:
+        problems.append("install.sh: carries a cargo install step again")
+    return (not problems), problems
 
 
 def check_gitignore_target():
