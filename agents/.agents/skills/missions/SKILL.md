@@ -95,7 +95,9 @@ delivered asks. Full contract: `docs/pi-missions.md` § Ask the commander.
 
 Discover the deferred `mission` tool through `tool_search`. Humans can use
 `/missions` to open the mission desk in a Herdr pane, or
-`/mission start REPO/SLUG`.
+`/mission start REPO/SLUG`. The desk is one mission list and one detail pane:
+`tab` moves the keys between them, `[` / `]` walk the list's state lane or the
+detail's five views, and `L` asks for a launch.
 
 - `mission {action:"start", handle:"REPO/SLUG"}` prepares the mission worktree
   (`mission workspace`) and hands the launch to the CLI: `mission deploy

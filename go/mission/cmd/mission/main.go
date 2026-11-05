@@ -11,7 +11,6 @@ import (
 
 const help = `mission — work that survives the agent
 
-  mission --version                       One line: version, vcs revision, vcs time
   mission --json list                     Agent interface: JSON, no prompts
   mission --json steps REPO/SLUG
   mission ui                              Optional human mission desk
@@ -31,10 +30,6 @@ const help = `mission — work that survives the agent
       --checks nonempty-artifact,json-valid --output result.json
   mission checks                          List registered check presets
   mission verify [REPO/SLUG]               Run checks for the current attempt context
-  mission ask REPO/SLUG --text QUESTION [--step S02] [--attempt ID]
-      [--kind blocked|question|decision]
-      Ask the commander one question and stop. No token needed.
-  mission ask --list REPO/SLUG             Pending and delivered asks
   mission claim REPO/SLUG --agent scout    Claim a research step; returns token
   mission pickup --repo dotfiles --agent scout   Claim ready research work
   mission run REPO/SLUG --agent worker --cwd WORKTREE -- COMMAND ARGS...
@@ -43,16 +38,12 @@ const help = `mission — work that survives the agent
       --workspace ID --pane ID             Private token in MISSION_TOKEN
   mission progress REPO/SLUG --status working --summary TEXT --event-id ID
       [--actor TROOPER] [--next TEXT] [--blocker TEXT]
-      [--session-id ID --session-file PATH]
       [--evidence artifacts/001/result.md]
                                            --actor also records one trooper
-                                           report on the attempt. An actor
-                                           named judge* needs --session-id and
-                                           records one judge event beside it
+                                           report on the attempt
   mission plan REPO/SLUG [--mux rex]       Read-only launch description: army
       session and window labels, captain argv and brief, worktree, ack token
-  mission deploy REPO/SLUG [--mux rex|herdr]
-                                           Seat the mission: army session, its
+  mission deploy REPO/SLUG [--mux rex]     Seat the mission: army session, its
       captain window, and the mission-<slug> session; a repeat focuses the seat
   mission launch REPO/SLUG                 Reserve one launch; adapters only
   mission launch REPO/SLUG --ack           Record the plan's ack token: the
@@ -80,9 +71,9 @@ const help = `mission — work that survives the agent
   mission close REPO/SLUG [--note TEXT] [--force]
                                            Retire the record; refuses open work
   mission demo --vault ./demo-vault         Seed isolated, simulated records
-  mission render --view inbox|table|repos|overview|troopers|attempts|activity|steps|step|call
+  mission render --view overview|attempts|activity|steps
       [--filter ACTIVE|YOURS|READY|FAILED|DONE]
-      [--handle REPO/SLUG] [--id S01] [--width 128] [--height 42] [--color]
+      [--handle REPO/SLUG] [--width 128] [--height 42] [--color]
 
 Global: --vault PATH (default $MISSION_VAULT or ~/vault), --json
 All data commands return one JSON envelope. No command specified: list missions.
@@ -129,12 +120,6 @@ func emit(v any, e error) int {
 func main() { os.Exit(execute(os.Args[1:])) }
 
 func execute(argv []string) int {
-	// --version is a switch, so it never reaches the positional dispatcher, and
-	// the stamp describes this binary rather than any vault.
-	if len(argv) == 1 && (argv[0] == "--version" || argv[0] == "-v" || argv[0] == "version") {
-		fmt.Println(versionLine())
-		return 0
-	}
 	a, e := platform.ParseArgs(argv)
 	if e != nil {
 		return emit(nil, e)
@@ -164,13 +149,9 @@ func execute(argv []string) int {
 	if cmd == "demo" && !a.Has("vault") {
 		return emit(nil, mission.Problem("usage", "demo requires an explicit --vault pointing to an isolated directory"))
 	}
-	// The version stamp describes this binary, not the vault, so version is the
-	// one command that answers without opening a store.
-	var s *Store
-	if cmd != "version" {
-		if s, e = openStore(vault); e != nil {
-			return emit(nil, e)
-		}
+	s, e := openStore(vault)
+	if e != nil {
+		return emit(nil, e)
 	}
 	// ui and render own their stdout, so they return an exit code directly.
 	switch cmd {
@@ -186,8 +167,6 @@ func execute(argv []string) int {
 // dispatch maps one CLI command to its handler. Groups live in cmd_*.go.
 func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 	switch cmd {
-	case "version":
-		return versionLine(), nil
 	case "repo":
 		return cmdRepo(a, s)
 	case "new":
@@ -206,8 +185,6 @@ func dispatch(cmd string, a platform.Args, s *Store) (any, error) {
 		return cmdVerify(a, s)
 	case "next", "ready":
 		return s.ready(a.Get("repo"))
-	case "ask":
-		return cmdAsk(a, s)
 	case "claim":
 		return cmdClaim(a, s)
 	case "pickup":
