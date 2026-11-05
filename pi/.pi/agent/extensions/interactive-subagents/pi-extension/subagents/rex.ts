@@ -166,12 +166,29 @@ function sessionArgs(): string[] {
   return session ? ["-s", session] : [];
 }
 
+/** True for a value that is a file path, not a session label or id. */
+function looksLikePath(value: string): boolean {
+  return value.includes("/") || value.endsWith(".jsonl");
+}
+
+/** Resolve one routing candidate (an id or a label) to a session id. */
+function resolveRoutedSession(want: string): string | null {
+  if (want.startsWith("session:")) return want;
+  return findSessionByLabel(want);
+}
+
 /**
- * The session a child runs in. `PI_SUBAGENT_SESSION` names a label or an id,
- * so a mission captain fans work out into the mission session instead of its
- * own. Without it, a child follows the caller, as before.
+ * The value the routing variables name, or null when neither names one.
+ * `PI_SUBAGENT_REX_SESSION` wins; `PI_SUBAGENT_SESSION` routes only while it
+ * holds a plain label, never the child's session file.
  */
-let childSession: string | null = null;
+function routingWant(): string | null {
+  const rex = process.env.PI_SUBAGENT_REX_SESSION?.trim();
+  if (rex) return rex;
+  const legacy = process.env.PI_SUBAGENT_SESSION?.trim();
+  if (legacy && !looksLikePath(legacy)) return legacy;
+  return null;
+}
 
 /** Every session label the server has, for an error a caller can act on. */
 function sessionLabels(): string {
@@ -188,13 +205,29 @@ function requireSession(want: string): string {
   throw new Error(`unknown session "${want}"; live sessions: ${sessionLabels()}`);
 }
 
+/**
+ * The session a child runs in. `PI_SUBAGENT_REX_SESSION` names a Rex label or
+ * id, so a mission captain fans work out into the mission session instead of
+ * its own.
+ *
+ * `PI_SUBAGENT_SESSION` is the child's pi session *file* (`/…/2026-…_abc.jsonl`),
+ * read by subagent-done.ts and the resume path. It routes only while it holds a
+ * plain label, which is how mission deploy seats its troops today; a path is
+ * never a session target. Without either variable a child follows the caller.
+ */
+let childSession: string | null = null;
+
 function childSessionId(explicit?: string): string | null {
   if (explicit) return requireSession(explicit.trim());
-  const want = process.env.PI_SUBAGENT_SESSION?.trim();
-  if (!want) return process.env.REX_SESSION || null;
-  if (childSession !== null) return childSession;
-  childSession = want.startsWith("session:") ? want : findSessionByLabel(want) ?? "";
-  return childSession || null;
+  const want = routingWant();
+  // No routing variable (or only the child's session file, which is not a
+  // session target): a child follows the caller, as before.
+  if (!want) return process.env.REX_SESSION?.trim() || null;
+  // Cache only a session a routing variable resolved to: a lookup that found
+  // nothing must retry on the next call, because the session can appear later.
+  if (childSession) return childSession;
+  childSession = resolveRoutedSession(want);
+  return childSession ?? (process.env.REX_SESSION?.trim() || null);
 }
 
 /** `-s` scope for a child tab, or none when no session is known. */
