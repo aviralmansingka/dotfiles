@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"mission.local/prototype/internal/adapters/checks"
 	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -68,7 +69,7 @@ func TestDivergentLockCannotDropClaimedAttempt(t *testing.T) {
 	s, h := ledgerFixture(t)
 	otherStore, e := vaultfs.Open(s.Repo.VaultPath(), vaultfs.WithLockDir(t.TempDir()))
 	must(t, e)
-	other := newApp(otherStore, "mission")
+	other := newApp(otherStore, checks.New(), "mission")
 	loaded, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
 		_, e := other.mutate(h, func(r *mission.Record) error {

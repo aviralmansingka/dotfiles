@@ -344,7 +344,7 @@ func (s *App) reopen(h, id, note string) (mission.Record, error) {
 	var current mission.Record
 	var attempt mission.Attempt
 	var st mission.Step
-	var before subjectSnapshot
+	var before mission.Snapshot
 	var target string
 	note = strings.TrimSpace(note)
 	if note == "" {
@@ -371,7 +371,7 @@ func (s *App) reopen(h, id, note string) (mission.Record, error) {
 			return mission.Problem("review_evidence_missing", "read the reviewed evidence %s: %v", cs.Evidence, before.ArtifactErr)
 		}
 		run.SubjectHash = before.Hash
-		run.DefinitionHash = definitionHash(st)
+		run.DefinitionHash = mission.DefinitionHash(st)
 		for _, name := range mission.StepChecks(st) {
 			run.Results = append(run.Results, mission.CheckResult{Check: name, Version: "1", Verdict: "not_run", At: run.Started, Summary: "Check has not run"})
 		}
@@ -387,7 +387,7 @@ func (s *App) reopen(h, id, note string) (mission.Record, error) {
 		return current, e
 	}
 	// Checks run without the vault lock, like the worker verification path.
-	logs := executeChecks(st, attempt.Cwd, before, &run)
+	logs := s.executeChecks(st, attempt.Cwd, before, &run)
 	var failed error
 	rec, e := s.update(h, func(r *mission.Record) error {
 		a, e := mission.FindAttempt(&r.State, attempt.ID)
@@ -400,7 +400,7 @@ func (s *App) reopen(h, id, note string) (mission.Record, error) {
 		if e = s.recordVerification(r, a, st, &run, before, logs); e != nil {
 			return e
 		}
-		if allPassed(run, st) {
+		if mission.AllPassed(run, st) {
 			cs := r.State.Checkpoints[target]
 			cs.Hash = before.ArtifactHash
 			r.State.Checkpoints[target] = cs

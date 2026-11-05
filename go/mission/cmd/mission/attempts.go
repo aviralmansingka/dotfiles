@@ -160,7 +160,7 @@ func (s *App) finish(h, id, token string, failed bool, note string, observedExit
 				a, _ = mission.FindAttempt(&r.State, id)
 			}
 			v := a.Verifications[len(a.Verifications)-1]
-			if !allPassed(v, attemptDefinition(r, *a)) {
+			if !mission.AllPassed(v, attemptDefinition(r, *a)) {
 				if len(v.Results) > 0 && v.Results[0].Verdict == "failed" {
 					return r, mission.Problem("missing_artifact", "required result check failed; inspect verification evidence")
 				}
