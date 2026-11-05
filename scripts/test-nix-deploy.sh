@@ -2,8 +2,10 @@
 # Paths: scripts/nix-deploy justfile nix/**
 #
 # Offline test for scripts/nix-deploy. No network, no switch, no real host: the
-# script runs with a stub PATH so `hostname`, `ssh`, `tar`, `home-manager` and
-# `darwin-rebuild` record their argv instead of doing work.
+# script runs with a stub PATH so `hostname`, `uname`, `ssh`, `tar`, `git`,
+# `stow`, `home-manager` and `darwin-rebuild` record their argv instead of doing
+# work. Each case runs against a throwaway $HOME, so the file phase's `rm -f`
+# and `stow` never touch the real one.
 #
 # What it proves:
 #   - the plan for a local target names home-manager or darwin-rebuild
@@ -42,6 +44,18 @@ else
 fi
 STUB
 
+# uname: resolve_target falls back to the platform when no table entry claims
+# the hostname, so the macbook cases must behave the same on a Linux CI runner
+# as on the Mac. STUB_UNAME forces the answer; unset delegates to the real one.
+cat > "$BIN/uname" <<'STUB'
+#!/usr/bin/env bash
+if [ "${1:-}" = "-s" ] && [ -n "${STUB_UNAME:-}" ]; then
+  echo "$STUB_UNAME"
+  exit 0
+fi
+exec /usr/bin/uname "$@"
+STUB
+
 # ssh records its argv and, when the command is a stage tar, consumes stdin.
 cat > "$BIN/ssh" <<'STUB'
 #!/usr/bin/env bash
@@ -55,6 +69,21 @@ cat > "$BIN/tar" <<'STUB'
 #!/usr/bin/env bash
 echo "tar $*" >> "$CALLS"
 cat > /dev/null 2>&1 || true
+exit 0
+STUB
+
+# git and stow: on a local target the file phase clones the checkout for real
+# and stows into $HOME. Record the argv, so the phase stays offline (the
+# checkout's url.insteadOf rewrites HTTPS to SSH, which would wait on a key).
+cat > "$BIN/git" <<'STUB'
+#!/usr/bin/env bash
+echo "git $*" >> "$CALLS"
+exit 0
+STUB
+
+cat > "$BIN/stow" <<'STUB'
+#!/usr/bin/env bash
+echo "stow $*" >> "$CALLS"
 exit 0
 STUB
 
@@ -116,10 +145,14 @@ export PATH="$BIN:$PATH"
 export FLEET_STUB_BIN="$BIN"
 
 run() { # $1 case name, rest: argv
-  local name="$1"
+  local name="$1" home
   shift
   : > "$CALLS"
-  OUT="$("$DEPLOY" "$@" 2>&1)"
+  # A fresh $HOME per case: the file phase writes a checkout under it and runs
+  # `rm -f` on .bashrc/.profile, which must never reach the real home.
+  home="$TMP/home"
+  mkdir -p "$home"
+  OUT="$(HOME="$home" "$DEPLOY" "$@" 2>&1)"
   RC=$?
   export OUT RC
 }
@@ -146,7 +179,7 @@ expect_no_call() { # $1 case, $2 needle, $3 why
 
 # --------------------------------------------------------------- the cases ---
 echo "== dry run, local macbook target"
-STUB_HOSTNAME=testmac run "dry local" macbook mac --dry-run
+STUB_HOSTNAME=testmac STUB_UNAME=Darwin run "dry local" macbook mac --dry-run
 expect_rc "dry local" 0 "exit 0"
 expect_contains "dry local" "darwinConfigurations.macbook" "names the macbook attribute"
 expect_contains "dry local" "darwin-rebuild switch" "names the switch command"
@@ -187,7 +220,7 @@ STUB_HOSTNAME=srv717581 run "local by cloud hostname" remote local --dry-run
 expect_rc "local by cloud hostname" 0 "exit 0"
 expect_contains "local by cloud hostname" "attribute homeConfigurations.remote-devbox" "the cloud-init hostname resolves to devbox"
 
-STUB_HOSTNAME=unknownbox run "local by platform" macbook local --dry-run
+STUB_HOSTNAME=unknownbox STUB_UNAME=Darwin run "local by platform" macbook local --dry-run
 expect_rc "local by platform" 0 "exit 0"
 expect_contains "local by platform" "attribute darwinConfigurations.macbook" "an unclaimed hostname falls back to the platform"
 
