@@ -63,13 +63,6 @@ in
         rustup
         uv
       ]
-      # Owner batch two (S06): the headless browser and the tailscale CLI come
-      # from the profile. The tailscaled daemon stays with apt (root service);
-      # the CLI talks to it over the local socket.
-      ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-        google-chrome
-        tailscale
-      ]
     );
 
   programs.home-manager.enable = true;
