@@ -50,7 +50,6 @@ newtmp() { mktemp -d "$TMPROOT/smoke.XXXXXX"; }
 # phase-5 `stow -R` restow; drift here fails the plan phase). A newline table
 # keeps this portable: macOS ships bash 3.2, which has no associative arrays.
 SENTINEL_TABLE='
-zsh=.zshenv
 profile=.profile
 tmux=.tmux.conf
 nvim=.config/nvim
@@ -212,7 +211,9 @@ run_deploy() {
       echo "OK stow $p"
       ok_p+=("$p"); ok_n+=("$nf")
     }
-    rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
+    # ~/.zshenv and ~/.zshrc stay: Home Manager writes both (the profile
+    # switch runs before this stow phase in install.sh).
+    rm -f "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
     local act p nf
     while read -r act p nf; do
       [ -n "$p" ] || continue
@@ -467,7 +468,7 @@ phase_stub() {
   if [ "$rc" -ne 0 ] && grep -q '^FAILSTEP ' <<<"$out"; then
     pass "stub/detected" "failing step surfaced as a hard failure (rc=$rc)"
   else fail "stub/detected" "failing step was not reported (rc=$rc): $out"; fi
-  if grep -q '^OK stow zsh$' <<<"$out" && grep -q '^ROLLBACK: zsh' <<<"$out"; then
+  if grep -q '^OK stow profile$' <<<"$out" && grep -q '^ROLLBACK: profile' <<<"$out"; then
     pass "stub/rollback" "first package stowed, then unstowed by rollback"
   else fail "stub/rollback" "rollback did not undo the stowed package"; fi
   if [ -z "$(find "$FHS" -type l)" ]; then

@@ -10,97 +10,25 @@ const hash = text => createHash("sha256").update(text).digest("hex");
 export const slug = title => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64).replace(/-$/, "");
 const active = a => a && ["running", "reported"].includes(a.status);
 
-/** The agent name that an `agent_name_taken` failure names, or null. */
-export function takenAgentName(message) {
-  const text = String(message ?? "");
-  if (!text.includes("agent_name_taken")) return null;
-  return /agent name ([\w-]+) is already used/.exec(text)?.[1] ?? null;
-}
-
-/** The Herdr agent name of one mission launch. Herdr keeps names unique per
- *  server and accepts 32 characters of [a-z0-9_-] that start with a letter. The
- *  name comes from the mission handle, so a launch reads back as the mission it
- *  serves. `tag` appends a short hash when the plain name is taken. */
-export function workerAgentName(handle, tag = "") {
-  const tail = slug(String(handle || "").split("/").pop() || "mission").slice(0, 24) || "mission";
-  const mark = String(tag || "").replace(/[^a-z0-9]+/gi, "").toLowerCase().slice(0, 6);
-  return `mission-${tail}${mark ? "-" + mark : ""}`.slice(0, 32).replace(/-+$/, "");
-}
-
 /** The identity a launched seat records. A launch sends the captain brief and
  *  runs the captain allowlist, so the seat it starts is a captain; a session
  *  that attaches on its own, with no launch intent to answer, is a trooper. */
 export const CAPTAIN_AGENT = "mission-captain";
 export const WORKER_AGENT = "mission-worker";
 
-/** The agent arguments of a plan's captain argv: everything after the
- *  executable. `herdr agent start <name> --kind pi --pane <id> [-- AGENT_ARG...]`
- *  starts the binary itself and passes this tail to it, and `pi` has no profile
- *  flag, so the argv tail is the only place a plan's tool allowlist can reach a
- *  launched seat. A plan with no argv passes nothing and the seat keeps the
- *  defaults it would have had. */
-export function seatArgs(argv) {
-  return (Array.isArray(argv) ? argv : []).map(arg => String(arg ?? "")).filter(Boolean).slice(1);
-}
-
-/** Whether a `mission plan` answer carries anything a launch can use: the
- *  captain contract, the seat's argv tail, or the subagent session. A failed
- *  call, an empty object, and a CLI that predates `plan` all answer nothing
- *  usable, so one degradation rule covers all three. */
-export function usablePlan(plan) {
-  if (!plan || typeof plan !== "object") return false;
-  if (typeof plan.captain_brief === "string" && plan.captain_brief !== "") return true;
-  if (Array.isArray(plan.captain_argv) && plan.captain_argv.length > 0) return true;
-  return typeof plan.subagent_session === "string" && plan.subagent_session !== "";
-}
-
-/** How long a launch waits for its new agent to reach the prompt. */
-export const AGENT_READY_TIMEOUT_MS = 60000;
-
-/** A tab Herdr just created may still be starting its shell. The launch retries
- *  the `agent_pane_busy` refusal this long before it gives up. */
-export const AGENT_PANE_READY_RETRIES = 20;
-export const AGENT_PANE_READY_DELAY_MS = 250;
-
-/** The code and message of a failed Herdr call, or the raw text. */
-export function herdrError(message) {
-  const text = String(message ?? "");
-  try {
-    const error = JSON.parse(text.slice(text.indexOf("{"))).error;
-    if (error?.code) return `${error.code}: ${error.message}`;
-  } catch { /* the call failed without a Herdr envelope */ }
-  return text;
-}
-
-/** One message a human can act on: the name, the pane that holds it, and the
- *  next step. */
-export function agentCollisionReport(name, holder, action) {
-  const pane = holder?.pane_id || "an unknown pane";
-  const status = holder?.agent_status || "unknown";
-  const cwd = holder?.foreground_cwd || holder?.cwd || "unknown";
-  return `Herdr agent name "${name}" is held by pane ${pane} (status ${status}, cwd ${cwd}). ${action}`;
-}
-/** The launcher configuration a driver pane must inherit: where Pi finds the
- *  extension, which vault and CLI it serves, and its private state directory.
- *  A checkout that is not installed (a preview or a mission worktree) sends its
- *  own agent dir this way. The attempt token never travels this way. */
-export function driverEnv(env = process.env) {
-  return ["PI_CODING_AGENT_DIR", "MISSION_VAULT", "MISSION_BIN", "MISSION_STATE_DIR"]
-    .filter(key => typeof env[key] === "string" && env[key] !== "" && !env[key].includes("\0"))
-    .map(key => [key, env[key]]);
-}
-
-/** The launch prompt of a mission driver. The launched agent holds the claim on
- *  one work request and steers it; it performs no step work itself. One work
- *  subagent executes each step, one judge subagent decides it, and the driver
- *  stays the single place the human visits for status and admin prompts. */
+/** The contract of one mission driver. The driver holds the claim on one work
+ *  request and steers it; it performs no step work itself. One work subagent
+ *  executes each step, one judge subagent decides it, and the driver stays the
+ *  single place the human visits for status and admin prompts. A launch id
+ *  names the intent a seat answers, so only a launched seat is told to attach. */
 export function driverTask(handle, launchID) {
   return [
     `You are the driver for mission ${handle}, not its worker. You hold the claim on this work request.`,
-    `Attach first: call mission with action=attach, handle=${handle}, launch_id=${launchID}. Its returned step brief and the missions skill describe the work, but you send that work out.`,
+    ...(launchID ? [`Attach first: call mission with action=attach, handle=${handle}, launch_id=${launchID}. Its returned step brief and the missions skill describe the work, but you send that work out.`] : []),
     "Duty 1 — hold the claim: this session owns the attempt and keeps the mission tool. Report structured progress, and call mission action=verify and mission action=finish only after a judge records a pass.",
     "Duty 2 — subagents do all step work: you never edit repository code and you never write a step artifact. For each step, spawn one work subagent (agent=worker) with the step brief, its artifact path, and the acceptance criteria, then wait for its result.",
-    "Duty 3 — subagents judge: after the work subagent reports, call mission action=judge and spawn one judge subagent (agent=worker, name=judge-<step>) with the returned task verbatim. Never judge your own work and never reuse the work subagent's session. The judge reads the artifact, runs the CLI checks itself through mission verify, and records its verdict with reasons as progress.",
+    "Duty 3 — subagents judge: after the work subagent reports, call mission action=judge and spawn one judge subagent (agent=worker, name=judge-<step>) with the returned task verbatim. Never judge your own work and never reuse the work subagent's session. The judge reads the artifact, runs the CLI checks itself through mission verify, and records its verdict with reasons as progress. When the step's checks include a cmd: check, the passed check is the verdict, so spawn no judge.",
+    "Duty 4 — advance in the same turn: after a judge records a pass, spawn the next step's work subagent in that same turn instead of ending it. A pending checkpoint is the only reason to stop between steps.",
     "Touchpoint — you answer the human's status and admin prompts in this session. Status: call mission action=status and report what is running, what passed, and what is next, plus any review or blocker, in plain words. Admin: run the change through an existing command — mission action=edit (with the revision you reported), mission action=retry, mission action=fail, or a checkpoint decision the human explicitly gives — then confirm the result. A stale edit is refused, never forced. Stop at human checkpoints and never approve one yourself.",
     "Keep the mission worktree as this session's cwd and keep the mission tool available for later steps. Do not launch another mission owner.",
   ].join("\n");
@@ -134,12 +62,6 @@ export function judgeTask({ handle, attempt, step, artifact, evidence, acceptanc
   ].join("\n");
 }
 
-/** Every Herdr workspace that belongs to this repository lineage: the primary
- * checkout's workspace plus one linked-worktree workspace per worktree Herdr
- * has open (missions register their own mission/<slug> checkout). */
-export function repositoryWorkspaces(workspaces, common) {
-  return (workspaces || []).filter(w => w.worktree?.repo_key === common);
-}
 export function pendingCount(symbol) {
   const fn = globalThis[Symbol.for(symbol)];
   if (typeof fn !== "function") return 0;
@@ -332,19 +254,75 @@ export function trooperReport(message) {
     : status === "needs-input" ? `Steer it with ${follow}` : `Resume or replace it with ${follow}`;
   const session = String(details.sessionFile || details.sessionId || trooper);
   const report = { id: "trooper-" + hash([session, status, summary].join("\u0000")).slice(0, 24), trooper, status, summary, next };
+  // A judge report carries the session that judged: the CLI refuses a judge
+  // progress that names no session, so the identity the ID was hashed from
+  // travels with the report instead of staying behind in the hash.
+  const sessionID = String(details.sessionId ?? "").trim();
+  const sessionFile = String(details.sessionFile ?? "").trim();
+  if (sessionID) report.session = sessionID;
+  if (sessionFile) report.session_file = sessionFile;
   if (status !== "ready") report.blocker = trooperLine(details.errorMessage ?? details.error ?? "", 160) || summary;
   return report;
 }
 
-/** CLI refusals that make a queued trooper report permanently undeliverable: the
- *  record already holds a different aspect of that ID, the attempt the trooper
- *  finished under is gone or no longer active, or its handle vanished. Matched
- *  on the CLI's own error codes (see the `Problem("code"` calls under
- *  go/mission), never on a substring: a transient failure — the CLI is busy or
- *  gone — is not on this list, so that report retries. */
-export const DROPPABLE_REPORT_CODES = new Set(["event_conflict", "stale_attempt", "attempt_terminal", "closed", "not_found", "invalid_handle"]);
+/** CLI refusals that make a queued line permanently undeliverable: the record
+ *  already holds a different aspect of that ID, the attempt the line names is
+ *  gone, ended, or no longer the owner, or its handle vanished. Matched on the
+ *  CLI's own error codes (see the `Problem("code"` calls under go/mission),
+ *  never on a substring: a transient failure — the CLI is busy or gone — is not
+ *  on this list, so that line retries. A hook is dropped by the same rule as a
+ *  report: an attempt the ledger stopped listing cannot take either one, and
+ *  retrying it forever is how a wedged outbox held every later event. */
+export const DROPPABLE_EVENT_CODES = new Set(["event_conflict", "stale_attempt", "attempt_terminal", "closed", "not_found", "invalid_handle"]);
+export function droppableEventError(message) {
+  return DROPPABLE_EVENT_CODES.has(/^([a-z_]+): /.exec(String(message ?? ""))?.[1] ?? "");
+}
+
+/** The CLI's own rule for a judge report: an actor whose trimmed, lowercased
+ *  name starts with "judge" is a judge, and only a judge's report names the
+ *  session behind it (`isJudge` in go/mission/cmd/mission/attempt.go, where the
+ *  actor is trimmed before this test). Matched here rather than re-invented, so
+ *  the two sides cannot drift into the refusal that wedged a captain. */
+export function isJudge(trooper) {
+  return String(trooper ?? "").trim().toLowerCase().startsWith("judge");
+}
+
+/** How many failed flushes one outbox item may take before it is set aside. A
+ *  transient failure retries; a refusal the extension does not recognize — the
+ *  CLI's `usage` is the one that wedged a live captain — must not be retried
+ *  forever at the head of the queue, because every tool call flushes it. */
+export const OUTBOX_FAILURE_LIMIT = 3;
+
+/** How many set-aside items the state file keeps for a human to inspect. */
+export const FAILED_OUTBOX_LIMIT = 20;
+
+/** How many one-line notices a session holds for its next tool result. */
+export const OUTBOX_NOTICE_LIMIT = 20;
+
+/** The CLI error code of one failed outbox delivery: the `code: ` prefix every
+ *  CLI problem carries, or a clipped message when the answer is not the CLI's
+ *  (a binary that is gone, invalid JSON). */
+export function outboxErrorCode(message) {
+  const text = String(message ?? "").trim();
+  return /^([a-z_]+): /.exec(text)?.[1] ?? (text.split("\n")[0].slice(0, 60) || "unknown");
+}
+
+/** The one line a set-aside outbox item leaves in the next tool result, so a
+ *  report or a hook the ledger never took is visible without failing the tool
+ *  call that flushed it. */
+export function setAsideNotice(item, error) {
+  const code = outboxErrorCode(error);
+  return item.report
+    ? `1 report could not be recorded: ${item.report.trooper} (${code})`
+    : `1 hook could not be recorded: ${item.event?.type || "unknown"} (${code})`;
+}
+
+/** The report-side name of the one permanent-code rule: the outbox dropped only
+ *  reports when it first named this, and a report and a hook are refused by the
+ *  same codes, so both names read one set instead of drifting apart. */
+export const DROPPABLE_REPORT_CODES = DROPPABLE_EVENT_CODES;
 export function droppableReportError(message) {
-  return DROPPABLE_REPORT_CODES.has(/^([a-z_]+): /.exec(String(message ?? ""))?.[1] ?? "");
+  return droppableEventError(message);
 }
 
 /** The path of a block's `pwd` answer: `file://<host>/<abs path>`, or a bare
@@ -365,7 +343,7 @@ function pwdPath(answer) {
  *  runs in. `paneCwd` and `blockCwd` are only set when that seat answered. */
 function seatRefusal({ paneID, herdrSeat, blockID, paneCwd, blockCwd, cwd }) {
   if (herdrSeat) return paneCwd === undefined
-    ? `Herdr pane ${paneID} is in no workspace of this repository. Move this session into the mission worktree's pane before attaching.`
+    ? `Herdr pane ${paneID} is in no workspace Herdr lists. Move this session into the mission worktree's pane before attaching.`
     : `Herdr pane ${paneID} reports ${paneCwd} but this session runs in ${cwd}. Move this session into the mission worktree's pane before attaching.`;
   if (blockCwd !== undefined) return blockCwd === null
     ? `Rex block ${blockID} reports no cwd, and this session runs in ${cwd}. Check the block still runs a shell in the mission worktree, or resume this session there.`
@@ -395,6 +373,19 @@ export class MissionBridge {
     });
     this.hint = null;
     this.error = null;
+    // Lines the outbox owes the next tool result, drained once: a set-aside item
+    // and a judge report that carried no session are both reported this way.
+    this.notices = [];
+    // Report IDs already warned about, so a replayed completion warns once.
+    this.warned = new Set();
+    // The attempt whose contract this session already delivered: the contract
+    // goes with the attach, and the turns after it stay short.
+    this.contractAttempt = null;
+    // The attempt the last ledger read listed as the owner. Every emitted line
+    // names this one, never `hint.attempt`: the hint records which attempt this
+    // session attached to, and a ledger read is the only thing that says which
+    // attempt is the owner now.
+    this.ledgerAttempt = null;
     this.surfaceSession = null;
     this.surface = null;
     this.expectedAttachment = false;
@@ -465,60 +456,6 @@ export class MissionBridge {
     return pane;
   }
   async common(cwd) { return realpathSync((await this.run("git", ["-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"])).trim()); }
-  /** The Herdr agent that holds one name, or null. Herdr lists a name only for
-   *  an agent it started; a detected agent carries none. */
-  async agentNamed(name) {
-    const agents = (await this.herdr(["agent", "list"])).agents || [];
-    return agents.find(a => a.name === name) || null;
-  }
-  /** Start the mission seat as a full Pi agent in the mission pane. The name
-   *  comes from the mission. A name that another session holds takes a short
-   *  handle hash once; the launch never renames another session's agent.
-   *  `args` is the plan's captain argv tail, passed through Herdr's AGENT_ARG
-   *  slot so the seat runs the allowlist the plan emits. */
-  /** Start the mission worker once its pane is a free shell. A tab that Herdr
-   *  just created can still be bringing its shell up, and `agent start` refuses
-   *  a pane that is not an available shell yet; that refusal is retried, not
-   *  fatal. Every other failure keeps its own handling. */
-  async startWorker(handle, pane, args = []) {
-    for (let attempt = 0; ; attempt++) {
-      try { return await this.startWorkerOnce(handle, pane, args); }
-      catch (e) {
-        if (!String(e.message).includes("agent_pane_busy") || attempt >= AGENT_PANE_READY_RETRIES) throw e;
-        await new Promise(r => setTimeout(r, AGENT_PANE_READY_DELAY_MS));
-      }
-    }
-  }
-  async startWorkerOnce(handle, pane, args = []) {
-    const start = name => this.herdr(["agent", "start", name, "--kind", "pi", "--pane", pane,
-      ...(args.length ? ["--", ...args] : [])]);
-    const name = workerAgentName(handle);
-    try { await start(name); return name; }
-    catch (e) { if (!takenAgentName(e.message)) throw e; }
-    const retry = workerAgentName(handle, hash(handle));
-    try { await start(retry); return retry; }
-    catch (e) {
-      const taken = takenAgentName(e.message);
-      if (!taken) throw e;
-      throw new Error(agentCollisionReport(taken, await this.agentNamed(taken),
-        `That session holds the name. End it, or run \`herdr agent rename <pane> <new name>\`, then launch again (agent_name_taken).`));
-    }
-  }
-  /** The agent a pane hosts, "unknown" when Herdr cannot answer, or null when
-   *  the pane holds no agent. */
-  async paneAgent(pane) {
-    try { return (await this.herdr(["pane", "get", pane])).pane?.agent || null; }
-    catch { return "unknown"; }
-  }
-  /** A failed launch stays retryable: it releases the intent it reserved, but
-   *  only when no worker can own it. A pane that hosts an agent, an
-   *  unanswered Herdr call, or a recorded session keeps the intent. */
-  async releaseLaunch(handle, launchID, pane) {
-    if (!launchID) return false;
-    if (pane == null || await this.paneAgent(pane)) return false;
-    try { await this.call(["launch", handle, "--release", "--launch-id", launchID]); return true; }
-    catch { return false; }
-  }
   async assertSurface(ctx) {
     const cwd = realpathSync(ctx.cwd);
     const paneID = this.env.HERDR_PANE_ID || "";
@@ -530,22 +467,22 @@ export class MissionBridge {
     // names it, so a mismatch reads without a live probe of the process.
     let paneCwd;
     if (herdrSeat) {
-      const common = await this.common(ctx.cwd);
-      const workspaces = repositoryWorkspaces((await this.herdr(["workspace", "list"])).workspaces, common);
-      if (!workspaces.length) throw new Error(`Herdr pane ${paneID} is in no workspace of this repository. Open the mission worktree's Herdr workspace first; missions register their worktree from it.`);
-      // A mission session lives in its own worktree workspace. Missions bound
-      // before worktree workspaces existed still sit in the primary workspace, so
-      // accept any workspace of this repository whose pane sits in the mission
-      // checkout — the pane cwd, not the workspace count, is the binding.
-      for (const w of workspaces) {
-        const result = await this.herdr(["pane", "list", "--workspace", w.workspace_id]);
-        const pane = result.panes?.find(p => p.pane_id === paneID);
-        if (!pane) continue;
+      // The binding is the pane's cwd, never the workspace's shape. A captain
+      // seated by `mission deploy` runs in the shared army workspace, which Herdr
+      // carries no worktree for, and that pane is as much the mission's seat as
+      // one in the worktree's own workspace. `pane list` answers for every
+      // workspace at once, so one call covers both shapes and the pane names the
+      // workspace it sits in.
+      const panes = (await this.herdr(["pane", "list"])).panes || [];
+      const pane = panes.find(p => p.pane_id === paneID);
+      if (pane) {
         const here = realpathSync(pane.foreground_cwd || pane.cwd);
-        if (here !== cwd) { paneCwd ??= here; continue; }
-        this.surfaceSession = ctx.sessionManager.getSessionId();
-        this.surface = { workspace: w.workspace_id, pane: pane.pane_id };
-        return this.surface;
+        if (here === cwd) {
+          this.surfaceSession = ctx.sessionManager.getSessionId();
+          this.surface = { workspace: pane.workspace_id, pane: pane.pane_id };
+          return this.surface;
+        }
+        paneCwd = here;
       }
     }
     // A Rex block is a seat too: the CLI accepts a session id and a block id
@@ -568,6 +505,9 @@ export class MissionBridge {
   }
   async restore(ctx) {
     this.hint = null; this.error = null; this.surfaceSession = null; this.expectedAttachment = false;
+    // A restored session starts a fresh history, so it hears the contract again.
+    this.contractAttempt = null;
+    this.ledgerAttempt = null;
     const file = this.key(ctx);
     if (!existsSync(file)) return;
     this.expectedAttachment = true;
@@ -588,8 +528,16 @@ export class MissionBridge {
     const b = r.state.runtime;
     if (!b || b.session_id !== ctx.sessionManager.getSessionId() || b.cwd !== realpathSync(ctx.cwd) || b.session_file !== realpathSync(ctx.sessionManager.getSessionFile() || ""))
       throw new Error("Mission owner differs from this session; tracking is suspended.");
-    const a = r.state.attempts.find(a => a.id === r.state.active_attempt);
-    if (active(a) && a.id !== this.hint.attempt) throw new Error("Mission attempt changed; explicitly attach before continuing.");
+    // The owner is the attempt the ledger lists now, never the one an earlier
+    // attach captured. A re-claim — retry, abandon, or repair, then a fresh
+    // claim — replaces this session's attempt, so this read adopts it and every
+    // emitted line names the new id. An attempt another session or a managed run
+    // owns is still a refusal.
+    const a = (r.state.attempts || []).find(x => x.id === r.state.active_attempt) || null;
+    const mine = Boolean(a?.session_id) && a.session_id === ctx.sessionManager.getSessionId();
+    if (mine && this.hint.attempt !== a.id) { this.hint.attempt = a.id; this.save(ctx); }
+    if (active(a) && !mine) throw new Error("Mission attempt changed; explicitly attach before continuing.");
+    this.ledgerAttempt = a?.id ?? null;
     return { record: r, attempt: a };
   }
   async attach(ctx, handle, launchID, agent) {
@@ -616,6 +564,9 @@ export class MissionBridge {
       const c = await this.call(args, this.hint.token);
       this.expectedAttachment = true;
       this.hint.attempt = c.attempt.id; this.hint.launchID = launchID;
+      // The claim the CLI just rendered is the ledger's answer, so it is also
+      // the attempt this session reports on until the next read replaces it.
+      this.ledgerAttempt = c.attempt.id;
       // A successful attach that this session owns arms the loop. A read-only
       // attach (another session owns the binding) stays explicit.
       const own = !binding?.session_id || binding.session_id === ctx.sessionManager.getSessionId();
@@ -625,8 +576,19 @@ export class MissionBridge {
       return this.publicClaim(c);
     } catch (e) { if (previous) this.hint = previous; throw e; }
   }
+  /** Whether this turn carries the driver contract. One attempt delivers it
+   *  once: a new attempt, or a restored session, delivers it again, while a
+   *  replayed attach to the same attempt repeats nothing. */
+  contractTurn(attempt) {
+    if (!attempt?.id || this.contractAttempt === attempt.id) return false;
+    this.contractAttempt = attempt.id;
+    return true;
+  }
   publicClaim(c) {
-    return { handle: c.handle, step: c.step, attempt: c.attempt.id, brief: c.attempt.brief_snapshot,
+    // `context` is the step brief and attempt line the CLI rendered from the
+    // ledger for this claim, and `driver` its driver lines. A seat reads those,
+    // not a text this extension assembled: only the CLI reads the ledger.
+    return { handle: c.handle, step: c.step, attempt: c.attempt.id, context: c.context || "", driver: c.driver || [],
       artifact: c.environment.MISSION_ARTIFACT, brief_file: c.environment.MISSION_BRIEF, cwd: c.attempt.cwd };
   }
   async flush(ctx) {
@@ -641,23 +603,62 @@ export class MissionBridge {
       const item = this.hint.outbox[0];
       try { await this.deliver(item); }
       catch (e) {
-        // A report the record can never take is not re-sent: the CLI refuses a
-        // reused ID, and a trooper that finished after its attempt settled has
-        // no attempt left to report on. Dropping it keeps the outbox from
-        // wedging behind one undeliverable line; a transient failure retries.
-        if (!(item.report && droppableReportError(e.message))) throw e;
+        // A line the record can never take is not re-sent: the CLI refuses a
+        // reused ID, and a hook or report queued under an attempt the ledger no
+        // longer lists has no attempt left to land on. Dropping it keeps the
+        // outbox from wedging behind one undeliverable line — the 2026-11-05
+        // wedge — while a transient failure still retries.
+        if (droppableEventError(e.message)) { /* leave it */ }
+        else {
+          // Every other failure may pass on the next flush, so it retries
+          // OUTBOX_FAILURE_LIMIT times. After that the item is set aside: a
+          // refusal this extension does not know (`usage` above all) must not
+          // sit at the head of the queue forever, because every tool call
+          // flushes the outbox. The tool call that flushed it still succeeds,
+          // and the next tool result carries one line about the item.
+          item.failures = (item.failures || 0) + 1;
+          if (item.failures < OUTBOX_FAILURE_LIMIT) { this.save(ctx); throw e; }
+          this.setAside(item, e.message);
+          this.hint.outbox.shift(); this.save(ctx);
+          continue;
+        }
       }
       this.hint.outbox.shift(); this.save(ctx);
     }
     this.error = null;
   }
+  /** Move one item that will not be recorded out of the queue and into the last
+   *  FAILED_OUTBOX_LIMIT set-aside entries of the state file, and queue the one
+   *  line the next tool result shows. Nothing is dropped silently: a hook the
+   *  ledger needed is visible the same way a report is. */
+  setAside(item, message) {
+    const entry = { at: new Date().toISOString(), attempt: item.attempt, failures: item.failures,
+      error: String(message ?? ""), ...(item.report ? { report: item.report } : { event: item.event }) };
+    this.hint.failed = [...(this.hint.failed || []), entry].slice(-FAILED_OUTBOX_LIMIT);
+    this.notice(setAsideNotice(item, message));
+  }
+  /** Queue one line for the next tool result. Display only: the state file
+   *  keeps the facts. */
+  notice(text) { this.notices = [...this.notices, text].slice(-OUTBOX_NOTICE_LIMIT); }
+  /** Take the lines the outbox owes the next tool result. Drained once, so a
+   *  notice never repeats in every later result of the session. */
+  takeNotices() { const notes = this.notices; this.notices = []; return notes; }
   /** Send one outbox item: a lifecycle hook, or one trooper report. Hook argv
    *  contains bounded metadata only; credentials travel in env. */
   async deliver(item) {
     if (item.report) {
       const r = item.report;
       const args = ["progress", this.hint.handle, "--attempt", item.attempt, "--event-id", r.id,
-        "--actor", r.trooper, "--status", r.status, "--summary", r.summary];
+        "--actor", r.trooper];
+      // A judge records who judged, so the CLI requires the judge's own session
+      // (go/mission/cmd/mission/attempt.go). A non-judge report sends exactly
+      // the argv it always sent, so its fingerprint does not change.
+      if (isJudge(r.trooper)) {
+        if (!r.session) throw new Error("usage: a judge progress needs --session-id naming the judge session");
+        args.push("--session-id", r.session);
+        if (r.session_file) args.push("--session-file", r.session_file);
+      }
+      args.push("--status", r.status, "--summary", r.summary);
       if (r.next) args.push("--next", r.next);
       if (r.blocker) args.push("--blocker", r.blocker);
       return this.call(args, this.hint.token);
@@ -672,21 +673,37 @@ export class MissionBridge {
   }
   /** Record one finished trooper. The report queues in the same outbox as the
    *  lifecycle hooks and flushes at once, so a reload replays an unacknowledged
-   *  report under the same ID instead of appending a second one. */
+   *  report under the same ID instead of appending a second one. The attempt it
+   *  names is the one the ledger listed at the last read: a report is never
+   *  queued under an id the ledger cannot show. */
   async report(ctx, message) {
-    if (!this.hint?.attempt) return;
+    const attempt = this.ledgerAttempt;
+    if (!attempt) return;
     const report = trooperReport(message);
     if (!report) return;
+    // A judge report that names no session can never be delivered — the CLI
+    // refuses it by design — so it never enters the outbox. It is surfaced
+    // once instead, and the rest of the outbox keeps moving.
+    if (isJudge(report.trooper) && !report.session) {
+      if (!this.warned.has(report.id)) {
+        // One bounded set of warned IDs: a long session must not grow it.
+        if (this.warned.size >= 256) this.warned.clear();
+        this.warned.add(report.id);
+        this.notice(setAsideNotice({ report }, "usage: a judge progress needs --session-id naming the judge session"));
+      }
+      return;
+    }
     if (this.hint.outbox.some(item => item.report?.id === report.id)) return;
     if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
-    this.hint.outbox.push({ attempt: this.hint.attempt, report });
+    this.hint.outbox.push({ attempt, report });
     this.save(ctx); await this.flush(ctx);
   }
   async record(ctx, event) {
-    if (!this.hint?.attempt) return;
+    const attempt = this.ledgerAttempt;
+    if (!attempt) return;
     if (this.hint.outbox.length >= 128) throw new Error("Mission hook outbox full; restore CLI recording before continuing.");
     const seat = this.eventSeat();
-    this.hint.outbox.push({ attempt: this.hint.attempt, event: { id: randomUUID(), session_id: ctx.sessionManager.getSessionId(),
+    this.hint.outbox.push({ attempt, event: { id: randomUUID(), session_id: ctx.sessionManager.getSessionId(),
       session_file: ctx.sessionManager.getSessionFile(), pane_id: seat.pane, workspace_id: seat.workspace,
       model:ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined, ...event } });
     this.save(ctx); await this.flush(ctx);
@@ -698,9 +715,19 @@ export class MissionBridge {
     await this.record(ctx, { type: "agent-settled", summary: "Pi run settled", quiescent: quiescent(event, ctx) });
     const current = await this.current(ctx);
     if (current?.attempt?.status === "reported" && quiescent(event, ctx)) {
-      return this.call(["settle", this.hint.handle, "--attempt", this.hint.attempt, "--session-id", ctx.sessionManager.getSessionId()], this.hint.token);
+      return this.call(["settle", this.hint.handle, "--attempt", current.attempt.id, "--session-id", ctx.sessionManager.getSessionId()], this.hint.token);
     }
   }
+  /** The mux this session runs in. Herdr names a workspace and a pane for every
+   *  session it hosts; anything else is a Rex block, which names its session and
+   *  block. Seating is the CLI's call for either, so this only says which. */
+  mux() { return this.env.HERDR_ENV === "1" && this.env.HERDR_PANE_ID ? "herdr" : "rex"; }
+  /** Launch one mission. Seating has one owner: the CLI. `mission deploy --mux`
+   *  reserves the intent, seats the army session, the captain's window and the
+   *  mission's subagent session, and acks it, for whichever mux this session runs
+   *  in. This extension owns no mux command for a launch, so a Rex mission and a
+   *  Herdr mission take the same path, and the launch reads the runtime back from
+   *  `mission show` instead of guessing it from the calls it made. */
   async start(ctx, handle) {
     if (this.env.PI_SUBAGENT_NAME) throw new Error("Launch missions from the captain; workers own only their assigned mission.");
     const initial = await this.call(["show", handle]);
@@ -708,84 +735,19 @@ export class MissionBridge {
     const repo = repos.find(r => r.slug === initial.mission.repo);
     const checkout = repo?.checkouts?.[(await import("node:os")).hostname()];
     if (!checkout) throw new Error("Register a local repository checkout first.");
-    const r = await this.call(["workspace", handle]);
-    const cwd = r.state.runtime.cwd;
-    const reservation = await this.call(["launch", handle]);
-    if (!reservation.acquired) return { launched: false, reason: "Owner or launch intent already recorded; resume/attach it instead of launching again.", runtime: reservation.runtime };
-    const launchID = reservation.runtime.launch_id;
-    // The launch description has one owner: the CLI renders it in `mission
-    // plan`, and plan writes nothing, so reading it here costs no state. Read it
-    // BEFORE any seat exists, because the tab's environment and the seat's argv
-    // are both taken from it, and Herdr fixes a tab's environment at creation.
-    // This launch already reserved its intent, so the brief names that id.
-    //
-    // A plan enriches a launch; it never gates one. A CLI that predates
-    // `mission plan`, a call that fails, and an answer with nothing usable are
-    // one case: the launch degrades to #441's driver contract and #441's default
-    // seat, which is exactly what a launch had before the plan existed. The
-    // degradation is reported on the result, never swallowed. A plan that
-    // answers still wins every field it answers.
-    let planError = null;
-    const planned = await this.call(["plan", handle, "--launch-id", launchID])
-      .catch(e => { planError = e.message; return null; });
-    const plan = usablePlan(planned) ? planned : null;
-    if (!plan) planError ||= "mission plan answered nothing usable";
-    // A failed launch must stay retryable: the reservation is released unless a
-    // worker can own it. A launch that half-succeeded keeps it for inspection.
-    let pane = null;
-    try {
-      // The CLI created the mission/<slug> checkout; Herdr registers it as the
-      // repository's linked worktree workspace (idempotent: a relaunch reuses the
-      // same workspace). Anchored on the primary checkout, because Herdr refuses
-      // create/open from inside a linked worktree.
-      const worktree = await this.herdr(["worktree", "open", "--cwd", checkout, "--path", cwd, "--no-focus"]);
-      const workspace = worktree.workspace?.workspace_id;
-      if (!workspace) throw new Error("Herdr did not return the mission worktree workspace; launch intent retained for inspection.");
-      // The captain pane must inherit the launcher's configuration: Herdr sets a
-      // tab's environment at creation and `worktree open` has no env flag, so the
-      // launch always creates its own tab with that environment and then closes a
-      // fresh workspace's empty root tab. The workspace keeps exactly one tab.
-      // The plan's subagent session rides in the same environment
-      // (`PI_SUBAGENT_SESSION`, rex.ts reads it as a label or an id), so every
-      // trooper the captain deploys lands in mission-<slug> instead of army
-      // without the captain having to repeat the name in each call.
-      const env = [...driverEnv(this.env), ...(plan?.subagent_session ? [["PI_SUBAGENT_SESSION", plan.subagent_session]] : [])]
-        .flatMap(([key, value]) => ["--env", `${key}=${value}`]);
-      const tab = await this.herdr(["tab", "create", "--workspace", workspace, "--cwd", cwd, "--label", initial.mission.slug, "--no-focus", ...env]);
-      pane = tab.root_pane?.pane_id;
-      if (!pane || tab.root_pane.workspace_id !== workspace) throw new Error("Herdr returned a different workspace; launch intent retained for inspection.");
-      // A workspace that was already open may be parked on the mission's previous
-      // session; its other tabs stay. Only a fresh workspace's empty root tab goes.
-      const empty = worktree.already_open ? null : worktree.root_pane?.pane_id;
-      if (empty && empty !== pane) {
-        try { await this.herdr(["pane", "close", empty]); }
-        catch { /* a leftover empty tab stays visible; it is never silent */ }
-      }
-      // The seat is a full Pi agent in this pane, not a subagent: it carries no
-      // subagent env, loadout file, timer, or watchdog. Pi loads the repository
-      // configuration and the missions skill in that worktree. Its reach is the
-      // plan's argv, because Herdr starts the binary itself and Pi has no
-      // profile flag: `seatArgs` is the only channel a profile can travel.
-      const agent = await this.startWorker(handle, pane, seatArgs(plan?.captain_argv));
-      try { await this.herdr(["agent", "wait", pane, "--until", "idle", "--timeout", String(AGENT_READY_TIMEOUT_MS)]); }
-      catch (e) { throw new Error(`Herdr agent ${agent} did not become ready: ${herdrError(e.message)}`); }
-      // The captain contract is the plan's, so this session starts from the text
-      // the plan rendered for the intent this launch reserved. A plan that names
-      // no brief (or no plan at all) keeps the capability layer's own driver
-      // task, which answers the same launch id this reservation holds.
-      await this.herdr(["agent", "prompt", pane, plan?.captain_brief || driverTask(handle, launchID)]);
-      const sessionFile = (await this.herdr(["agent", "get", pane])).agent?.agent_session?.value;
-      if (!sessionFile) throw new Error("Herdr reported no session for the mission agent; launch intent retained for inspection.");
-      await this.call(["launch", handle, "--launch-id", launchID, "--session-file", sessionFile]);
-      // The intent this launch acquired before the plan read is the one it
-      // acks: a degraded plan changes the seat's argv and prompt, never the
-      // reservation, so the ack rules are the same for both paths.
-      return { launched: true, runtime: (await this.call(["show", handle])).state.runtime, session_file: sessionFile, pane, workspace,
-        ...(planError ? { plan_degraded: planError } : {}) };
-    } catch (e) {
-      if (!(await this.releaseLaunch(handle, launchID, pane))) throw e;
-      throw new Error(`${e.message} The launch intent is released; launch again when the cause is clear.`);
+    // The worktree is the CLI's, not the mux's: `mission workspace` prepares or
+    // revives the mission checkout the seat runs in, and deploy refuses a
+    // mission without one.
+    await this.call(["workspace", handle]);
+    const deployment = await this.call(["deploy", handle, "--mux", this.mux()]);
+    const runtime = (await this.call(["show", handle])).state.runtime;
+    // A repeat press finds the captain still seated and focuses it instead of
+    // seating a second one, exactly as `mission deploy` reports.
+    if (deployment.focused) {
+      return { launched: false, reason: "The captain seat is already live; it was focused instead of seated again.", runtime };
     }
+    return { launched: true, runtime, session_file: deployment.session_file || runtime.session_file,
+      pane: deployment.pane || runtime.pane, workspace: runtime.workspace };
   }
   /** Launch requests the desk left behind. The desk cannot start a mission: it
    *  writes one file per handle, this session claims it, and start() stays the
@@ -923,7 +885,7 @@ export class MissionBridge {
   /** Claim and start one pending request this session may serve. Workers never
    *  launch; a busy turn waits; a second sweep finds the claim gone. A captain
    *  that already owns a mission still serves this workspace's request, because
-   *  start() puts the worker in the mission's own worktree workspace. */
+   *  the CLI seats its captain as a tab of this workspace. */
   async sweepLaunches(ctx) {
     if (this.sweeping) return this.sweeping;
     this.sweeping = (async () => {
@@ -945,7 +907,6 @@ export class MissionBridge {
         const result = await this.start(ctx, request.handle);
         const launched = result?.launched === true;
         this.settleLaunch(request, { state: launched ? "started" : "failed", launch_id: result?.runtime?.launch_id,
-          ...(result?.plan_degraded ? { plan_degraded: result.plan_degraded } : {}),
           ...(launched ? { workspace: result?.workspace, pane: result?.pane, session_file: result?.session_file }
             : { error: result?.reason || "the launch was not acknowledged" }) });
       } catch (e) {
@@ -992,6 +953,10 @@ export class MissionBridge {
     await this.flush(ctx);
     const current = await this.current(ctx);
     if (!active(current?.attempt)) throw new Error("No active step; inspect checkpoints or explicitly pick up next.");
+    // Every call below names the attempt this read found in the ledger, so a
+    // re-claim is reported under its new id and a hint value can never address
+    // an attempt the ledger does not list.
+    const attempt = current.attempt.id;
     // The judge reads the artifact, runs the check run itself, and records its
     // verdict. Its capability is a file path; the token stays in this cache.
     if (p.action === "judge") {
@@ -999,13 +964,13 @@ export class MissionBridge {
       const st = a.Definition || (current.record.mission.steps || []).find(s => s.id === a.step) || {};
       const checks = [...new Set(["nonempty-artifact", ...(st.checks || [])])];
       const artifact = join(this.vault, "6_missions", handle, a.artifact);
-      const capability = this.judgeCapability(ctx, a.id);
-      const task = judgeTask({ handle, attempt: a.id, step: a.step, artifact, evidence: a.artifact,
+      const capability = this.judgeCapability(ctx, attempt);
+      const task = judgeTask({ handle, attempt, step: a.step, artifact, evidence: a.artifact,
         acceptance: st.acceptance || "", checks, capability, vault: this.vault, binary: this.binary, cwd: a.cwd });
-      return { handle, attempt: a.id, step: a.step, artifact, acceptance: st.acceptance || "", checks,
+      return { handle, attempt, step: a.step, artifact, acceptance: st.acceptance || "", checks,
         capability, agent: "worker", name: "judge-" + a.step, task };
     }
-    const args = [p.action, handle, "--attempt", this.hint.attempt];
+    const args = [p.action, handle, "--attempt", attempt];
     if (p.action === "progress") {
       args.push("--status", p.status || "working", "--summary", p.summary || "", "--event-id", p.event_id || eventID);
       if (p.actor) args.push("--actor", p.actor);
@@ -1017,11 +982,154 @@ export class MissionBridge {
     const r = await this.call(args, this.hint.token);
     // The judge has finished once the driver verifies or reports: its one-shot
     // capability must not outlive that, and a failed call keeps it for a retry.
-    if (["verify", "finish", "fail"].includes(p.action)) this.releaseJudgeCapabilities(ctx, this.hint.attempt);
+    if (["verify", "finish", "fail"].includes(p.action)) this.releaseJudgeCapabilities(ctx, attempt);
     if (!r.state) return r;
-    const a = r.state.attempts.find(a => a.id === this.hint.attempt);
-    return { handle, status:r.state.status, attempt:a.id, attempt_status:a.status, step:a.step, checkpoint:r.state.pending_checkpoint,
+    const a = (r.state.attempts || []).find(x => x.id === attempt) || current.attempt;
+    return { handle, status:r.state.status, attempt: attempt, attempt_status:a.status, step:a.step, checkpoint:r.state.pending_checkpoint,
       progress:a.progress?.at(-1), verification:a.verifications?.at(-1),
       message: p.action === "finish" || p.action === "fail" ? "Completion reported. Ownership remains until the turn settles; checks and checkpoints still apply." : undefined };
+  }
+}
+
+/** The window label that marks the commander seat. A session is the commander
+ *  when its own block sits in this window of its own Rex session, so a captain
+ *  window that happens to run beside the commander is never mistaken for it. */
+export const COMMANDER_WINDOW = "commander";
+
+/** How often a cached commander answer is re-resolved. Role detection gates the
+ *  ask drain and nothing else, so a slow re-check costs one Rex call a minute
+ *  and no other behavior may depend on it. */
+export const COMMANDER_RECHECK_MS = 60_000;
+
+/** How many asks one drain delivers: a handful, oldest first. A backlog waits
+ *  for the next tick instead of arriving as one wall of text. */
+export const ASKS_PER_DRAIN = 5;
+
+/** One ask as the commander reads it: the mission, the step, and the kind come
+ *  from the record, so a line can be answered without opening the vault. */
+export function askLine(ask) {
+  return `[mission ${[ask.handle, ask.step, ask.kind].filter(Boolean).join(" · ")}] ${ask.text}`;
+}
+
+/** The command that answers a decision ask, beside the question it settles.
+ *  Blocked and question asks need a reply, not a checkpoint decision, so they
+ *  render no command. */
+export function askAnswer(ask) {
+  return ask.kind === "decision"
+    ? `Answer with: mission checkpoint accept|revise ${ask.handle} C01 --note "…"`
+    : null;
+}
+
+/** One commander message for one batch of asks: a line each, then the decision
+ *  command that settles it. */
+export function askMessage(asks) {
+  return asks.flatMap(ask => [askLine(ask), askAnswer(ask)].filter(Boolean)).join("\n");
+}
+
+/** The ask channel's receiving half. A captain writes `asks/<stamp>-<id>.json`
+ *  and stops; this drains those files into the commander's own session. The
+ *  files are the queue, so nothing is lost while the commander is absent and a
+ *  restart delivers each ask once, because delivery is recorded in the file.
+ *
+ *  Role detection is cached and re-checked slowly: `commander()` answers
+ *  whether this session's block is the block of the window labeled `commander`
+ *  in its own Rex session. It gates only the drain. */
+export class CommanderInbox {
+  constructor({ vault, env = process.env, run, send, now = () => new Date().toISOString() }) {
+    this.vault = vault;
+    this.env = env;
+    this.run = run;
+    this.send = send;
+    this.now = now;
+    this.asksPerDrain = ASKS_PER_DRAIN;
+    this.role = undefined;
+    this.roleAt = 0;
+    this.draining = null;
+  }
+
+  /** Forget a cached role answer: a fresh session resolves it again. */
+  reset() { this.role = undefined; this.roleAt = 0; }
+
+  async isCommander(force = false) {
+    const at = Date.now();
+    if (!force && this.role !== undefined && at - this.roleAt < COMMANDER_RECHECK_MS) return this.role;
+    this.role = await this.resolveCommander();
+    this.roleAt = at;
+    return this.role;
+  }
+
+  /** Resolve the seat through the Rex API the extension already reaches: the
+   *  block reports its window, and that window's label decides. A Herdr seat,
+   *  a session with no Rex block, or a Rex that cannot answer is not the
+   *  commander — the answer is false, never an error that stops a session. */
+  async resolveCommander() {
+    const session = this.env.REX_SESSION || "";
+    const block = this.env.REX_BLOCK || "";
+    if (!session || !block || this.env.HERDR_ENV === "1") return false;
+    try {
+      const view = JSON.parse(await this.run("rex", ["block", "inspect", block, "--json"], { env: this.env }));
+      const windowID = view?.block?.window_id;
+      if (!windowID) return false;
+      const windows = JSON.parse(await this.run("rex", ["window", "ls", "-s", session, "--json"], { env: this.env }))?.windows || [];
+      return windows.some(window => window.window_id === windowID && window.label === COMMANDER_WINDOW);
+    } catch { return false; }
+  }
+
+  /** Every undelivered ask under the vault, oldest first. The filename starts
+   *  with a fixed-width UTC stamp, so readdir order is the order asks were
+   *  written. A file that is not a readable ask is skipped, not fatal. */
+  pending() {
+    const out = [];
+    const entries = directory => {
+      try { return readdirSync(directory, { withFileTypes: true }); } catch { return []; }
+    };
+    for (const repo of entries(join(this.vault, "6_missions"))) {
+      if (!repo.isDirectory()) continue;
+      for (const mission of entries(join(this.vault, "6_missions", repo.name))) {
+        if (!mission.isDirectory()) continue;
+        const dir = join(this.vault, "6_missions", repo.name, mission.name, "asks");
+        for (const file of entries(dir)) {
+          if (!file.isFile() || !file.name.endsWith(".json")) continue;
+          const path = join(dir, file.name);
+          try {
+            const ask = JSON.parse(readFileSync(path, "utf8"));
+            if (ask?.id && ask?.handle && !ask.delivered_at) out.push({ ask, path, name: file.name });
+          } catch { /* a torn or foreign file is not an ask */ }
+        }
+      }
+    }
+    return out.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  }
+
+  /** Deliver consecutive asks from one handle as one message, then record the
+   *  delivery in each ask's own file. A send that throws leaves the asks
+   *  undelivered, so the next tick retries instead of losing the question. */
+  async drain(sessionID) {
+    if (!(await this.isCommander())) return [];
+    if (this.draining) return this.draining;
+    this.draining = (async () => {
+      const batch = this.pending().slice(0, this.asksPerDrain);
+      const delivered = [];
+      for (let i = 0; i < batch.length;) {
+        const handle = batch[i].ask.handle;
+        const group = [];
+        while (i < batch.length && batch[i].ask.handle === handle) group.push(batch[i++]);
+        this.send({ customType: "mission-ask", content: askMessage(group.map(f => f.ask)), display: true },
+          { deliverAs: "followUp", triggerTurn: true });
+        for (const file of group) this.markDelivered(file, sessionID);
+        delivered.push(...group.map(f => f.ask));
+      }
+      return delivered;
+    })();
+    try { return await this.draining; } finally { this.draining = null; }
+  }
+
+  /** Record delivery in the ask's own file, written beside it and renamed, so a
+   *  reader sees either the pending ask or the delivered one, never a fragment. */
+  markDelivered({ ask, path }, sessionID) {
+    const delivered = { ...ask, delivered_at: this.now(), delivered_to: sessionID };
+    const temp = path + "." + randomUUID();
+    writeFileSync(temp, JSON.stringify(delivered, null, 2) + "\n", { mode: 0o600 });
+    renameSync(temp, path);
   }
 }

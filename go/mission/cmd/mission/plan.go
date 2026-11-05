@@ -74,15 +74,14 @@ func seatLabel(prefix, slug string) string {
 // captainBrief is the captain contract, and the only copy of the launch prompt
 // text: the captain profiles hold no second version of it, so the duties are
 // edited here or nowhere. The first sentence is the token the captain attaches
-// with: the plan's ack token by default, or the launch intent an adapter has
-// already reserved (extension launches pass their own id so the brief names the
-// intent they will record). The three duties are the rank's whole division of
+// with: the plan's ack token by default, or the launch intent deploy reserved, so
+// the id a captain reads is the id the record holds. The three duties are the rank's whole division of
 // work: the captain keeps the claim and its hands off the files, a trooper does
 // each step and another judges it, and the captain answers the commander. The
 // session clause names where troopers work, because the captain is the only
 // thing that deploys them: the plan's subagent session is the label it passes on
 // every call, and the army session is never a place for a rank tab.
-const captainBrief = `You are the captain of mission %[1]s, seated in its worktree as cwd for the whole mission. Before reading repository files, call mission with action=attach, handle=%[1]s, launch_id=%[2]s. Three duties, and no others: hold the claim for this mission and never edit repository files yourself; deploy a trooper for every step and judge the result through a trooper, not with your own hands; answer the commander in the %[3]s session. Deploy every trooper in the %[4]s session: pass session=%[4]s on each subagent call, so no rank tab lands in the %[3]s session. Stop at checkpoints; keep this session and worktree for later steps.`
+const captainBrief = `You are the captain of mission %[1]s, seated in its worktree as cwd for the whole mission. Before reading repository files, call mission with action=attach, handle=%[1]s, launch_id=%[2]s. Three duties, and no others: hold the claim for this mission and never edit repository files yourself; deploy a trooper for every step and judge the result through a trooper, not with your own hands; answer the commander in the %[3]s session. Deploy every trooper in the %[4]s session: pass session=%[4]s on each subagent call, so no rank tab lands in the %[3]s session. When you are blocked on a decision, a missing credential, or anything only the human can settle, run mission ask %[1]s --text "<one clear question>" --step <step-id> --kind blocked|question|decision, then stop and keep this session for the answer. Do not use ask_user_question; nobody watches a captain pane. Stop at checkpoints; keep this session and worktree for later steps.`
 
 // captainPrompt renders the brief for one launch id. Plan renders it with the id
 // a caller passes, and deploy renders it again with the intent it reserved, so
@@ -92,12 +91,14 @@ func captainPrompt(h, subagentSession, launchID string) string {
 	return fmt.Sprintf(captainBrief, h, launchID, armySession, subagentSession)
 }
 
-// captainLoadout is the captain's reach at launch: the same six tools the
+// captainLoadout is the captain's reach at launch: the same five tools the
 // mission-captain profile declares. A captain holds the claim and never edits
 // files, so no edit, write, or bash is granted to it — the profile is the
 // contract, and this allowlist is the flag that makes a launched captain obey
-// it instead of inheriting every default tool.
-const captainLoadout = "mission,subagent,subagent_message,read,ask_user_question,tool_search"
+// it instead of inheriting every default tool. ask_user_question is not here:
+// a captain pane has no watcher, so a blocked captain writes a durable ask with
+// `mission ask` instead of painting a menu nobody sees.
+const captainLoadout = "mission,subagent,subagent_message,read,tool_search"
 
 // captainPi resolves the pi binary at plan time. A window's command is resolved
 // against the mux server's own PATH, not the caller's, and that PATH holds the

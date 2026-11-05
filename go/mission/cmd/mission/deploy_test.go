@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -28,6 +29,9 @@ type rexFake struct {
 	blocks map[string]string // "session/window" -> that window's root block id
 	ids    map[string]string // "session/window" -> that window's id
 	dead   map[string]bool
+	// shellForeground makes the block's process answer with the login shell
+	// instead of pi, the seat that never became the captain.
+	shellForeground bool
 }
 
 func newRexFake() *rexFake {
@@ -84,21 +88,24 @@ func (f *rexFake) call(method string, a map[string]any) (map[string]any, error) 
 		}
 		return map[string]any{"label": label, "windows": out}, nil
 	case "block.method":
-		// The API form of `rex block call <block> process`, and of the write that
-		// replaces the seat's waiting shell with the captain.
+		// The API form of `rex block call <block> process`, which is how the seat
+		// verifies the captain and how deploy reads a live window's liveness.
 		block := text(a["block_id"])
 		if f.dead[block] || !f.holds(block) {
 			return nil, fmt.Errorf("stream response \"control-2\" failed: block not found: %s (status=404 code=not_found)", block)
 		}
 		switch text(a["method"]) {
 		case "process":
+			if f.shellForeground {
+				return map[string]any{
+					"last_exit":  nil,
+					"foreground": map[string]any{"name": filepath.Base(loginShell()), "argv0": loginShell()},
+				}, nil
+			}
 			return map[string]any{
 				"last_exit":  nil,
 				"foreground": map[string]any{"name": "node", "argv0": "pi", "path": "/opt/homebrew/bin/pi"},
 			}, nil
-		case "write":
-			args, _ := a["args"].(map[string]any)
-			return map[string]any{"bytes_written": len(text(args["data"]))}, nil
 		}
 		return nil, fmt.Errorf("deploy asked a block for %q", a["method"])
 	case "session.close_window":
@@ -187,30 +194,78 @@ func (f *rexFake) killCaptain(session, label string) string {
 	return block
 }
 
-// execLine is the last line deploy wrote into a block: the exec line that turns a
-// waiting shell into the captain. Later writes win, because a replaced seat
-// writes its own line into its own block.
+// execLine is the exec line the seat started the captain with: the last argument
+// of the captain window's own command. Deploy writes nothing into a Rex block, so
+// the window's command is the only place the line exists.
 func (f *rexFake) execLine() string {
-	out := ""
+	argv := f.captainCommand()
+	if len(argv) == 0 {
+		return ""
+	}
+	return text(argv[len(argv)-1])
+}
+
+// captainCommand is the command the captain window was created with.
+func (f *rexFake) captainCommand() []any {
+	command, _ := f.captainOptions()["command"].([]any)
+	return command
+}
+
+// captainOptions are the options of the block the captain window was created
+// with.
+func (f *rexFake) captainOptions() map[string]any {
+	layout, _ := f.args["session.new_window"]["layout"].(map[string]any)
+	block, _ := layout["block"].(map[string]any)
+	options, _ := block["options"].(map[string]any)
+	return options
+}
+
+// writes counts the block.method writes the seat asked for. The seat starts the
+// captain as the window's own command, so this must stay zero: a write into a
+// starting shell is exactly the race that lost four captains.
+func (f *rexFake) writes() int {
+	n := 0
 	for _, a := range f.argsFor("block.method") {
-		if text(a["method"]) != "write" {
+		if text(a["method"]) == "write" {
+			n++
+		}
+	}
+	return n
+}
+
+// steps is what the seat asked Rex, in order: session methods by name, and each
+// block method by the block method's own name.
+func (f *rexFake) steps() []string {
+	out := []string{}
+	for _, c := range f.log {
+		method := c[0].(string)
+		if method != "block.method" {
+			out = append(out, method)
 			continue
 		}
-		args, _ := a["args"].(map[string]any)
-		out = text(args["data"])
+		args, _ := c[1].(map[string]any)
+		out = append(out, text(args["method"]))
 	}
 	return out
 }
 
-// wroteTo is the block deploy seated the captain in, the target of that write.
-func (f *rexFake) wroteTo() string {
-	out := ""
-	for _, a := range f.argsFor("block.method") {
-		if text(a["method"]) == "write" {
-			out = text(a["block_id"])
-		}
-	}
-	return out
+// fastSeat keeps the seat's waits short, so a test that has to time out does not
+// wait the deploy's own seconds. Every other test lets the waits stand.
+func fastSeat(t *testing.T) {
+	t.Helper()
+	poll, shell, start := seatPoll, seatShellWait, seatStartWait
+	seatPoll, seatShellWait, seatStartWait = time.Millisecond, 20*time.Millisecond, 20*time.Millisecond
+	t.Cleanup(func() { seatPoll, seatShellWait, seatStartWait = poll, shell, start })
+}
+
+// onePollSeat makes each bounded wait in the seat ask Rex exactly once: a zero
+// deadline passes after the first read, so a verification round is one `process`
+// call. That makes the retry countable instead of a matter of timing.
+func onePollSeat(t *testing.T) {
+	t.Helper()
+	poll, shell, start := seatPoll, seatShellWait, seatStartWait
+	seatPoll, seatShellWait, seatStartWait = 0, 0, 0
+	t.Cleanup(func() { seatPoll, seatShellWait, seatStartWait = poll, shell, start })
 }
 
 // argsFor returns the arguments of every call of one method, in order.
@@ -262,10 +317,11 @@ func TestDeploySeatsTheArmy(t *testing.T) {
 	}
 	// The army comes first, with the commander seated; then the mission's own
 	// session; then the captain window, last, so it takes the human's focus. The
-	// window opens on a waiting shell, so one write turns it into the captain.
-	want := []string{"session.list", "session.create", "session.create", "session.new_window", "block.method"}
-	if strings.Join(f.calls, " ") != strings.Join(want, " ") {
-		t.Fatalf("calls = %v", f.calls)
+	// captain window is created with the captain as its own command, and the seat
+	// verifies the block's foreground: nothing is ever typed into a shell.
+	want := []string{"session.list", "session.create", "session.create", "session.new_window", "process"}
+	if got := f.steps(); strings.Join(got, ", ") != strings.Join(want, ", ") {
+		t.Fatalf("calls = %v", got)
 	}
 	army := f.argsFor("session.create")[0]
 	if army["label"] != "army" {
@@ -284,19 +340,22 @@ func TestDeploySeatsTheArmy(t *testing.T) {
 	}
 	block, _ := win["layout"].(map[string]any)["block"].(map[string]any)
 	opts, _ := block["options"].(map[string]any)
-	// The window opens on the human's login shell, then one exec line replaces it
-	// with the captain: the block id exists only after the window is created, and
-	// the login shell supplies the human's PATH.
-	argv, _ := opts["command"].([]string)
-	if want := loginShellArgv(); len(argv) != len(want) || argv[0] != want[0] || argv[1] != "-l" {
-		t.Fatalf("captain window command = %v, want the login shell %v", argv, want)
+	// The captain is the window's own command: the login shell reads the exec
+	// line as its -c argument, so pi is the block's foreground from the start and
+	// there is no prompt to race.
+	argv, _ := opts["command"].([]any)
+	if len(argv) != 4 || text(argv[0]) != loginShell() || text(argv[1]) != "-l" || text(argv[2]) != "-c" {
+		t.Fatalf("captain window command = %v, want %s -l -c <exec line>", argv, loginShell())
 	}
 	line := f.execLine()
 	if line == "" || !strings.HasPrefix(line, "exec env ") {
-		t.Fatalf("no exec line was written into the seat: %q", line)
+		t.Fatalf("the captain window does not run the exec line: %q", line)
 	}
-	if f.wroteTo() != f.rootBlock("army", p.CaptainWindow) {
-		t.Fatalf("the exec line went to %q, not the seat's own block", f.wroteTo())
+	if n := f.writes(); n != 0 {
+		t.Fatalf("the seat typed %d times into the block instead of starting the captain as its command", n)
+	}
+	if d.Pane != f.rootBlock("army", p.CaptainWindow) {
+		t.Fatalf("the deployment reports pane %q, want the seat's own block", d.Pane)
 	}
 	// The brief names the launch intent deploy reserved, not the derived ack
 	// token: the record holds the same id, so the captain's attach matches.
@@ -343,12 +402,12 @@ func TestDeployNamesTheReservedIntent(t *testing.T) {
 	}
 }
 
-// The seat is two phases, because a block's id exists only after its window does.
-// The window opens on the human's login shell; deploy reads the block id from the
-// result and writes one exec line that starts pi with that id as its own
-// REX_BLOCK, the session label it must deploy troopers in, and the mission's
-// environment, PATH included through that login shell.
-func TestDeploySeatsTheCaptainWithItsOwnBlock(t *testing.T) {
+// The seat is one phase now: the captain window is created with the captain as
+// its command. Rex assigns the block id as it creates the window and sets
+// REX_BLOCK in the environment of the program it starts there, so the exec line
+// carries the session label and needs no block id of its own — a window command
+// cannot name an id that does not exist until the window has been created.
+func TestDeployStartsTheCaptainAsTheWindowCommand(t *testing.T) {
 	s, h, _ := piFixture(t)
 	f := fakeRex(t)
 	p, e := s.plan(h, "rex", "")
@@ -357,13 +416,9 @@ func TestDeploySeatsTheCaptainWithItsOwnBlock(t *testing.T) {
 		t.Fatal(e)
 	}
 	block := f.rootBlock("army", p.CaptainWindow)
-	if f.wroteTo() != block {
-		t.Fatalf("the exec line went to %q, want the seat's own block %q", f.wroteTo(), block)
-	}
 	line := f.execLine()
 	for _, want := range []string{
 		"'REX_SESSION=army'",
-		"'REX_BLOCK=" + block + "'",
 		"'PI_SUBAGENT_SESSION=" + p.SubagentSession + "'",
 		"'PI_SUBAGENT_CWD=" + p.Cwd + "'",
 		shellQuote(p.CaptainArgv[0]),
@@ -372,6 +427,19 @@ func TestDeploySeatsTheCaptainWithItsOwnBlock(t *testing.T) {
 		if !strings.Contains(line, want) {
 			t.Fatalf("the exec line does not carry %q:\n%s", want, line)
 		}
+	}
+	// REX_BLOCK is Rex's own answer, not the seat's guess: the mux sets it in the
+	// block's environment, so naming it here would mean naming an id the seat
+	// cannot know before the window exists.
+	if strings.Contains(line, "REX_BLOCK") {
+		t.Fatalf("the exec line names a REX_BLOCK the seat cannot know yet:\n%s", line)
+	}
+	// The pane deploy reports is the block Rex created for the window, read back
+	// from the creation result, so the verification and the record agree.
+	if d, e := s.deploy(h, "rex"); e != nil {
+		t.Fatal(e)
+	} else if d.Pane != block {
+		t.Fatalf("the deployment reports pane %q, want the seat's block %q", d.Pane, block)
 	}
 	// The seat's PATH is the login shell's, so the exec line carries no PATH of its
 	// own: a hand-rolled list is exactly what dropped `mission` and `rex`.
@@ -383,14 +451,14 @@ func TestDeploySeatsTheCaptainWithItsOwnBlock(t *testing.T) {
 	if !strings.HasSuffix(strings.TrimSpace(line), "keep this session and worktree for later steps.'") {
 		t.Fatalf("the brief is not the last argument:\n%s", line)
 	}
-	// One line, with only the trailing newline that submits it: a shell reads each
-	// line on its own, so a break would run the exec in parts.
-	if strings.Contains(strings.TrimSuffix(line, "\n"), "\n") {
-		t.Fatalf("the exec line spans lines, so the shell would run it in parts:\n%s", line)
+	// One line, and the window passes it as one argv element: a shell reading it
+	// as its -c argument runs it whole, quotes and all.
+	if strings.Contains(line, "\n") {
+		t.Fatalf("the exec line spans lines:\n%s", line)
 	}
 }
 
-// The captain's block opens the human's login shell, so the exec line that
+// The captain's window runs the human's login shell, so the exec line that
 // replaces it starts pi with the human's own PATH. That is the fix for PATH
 // parity: a captain seated from the multiplexer's minimal PATH lost `mission`
 // (`spawn mission ENOENT`, mission tracking unavailable), lost `rex` (the
@@ -406,26 +474,26 @@ func TestDeploySeatsTheCaptainUnderTheLoginShell(t *testing.T) {
 	if _, e = s.deploy(h, "rex"); e != nil {
 		t.Fatal(e)
 	}
-	win := f.args["session.new_window"]
-	opts, _ := win["layout"].(map[string]any)["block"].(map[string]any)["options"].(map[string]any)
-	argv, _ := opts["command"].([]string)
-	if want := loginShellArgv(); len(argv) != len(want) || argv[0] != want[0] || argv[1] != want[1] {
-		t.Fatalf("the captain's block runs %v, want the absolute login shell %v: no profile, no PATH", argv, want)
+	opts := f.captainOptions()
+	argv, _ := opts["command"].([]any)
+	if len(argv) != 4 || text(argv[0]) != loginShell() || text(argv[1]) != "-l" || text(argv[2]) != "-c" {
+		t.Fatalf("the captain's window runs %v, want the absolute login shell %s -l -c <exec line>: no profile, no PATH", argv, loginShell())
 	}
-	if !filepath.IsAbs(argv[0]) {
-		t.Fatalf("the captain's block runs %q: a window resolves its command against rex's own PATH", argv[0])
+	if !filepath.IsAbs(text(argv[0])) {
+		t.Fatalf("the captain's window runs %q: a window resolves its command against rex's own PATH", text(argv[0]))
 	}
 	if opts["shell"] != filepath.Base(loginShell()) {
 		t.Fatalf("the captain's block names shell %v, want %q: an unnamed shell starts a login wrapper over the seat: %v", opts["shell"], filepath.Base(loginShell()), opts)
 	}
+	if opts["cwd"] != p.Cwd {
+		t.Fatalf("the captain's block starts in %v, want the plan cwd %q", opts["cwd"], p.Cwd)
+	}
 	if _, ok := opts["path_prepend"]; ok {
 		t.Fatalf("the captain's block prepends a PATH of its own: %v", opts)
 	}
-	block := f.rootBlock("army", p.CaptainWindow)
 	line := f.execLine()
 	for _, want := range []string{
 		"'REX_SESSION=army'",
-		"'REX_BLOCK=" + block + "'",
 		"'PI_SUBAGENT_SESSION=" + p.SubagentSession + "'",
 		"'PI_SUBAGENT_CWD=" + p.Cwd + "'",
 		shellQuote(p.CaptainArgv[0]),
@@ -463,9 +531,6 @@ func TestLoginShellFollowsTheUsersShell(t *testing.T) {
 		if got := loginShell(); got != "/bin/sh" {
 			t.Fatalf("loginShell() = %q with SHELL=%q, want /bin/sh", got, bad)
 		}
-	}
-	if argv := loginShellArgv(); len(argv) != 2 || argv[0] != "/bin/sh" || argv[1] != "-l" {
-		t.Fatalf("loginShellArgv() = %v, want /bin/sh -l", argv)
 	}
 }
 
@@ -543,7 +608,7 @@ func TestDeployReplacesADeadSeatAndAcks(t *testing.T) {
 	first, e := s.deploy(h, "rex")
 	must(t, e)
 	f.killCaptain("army", "captain-test-mission")
-	f.calls = nil
+	f.forget()
 
 	d, e := s.deploy(h, "rex")
 	must(t, e)
@@ -553,26 +618,29 @@ func TestDeployReplacesADeadSeatAndAcks(t *testing.T) {
 	if d.Ack == "" {
 		t.Fatalf("a replaced seat was not acked: %+v", d)
 	}
-	// Close the dead window, seat the fresh one, then ack. Nothing is focused.
-	want := "session.list session.view block.method session.close_window session.new_window block.method"
-	if strings.Join(f.calls, " ") != want {
-		t.Fatalf("the replace called %v", f.calls)
+	// Close the dead window, seat the fresh one, then ack. Nothing is focused. The
+	// fresh window is created with the captain as its own command, and the seat
+	// checks that pi took the foreground.
+	want := "session.list session.view process session.close_window session.new_window process"
+	if got := strings.Join(f.steps(), " "); got != want {
+		t.Fatalf("the replace called %v", got)
 	}
 	if d.CaptainWindowID == first.CaptainWindowID || d.CaptainWindowID != f.windowID("army", "captain-test-mission") {
 		t.Fatalf("the fresh seat = %q, the dead one was %q", d.CaptainWindowID, first.CaptainWindowID)
 	}
-	win := f.argsFor("session.new_window")[0]
-	block, _ := win["layout"].(map[string]any)["block"].(map[string]any)
-	argv, _ := block["options"].(map[string]any)["command"].([]string)
-	if len(argv) != 2 || argv[0] != loginShell() || argv[1] != "-l" {
-		t.Fatalf("the fresh window runs %v, want the login shell", argv)
+	argv, _ := f.captainOptions()["command"].([]any)
+	if len(argv) != 4 || text(argv[0]) != loginShell() || text(argv[1]) != "-l" || text(argv[2]) != "-c" {
+		t.Fatalf("the fresh window runs %v, want the login shell reading the exec line", argv)
 	}
 	line := f.execLine()
 	if !strings.Contains(line, "launch_id="+d.LaunchID) {
 		t.Fatalf("the fresh seat's exec line = %q", line)
 	}
-	if f.wroteTo() != f.rootBlock("army", "captain-test-mission") {
-		t.Fatalf("the fresh exec line went to %q", f.wroteTo())
+	if n := f.writes(); n != 0 {
+		t.Fatalf("the fresh seat typed %d times into the block", n)
+	}
+	if d.Pane != f.rootBlock("army", "captain-test-mission") {
+		t.Fatalf("the fresh seat reports pane %q, want its own block", d.Pane)
 	}
 	r, e := s.load(h)
 	must(t, e)
@@ -634,8 +702,8 @@ func TestDeployStopsBeforeTheAckWhenRexFails(t *testing.T) {
 	if d.LaunchID != reserved || !d.Acknowledged {
 		t.Fatalf("the retry = %+v, want the intent %s", d, reserved)
 	}
-	argv, _ := f.args["session.new_window"]["layout"].(map[string]any)["block"].(map[string]any)["options"].(map[string]any)["command"].([]string)
-	if out := f.execLine(); len(argv) != 2 || !strings.Contains(out, "launch_id="+reserved) {
+	argv, _ := f.captainOptions()["command"].([]any)
+	if out := f.execLine(); len(argv) != 4 || !strings.Contains(out, "launch_id="+reserved) {
 		t.Fatalf("the retried seat runs %v with %q", argv, out)
 	}
 }
@@ -651,11 +719,18 @@ func TestDeployNeedsAWorktree(t *testing.T) {
 	}
 }
 
-// One adapter today. An unknown mux is named, not silently treated as rex.
-func TestDeployRefusesAnotherMux(t *testing.T) {
+// Two adapters, and an unknown mux is named, not silently treated as one of
+// them. It is refused before deploy reads the record, so a mission with no
+// worktree still hears the mux's own name.
+func TestDeployRefusesAnUnknownMux(t *testing.T) {
 	s, h := fixture(t)
 	_, e := s.deploy(h, "tmux")
 	wantCode(t, e, "mux_unsupported")
+	for _, want := range []string{"rex", "herdr", `"tmux"`} {
+		if !strings.Contains(e.Error(), want) {
+			t.Fatalf("the refusal does not name %q: %v", want, e)
+		}
+	}
 }
 
 // A closed mission deploys nothing, and the error is the record's own.
@@ -669,10 +744,12 @@ func TestDeployRefusesAClosedMission(t *testing.T) {
 }
 
 // The command path: `mission deploy` reaches the same seats, with rex as the
-// default mux.
+// default mux. The chosen adapter seats and the other one is never asked: a rex
+// deployment makes no Herdr call.
 func TestDeployCommandUsesRexByDefault(t *testing.T) {
 	s, h, _ := piFixture(t)
 	f := fakeRex(t)
+	herdr := fakeHerdr(t)
 	a, e := platform.ParseArgs([]string{"deploy", h, "--json"})
 	must(t, e)
 	v, e := cmdDeploy(a, s)
@@ -682,5 +759,63 @@ func TestDeployCommandUsesRexByDefault(t *testing.T) {
 	}
 	if !f.used("session.new_window") {
 		t.Fatal("the command seated no captain")
+	}
+	if len(herdr.calls) != 0 {
+		t.Fatalf("a rex deployment called herdr: %v", herdr.calls)
+	}
+}
+
+// forget clears the call record, so a test reads only the steps it cares about.
+func (f *rexFake) forget() {
+	f.calls, f.log = nil, nil
+}
+
+// countSteps counts how many times the seat took one step.
+func countSteps(f *rexFake, want string) int {
+	n := 0
+	for _, got := range f.steps() {
+		if got == want {
+			n++
+		}
+	}
+	return n
+}
+
+// A window Rex creates is not yet a seated captain: Rex accepting the window says
+// only that the window exists. The seat waits, bounded, for the block to report
+// pi, retries that wait once, then fails naming the block, the window, and what
+// the block still runs. It never opens a second window, because the label would
+// name two.
+func TestDeployFailsWhenPiNeverTakesTheSeat(t *testing.T) {
+	onePollSeat(t)
+	s, h, _ := piFixture(t)
+	f := fakeRex(t)
+	f.shellForeground = true
+	p, e := s.plan(h, "rex", "")
+	must(t, e)
+	if _, e = (rexSeat{}).place(p, "session:army"); e == nil {
+		t.Fatal("a seat whose shell never became pi was reported as seated")
+	}
+	wantCode(t, e, "rex_error")
+	block := f.rootBlock("army", p.CaptainWindow)
+	for _, want := range []string{block, f.windowID("army", p.CaptainWindow), filepath.Base(loginShell())} {
+		if !strings.Contains(e.Error(), want) {
+			t.Fatalf("the failure does not report %q: %v", want, e)
+		}
+	}
+	// Each bounded wait is one read here, so two reads are the first check and its
+	// one retry: no more, and no submit to re-send, because the captain is the
+	// window's own command.
+	if n := countSteps(f, "process"); n != seatVerifyTries {
+		t.Fatalf("the seat checked the captain %d times, want one check and one retry: %v", n, f.steps())
+	}
+	if n := countSteps(f, "session.new_window"); n != 1 {
+		t.Fatalf("the failed seat opened %d windows", n)
+	}
+	if n := f.seats("army", p.CaptainWindow); n != 1 {
+		t.Fatalf("the failed seat left %d captain windows", n)
+	}
+	if n := f.writes(); n != 0 {
+		t.Fatalf("the failed seat typed %d times into the block", n)
 	}
 }

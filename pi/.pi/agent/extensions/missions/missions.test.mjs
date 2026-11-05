@@ -1,20 +1,17 @@
 // Paths: go/mission/**, pi/.pi/agent/extensions/missions/**, pi/.pi/agent/extensions/interactive-subagents/**, agents/.agents/skills/missions/**
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, realpathSync, rmSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAPTAIN_AGENT, MissionBridge, WORKER_AGENT, agentCollisionReport, driverEnv, driverStatus, driverTask, droppableReportError, herdrError, judgeTask, missionContinues, missionToolBlock, quiescent, repositoryWorkspaces, seatArgs, takenAgentName, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus, usablePlan, workerAgentName } from "./core.mjs";
+import { CAPTAIN_AGENT, CommanderInbox, FAILED_OUTBOX_LIMIT, MissionBridge, OUTBOX_FAILURE_LIMIT, WORKER_AGENT, askMessage, driverStatus, driverTask, droppableEventError, droppableReportError, isJudge, judgeTask, missionContinues, missionToolBlock, outboxErrorCode, quiescent, setAsideNotice, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
 const exec = promisify(execFile);
-/** The handle hash the launch appends to a taken agent name. */
-const hashOf = text => createHash("sha256").update(text).digest("hex");
 const bin = process.env.MISSION_TEST_BIN;
 const needsCLI = { skip: !bin && "Run scripts/test-missions.sh for real CLI integration coverage" };
 const context = (cwd, file, id="existing-pi") => ({ cwd, sessionManager: { getSessionId:()=>id, getSessionFile:()=>file }, hasPendingMessages:()=>false, isIdle:()=>true });
@@ -32,13 +29,6 @@ test("normal turn is quiescent only without queued work and registered waits", (
     globalThis[key]=()=>1;assert.equal(quiescent(event,ctx),false);
     globalThis[key]=()=>{throw Error("unavailable")};assert.equal(quiescent(event,ctx),false);
   } finally {delete globalThis[key]}
-});
-
-test("workspace lookup keeps every workspace of one repository lineage", () => {
-  const records=[{workspace_id:"repo",worktree:{repo_key:"/git/repo",is_linked_worktree:false}}, {workspace_id:"mission-a",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}, {workspace_id:"other",worktree:{repo_key:"/git/other",is_linked_worktree:false}}];
-  assert.deepEqual(repositoryWorkspaces(records,"/git/repo").map(w=>w.workspace_id),["repo","mission-a"]);
-  assert.deepEqual(repositoryWorkspaces(records,"/git/absent"),[]);
-  assert.deepEqual(repositoryWorkspaces(undefined,"/git/repo"),[]);
 });
 
 test("mission tool gate follows status and never blocks inspection", () => {
@@ -121,27 +111,6 @@ test("next-step continuation follows status and pending steps", () => {
     assert.equal(missionContinues({ status, steps }), false, `${status} never continues`);
   }
   assert.equal(missionContinues(undefined), false);
-});
-
-test("agent-name helpers read the Herdr collision and stay inside the name limits", () => {
-  const message='launch_failed: herdr agent: {"error":{"code":"agent_name_taken","message":"agent name pi is already used; candidates: pane_id=w8N:p1"},"id":"cli:agent:start"}';
-  assert.equal(takenAgentName(message),"pi");
-  assert.equal(takenAgentName("Acknowledgement lost"),null);
-  assert.equal(takenAgentName(undefined),null);
-  assert.equal(takenAgentName('herdr failed: {"code":"agent_pane_busy"}'),null);
-  // A worker name comes from the mission handle, and Herdr accepts only 32
-  // characters of [a-z0-9_-] that start with a letter.
-  const name=workerAgentName("dotfiles/fix-review-ergonomics-stable-decisions-no-tool-lockout");
-  assert.equal(name,"mission-fix-review-ergonomics-st");assert.equal(name.length,32);
-  assert.equal(workerAgentName("dotfiles/"+ "x".repeat(80)),"mission-"+"x".repeat(24));
-  assert.equal(workerAgentName(""),"mission-mission");
-  const hashed=workerAgentName("dotfiles/fix-review","a1b2c3d4e5f6");
-  assert.equal(hashed,"mission-fix-review-a1b2c3");assert.match(hashed,/^[a-z][a-z0-9_-]*$/);
-  assert.match(agentCollisionReport("pi",{pane_id:"w8N:p1",agent_status:"working",cwd:"/w/mission-a"},"Act."),/name "pi" is held by pane w8N:p1 \(status working, cwd \/w\/mission-a\)\. Act\./);
-  assert.match(agentCollisionReport("pi",null,"Act."),/unknown pane/);
-  // A failed Herdr call keeps its code and message without the process noise.
-  assert.equal(herdrError('Command failed: herdr agent wait\n{"error":{"code":"timeout","message":"agent did not match"}}'),"timeout: agent did not match");
-  assert.equal(herdrError("Herdr is not running"),"Herdr is not running");
 });
 
 /** One finished-subagent steer, exactly as the interactive subagents extension
@@ -246,12 +215,13 @@ test("a finished subagent becomes one trooper report named by itself", () => {
   assert.equal(trooperLine("a".repeat(400)).length, 160);
   // Content blocks are flattened the same way: the headline is still not a report.
   assert.equal(trooperLine([{ type: "text", text: `Sub-agent "trooper-S01" completed (2m).` }, { type: "text", text: "Mapped the lifecycle hooks." }]), "Mapped the lifecycle hooks.");
-  // A report the record can never take is dropped, a transient failure retries.
-  // Only the CLI's own error codes count, never a substring of a message.
+  // A line the record can never take is dropped — a trooper report or a
+  // lifecycle hook queued under an attempt the ledger stopped listing — while a
+  // transient failure retries. Only the CLI's own codes count, never a substring.
   for (const refusal of ["event_conflict: progress id reused with different content", "stale_attempt: progress needs the active attempt", "attempt_terminal: attempt is settled", "closed: mission dotfiles/x is closed", "not_found: mission dotfiles/x not found", "invalid_handle: handle must be REPO/SLUG"])
-    assert.equal(droppableReportError(refusal), true, refusal);
+    assert.equal(droppableEventError(refusal), true, refusal);
   for (const transient of ["io_error: no such file", "unavailable", "Mission CLI returned invalid JSON", "Mission CLI unavailable: spawn mission ENOENT", "usage: progress needs a stable event-id", "the closed attempt not_found event_conflict", "closed the pane"])
-    assert.equal(droppableReportError(transient), false, transient);
+    assert.equal(droppableEventError(transient), false, transient);
 });
 
 
@@ -276,79 +246,49 @@ async function fixture(t, checkpoint=false) {
   delete env.PI_SUBAGENT_NAME;
   // Parent credentials must not leak into requests or any spawned child.
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
-  const f={ env, hookFailures:0, planFailures:0, planAnswer:null, hookIDs:[], reportFailures:0, reportCalls:[], tabs:[], closes:[], worktrees:[], workspaces:[], calls:[], agents:[], agentCalls:[], started:[], taken:new Set(), startErrors:[], paneBusy:0, prompts:[], waitError:null, promptError:null, sessionFile:null, paneAgents:{} };
-  /** The Herdr failure envelope herdr prints on stderr when a call fails. */
-  const herdrFails=(code,message)=>Error(`Command failed: herdr agent\n${JSON.stringify({error:{code,message},id:"cli:agent:start"})}`);
-  const takenErr=name=>herdrFails("agent_name_taken",`agent name ${name} is already used; candidates: pane_id=w-other:p1 workspace_id=w-other status=working`);
+  // The launch is the CLI's, so the fake covers what a session still asks
+  // Herdr for: the workspaces and panes it binds on, and the desk's own split.
+  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportRefusal:null, showFailures:0, reportCalls:[], workspaces:[], calls:[] };
   const run=async(binary,args,options={})=>{
     f.calls.push({binary,args,env:options.env});
     if(binary==="herdr") {
       const common=await f.bridge.common(repo);
-      const flag=name=>args[args.indexOf(name)+1];
+      const flag=name=>{const i=args.indexOf(name);return i<0?undefined:args[i+1];};
       let result;
       if(args[0]==="workspace") result={workspaces:[{workspace_id:"repo",worktree:{repo_key:common,is_linked_worktree:false}},...f.workspaces]};
-      else if(args[0]==="worktree") {
-        f.worktrees.push(args);
-        const path=flag("--path");
-        let ws=f.workspaces.find(w=>w.worktree.checkout_path===path);
-        const already_open=Boolean(ws);
-        if(!ws) { ws={workspace_id:"w-mission",worktree:{repo_key:common,is_linked_worktree:true,checkout_path:path}}; f.workspaces.push(ws); }
-        result={type:"worktree_opened",already_open,workspace:ws,worktree:{path},root_pane:{pane_id:ws.workspace_id+":p1",workspace_id:ws.workspace_id}};
-      }
-      else if(args[0]==="tab") { f.tabs.push(args); const workspace=flag("--workspace"); result={root_pane:{pane_id:workspace+":p2",workspace_id:workspace}}; }
-      else if(args[0]==="agent") {
-        f.agentCalls.push(args);
-        const target=args[2];
-        if(args[1]==="start") {
-          if(f.paneBusy-->0) throw herdrFails("agent_pane_busy",`agent target pane ${target} is not an available shell`);
-          if(f.startErrors.length) throw f.startErrors.shift();
-          if(f.taken.has(target)) throw takenErr(target);
-          f.started.push(target); result={agent:{name:target,pane_id:target}};
-        }
-        else if(args[1]==="wait") { if(f.waitError) throw f.waitError; result={agent:{agent_status:"idle",pane_id:target}}; }
-        else if(args[1]==="prompt") { if(f.promptError) throw f.promptError; f.prompts.push({pane:target,text:args[3]}); result={agent:{agent_status:"working",pane_id:target}}; }
-        else if(args[1]==="get") result={agent:{name:f.started.at(-1),agent_status:"working",pane_id:target,agent_session:{value:f.sessionFile}} };
-        else if(args[1]==="list") result={agents:f.agents};
-        else result={agent:{name:target}};
-      }
-      else if(args[0]==="pane" && args[1]==="get") {
-        result={pane:{pane_id:args[2],agent:f.paneAgents[args[2]]??null}};
-      }
-      else if(args[0]==="pane" && args[1]==="close") {
-        f.closes.push(args[2]); result={type:"pane_closed",pane_id:args[2]};
-      }
       else if(args[0]==="pane" && args[1]==="split") {
         // The mission desk opens here: /missions splits a pane and runs the Go UI in it.
         result={pane:{pane_id:env.HERDR_PANE_ID+"-desk"}};
       }
       else {
-        const workspace=flag("--workspace"), here=workspace===(f.paneWorkspace||"repo"), cwd=f.paneCwd||f.cwd;
-        // Both the owner pane and a bystander pane ("-b" suffix, or any pane id
-        // that ends in -b) sit in the mission checkout, so the fake answers for
-        // both even when the caller carries a different HERDR_PANE_ID.
+        // `pane list` answers for every workspace at once, and for one workspace
+        // when it is asked for it. Both the owner pane and a bystander pane ("-b"
+        // suffix) sit in the mission checkout, so the fake answers for both even
+        // when the caller carries a different HERDR_PANE_ID.
+        const workspace=flag("--workspace"), here=!workspace||workspace===(f.paneWorkspace||"repo"), cwd=f.paneCwd||f.cwd;
         const wanted=options?.env?.HERDR_PANE_ID || env.HERDR_PANE_ID;
         result={panes:here?[
-          {pane_id:env.HERDR_PANE_ID,cwd,foreground_cwd:cwd},
-          {pane_id:env.HERDR_PANE_ID+"-b",cwd,foreground_cwd:cwd},
-          ...(wanted&&wanted!==env.HERDR_PANE_ID&&wanted!==env.HERDR_PANE_ID+"-b"?[{pane_id:wanted,cwd,foreground_cwd:cwd}]:[]),
+          {pane_id:env.HERDR_PANE_ID,workspace_id:workspace||"repo",cwd,foreground_cwd:cwd},
+          {pane_id:env.HERDR_PANE_ID+"-b",workspace_id:workspace||"repo",cwd,foreground_cwd:cwd},
+          ...(wanted&&wanted!==env.HERDR_PANE_ID&&wanted!==env.HERDR_PANE_ID+"-b"?[{pane_id:wanted,workspace_id:workspace||"repo",cwd,foreground_cwd:cwd}]:[]),
         ]:[]};
       }
       return JSON.stringify({result});
     }
+    // A record the CLI cannot answer for: the session still runs, and the read
+    // that breaks is the one the gate would otherwise trust.
+    if(binary===bin && args.includes("show") && f.showFailures-->0)
+      return JSON.stringify({ok:false,error:{code:"not_found",message:"mission vanished"}});
     if(binary===bin && args.includes("hook")) {
       f.hookIDs.push(args[args.indexOf("--event-id")+1]);
       if(f.hookFailures-->0) throw Error("Temporary CLI failure");
     }
-    // `mission plan` is the launch's one optional read: a failed call and an
-    // unusable answer are the same degradation, so both are injectable here.
-    if(binary===bin && args[args.indexOf("--vault")+2]==="plan") {
-      if(f.planFailures>0) { f.planFailures--; throw Error('unknown command "plan" for "mission"'); }
-      if(f.planAnswer!==null) return JSON.stringify({ok:true,data:f.planAnswer});
-    }
     // A trooper report rides `progress --actor`; the fixture can lose one call
-    // so the outbox retry is exercised against the real CLI.
+    // so the outbox retry is exercised against the real CLI, or refuse every
+    // call with one CLI error code so the set-aside path is exercised.
     if(binary===bin && args.includes("progress")) {
       f.reportCalls.push(args);
+      if(f.reportRefusal) return JSON.stringify({ok:false,error:{code:f.reportRefusal,message:"a judge progress needs --session-id naming the judge session"}});
       if(f.reportFailures-->0) throw Error("Temporary CLI failure");
     }
     return (await exec(binary,args,{encoding:"utf8",...options})).stdout;
@@ -362,9 +302,6 @@ async function fixture(t, checkpoint=false) {
   const r=await f.bridge.call(["workspace",handle,"--root",worktrees]);
   f.cwd=r.state.runtime.cwd;f.file=join(root,"existing.jsonl");
   writeFileSync(f.file,JSON.stringify({type:"session",id:"existing-pi",cwd:f.cwd})+"\n");
-  // The launched worker writes its own session file; the fixture reports this
-  // one from `agent get`.
-  f.sessionFile=f.file;
   f.ctx=context(f.cwd,f.file);f.handle=handle;f.repo=repo;f.run=run;f.vault=vault;f.cache=cache;
   return f;
 }
@@ -536,6 +473,139 @@ test("a trooper that finishes after its attempt settled leaves no wedged outbox"
   assert.equal(r.state.attempts[0].reports,undefined);
 });
 
+/** A bridge over a fake CLI: no vault, no mux, no session, no live call. It
+ *  records the argv one outbox item sends and answers with one canned reply, so
+ *  the delivery rules are testable without a mission record. */
+function outboxFixture(t, answer=()=>JSON.stringify({ok:true,data:{}})) {
+  const dir=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-outbox-")));
+  t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const env={...process.env,MISSION_VAULT:join(dir,"vault"),MISSION_STATE_DIR:dir,MISSION_BIN:"/bin/mission"};
+  delete env.PI_SUBAGENT_NAME;
+  const calls=[];
+  const bridge=new MissionBridge({env,run:async(binary,args)=>{calls.push({binary,args});return answer(args);}});
+  const ctx={...context(join(dir,"work"),join(dir,"pi.jsonl")),cwd:join(dir,"work")};
+  bridge.hint={handle:"dotfiles/judge-report",attempt:"attempt-1",token:"token",session:"existing-pi",vault:bridge.vault,outbox:[]};
+  // The queue source is the ledger's answer, not the attach hint: a fake-CLI
+  // bridge performs no ledger read, so the fixture states the one attempt the
+  // ledger would list. `hint.attempt` alone queues nothing — that is the rule
+  // a report must not escape.
+  bridge.ledgerAttempt="attempt-1";
+  return {bridge,ctx,calls,file:bridge.key(ctx)};
+}
+
+const USAGE_REFUSAL=()=>JSON.stringify({ok:false,error:{code:"usage",message:"a judge progress needs --session-id naming the judge session"}});
+
+test("a judge report carries its own session; every other report keeps today's argv", async t => {
+  const f=outboxFixture(t);
+  // The CLI's rule, matched on both sides: a name with the judge prefix is a
+  // judge, whatever its case, and nothing else is one.
+  assert.equal(isJudge("judge-S02"),true);assert.equal(isJudge("Judge-S02"),true);assert.equal(isJudge("  judge-S02  "),true);
+  for(const name of ["trooper-S01","sergeant-S01","",undefined,"adjudicator"]) assert.equal(isJudge(name),false,String(name));
+  const summary="Mapped the lifecycle hooks and listed 12 calls.",next="Read the result in this session";
+  const judgeMessage=trooperDone("judge-S02","done",{sessionId:"pi-judge-1",sessionFile:"/tmp/judge-S02.jsonl"});
+  const judge=trooperReport(judgeMessage);
+  // The identity the ID was hashed from travels with the report.
+  assert.equal(judge.session,"pi-judge-1");assert.equal(judge.session_file,"/tmp/judge-S02.jsonl");
+  await f.bridge.report(f.ctx,judgeMessage);
+  assert.equal(f.bridge.hint.outbox.length,0);assert.equal(f.calls.length,1);
+  assert.deepEqual(f.calls[0].args,["--json","--vault",f.bridge.vault,"progress","dotfiles/judge-report","--attempt","attempt-1",
+    "--event-id",judge.id,"--actor","judge-S02","--session-id","pi-judge-1","--session-file","/tmp/judge-S02.jsonl",
+    "--status","ready","--summary",summary,"--next",next]);
+  // A name without the judge prefix flushes exactly as it always did: no session
+  // flags, so its fingerprint against the CLI does not change.
+  const plainMessage=trooperDone("trooper-S01"),plain=trooperReport(plainMessage);
+  assert.equal(plain.session,undefined);assert.equal(plain.session_file,"/tmp/trooper-S01.jsonl");
+  await f.bridge.report(f.ctx,plainMessage);
+  assert.deepEqual(f.calls[1].args,["--json","--vault",f.bridge.vault,"progress","dotfiles/judge-report","--attempt","attempt-1",
+    "--event-id",plain.id,"--actor","trooper-S01","--status","ready","--summary",summary,"--next",next]);
+});
+
+test("a judge report with no session id is never queued and warns once", async t => {
+  const f=outboxFixture(t,USAGE_REFUSAL);
+  const nameless=trooperDone("judge-S02-final");
+  assert.equal(trooperReport(nameless).session,undefined);
+  await f.bridge.report(f.ctx,nameless);
+  // The CLI refuses this report by design, so it never reaches the outbox ...
+  assert.equal(f.bridge.hint.outbox.length,0);
+  assert.equal(f.calls.length,0,"an undeliverable judge report makes no CLI call");
+  // ... and the next tool result names the trooper, once.
+  assert.deepEqual(f.bridge.takeNotices(),["1 report could not be recorded: judge-S02-final (usage)"]);
+  assert.deepEqual(f.bridge.takeNotices(),[]);
+  await f.bridge.report(f.ctx,nameless);
+  assert.deepEqual(f.bridge.takeNotices(),[],"a replayed completion warns once");
+});
+
+test("a report refused three times leaves the outbox for the failed list", async t => {
+  const f=outboxFixture(t,USAGE_REFUSAL);
+  assert.equal(OUTBOX_FAILURE_LIMIT,3);assert.equal(FAILED_OUTBOX_LIMIT,20);
+  assert.equal(outboxErrorCode("usage: a judge progress needs --session-id"),"usage");
+  assert.equal(outboxErrorCode("Mission CLI returned invalid JSON"),"Mission CLI returned invalid JSON");
+  const report=trooperReport(trooperDone("trooper-S01"));
+  f.bridge.hint.outbox.push({attempt:"attempt-1",report});
+  // A failure the extension has no rule for still retries while it may pass.
+  for(let i=1;i<OUTBOX_FAILURE_LIMIT;i++) await assert.rejects(f.bridge.flush(f.ctx),/usage: a judge progress/);
+  // The flush that sets it aside returns instead of failing the tool call.
+  await f.bridge.flush(f.ctx);
+  assert.equal(f.bridge.hint.outbox.length,0);
+  const saved=JSON.parse(readFileSync(f.file,"utf8"));
+  assert.equal(saved.outbox.length,0);assert.equal(saved.failed.length,1);
+  assert.equal(saved.failed[0].report.trooper,"trooper-S01");assert.equal(saved.failed[0].failures,OUTBOX_FAILURE_LIMIT);
+  assert.match(saved.failed[0].error,/^usage: /);
+  assert.deepEqual(f.bridge.takeNotices(),["1 report could not be recorded: trooper-S01 (usage)"]);
+  // The list is bounded: only the newest entries survive.
+  for(let i=0;i<FAILED_OUTBOX_LIMIT+5;i++) f.bridge.setAside({attempt:"attempt-1",report:{...report,id:"trooper-"+i}},`io_error: ${i}`);
+  assert.equal(f.bridge.hint.failed.length,FAILED_OUTBOX_LIMIT);
+  assert.equal(f.bridge.hint.failed.at(-1).error,"io_error: 24");
+});
+
+test("a hook refused three times leaves the outbox and says a hook was lost", async t => {
+  const io=()=>JSON.stringify({ok:false,error:{code:"io_error",message:"no such file"}});
+  const f=outboxFixture(t,io);
+  f.bridge.hint.outbox.push({attempt:"attempt-1",event:{id:"event-1",type:"tool-start",session_id:"existing-pi",
+    session_file:"/tmp/pi.jsonl",summary:"Tool call call-1"}});
+  for(let i=1;i<OUTBOX_FAILURE_LIMIT;i++) await assert.rejects(f.bridge.flush(f.ctx),/io_error: /);
+  await f.bridge.flush(f.ctx);
+  assert.equal(f.bridge.hint.outbox.length,0);
+  const saved=JSON.parse(readFileSync(f.file,"utf8"));
+  assert.equal(saved.failed.length,1);assert.equal(saved.failed[0].event.type,"tool-start");
+  // A lost hook is never dropped silently: the ledger needed it, so it surfaces.
+  assert.deepEqual(f.bridge.takeNotices(),["1 hook could not be recorded: tool-start (io_error)"]);
+});
+
+test("the tool call that sets an item aside succeeds and carries one line",needsCLI,async t=>{
+  const f=await fixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:()=>{},setStatus:()=>{}}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},ctx);
+  const claim=await tools.mission.execute("attach",{action:"attach",handle:f.handle},null,null,ctx);
+  assert.equal(claim.isError,undefined,claim.content?.[0]?.text);
+  // The CLI refuses this report every time with an error the extension has no
+  // rule for: the incident's own `usage` refusal.
+  f.reportRefusal="usage";
+  await events.message_end({message:trooperDone("trooper-S01")},ctx);
+  const state=()=>JSON.parse(readFileSync(join(f.cache,readdirSync(f.cache).filter(n=>n.endsWith(".json"))[0]),"utf8"));
+  assert.equal(state().outbox.length,1);
+  // Two failed flushes still fail the editing tool call, exactly as before.
+  assert.equal((await events.tool_call({toolName:"write"},ctx)).block,true);
+  // The third sets the item aside, so the tool call runs.
+  assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
+  const flushed=state();
+  assert.equal(flushed.outbox.length,0);
+  assert.deepEqual(flushed.failed.map(x=>x.report.trooper),["trooper-S01"]);
+  // Its result keeps what the tool returned and adds the one line, once.
+  const result=await events.tool_result({toolCallId:"write-1",toolName:"write",isError:false,content:[{type:"text",text:"wrote"}],details:{path:"x"}},ctx);
+  assert.equal(result.content[0].text,"wrote");
+  // The patch names only the content: an omitted field keeps its value, so the
+  // tool's own details still reach the transcript.
+  assert.deepEqual(Object.keys(result),["content"]);
+  assert.equal(result.content.at(-1).text,"1 report could not be recorded: trooper-S01 (usage)");
+  assert.equal(await events.tool_result({toolCallId:"read-1",toolName:"read",isError:false,content:[{type:"text",text:"read"}]},ctx),undefined);
+  await events.session_shutdown({},ctx);
+});
+
 test("failed checks retain ownership and successful correction settles it",needsCLI,async t=>{
   const f=await fixture(t);const c=await f.bridge.action(f.ctx,{action:"attach",handle:f.handle});
   await f.bridge.action(f.ctx,{action:"finish"});
@@ -544,36 +614,6 @@ test("failed checks retain ownership and successful correction settles it",needs
   writeFileSync(c.artifact,"Corrected output");
   await f.bridge.settled(f.ctx,{aborted:false,outcome:"completed"});
   const r=await f.bridge.call(["show",f.handle]);assert.equal(r.state.attempts[0].status,"succeeded");assert.equal(r.state.status,"ready");
-});
-
-test("a launched driver receives the driver contract, not autonomous worker duties", () => {
-  const task = driverTask("dotfiles/session-progress", "launch-abc");
-  // The claim: the launched session owns one work request and attaches with it.
-  assert.match(task, /You hold the claim on this work request/);
-  assert.match(task, /action=attach, handle=dotfiles\/session-progress, launch_id=launch-abc/);
-  // Duty one: the driver keeps the attempt and the mission tool.
-  assert.match(task, /Duty 1 — hold the claim/);
-  assert.match(task, /owns the attempt and keeps the mission tool/);
-  // Duty two: one work subagent per step, and the driver writes no artifact.
-  assert.match(task, /Duty 2 — subagents do all step work/);
-  assert.match(task, /you never edit repository code and you never write a step artifact/);
-  assert.match(task, /one work subagent \(agent=worker\)/);
-  assert.match(task, /step brief, its artifact path, and the acceptance criteria/);
-  // Duty three: one judge subagent per step, which runs the CLI checks itself.
-  assert.match(task, /Duty 3 — subagents judge/);
-  assert.match(task, /call mission action=judge/);
-  assert.match(task, /one judge subagent \(agent=worker, name=judge-<step>\)/);
-  assert.match(task, /Never judge your own work and never reuse the work subagent's session/);
-  assert.match(task, /runs the CLI checks itself through mission verify/);
-  assert.match(task, /records its verdict with reasons as progress/);
-  // The human touchpoint: status and admin prompts land in this session.
-  assert.match(task, /Touchpoint — you answer the human's status and admin prompts in this session/);
-  assert.match(task, /never approve one yourself/);
-  // The driver keeps the worktree and the tool for later steps.
-  assert.match(task, /mission worktree as this session's cwd/);
-  // No autonomous "do the step yourself" instruction survives the launch.
-  assert.doesNotMatch(task, /Write the required artifact and call finish/);
-  assert.doesNotMatch(task, /work alone/i);
 });
 
 test("the judge task hands the judge the artifact, the checks, and one capability path", () => {
@@ -720,15 +760,9 @@ test("the driver answers a status prompt from the ledger and steers a step edit 
   assert.equal((await b.call(["steps",f.handle])).find(v=>v.step.id==="S02").status,"pending");
 });
 
-test("a launched seat is a captain, and a plan with no argv keeps the defaults", needsCLI, async t=>{
+test("an attached seat is a captain when it answers a launch intent", needsCLI, async t=>{
   const f=await fixture(t);
-  // The plan's tool reach travels as the AGENT_ARG tail Herdr passes to Pi;
-  // everything before it is the executable, which Herdr starts itself.
-  const plan=await f.bridge.call(["plan",f.handle]);
-  assert.equal(plan.captain_argv[0],"pi");
-  assert.deepEqual(seatArgs(plan.captain_argv),["--tools","mission,subagent,subagent_message,read,ask_user_question,tool_search"]);
-  assert.deepEqual(seatArgs([]),[]);assert.deepEqual(seatArgs(undefined),[]);assert.deepEqual(seatArgs(["pi"]),[]);
-  // A seat with no argv passes no `--` tail: Herdr still starts a bare Pi.
+  // A session that attaches on its own is a trooper.
   const manual=await f.bridge.attach(f.ctx,f.handle,undefined,undefined);
   assert.equal(manual.handle,f.handle);
   const attachArgs=()=>f.calls.filter(c=>c.binary===bin&&c.args.includes("attach")).at(-1).args;
@@ -743,160 +777,69 @@ test("a launched seat is a captain, and a plan with no argv keeps the defaults",
   assert.equal((await launched.bridge.call(["show",launched.handle])).state.attempts[0].agent,CAPTAIN_AGENT);
 });
 
-test("a launch starts one full agent in the mission pane",needsCLI,async t=>{
-  const f=await fixture(t);
-  // The launch needs no subagent extension: the worker is a full Pi agent.
-  assert.equal(globalThis.__pi_interactive_subagents,undefined);
-  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-  const launch=(await f.bridge.call(["show",f.handle])).state.runtime.launch_id;
-  // The launch prompt has one owner: plan renders the captain contract, so the
-  // test reads that text instead of holding a second copy of it.
-  const plan=(await f.bridge.call(["plan",f.handle,"--launch-id",launch]));
-  const brief=plan.captain_brief;
-  // The whole captain launch: a mission-derived name, the plan's argv tail, one
-  // readiness wait, one task prompt, and one session read. The seat's reach has
-  // one owner: it is the argv the plan emits, never a second list here.
-  assert.deepEqual(f.agentCalls,[
-    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2","--",...plan.captain_argv.slice(1)],
-    ["agent","wait","w-mission:p2","--until","idle","--timeout","60000"],
-    ["agent","prompt","w-mission:p2",brief],
-    ["agent","get","w-mission:p2"],
-  ]);
-  // The seat holds no editor and no shell: the allowlist the plan names is the
-  // one the launched Pi receives.
-  for(const banned of ["edit","write","bash"]) assert.equal(seatArgs(plan.captain_argv).join(",").split(",").includes(banned),false,`the launched seat is granted ${banned}`);
-  // The agent session file is recorded on the launch.
-  assert.equal(r.session_file,f.file);
-  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
-  // The seat's reach is the plan's argv: no loadout file and no allowlist
-  // variable reaches it. The one environment variable it does carry is the
-  // plan's subagent session, the label every trooper tab scopes to.
-  const sent=JSON.stringify(f.calls.filter(c=>c.binary==="herdr").map(c=>c.args));
-  assert.equal(sent.includes("loadout"),false);assert.equal(sent.includes("PI_SUBAGENT_ALLOWED"),false);
-  assert.ok(f.tabs[0].includes(`PI_SUBAGENT_SESSION=${plan.subagent_session}`),"the seat carries no plan subagent session");
-  assert.equal(plan.subagent_session,"mission-session-progress");
+test("a launch asks the CLI to deploy for this mux and adopts the runtime it records", async () => {
+  // Seating has one owner now: the CLI. This session's job is to say which mux
+  // it runs in, hand the launch over, and read the runtime back from
+  // `mission show` — no Herdr worktree, tab, agent, or prompt of its own.
+  const launch = async env => {
+    const calls=[];
+    const spawned=[];
+    const runtime={launch_id:"launch-1",session_file:"/sessions/captain.jsonl",pane:"w1:p2",workspace:"w1"};
+    const bridge=new MissionBridge({env:{MISSION_VAULT:"/vault",...env},
+      // Any subprocess is a failure: a launch owns no mux command, so nothing
+      // but the CLI may be spawned, and even that is stubbed through call().
+      run:async binary=>{spawned.push(binary);throw Error(`a launch spawned ${binary}`)}});
+    bridge.call=async args=>{
+      calls.push(args);
+      if(args[0]==="show") return {mission:{repo:"dotfiles"},state:{runtime}};
+      if(args[0]==="repo") return [{slug:"dotfiles",checkouts:{[hostname()]:"/checkout"}}];
+      if(args[0]==="workspace") return {state:{runtime:{cwd:"/checkout"}}};
+      if(args[0]==="deploy") return {handle:"dotfiles/x",mux:args[args.indexOf("--mux")+1],focused:false,pane:"w1:p2"};
+      throw Error(`the launch asked the CLI for ${args[0]}`);
+    };
+    const r=await bridge.start(context("/checkout","/checkout/s.jsonl"),"dotfiles/x");
+    return {r,calls,spawned};
+  };
+  const herdr=await launch({HERDR_ENV:"1",HERDR_PANE_ID:"w1:p1",HERDR_WORKSPACE_ID:"w1"});
+  const rex=await launch({REX_SESSION:"army",REX_BLOCK:"block:1"});
+  // The mux is the environment's, and the deploy call names it.
+  const deploy=calls=>calls.find(a=>a[0]==="deploy");
+  assert.deepEqual(deploy(herdr.calls),["deploy","dotfiles/x","--mux","herdr"]);
+  assert.deepEqual(deploy(rex.calls),["deploy","dotfiles/x","--mux","rex"]);
+  // The launch is the CLI's: no reservation, no plan read, and no mux subprocess.
+  for(const {calls,spawned} of [herdr,rex]) {
+    assert.deepEqual(spawned,[],"a launch spawned a mux");
+    for(const gone of ["launch","plan"]) assert.equal(calls.some(a=>a[0]===gone),false,`the extension still calls ${gone}`);
+    assert.deepEqual(calls.map(a=>a[0]),["show","repo","workspace","deploy","show"]);
+  }
+  // The runtime is the record's, not one the launch guessed: `mission show` is
+  // the read the seat reports back through.
+  for(const {r} of [herdr,rex]) {
+    assert.equal(r.launched,true);
+    assert.equal(r.runtime.launch_id,"launch-1");
+    assert.equal(r.session_file,"/sessions/captain.jsonl");
+    assert.equal(r.pane,"w1:p2");assert.equal(r.workspace,"w1");
+  }
 });
 
-test("a launch whose plan fails starts #441's driver seat instead of failing hard",needsCLI,async t=>{
-  const f=await fixture(t);
-  // A CLI that predates `mission plan`: the read is the launch's one optional
-  // step, so this failure degrades the seat instead of aborting the launch.
-  f.planFailures=1;
-  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-  const launchID=r.runtime.launch_id;
-  // No plan answer, no argv tail: the seat is #441's bare Pi with #441's own
-  // driver contract, and the ack answers the intent the reservation holds.
-  assert.deepEqual(f.agentCalls,[
-    ["agent","start","mission-session-progress","--kind","pi","--pane","w-mission:p2"],
-    ["agent","wait","w-mission:p2","--until","idle","--timeout","60000"],
-    ["agent","prompt","w-mission:p2",driverTask(f.handle,launchID)],
-    ["agent","get","w-mission:p2"],
-  ]);
-  assert.equal(f.agentCalls[0].includes("--"),false,"a planless seat passes no allowlist tail");
-  // The fallback prompt is real: it names the same launch id, so the seat can
-  // attach to the intent this launch reserved.
-  assert.ok(f.prompts.at(-1).text.includes(`action=attach, handle=${f.handle}, launch_id=${launchID}`));
-  assert.match(f.prompts.at(-1).text,/Duty 2 — subagents do all step work/);
-  // A plan that answered nothing would have carried this one value; a degraded
-  // launch sets no session, so no trooper tab is scoped by it.
-  assert.equal(JSON.stringify(f.tabs[0]).includes("PI_SUBAGENT_SESSION"),false);
-  // One reservation, one ack, no release: the plan's failure changed neither.
-  const reserving=f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&!c.args.includes("--session-file"));
-  assert.equal(reserving.length,1);assert.equal(f.calls.some(c=>c.binary===bin&&c.args.includes("--release")),false);
-  const ack=f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&c.args.includes("--session-file"));
-  assert.equal(ack.length,1);
-  assert.equal(ack[0].args[ack[0].args.indexOf("--launch-id")+1],launchID);
-  assert.equal(ack[0].args[ack[0].args.indexOf("--session-file")+1],realpathSync(f.file));
-  assert.equal(r.session_file,f.file);
-  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.launch_id,launchID,"the same intent is acked");
-  // The human can see that this launch ran on the fallback.
-  assert.match(r.plan_degraded,/Mission CLI unavailable: unknown command "plan"/);
-});
-
-test("an unusable plan answer degrades the seat the same way a failed plan call does",needsCLI,async t=>{
-  const f=await fixture(t);
-  // The call succeeds and answers an object that names no brief, no argv, and
-  // no session: nothing a launch can use, so the same fallback applies.
-  f.planAnswer={};
-  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-  assert.deepEqual(f.agentCalls[0][1],"start");
-  assert.equal(f.agentCalls[0].includes("--"),false);
-  assert.equal(f.prompts.at(-1).text,driverTask(f.handle,r.runtime.launch_id));
-  assert.equal(r.plan_degraded,"mission plan answered nothing usable");
-});
-
-test("a degraded launch that fails before its seat still releases the intent",needsCLI,async t=>{
-  const f=await fixture(t);
-  f.planFailures=1;
-  f.waitError=Error('Command failed: herdr agent wait\n'+JSON.stringify({error:{code:"timeout",message:"agent wait timed out after 60000ms"},id:"cli:agent:wait"}));
-  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/The launch intent is released/);
-  // The fallback seat never reached its prompt, so the intent is released and
-  // the next press can launch again — the same rule as a plan-backed launch.
-  assert.equal(f.prompts.length,0);
-  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
-  f.waitError=null;
-  f.planFailures=1;
-  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,true);
-  assert.equal(f.prompts.at(-1).text,driverTask(f.handle,again.runtime.launch_id));
-});
-
-test("a plan answer is usable only when it names a brief, an argv, or a session",()=>{
-  assert.equal(usablePlan(null),false);assert.equal(usablePlan(undefined),false);
-  assert.equal(usablePlan({}),false);assert.equal(usablePlan("plan"),false);assert.equal(usablePlan([]),false);
-  assert.equal(usablePlan({captain_brief:""}),false);assert.equal(usablePlan({captain_argv:[]}),false);
-  assert.equal(usablePlan({subagent_session:""}),false);
-  assert.equal(usablePlan({captain_brief:"You are the captain"}),true);
-  assert.equal(usablePlan({captain_argv:["pi"]}),true);
-  assert.equal(usablePlan({subagent_session:"mission-x"}),true);
-});
-
-test("no subagent extension is needed to start a mission",needsCLI,async t=>{
-  const f=await fixture(t);
-  const saved=globalThis.__pi_interactive_subagents;delete globalThis.__pi_interactive_subagents;
-  try {
-    const r=await f.bridge.start(context(f.repo,f.file),f.handle);
-    assert.equal(r.launched,true);assert.deepEqual(f.started,["mission-session-progress"]);
-  } finally {if(saved!==undefined)globalThis.__pi_interactive_subagents=saved}
-});
-
-test("mission launch registers a Herdr worktree and adopts its workspace",needsCLI,async t=>{
-  const f=await fixture(t);
-  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-  // The worker inherits the pane environment, so no parent credential travels
-  // in any Herdr argument.
-  assert.equal(JSON.stringify(f.calls.filter(c=>c.binary==="herdr").map(c=>c.args)).includes("unrelated-parent-token"),false);
-  // One launch keeps one reservation, one worktree open, and one agent.
-  assert.equal(f.calls.filter(c=>c.binary===bin&&c.args.includes("launch")&&!c.args.includes("--session-file")).length,1);
-  assert.equal(f.worktrees.length,1);assert.equal(f.started.length,1);
-  // The mission branch is mission/<slug>, and Herdr owns that checkout as its
-  // own linked worktree workspace, anchored on the primary checkout.
-  const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
-  assert.equal(runtime.branch,"mission/session-progress");
-  assert.deepEqual(f.worktrees[0].slice(0,3),["worktree","open","--cwd"]);
-  assert.equal(f.worktrees[0][3],f.repo);assert.equal(f.worktrees[0][f.worktrees[0].indexOf("--path")+1],f.cwd);
-  assert.ok(f.worktrees[0].includes("--no-focus"));
-  // A fresh worktree workspace gets one launch tab that carries the launcher
-  // environment; the empty root tab Herdr opened goes away, so one tab stays.
-  assert.equal(f.tabs.length,1);assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-mission"]);
-  assert.deepEqual(f.closes,["w-mission:p1"]);assert.equal(f.agentCalls[0][6],"w-mission:p2");assert.equal(r.workspace,"w-mission");
-  // The tab carries the launcher configuration, never a credential.
-  const tab=f.tabs[0];
-  assert.ok(tab.includes(`MISSION_VAULT=${f.vault}`));assert.ok(tab.includes(`MISSION_STATE_DIR=${f.env.MISSION_STATE_DIR}`));
-  assert.ok(tab.includes(`MISSION_BIN=${bin}`));assert.equal(JSON.stringify(tab).includes("unrelated-parent-token"),false);
-  // The mission session is accepted as a pane of that worktree workspace, and
-  // still refused when its cwd is not the mission checkout.
-  f.paneWorkspace="w-mission";
-  assert.deepEqual(await f.bridge.assertSurface(f.ctx),{workspace:"w-mission",pane:f.env.HERDR_PANE_ID});
-  // A Herdr seat in another checkout is refused by its own name and paths, so
-  // a Herdr refusal never reads as a Rex one.
-  await assert.rejects(f.bridge.assertSurface({...f.ctx,cwd:f.repo}),(e)=>{
-    assert.match(e.message,/Herdr pane repo:p2/);
-    assert.match(e.message,/mission worktree/);
-    assert.ok(e.message.includes(f.repo)&&e.message.includes(f.cwd),`names both paths: ${e.message}`);
-    return true;
-  });
-  f.paneWorkspace="repo";
-  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);assert.equal(f.started.length,1);
+test("a launch that found the captain already seated reports no second seat", async () => {
+  // A repeat press focuses the live captain in the CLI. The extension reports it
+  // as not launched, so the desk receipt says "already seated" instead of
+  // claiming a launch that did not happen.
+  const runtime={launch_id:"launch-1"};
+  const bridge=new MissionBridge({env:{MISSION_VAULT:"/vault",HERDR_ENV:"1",HERDR_PANE_ID:"w1:p1"},
+    run:async binary=>{throw Error(`a launch spawned ${binary}`)}});
+  bridge.call=async args=>{
+    if(args[0]==="show") return {mission:{repo:"dotfiles"},state:{runtime}};
+    if(args[0]==="repo") return [{slug:"dotfiles",checkouts:{[hostname()]:"/checkout"}}];
+    if(args[0]==="workspace") return {state:{runtime:{cwd:"/checkout"}}};
+    if(args[0]==="deploy") return {handle:"dotfiles/x",focused:true};
+    throw Error(`the launch asked the CLI for ${args[0]}`);
+  };
+  const r=await bridge.start(context("/checkout","/checkout/s.jsonl"),"dotfiles/x");
+  assert.equal(r.launched,false);
+  assert.match(r.reason,/already live/);
+  assert.equal(r.runtime.launch_id,"launch-1");
 });
 
 test("a Rex block is a mission seat when it runs in the mission checkout", async t => {
@@ -1055,15 +998,16 @@ test("a Herdr pane still binds by pane cwd and never asks Rex", async t => {
   const bridge=new MissionBridge({env:{HERDR_ENV:"1",HERDR_PANE_ID:"repo:p2",REX_BLOCK:"block-1"},run:async(binary,args)=>{
     calls.push(binary);
     if(binary!=="herdr") throw Error(`unexpected ${binary} in a Herdr seat`);
-    const result=args[0]==="workspace"
-      ? {workspaces:[{workspace_id:"w-mission",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}]}
-      : {panes:[{pane_id:"repo:p2",cwd:root,foreground_cwd:root}]};
+    // One pane list covers every workspace, and the pane names its own: a
+    // captain in the shared army workspace binds exactly as one in a worktree
+    // workspace does.
+    const result={panes:[{pane_id:"repo:p2",workspace_id:"army",cwd:root,foreground_cwd:root}]};
     return JSON.stringify({result});
   }});
-  bridge.common=async()=>"/git/repo";
   bridge.seatCwd=async()=>{throw Error("a Herdr seat never asks Rex")};
-  assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"herdr-pi")),{workspace:"w-mission",pane:"repo:p2"});
+  assert.deepEqual(await bridge.assertSurface(context(root,join(root,"session.jsonl"),"herdr-pi")),{workspace:"army",pane:"repo:p2"});
   assert.equal(bridge.surfaceSession,"herdr-pi");assert.equal(calls.includes("rex"),false);
+  assert.deepEqual(calls,["herdr"],"the binding is one pane list and no workspace walk");
 });
 
 test("a Herdr pane outside the mission checkout is refused by its own seat", async t => {
@@ -1072,12 +1016,9 @@ test("a Herdr pane outside the mission checkout is refused by its own seat", asy
   const mission=join(root,"mission"),repo=join(root,"repo");mkdirSync(mission);mkdirSync(repo);
   const bridge=new MissionBridge({env:{HERDR_ENV:"1",HERDR_PANE_ID:"repo:p2",REX_BLOCK:"block-1"},run:async(binary,args)=>{
     if(binary!=="herdr") throw Error(`unexpected ${binary} in a Herdr seat`);
-    const result=args[0]==="workspace"
-      ? {workspaces:[{workspace_id:"w-mission",worktree:{repo_key:"/git/repo",is_linked_worktree:true}}]}
-      : {panes:[{pane_id:"repo:p2",cwd:repo,foreground_cwd:repo}]};
+    const result={panes:[{pane_id:"repo:p2",workspace_id:"repo",cwd:repo,foreground_cwd:repo}]};
     return JSON.stringify({result});
   }});
-  bridge.common=async()=>"/git/repo";
   bridge.seatCwd=async()=>{throw Error("a Herdr seat never asks Rex")};
   await assert.rejects(bridge.assertSurface(context(mission,join(mission,"session.jsonl"))),(e)=>{
     assert.match(e.message,/Herdr pane repo:p2 reports/);
@@ -1088,9 +1029,12 @@ test("a Herdr pane outside the mission checkout is refused by its own seat", asy
   assert.equal(bridge.surfaceSession,null);
 });
 
-/** The seat one hook event reports, recorded without the CLI. */
+/** The seat one hook event reports, recorded without the CLI. The attempt the
+ *  event names is the one the last ledger read listed, so the fixture sets that
+ *  read's answer and not the persisted hint. */
 async function recordedSeat(bridge, ctx, event = { type: "session-start", summary: "Pi session attached" }) {
   bridge.hint = { handle: "dotfiles/seat", attempt: "attempt-1", token: "token", outbox: [] };
+  bridge.ledgerAttempt = "attempt-1";
   bridge.flush = async () => {};
   await bridge.record(ctx, event);
   const { pane_id, workspace_id } = bridge.hint.outbox.at(-1).event;
@@ -1142,136 +1086,6 @@ test("a caller-supplied seat field still wins over the default", async t => {
   await bridge.assertSurface(ctx);
   assert.deepEqual(await recordedSeat(bridge, ctx, { type: "tool-start", workspace_id: "caller-workspace" }),
     { pane_id: "block:x", workspace_id: "caller-workspace" });
-});
-
-test("a driver pane inherits the launcher configuration and no credential", () => {
-  assert.deepEqual(driverEnv({ PI_CODING_AGENT_DIR: "/cfg", MISSION_VAULT: "/vault", MISSION_BIN: "/bin/mission", MISSION_STATE_DIR: "/state", MISSION_TOKEN: "secret", MISSION_ATTEMPT: "attempt-1", EMPTY: "" }),
-    [["PI_CODING_AGENT_DIR", "/cfg"], ["MISSION_VAULT", "/vault"], ["MISSION_BIN", "/bin/mission"], ["MISSION_STATE_DIR", "/state"]]);
-  assert.deepEqual(driverEnv({}), []);
-});
-
-test("an already open mission workspace gets its own launch tab",needsCLI,async t=>{
-  const f=await fixture(t);
-  // The human already opened the mission worktree as a workspace: relanding on
-  // its parked first tab could take over that pane, so a launch takes a new tab.
-  f.workspaces.push({workspace_id:"w-open",worktree:{repo_key:await f.bridge.common(f.repo),is_linked_worktree:true,checkout_path:f.cwd}});
-  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-  assert.equal(f.worktrees.length,1);assert.equal(f.agentCalls[0][6],"w-open:p2");
-  assert.deepEqual(f.tabs[0].slice(0,4),["tab","create","--workspace","w-open"]);
-  assert.equal(f.tabs[0][f.tabs[0].indexOf("--cwd")+1],f.cwd);
-  assert.ok(f.tabs[0].includes("--no-focus"));
-  // An open workspace keeps its other tabs: the launch closes nothing.
-  assert.deepEqual(f.closes,[]);
-});
-
-test("a pane that is still starting its shell is retried, not fatal",needsCLI,async t=>{
-  const f=await fixture(t);
-  f.paneBusy=2;
-  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-  // Two refusals, then the same name starts: the retry never renames or releases.
-  assert.equal(f.agentCalls.filter(c=>c[1]==="start").length,3);assert.deepEqual(f.started,["mission-session-progress"]);
-  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
-});
-
-test("a taken name takes a hashed name once and never renames the holder",needsCLI,async t=>{
-  const f=await fixture(t);
-  // Herdr keeps one name per server. Another mission's session can hold the
-  // plain name, so the launch takes a hashed name instead of renaming it.
-  const holder={name:"mission-session-progress",pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"working"};
-  f.agents.push(holder);f.taken.add(holder.name);
-  const r=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(r.launched,true);
-  const retry=f.started[0];
-  assert.equal(retry,workerAgentName(f.handle,hashOf(f.handle)));
-  assert.match(retry,/^mission-session-progress-[0-9a-f]{6}$/);
-  const plan=await f.bridge.call(["plan",f.handle]);
-  // The retry carries the same reach as the first attempt: one plan argv.
-  const seat=["--kind","pi","--pane","w-mission:p2","--",...plan.captain_argv.slice(1)];
-  assert.deepEqual(f.agentCalls.slice(0,2),[
-    ["agent","start","mission-session-progress",...seat],
-    ["agent","start",retry,...seat],
-  ]);
-  // The holder keeps its name and the launch continues on the same pane.
-  assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
-  assert.equal(f.agentCalls[2][1],"wait");assert.equal(f.prompts.length,1);
-  assert.equal((await f.bridge.call(["show",f.handle])).state.runtime.session_file,realpathSync(f.file));
-});
-
-test("a name taken twice reports the holder and stays launchable",needsCLI,async t=>{
-  const f=await fixture(t);
-  const plain="mission-session-progress",retry=workerAgentName(f.handle,hashOf(f.handle));
-  f.agents.push({name:plain,pane_id:"w-other:p1",workspace_id:"w-other",agent_status:"working"});
-  f.agents.push({name:retry,pane_id:"w-other:p2",workspace_id:"w-other",agent_status:"done"});
-  f.taken.add(plain);f.taken.add(retry);
-  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),e=>{
-    // The report names the holder pane, its status, and the next step.
-    assert.match(e.message,/agent_name_taken/);
-    assert.match(e.message,/held by pane w-other:p2 \(status done/);
-    assert.match(e.message,/herdr agent rename <pane> <new name>/);
-    assert.match(e.message,/The launch intent is released/);
-    return true;
-  });
-  // Exactly one start per name, no third attempt and no rename.
-  assert.deepEqual(f.started,[]);assert.equal(f.prompts.length,0);
-  assert.equal(f.agentCalls.filter(a=>a[1]==="start").length,2);
-  assert.equal(f.agentCalls.some(a=>a[1]==="rename"),false);
-  // The failed launch released its intent, so the next press reserves again and
-  // starts the worker under the plain name.
-  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
-  f.taken.clear();
-  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,true);
-  assert.deepEqual(f.started,[plain]);
-  assert.equal(f.agentCalls.filter(a=>a[1]==="start").length,3);
-});
-
-test("a launch that never reaches its prompt fails cleanly and releases its intent",needsCLI,async t=>{
-  const f=await fixture(t);
-  f.waitError=Error('Command failed: herdr agent wait\n'+JSON.stringify({error:{code:"timeout",message:"agent wait timed out after 60000ms"},id:"cli:agent:wait"}));
-  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),e=>{
-    assert.match(e.message,/Herdr agent mission-session-progress did not become ready: timeout: agent wait timed out/);
-    assert.match(e.message,/The launch intent is released/);
-    return true;
-  });
-  // A worker that never reached its prompt is never prompted, and its intent
-  // returns to the vault so the next press can launch.
-  assert.equal(f.started.length,1);assert.equal(f.prompts.length,0);
-  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
-});
-
-test("a failed launch stays retryable when no worker can own it",needsCLI,async t=>{
-  const f=await fixture(t);
-  f.startErrors.push(Error("Acknowledgement lost"),Error("Acknowledgement lost"));
-  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
-  assert.equal(f.started.length,0);assert.equal(f.prompts.length,0);
-  // The launch pane hosts no agent, so the intent was released: the same
-  // press works again without a hand edit of the record.
-  assert.ok(!(await f.bridge.call(["show",f.handle])).state.runtime.launch_id);
-  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
-  assert.equal(f.startErrors.length,0);
-});
-
-test("a degraded launch leaves its reason on the desk receipt", async t => {
-  const cache=realpathSync(mkdtempSync(join(tmpdir(),"mission-launch-")));
-  t.after(()=>rmSync(cache,{recursive:true,force:true}));
-  const bridge=new MissionBridge({env:captainEnv({MISSION_STATE_DIR:cache}),run:async()=>"[]"});
-  bridge.sessionRepo=async()=>"dotfiles";
-  // The desk's request is started by a launch that ran without a plan: the
-  // receipt the human reads keeps that fact instead of hiding it.
-  bridge.start=async()=>({launched:true,runtime:{launch_id:"launch-2"},plan_degraded:"Mission CLI unavailable: unknown command \"plan\""});
-  const file=launchRequest(cache,"dotfiles/desk-degraded","dotfiles");
-  await bridge.sweepLaunches(context("/tmp","/tmp/pi"));
-  const receipt=JSON.parse(readFileSync(file,"utf8"));
-  assert.equal(receipt.state,"started");assert.equal(receipt.launch_id,"launch-2");
-  assert.match(receipt.plan_degraded,/unknown command "plan"/);
-});
-
-test("a launch keeps its intent while the launch pane hosts an agent",needsCLI,async t=>{
-  const f=await fixture(t);
-  f.paneAgents["w-mission:p2"]="pi";
-  f.startErrors.push(Error("Acknowledgement lost"),Error("Acknowledgement lost"));
-  await assert.rejects(f.bridge.start(context(f.repo,f.file),f.handle),/Acknowledgement lost/);
-  // A worker may own the pane, so the intent stays and no second worker starts.
-  const again=await f.bridge.start(context(f.repo,f.file),f.handle);assert.equal(again.launched,false);
-  assert.equal(f.started.length,0);assert.equal(f.startErrors.length,1);
 });
 
 /** A captain environment: an ambient subagent identity (this suite can run
@@ -1414,25 +1228,6 @@ test("a worker never launches another mission", async t => {
   assert.equal(f.bridge.pendingLaunches().length,1);
 });
 
-test("the desk's request starts the mission through the start path", needsCLI, async t => {
-  const f=await fixture(t);
-  const file=launchRequest(f.cache,f.handle,"dotfiles");
-  assert.deepEqual(await f.bridge.sessionRepo(context(f.repo,f.file)),"dotfiles");
-  await f.bridge.sweepLaunches(context(f.repo,f.file));
-  // The request and the panel key share one launch path: one full agent, one
-  // prompt, and one session file recorded.
-  assert.deepEqual(f.started,["mission-session-progress"]);assert.equal(f.prompts.length,1);
-  const receipt=JSON.parse(readFileSync(file,"utf8"));
-  assert.equal(receipt.state,"started");
-  const runtime=(await f.bridge.call(["show",f.handle])).state.runtime;
-  assert.equal(receipt.launch_id,runtime.launch_id);
-  assert.equal(receipt.pane,"w-mission:p2");assert.equal(receipt.workspace,"w-mission");
-  assert.equal(receipt.session_file,realpathSync(f.file));
-  // The same press, twice: the claim is gone, so no second worker appears.
-  await f.bridge.sweepLaunches(context(f.repo,f.file));
-  assert.equal(f.started.length,1);assert.equal(f.prompts.length,1);
-});
-
 /** Load the missions extension factory through jiti, exactly as pi does. */
 async function loadFactory() {
   const {createRequire,default:Module}=await import("node:module");
@@ -1495,6 +1290,206 @@ test("Pi factory callbacks use final settlement and block only finish at a revie
   assert.equal((await events.tool_call({toolName:"write"},ctx)).block,true);
 });
 
+/** The driver contract: a launched seat attaches first, every seat carries the
+ *  same duties, and a seat that answers no launch intent invents no id. Duty 3
+ *  keeps the judge for every step and drops it only for a step whose cmd: check
+ *  is the verdict; Duty 4 keeps the driver moving without a human nudge. */
+test("the driver contract carries the advance duty and no empty launch id", () => {
+  const launched = driverTask("dotfiles/contract", "launch-7");
+  const attached = driverTask("dotfiles/contract");
+  assert.match(launched, /launch_id=launch-7/);
+  // A hand attach answers no launch intent: no attach line and no empty id.
+  assert.doesNotMatch(attached, /launch_id/);
+  assert.doesNotMatch(attached, /undefined/);
+  for (const task of [launched, attached]) {
+    assert.match(task, /Duty 1 — hold the claim/);
+    assert.match(task, /Duty 2 — subagents do all step work/);
+    // A step with no cmd: check still carries the judge duty.
+    assert.match(task, /Duty 3 — subagents judge/);
+    assert.match(task, /spawn one judge subagent/);
+    assert.match(task, /When the step's checks include a cmd: check, the passed check is the verdict, so spawn no judge\./);
+    assert.match(task, /Duty 4 — advance in the same turn: after a judge records a pass, spawn the next step's work subagent in that same turn/);
+    assert.match(task, /A pending checkpoint is the only reason to stop between steps\./);
+  }
+});
+
+/** A mission CLI and a Herdr pane that answer without a binary: the attach path
+ *  reads `show`, replays `attach`, and records one `hook`, and the seat is one
+ *  pane in this session's cwd. A replayed attach recovers the same attempt,
+ *  exactly as the CLI does, so a second attach starts no second writer. */
+function attachFixture(t) {
+  const root=realpathSync(mkdtempSync(join(tmpdir(),"pi-mission-attach-")));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const cwd=join(root,"worktree");mkdirSync(cwd,{recursive:true});
+  const file=join(root,"pi.jsonl");writeFileSync(file,"");
+  const handle="dotfiles/attached";
+  const session="attach-pi";
+  const record={handle,mission:{title:"Attached",steps:[{id:"S01",title:"Inspect hooks"}]},
+    state:{status:"ready",current_step:"S01",active_attempt:"",runtime:null,attempts:[]}};
+  // The CLI renders the injected context from the ledger on every read: the step
+  // brief, then the attempt line for the attempt the ledger lists now, and no id
+  // at all when it lists none. This fixture renders the same text, so a test
+  // asserts on what the extension injects and not on what it remembers.
+  const attemptLine=()=>{
+    const a=record.state.attempts.find(x=>x.id===record.state.active_attempt);
+    return a ? `Attempt ${a.id} on step ${a.step} is ${a.status}.` : "No active attempt: the ledger lists none. Claim the step before editing.";
+  };
+  const driver=["Mission "+handle+" is ready."];
+  const rendered=()=>`# Assigned step: S01 — Inspect hooks\n\nInspect the lifecycle hooks.\n\n${attemptLine()}\n`;
+  const claimOf=a=>({handle,step:a.step,attempt:a,context:rendered(),driver,
+    environment:{MISSION_ARTIFACT:join(root,"vault","artifact.md"),MISSION_BRIEF:join(root,"brief.md"),MISSION_ATTEMPT:a.id}});
+  const env={MISSION_BIN:"mission-fake",MISSION_VAULT:join(root,"vault"),MISSION_STATE_DIR:join(root,"cache"),
+    HERDR_ENV:"1",HERDR_PANE_ID:"pane-1",HERDR_WORKSPACE_ID:"ws-1"};
+  const run=async(binary,args)=>{
+    if(binary==="herdr") return JSON.stringify({result:{panes:[{pane_id:"pane-1",workspace_id:"ws-1",cwd,foreground_cwd:cwd}]}});
+    const verb=args.find(a=>["show","attach","hook"].includes(a));
+    if(verb==="show") return JSON.stringify({ok:true,data:{...record,context:rendered(),driver}});
+    if(verb==="attach") {
+      if(!record.state.active_attempt) {
+        const a={id:"attempt-"+(record.state.attempts.length+1),step:"S01",status:"running",session_id:session,brief_snapshot:"Inspect the lifecycle hooks.",cwd};
+        record.state.attempts.push(a);record.state.active_attempt=a.id;
+      }
+      record.state.runtime={session_id:session,cwd,session_file:file};
+      return JSON.stringify({ok:true,data:claimOf(record.state.attempts.at(-1))});
+    }
+    if(verb==="hook") return JSON.stringify({ok:true,data:{}});
+    throw Error("the attach path asked the CLI for "+args.slice(2).join(" "));
+  };
+  const ctx={cwd,sessionManager:{getSessionId:()=>session,getSessionFile:()=>file},
+    hasUI:true,isIdle:()=>true,hasPendingMessages:()=>false,ui:{notify:()=>{},setStatus:()=>{}}};
+  return {env,run,ctx,handle,record};
+}
+
+test("an attach carries the whole driver contract once and keeps later turns short",async t=>{
+  const f=attachFixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},f.ctx);
+  const attached=await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,f.ctx);
+  assert.equal(attached.isError,undefined,attached.content?.[0]?.text);
+  // A seat that attached by hand hears the driver contract, not one fixed line:
+  // every duty arrives with the attempt line and the step brief.
+  const first=await events.before_agent_start({},f.ctx);
+  assert.equal(first.message.customType,"mission-context");assert.equal(first.message.display,false);
+  assert.match(first.message.content,/Inspect the lifecycle hooks\./);
+  assert.match(first.message.content,/Duty 1 — hold the claim/);
+  assert.match(first.message.content,/Duty 2 — subagents do all step work/);
+  assert.match(first.message.content,/Duty 3 — subagents judge/);
+  // A hand attach answers no launch intent, so no launch id is ever invented.
+  assert.doesNotMatch(first.message.content,/launch_id/);
+  // The following turn keeps the attempt line and the brief and repeats no duty.
+  const next=await events.before_agent_start({},f.ctx);
+  assert.match(next.message.content,/Inspect the lifecycle hooks\./);
+  assert.doesNotMatch(next.message.content,/Duty 1 — hold the claim/);
+  // A second attach replays the same attempt, so the contract is not stacked.
+  await tools.mission.execute("attach-again",{action:"attach",handle:f.handle},null,null,f.ctx);
+  const again=await events.before_agent_start({},f.ctx);
+  assert.doesNotMatch(again.message.content,/Duty 1 — hold the claim/);
+});
+
+/** The contract rides the attach, once per attempt, and a waiting review is the
+ *  one thing that stops the advance: the same settled ready state emits mission
+ *  action=next only when no checkpoint waits. */
+test("an attach carries the contract once and a waiting review stops the advance",async t=>{
+  const f=attachFixture(t);
+  const factory=await loadFactory();
+  const events={},tools={},sent=[],notes=[];
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:(message,options)=>sent.push({message,options})};
+  f.ctx.ui={notify:(text,tone)=>notes.push({text,tone}),setStatus:()=>{}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},f.ctx);
+  const attached=await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,f.ctx);
+  assert.equal(attached.isError,undefined,attached.content?.[0]?.text);
+  // 1. An attach to a ready mission emits the whole contract, Duty 1 to Duty 4.
+  const turn=async()=>{const r=await events.before_agent_start({},f.ctx);assert.equal(r.message.customType,"mission-context");return r.message.content};
+  const contents=[await turn()];
+  assert.match(contents[0],/Inspect the lifecycle hooks\./);
+  for(const duty of ["Duty 1 — hold the claim","Duty 2 — subagents do all step work","Duty 3 — subagents judge","Duty 4 — advance in the same turn"])
+    assert.match(contents[0],new RegExp(duty));
+  assert.match(contents[0],/A pending checkpoint is the only reason to stop between steps\./);
+  // 2. A second attach replays the same attempt, so the contract arrives once.
+  const again=await tools.mission.execute("attach-again",{action:"attach",handle:f.handle},null,null,f.ctx);
+  assert.equal(again.isError,undefined,again.content?.[0]?.text);
+  contents.push(await turn());
+  assert.match(contents[1],/Inspect the lifecycle hooks\./);
+  assert.equal(contents.filter(c=>/Duty 1 — hold the claim/.test(c)).length,1,"the contract arrives one time");
+  // 3. A mission with a pending checkpoint emits no advance instruction, even
+  // though its state is ready and one step is still eligible to run.
+  f.record.mission.steps.push({id:"S02",title:"Attach the hooks"});
+  f.record.state.status="ready";
+  f.record.state.steps={S01:{status:"passed"},S02:{status:"pending"}};
+  f.record.state.pending_checkpoint="C01";
+  await events.agent_settled({aborted:false,outcome:"completed"},f.ctx);
+  assert.equal(sent.filter(s=>s.message?.customType==="mission-next").length,0,"a waiting review emits no advance instruction");
+  // The same state without the waiting review does advance, so the silence above
+  // is the checkpoint and not a settle path that never ran.
+  delete f.record.state.pending_checkpoint;
+  await events.agent_settled({aborted:false,outcome:"completed"},f.ctx);
+  const advance=sent.filter(s=>s.message?.customType==="mission-next");
+  assert.equal(advance.length,1);
+  assert.match(advance[0].message.content,/Call mission action=next to pick up the next eligible step/);
+  assert.deepEqual(notes,[]);
+});
+
+/** The injected context is the text the CLI rendered from the ledger for this
+ *  read, so a re-claim is named by its new attempt id on the very next turn and
+ *  a ledger that lists no attempt produces no attempt id at all — the two halves
+ *  of the 2026-11-05 incident, where a captured attempt id outlived its claim. */
+test("a re-claim is named by the new attempt and no turn names an unlisted one",async t=>{
+  const f=attachFixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},f.ctx);
+  await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,f.ctx);
+  const turn=async()=>{const r=await events.before_agent_start({},f.ctx);assert.equal(r.message.customType,"mission-context");return r.message.content};
+  const first=await turn();
+  assert.match(first,/Attempt attempt-1 on step S01 is running\./);
+  // The owner dies and the step is claimed again: the ledger names attempt-2.
+  f.record.state.attempts.at(-1).status="failed";
+  f.record.state.active_attempt="";
+  f.record.state.attempts.push({id:"attempt-2",step:"S01",status:"running",session_id:"attach-pi",cwd:f.ctx.cwd});
+  f.record.state.active_attempt="attempt-2";
+  const second=await turn();
+  assert.match(second,/Attempt attempt-2 on step S01 is running\./,second);
+  assert.doesNotMatch(second,/attempt-1/,second);
+  // The incident shape: active_attempt survives, the attempt record does not.
+  f.record.state.attempts=[];
+  f.record.state.active_attempt="attempt-2";
+  const lost=await turn();
+  assert.doesNotMatch(lost,/attempt-\d/,lost);
+  assert.match(lost,/No active attempt/,lost);
+});
+
+/** A queued line whose attempt the ledger stopped listing is dropped instead of
+ *  wedging the outbox: the incident's outbox kept every later event behind one
+ *  hook the CLI could never accept. The attempt a hook names is the one the last
+ *  ledger read listed, never the value the persisted hint captured. */
+test("a hook the ledger cannot take is dropped and a transient failure retries",async t=>{
+  const f=attachFixture(t);
+  const b=new MissionBridge({env:f.env,run:f.run});
+  await b.restore(f.ctx);
+  b.hint={handle:f.handle,token:"t",session:f.ctx.sessionManager.getSessionId(),vault:b.vault,attempt:"attempt-999",outbox:[]};
+  b.surfaceSession=f.ctx.sessionManager.getSessionId();
+  b.ledgerAttempt="attempt-1";
+  b.call=async()=>{throw new Error("not_found: attempt attempt-1 not found")};
+  await b.record(f.ctx,{type:"agent-start",summary:"Pi turn started"});
+  assert.equal(b.hint.outbox.length,0,"the undeliverable hook is dropped");
+  // The hint's captured id is never what a line names.
+  b.call=async(_args)=>{throw new Error("io_error: the CLI is busy")};
+  b.hint.outbox.push({attempt:"attempt-1",event:{id:"e1",type:"agent-start",summary:"Pi turn started"}});
+  await assert.rejects(b.flush(f.ctx),/io_error/);
+  assert.equal(b.hint.outbox.length,1,"a transient failure retries");
+  assert.equal(b.hint.outbox[0].attempt,"attempt-1","the queued line names the ledger attempt");
+  // A ledger that lists no attempt queues nothing at all.
+  b.ledgerAttempt=null;
+  await b.record(f.ctx,{type:"agent-start",summary:"Pi turn started"});
+  assert.equal(b.hint.outbox.length,1,"nothing is queued without a listed attempt");
+});
+
 test("a broken tracking record blocks edits and warns on reads",needsCLI,async t=>{
   const f=await fixture(t);
   const factory=await loadFactory();
@@ -1504,12 +1499,12 @@ test("a broken tracking record blocks edits and warns on reads",needsCLI,async t
   factory(pi,{env:f.env,run:f.run});
   await events.session_start({},ctx);
   await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,ctx);
-  // One lost hook leaves its retry in the outbox; every later flush fails, so
-  // the record this session reads never recovers.
+  // One lost hook leaves its retry in the outbox; the record this session reads
+  // never recovers, so every tool call reports the break.
   f.hookFailures=1;
   await events.tool_execution_start({toolName:"read",toolCallId:"lost"},ctx);
   assert.ok(notifications.some(n=>/Mission tracking: /.test(n.text)),"the lost hook is reported");
-  f.hookFailures=99;
+  f.showFailures=99;
   for(const toolName of ["bash","read","grep"]) assert.equal(await events.tool_call({toolName},ctx),undefined,`${toolName} runs while tracking is broken`);
   assert.ok(notifications.some(n=>n.tone==="warning"&&/Mission tracking: /.test(n.text)));
   for(const toolName of ["write","edit"]) {
@@ -1517,7 +1512,7 @@ test("a broken tracking record blocks edits and warns on reads",needsCLI,async t
     assert.equal(blocked.block,true,`${toolName} stays blocked`);assert.match(blocked.reason,/Mission tracking must recover before work continues/);
   }
   // A recovered record restores every tool again.
-  f.hookFailures=0;
+  f.showFailures=0;
   assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
   await events.session_shutdown({},ctx);
 });
@@ -1789,4 +1784,114 @@ test("the panel opens the mission desk in a Herdr pane", async () => {
   // Outside Herdr the desk has no pane, so the caller notifies instead.
   const outside = new MissionBridge({ env: { ...process.env, HERDR_ENV: "0" } });
   await assert.rejects(outside.openDesk(), /Herdr pane/);
+});
+
+// The ask channel's fixtures: a vault with ask files, and a Rex seat that answers
+// the role probe. No live mux and no mission CLI takes part.
+function askVault(root, asks) {
+  const vault = join(root, "vault");
+  for (const ask of asks) {
+    const dir = join(vault, "6_missions", ask.handle, "asks");
+    mkdirSync(dir, { recursive: true });
+    const { stamp = "20261105T191938.000000000Z", ...fields } = ask;
+    writeFileSync(join(dir, `${stamp}-${ask.id}.json`), JSON.stringify({
+      id: ask.id, handle: ask.handle, step: "S01", kind: "blocked", text: "A question.", at: "2026-11-05T19:19:38Z", ...fields,
+    }, null, 2) + "\n");
+  }
+  return vault;
+}
+const rexSeat = windows => async (binary, args) => {
+  assert.equal(binary, "rex", "the role probe reaches Rex, not the mission CLI");
+  if (args[0] === "block" && args[1] === "inspect") return JSON.stringify({ block: { block_id: args[2], window_id: "window:cmd" } });
+  if (args[0] === "window" && args[1] === "ls") return JSON.stringify({ windows });
+  throw Error("unexpected rex call: " + args.join(" "));
+};
+function storedAsks(vault, handle) {
+  const dir = join(vault, "6_missions", handle, "asks");
+  return readdirSync(dir).map(name => JSON.parse(readFileSync(join(dir, name), "utf8")));
+}
+
+test("the commander drains each ask once and a second drain sends nothing", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [
+    { id: "ask-a", handle: "dotfiles/x", stamp: "20261105T191938.000000000Z", step: "S02", attempt: "attempt-1", kind: "blocked", text: "CI cannot reach the registry." },
+    { id: "ask-b", handle: "dotfiles/y", stamp: "20261105T192000.000000000Z", step: "S01", kind: "question", text: "Which remote should I push to?" },
+  ]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: rexSeat([{ window_id: "window:cmd", label: "commander" }]),
+    send: (message, options) => sent.push({ message, options }), now: () => "2026-11-05T19:21:00.000000000Z",
+  });
+  const delivered = await inbox.drain("commander-session");
+  assert.deepEqual(delivered.map(ask => ask.id), ["ask-a", "ask-b"], "oldest first");
+  // Two handles, two messages, each naming the handle, the step and the kind.
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].message.content, "[mission dotfiles/x · S02 · blocked] CI cannot reach the registry.");
+  assert.equal(sent[1].message.content, "[mission dotfiles/y · S01 · question] Which remote should I push to?");
+  assert.equal(sent[0].options.deliverAs, "followUp");
+  // Delivery is recorded in the same file, so no restart can deliver it twice.
+  for (const [handle, id] of [["dotfiles/x", "ask-a"], ["dotfiles/y", "ask-b"]]) {
+    const ask = storedAsks(vault, handle).find(value => value.id === id);
+    assert.equal(ask.delivered_at, "2026-11-05T19:21:00.000000000Z");
+    assert.equal(ask.delivered_to, "commander-session");
+    assert.equal(ask.step, id === "ask-a" ? "S02" : "S01", "delivery keeps the rest of the ask");
+  }
+  assert.deepEqual(await inbox.drain("commander-session"), []);
+  assert.equal(sent.length, 2, "a delivered ask is never sent twice");
+});
+
+// Consecutive asks from one handle arrive as one message, so a captain that asks
+// three things at once is one interruption rather than three.
+test("consecutive asks from one handle arrive as one message", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [
+    { id: "ask-a", handle: "dotfiles/x", stamp: "20261105T191938.000000000Z", text: "Which branch?" },
+    { id: "ask-b", handle: "dotfiles/x", stamp: "20261105T191939.000000000Z", text: "Which remote?" },
+    { id: "ask-c", handle: "dotfiles/y", stamp: "20261105T191940.000000000Z", text: "Is the registry up?" },
+  ]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: rexSeat([{ window_id: "window:cmd", label: "commander" }]),
+    send: message => sent.push(message.content),
+  });
+  assert.equal((await inbox.drain("commander-session")).length, 3);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0], "[mission dotfiles/x · S01 · blocked] Which branch?\n[mission dotfiles/x · S01 · blocked] Which remote?");
+  assert.equal(sent[1], "[mission dotfiles/y · S01 · blocked] Is the registry up?");
+});
+
+// A captain's own pane is not the commander, so nothing is delivered there.
+test("a session that is not the commander drains nothing", async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pi-mission-asks-")));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vault = askVault(root, [{ id: "ask-a", handle: "dotfiles/x", text: "Which branch?" }]);
+  const sent = [];
+  const inbox = new CommanderInbox({
+    vault, env: { REX_SESSION: "session:army", REX_BLOCK: "block:captain" },
+    run: rexSeat([{ window_id: "window:captain", label: "captain-x" }]),
+    send: message => sent.push(message.content),
+  });
+  assert.deepEqual(await inbox.drain("captain-session"), []);
+  assert.deepEqual(sent, []);
+  assert.equal(storedAsks(vault, "dotfiles/x")[0].delivered_at, undefined);
+  // A Herdr session is never the Rex commander, and it probes no Rex at all.
+  const herdr = new CommanderInbox({
+    vault, env: { HERDR_ENV: "1", HERDR_PANE_ID: "w:p1", REX_SESSION: "session:army", REX_BLOCK: "block:cmd" },
+    run: async () => { throw Error("a Herdr session must not probe Rex for the commander seat"); },
+    send: message => sent.push(message.content),
+  });
+  assert.deepEqual(await herdr.drain("herdr-session"), []);
+  assert.deepEqual(sent, []);
+});
+
+// A decision ask carries the exact checkpoint command that answers it.
+test("a decision ask renders the checkpoint command", () => {
+  assert.equal(askMessage([{ handle: "dotfiles/x", step: "S02", kind: "decision", text: "Accept the migration plan?" }]),
+    "[mission dotfiles/x · S02 · decision] Accept the migration plan?\n" +
+    'Answer with: mission checkpoint accept|revise dotfiles/x C01 --note "…"');
+  assert.doesNotMatch(askMessage([{ handle: "dotfiles/x", step: "S02", kind: "blocked", text: "Stuck." }]), /checkpoint/);
 });

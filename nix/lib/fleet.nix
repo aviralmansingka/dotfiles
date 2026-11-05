@@ -28,6 +28,14 @@ let
   # Modules that need the in-repo crate receive it as an argument: the crate is
   # a flake input, so it is not reachable as a relative path from a module.
   crateArgs = { inherit rataflowSrc; };
+
+  # The managed user for a NixOS target. `users.users.<name>` in the per-host
+  # module must name the same account, and so must the Home Manager user layer.
+  users = {
+    homelab = "avirus";
+    devbox = "aviral";
+    probe = "aviral";
+  };
 in
 rec {
   # Target -> system. The deploy script refuses a target absent here, so an
@@ -90,6 +98,39 @@ rec {
       }
     ];
   };
+
+  # NixOS: the system layer is the NixOS module tree, the user layer is the
+  # same `shared` module the other profiles import, reached through
+  # `home-manager.nixosModules.home-manager` instead of the standalone tool.
+  mkNixos =
+    host:
+    nixpkgs.lib.nixosSystem {
+      system = systems.${host};
+      specialArgs = crateArgs;
+      modules = [
+        # System layer: boot, users, networking, the host's daemons.
+        (modules + "/nixos")
+        (modules + "/nixos/${host}.nix")
+        # User layer: Home Manager as a NixOS module, same shape as mkMacbook.
+        home-manager.nixosModules.home-manager
+        {
+          # One system-level pkgs decision (nixpkgs.config.allowUnfree) instead
+          # of a per-user package set, and the user's packages installed into
+          # the profile by the system activation.
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.extraSpecialArgs = crateArgs;
+          home-manager.users.${users.${host}} = {
+            imports = [ (modules + "/shared") ];
+            # Generic Linux support exists to teach Home Manager how to reach a
+            # non-NixOS box; on NixOS the system already answers those
+            # questions. Pinned here so `shared` needs no edit and the Ubuntu
+            # hosts keep their default.
+            targets.genericLinux.enable = lib.mkForce false;
+          };
+        }
+      ];
+    };
 
   hostNames = builtins.attrNames systems;
 }

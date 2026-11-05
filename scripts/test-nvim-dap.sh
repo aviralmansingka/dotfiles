@@ -25,20 +25,10 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 config_root="$repo_root/nvim/.config/nvim"
 
-# --- nvim discovery: PATH first, then bob fallbacks (mirrors test-nvim-headless)
+# --- nvim discovery: the profile installs nvim, so PATH is the only source
 find_nvim() {
   if command -v nvim >/dev/null 2>&1; then
     command -v nvim
-    return 0
-  fi
-  local bob_nvim="$HOME/.local/share/bob/nightly/bin/nvim"
-  if [[ -x "$bob_nvim" ]]; then
-    printf '%s\n' "$bob_nvim"
-    return 0
-  fi
-  local bob_stable="$HOME/.local/share/bob/v0.12.2/bin/nvim"
-  if [[ -x "$bob_stable" ]]; then
-    printf '%s\n' "$bob_stable"
     return 0
   fi
   return 1
@@ -47,7 +37,7 @@ find_nvim() {
 nvim_bin="$(find_nvim || true)"
 if [[ -z "$nvim_bin" ]]; then
   if [[ "$STRICT" == "1" ]]; then
-    echo "test-nvim-dap: FAIL — nvim not found on PATH or in ~/.local/share/bob (STRICT=1)" >&2
+    echo "test-nvim-dap: FAIL — nvim not found on PATH (STRICT=1)" >&2
     exit 127
   fi
   echo "test-nvim-dap: SKIP — nvim not found (set STRICT=1 to make this a failure)"

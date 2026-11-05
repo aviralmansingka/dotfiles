@@ -90,9 +90,10 @@ Everything else is owned by the flake or by Homebrew:
 
 | Install | Owner | Example |
 | --- | --- | --- |
-| User CLI tools and runtimes | Nix (`home.packages`) | `herdr`, `rustup`, `bob`, `gh-dash`, npm globals |
+| User CLI tools and runtimes | Nix (`home.packages`) | `herdr`, `rustup`, `neovim`, `delta`, `gh-dash`, npm globals |
 | Pi extension dependencies | Nix, built by the same derivation | `npm ci` for the Pi plugins |
 | Herdr plugins, Oh My Zsh, zsh plugins | Nix, as managed inputs | plugin trees and their versions |
+| Shell integrations: prompt, `cd` jumper, env switcher, fuzzy finder | Nix (`programs.starship`/`zoxide`/`direnv`/`fzf`) | no `eval "$(<tool> init zsh)"` line in `zsh/.zshrc` (S02) |
 | terminal-browser render settings | Nix, as a config file | `render.fps = 30` |
 | User services | Nix (`systemd.user.services`, `launchd.agents`) | the eight units (S05, `nix/services`), the four agents |
 | Fonts | nix-darwin (`fonts.packages`) | every font now installed by a Homebrew cask |

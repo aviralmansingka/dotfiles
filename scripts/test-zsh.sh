@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Paths: zsh/**
+# Paths: zsh/** nix/modules/shared/default.nix
 # zsh layer checks (CI surface: tracked shell dotfile contracts).
 #
-# Checks (PRs #13/#20/#21/#26):
+# Checks (PRs #13/#20/#21/#26, mission zsh-to-nix S01/S02):
 #   zsh-syntax     : zsh -n over every tracked zsh/ file.
+#   env-owner      : no tracked zsh file assigns PATH; the profile owns it.
 #   zshenv-path    : a non-login, non-interactive zsh (only .zshenv sourced)
 #                    resolves cargo, starship, uv, zoxide, direnv from their
 #                    canonical home bin dirs, prepended on PATH (#13/#20).
@@ -15,10 +16,14 @@
 #   term-env       : .zshenv leaves TERM alone and never sets xterm-ghostty.
 #   term-content   : no tracked zsh file references xterm-ghostty as a TERM
 #                    value (#21).
-#   alias-targets  : every alias target resolves in a stub PATH, is a repo
-#                    file, or sits on the host-only allowlist (#26).
-#   guard-struct   : the starship/zoxide/direnv init blocks in .zshrc are
-#                    command -v-guarded on the same line.
+#   dead-config    : no tracked zsh file carries a block for a tool this fleet
+#                    does not have (nvm, the oh-my-zsh curl installer, the
+#                    google-cloud-sdk).
+#   alias-targets  : every programs.zsh.shellAliases target resolves in a stub
+#                    PATH, is a repo file, or sits on the host-only allowlist
+#                    (#26).
+#   profile-owner  : starship, zoxide, direnv and fzf are home-manager program
+#                    modules, and no tracked zsh file evals a tool init.
 #   guard-behavior : .zshrc sourced with those tools absent exits 0 with
 #                    clean stderr.
 #   idempotent     : sourcing .zshenv + .zshrc twice adds no duplicate PATH
@@ -47,6 +52,11 @@ ZSH_SRC="${ZSH_SRC:-$REPO_ROOT/zsh}"
 # Aliases whose targets live in home checkouts outside this repo:
 # (none currently — dvim was removed with the dead-code cleanup)
 HOST_ONLY_ALIASES=""
+# The aliases and the tool hooks moved out of the shell text: zsh/.zshrc keeps
+# only what has no declarative form (mission zsh-to-nix S02). These checks read
+# the module that owns them. SHARED_NIX_FILE is overridable so the selftest can
+# point them at a mutated copy.
+SHARED_NIX_FILE="${SHARED_NIX_FILE:-$REPO_ROOT/nix/modules/shared/default.nix}"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -138,12 +148,16 @@ mk_home() {
     cp "$src/.zshenv" "$h/.zshenv" 2>/dev/null || true
     case $mode in
         zshenv-only)
-            # Only .zshenv: proves a zsh -c never needs .zshrc. Tool stubs in
-            # their canonical home bin dirs: cargo in ~/.cargo/bin, the rest
-            # in ~/.local/bin. A stub .cargo/env exercises the source branch.
+            # Only .zshenv: proves a zsh -c never needs .zshrc. The PATH and the
+            # environment come from the Nix-generated hm-session-vars.sh, so the
+            # sandbox carries a stand-in for it: the guarded source branch.
             stub_bin "$h/.cargo/bin" cargo
             stub_bin "$h/.local/bin" starship uv zoxide direnv
-            printf 'export PATH="$HOME/.cargo/bin:$PATH"\n' > "$h/.cargo/env"
+            mkdir -p "$h/.nix-profile/etc/profile.d"
+            cat > "$h/.nix-profile/etc/profile.d/hm-session-vars.sh" <<'HSV'
+export EDITOR=nvim
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+HSV
             ;;
         rc-*)
             cp "$src/.zshrc" "$h/.zshrc" 2>/dev/null || true
@@ -166,9 +180,11 @@ mk_home() {
 
 runzsh() {
     # $1 fake home  $2 TERM for the sandbox  remaining args: zsh args.
+    # The fake home's bin comes from the caller now, not from .zshrc: the
+    # profile owns PATH and the sandbox has no profile.
     local h=$1 term=$2
     shift 2
-    env -i HOME="$h" PATH=/usr/bin:/bin TERM="$term" "$ZSH_BIN" "$@"
+    env -i HOME="$h" PATH="$h/.local/bin:/usr/bin:/bin" TERM="$term" "$ZSH_BIN" "$@"
 }
 
 runzsh_tmux() {
@@ -176,7 +192,7 @@ runzsh_tmux() {
     # set, so .zshrc must leave TERM exactly as tmux provided it (B23).
     local h=$1 term=$2
     shift 2
-    env -i HOME="$h" PATH=/usr/bin:/bin TERM="$term" \
+    env -i HOME="$h" PATH="$h/.local/bin:/usr/bin:/bin" TERM="$term" \
         TMUX="/tmp/tmux-0/default,12345,0" "$ZSH_BIN" "$@"
 }
 
@@ -218,14 +234,54 @@ check_zshenv_path() {
         for t in cargo starship uv zoxide direnv; do
             command -v -- $t >/dev/null 2>&1 || print -r -- "MISSING:$t"
         done
+        [[ $EDITOR == nvim ]] || print -r -- "NO-SESSION-VARS"
         [[ $PATH == "$HOME/.cargo/bin:$HOME/.local/bin:"* ]] || print -r -- "NOTPREPENDED"
     ' 2>&1)"
     if [ -n "$out" ]; then
         report FAIL zshenv-path "zsh/.zshenv" "non-interactive zsh -c contract broken: $(echo "$out" | tr '\n' ' ')" "$(( $(now_ms) - t0 ))"
         rc=1
     else
-        report PASS zshenv-path "zsh/.zshenv" "zsh -c with only .zshenv resolves cargo/starship/uv/zoxide/direnv, home bins prepended (#13/#20)" "$(( $(now_ms) - t0 ))"
+        report PASS zshenv-path "zsh/.zshenv" "zsh -c with only .zshenv sources hm-session-vars.sh, so EDITOR and the home bins are present (#13/#20)" "$(( $(now_ms) - t0 ))"
     fi
+    # With no profile on the host the guarded source is skipped and the shell
+    # still starts clean: PATH is exactly what the caller passed in.
+    local bare
+    bare="$(mktemp -d "${TMPDIR:-/tmp}/zsh-test-home.XXXXXX")"
+    register_home "$bare"
+    cp "$src/.zshenv" "$bare/.zshenv" 2>/dev/null || true
+    t0="$(now_ms)"
+    # Compare before and after: the host's own /etc/zshenv may rewrite PATH
+    # (nix-darwin does), so the contract is "unchanged", not a literal value.
+    out="$(runzsh "$bare" xterm-256color -c '
+        before=$PATH
+        . $HOME/.zshenv
+        [[ $PATH == $before ]] || print -r -- "CHANGED:$before -> $PATH"
+    ' 2>&1)"
+    if [ -z "$out" ]; then
+        report PASS zshenv-path "zsh/.zshenv" "no hm-session-vars.sh on the host: PATH untouched, shell exits 0" "$(( $(now_ms) - t0 ))"
+    else
+        report FAIL zshenv-path "zsh/.zshenv" "without a Nix profile PATH must stay as inherited (got: $(echo "$out" | tr '\n' ' '))" "$(( $(now_ms) - t0 ))"
+        rc=1
+    fi
+    return $rc
+}
+
+# The environment belongs to the flake now: nix/modules/shared/default.nix
+# declares home.sessionPath and home.sessionVariables. A tracked zsh file that
+# assigns PATH again silently overrides the profile, so it is a hard failure.
+check_env_owner() {
+    local src=$1 rc=0 t0 f hits
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        t0="$(now_ms)"
+        hits="$(grep -nE '^[[:space:]]*(export[[:space:]]+)?PATH=' "$src/$f" 2>/dev/null | tr '\n' ' ')"
+        if [ -n "$hits" ]; then
+            report FAIL env-owner "zsh/$f" "assigns PATH ($hits); home.sessionPath in nix/modules/shared/default.nix owns it" "$(( $(now_ms) - t0 ))"
+            rc=1
+        else
+            report PASS env-owner "zsh/$f" "no PATH assignment; the profile owns PATH" "$(( $(now_ms) - t0 ))"
+        fi
+    done < <(zsh_names "$src")
     return $rc
 }
 
@@ -319,52 +375,82 @@ check_term_content() {
     return $rc
 }
 
+alias_pairs_from_module() {
+    # Every `name = "value";` line inside `shellAliases = { ... }` in the shared
+    # module, printed as `name=value`. A line the reader cannot read is printed
+    # as `UNPARSED:<line>` so the caller fails loudly instead of skipping an
+    # alias silently.
+    local line t name value in_block=0
+    while IFS= read -r line; do
+        if [ "$in_block" = 0 ]; then
+            case $line in *"shellAliases = {"*) in_block=1 ;; esac
+            continue
+        fi
+        case $line in *"};"*) in_block=0; continue ;; esac
+        t="${line#"${line%%[![:space:]]*}"}"
+        [ -z "$t" ] && continue
+        case $t in \#*) continue ;; esac
+        # Kept bash-3.2-safe: no quoting inside the pattern (the guard is a
+        # tracked-shell contract, and macOS /bin/bash is 3.2).
+        if [[ $t =~ ^([A-Za-z0-9_.-]+)[[:space:]]+=[[:space:]]+(.*)\;$ ]]; then
+            name="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            value="${value#\"}"
+            value="${value%\"}"
+            printf '%s=%s\n' "$name" "$value"
+        else
+            printf 'UNPARSED:%s\n' "$t"
+        fi
+    done < "$SHARED_NIX_FILE"
+}
+
 check_alias_targets() {
-    # Repo-defined aliases only: lines in .zshrc of the form `alias n=v`.
-    # zsh built-in default aliases (run-help, which-command, ...) are not
-    # repo definitions, and their targets (man, whence) are host-dependent.
-    # HOST_ONLY: aliases that target home checkouts outside this repo:
-    #   dvim -> $HOME/tools/neovim (a Neovim source checkout, not this repo).
-    local src=$1 rc=0 t0 h name value word rest
-    local -a names=()
+    # The repo's own aliases live in programs.zsh.shellAliases now (S02), so the
+    # source of truth is the module, not .zshrc. Home Manager writes them as
+    # `alias -- name='value'` at the end of the generated rc.
+    local src=$1 rc=0 t0 h pair name value word rest
+    local -a pairs=()
     mk_home "$src" rc-alias
     h=$SB_HOME
     t0="$(now_ms)"
-    while IFS= read -r name; do
-        [ -n "$name" ] || continue
-        names+=("$name")
-    done < <(grep -E '^alias[[:space:]]+[A-Za-z0-9_.-]+=' "$src/.zshrc" 2>/dev/null \
-        | sed -E 's|^alias[[:space:]]+([A-Za-z0-9_.-]+)=.*|\1|' | sort)
-    if [ "${#names[@]}" -eq 0 ]; then
-        report FAIL alias-targets "zsh/.zshrc" "no alias definitions found in .zshrc (#26)" "$(( $(now_ms) - t0 ))"
+    while IFS= read -r pair; do
+        [ -n "$pair" ] && pairs+=("$pair")
+    done < <(alias_pairs_from_module)
+    if [ "${#pairs[@]}" -eq 0 ]; then
+        report FAIL alias-targets "nix/modules/shared/default.nix" "no aliases found in programs.zsh.shellAliases (#26)" "$(( $(now_ms) - t0 ))"
         return 1
     fi
-    for name in "${names[@]}"; do
-        # Value: text after `alias name=`, surrounding quotes stripped.
-        value="$(grep -E "^alias[[:space:]]+$name=" "$src/.zshrc" | head -1 | sed -E "s|^alias[[:space:]]+$name=||")"
-        value="${value%\"}"; value="${value#\"}"
-        value="${value%\'}"; value="${value#\'}"
+    for pair in "${pairs[@]}"; do
+        case $pair in
+            UNPARSED:*)
+                report FAIL alias-targets "nix/modules/shared/default.nix" "unreadable programs.zsh.shellAliases line: ${pair#UNPARSED:}" "$(( $(now_ms) - t0 ))"
+                rc=1
+                continue ;;
+        esac
+        name="${pair%%=*}"
+        value="${pair#*=}"
         word="${value%%[[:space:]]*}"
         case $word in
             '$HOME'/*|'~'/*|/*)
                 rest="${word#\$HOME/}"; rest="${rest#\~/}"
                 if [ -f "$REPO_ROOT/$rest" ]; then
-                    report PASS alias-targets "zsh/.zshrc" "alias '$name': target is a tracked repo file" "$(( $(now_ms) - t0 ))"
+                    report PASS alias-targets "nix/modules/shared/default.nix" "alias '$name': target is a tracked repo file" "$(( $(now_ms) - t0 ))"
                 elif [[ " $HOST_ONLY_ALIASES " == *" $name "* ]]; then
-                    report PASS alias-targets "zsh/.zshrc" "alias '$name': host-only target '$word' (home checkout, allowlisted)" "$(( $(now_ms) - t0 ))"
+                    report PASS alias-targets "nix/modules/shared/default.nix" "alias '$name': host-only target '$word' (home checkout, allowlisted)" "$(( $(now_ms) - t0 ))"
                 else
-                    report FAIL alias-targets "zsh/.zshrc" "alias '$name' target '$word' is neither a repo file nor allowlisted (#26)" "$(( $(now_ms) - t0 ))"
+                    report FAIL alias-targets "nix/modules/shared/default.nix" "alias '$name' target '$word' is neither a repo file nor allowlisted (#26)" "$(( $(now_ms) - t0 ))"
                     rc=1
                 fi ;;
             *)
-                # Defined after sourcing, and the binary resolves in the stub PATH.
-                # (name and word pass as positional parameters, not interpolation)
+                # The binary must resolve in the stub PATH. The stub dir is
+                # prepended inside the shell: no tracked zsh file manages PATH
+                # (the profile does), and a host's global rc may rebuild it.
                 if runzsh "$h" xterm-256color -c \
-                    'source $HOME/.zshrc; [[ -n $aliases[$1] ]] && command -v -- $2' \
-                    zsh "$name" "$word" >/dev/null 2>&1; then
-                    report PASS alias-targets "zsh/.zshrc" "alias '$name': binary '$word' resolves in the stub PATH" "$(( $(now_ms) - t0 ))"
+                    'PATH=$HOME/.local/bin:$PATH; command -v -- $1' \
+                    zsh "$word" >/dev/null 2>&1; then
+                    report PASS alias-targets "nix/modules/shared/default.nix" "alias '$name': binary '$word' resolves in the stub PATH" "$(( $(now_ms) - t0 ))"
                 else
-                    report FAIL alias-targets "zsh/.zshrc" "alias '$name': binary '$word' resolves nowhere after sourcing (#26)" "$(( $(now_ms) - t0 ))"
+                    report FAIL alias-targets "nix/modules/shared/default.nix" "alias '$name': binary '$word' resolves nowhere (#26)" "$(( $(now_ms) - t0 ))"
                     rc=1
                 fi ;;
         esac
@@ -372,25 +458,58 @@ check_alias_targets() {
     return $rc
 }
 
-check_guard_struct() {
-    local src=$1 rc=0 tool arg pat t0
-    for tool in starship zoxide direnv; do
-        case $tool in
-            direnv) arg="hook" ;;
-            *)      arg="init" ;;
-        esac
+check_dead_config() {
+    # Blocks for tools this fleet does not have. Each one used to sit in the
+    # tracked .zshrc: ~/.nvm never existed, the oh-my-zsh curl installer ran on
+    # every shell start on a machine without ~/.oh-my-zsh, and no host has the
+    # Google Cloud SDK (mission zsh-to-nix S02).
+    local src=$1 rc=0 t0 f hits
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
         t0="$(now_ms)"
-        pat='eval "$('"$tool $arg zsh"')"'
-        if ! grep -Fq "$pat" "$src/.zshrc" 2>/dev/null; then
-            report FAIL guard-struct "zsh/.zshrc" "$tool $arg zsh block missing (#26)" "$(( $(now_ms) - t0 ))"
-            rc=1
-        elif ! grep -F "$pat" "$src/.zshrc" 2>/dev/null | grep -Fq "command -v $tool"; then
-            report FAIL guard-struct "zsh/.zshrc" "$tool $arg zsh eval is not command -v-guarded on its line (#26)" "$(( $(now_ms) - t0 ))"
+        hits="$(grep -nE 'NVM_DIR|nvm\.sh|curl -fsSL|google-cloud-sdk|gcloud' "$src/$f" 2>/dev/null | tr '\n' ' ')"
+        if [ -n "$hits" ]; then
+            report FAIL dead-config "zsh/$f" "carries a dead tool block ($hits); nvm, the oh-my-zsh curl installer and the Google Cloud SDK are absent fleet-wide (S02)" "$(( $(now_ms) - t0 ))"
             rc=1
         else
-            report PASS guard-struct "zsh/.zshrc" "$tool $arg zsh eval is command -v-guarded" "$(( $(now_ms) - t0 ))"
+            report PASS dead-config "zsh/$f" "no nvm, oh-my-zsh curl installer or google-cloud-sdk block" "$(( $(now_ms) - t0 ))"
         fi
+    done < <(zsh_names "$src")
+    return $rc
+}
+
+check_profile_owner() {
+    # S02: the three eval-based tool hooks and the fzf default command are
+    # home-manager program modules, and the aliases are shellAliases. A tracked
+    # zsh file must not eval a tool init again - that would double-init the tool
+    # or shadow the module.
+    local src=$1 rc=0 t0 f hits missing="" marker
+    t0="$(now_ms)"
+    for marker in \
+        'programs.starship.enable = true;' \
+        'programs.zoxide.enable = true;' \
+        'programs.direnv.enable = true;' \
+        'programs.fzf = {' \
+        'shellAliases = {'; do
+        grep -Fq -- "$marker" "$SHARED_NIX_FILE" 2>/dev/null || missing+="$marker "
     done
+    if [ -z "$missing" ]; then
+        report PASS profile-owner "nix/modules/shared/default.nix" "starship, zoxide, direnv and fzf are program modules; the aliases are shellAliases" "$(( $(now_ms) - t0 ))"
+    else
+        report FAIL profile-owner "nix/modules/shared/default.nix" "the profile no longer declares: $missing" "$(( $(now_ms) - t0 ))"
+        rc=1
+    fi
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        t0="$(now_ms)"
+        hits="$(grep -nE 'eval[[:space:]]+"\$\((starship|zoxide|direnv)[[:space:]]' "$src/$f" 2>/dev/null | tr '\n' ' ')"
+        if [ -n "$hits" ]; then
+            report FAIL profile-owner "zsh/$f" "evals a tool init ($hits); the program module owns it (S02)" "$(( $(now_ms) - t0 ))"
+            rc=1
+        else
+            report PASS profile-owner "zsh/$f" "no eval-based tool init; the program modules own them" "$(( $(now_ms) - t0 ))"
+        fi
+    done < <(zsh_names "$src")
     return $rc
 }
 
@@ -442,7 +561,7 @@ check_idempotent() {
 # Main run.
 # ---------------------------------------------------------------------------
 
-ALL_CHECKS="check_syntax check_zshenv_path check_zshenv_exit0 check_term_rc check_term_env check_term_content check_alias_targets check_guard_struct check_guard_behavior check_idempotent"
+ALL_CHECKS="check_syntax check_env_owner check_zshenv_path check_zshenv_exit0 check_term_rc check_term_env check_term_content check_dead_config check_alias_targets check_profile_owner check_guard_behavior check_idempotent"
 
 for chk in $ALL_CHECKS; do
     "$chk" "$ZSH_SRC" || true
@@ -473,6 +592,23 @@ if [ "$SELFTEST" = "1" ]; then
             report FAIL "selftest-$label" "zsh/*" "mutation NOT caught by $chk" 0
         fi
     }
+    st_run_nix() { # $1 check fn  $2 label  $3 mutation snippet (cwd: temp nix/ copy)
+        local chk=$1 label=$2 mut=$3 tmp caught=1
+        tmp="$(mktemp -d "${TMPDIR:-/tmp}/zsh-test-mut.XXXXXX")"
+        register_home "$tmp"
+        mkdir -p "$tmp/nix"
+        cp "$SHARED_NIX_FILE" "$tmp/nix/shared.nix"
+        ( cd "$tmp/nix" && eval "$mut" ) >/dev/null 2>&1
+        if ( SHARED_NIX_FILE="$tmp/nix/shared.nix" "$chk" "$ZSH_SRC" ) >/dev/null 2>&1; then
+            caught=0
+        fi
+        rm -rf "$tmp"
+        if [ "$caught" -eq 1 ]; then
+            report PASS "selftest-$label" "nix/modules/shared/default.nix" "mutation caught by $chk" 0
+        else
+            report FAIL "selftest-$label" "nix/modules/shared/default.nix" "mutation NOT caught by $chk" 0
+        fi
+    }
     st_pristine() { # every check must pass on the pristine tree
         local chk ok=1
         for chk in $ALL_CHECKS; do
@@ -490,16 +626,22 @@ if [ "$SELFTEST" = "1" ]; then
     echo "== zsh selftest: mutations must trip their checks =="
     st_pristine || true
     st_run check_syntax         syntax       "printf 'if [[ -n broken\n' >> .zshrc"
-    st_run check_zshenv_path    zshenv-path  "mut_sed .zshenv 's|\$HOME/.local/bin:||'"
+    st_run check_env_owner      path-owner   "printf 'export PATH=\"/tmp/x:\$PATH\"\n' >> .zshrc"
+    st_run check_zshenv_path    zshenv-path  "mut_sed .zshenv 's|hm-session-vars.sh|hm-session-vars-absent.sh|'"
     st_run check_zshenv_exit0   zshenv-exit  "printf 'false\n' >> .zshenv"
     st_run check_term_rc        term-rc      "mut_sed .zshrc 's|export TERM=\"xterm-256color\"|export TERM=\"xterm-ghostty\"|'"
     st_run check_term_rc        term-guard   "printf 'export TERM=\"xterm-256color\"\n' >> .zshrc"
     st_run check_term_env       term-env     "printf 'export TERM=\"xterm-ghostty\"\n' >> .zshenv"
     st_run check_term_content   term-content "mut_sed .zshrc 's|export TERM=\"xterm-256color\"|export TERM=\"xterm-ghostty\"|'"
-    st_run check_alias_targets  alias-drop   "mut_sed .zshrc \"s|alias ghd='gh dash'|alias ghd='gh-dash-missing'|\""
-    st_run check_guard_struct   guard-drop   "mut_sed .zshrc 's|command -v starship >/dev/null 2>&1 && ||'"
-    st_run check_guard_behavior guard-drop   "mut_sed .zshrc 's|command -v starship >/dev/null 2>&1 && ||'"
-    st_run check_idempotent     dedup-drop   "mut_sed .zshenv '/^typeset -U path PATH$/d'"
+    st_run_nix check_alias_targets alias-target "mut_sed shared.nix \"s|gh dash|gh-dash-missing|\""
+    st_run check_dead_config    nvm-block    "printf 'export NVM_DIR=\"\$HOME/.nvm\"\\n' >> .zshrc"
+    # The module owns the aliases and the tool hooks now, so st_run_nix mutates
+    # a copy of it: dropping a program module or an alias must trip its check.
+    st_run_nix check_profile_owner hook-drop  "mut_sed shared.nix 's|programs.zoxide.enable = true;||'"
+    st_run check_guard_behavior guard-drop   "printf 'st4rship init zsh\\n' >> .zshrc"
+    # Without typeset -U a PATH assignment in the shell files duplicates on a
+    # re-source; that is the guarantee the check defends.
+    st_run check_idempotent     dup-path     "mut_sed .zshenv '/^typeset -U path PATH$/d'; printf 'PATH=\"/tmp/dup:\$PATH\"\n' >> .zshrc"
 fi
 
 TOTAL_MS="$(( $(now_ms) - TOTAL_START ))"

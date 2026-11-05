@@ -3,7 +3,7 @@
 Development environment configuration for macOS and AWS devbox (Ubuntu), managed with [GNU Stow](https://www.gnu.org/software/stow/).
 
 - **ghostty** - GPU-accelerated terminal emulator
-- **zsh** - Shell with Oh My Zsh, autosuggestions, and syntax highlighting
+- **zsh** - Shell configuration, installed by Home Manager (Oh My Zsh, autosuggestions, syntax highlighting)
 - **tmux** - Terminal multiplexer with Gruvbox Material theme and TPM
 - **neovim** - LazyVim distribution
 - **aerospace** - Tiling window manager for macOS
@@ -22,8 +22,8 @@ cd ${HOME}/dotfiles/
 ./install.sh
 ```
 
-The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, installs
-Neovim via `bob`, and installs pinned Herdr Flash, Annotate Lite, and a pinned, patched local reviewer.
+The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, and
+installs pinned Herdr Flash, Annotate Lite, and a pinned, patched local reviewer.
 A failed reviewer build or missing Flash executable stops the installation.
 
 `Ctrl+a f` opens Herdr Flash: search visible pane text, jump by label, select with `v`/`V` and Vim motions,
@@ -36,7 +36,7 @@ For manual package and configuration deployment (excluding installer-managed int
 brew bundle
 gh extension install dlvhdr/gh-dash
 ./scripts/pi-settings-sync
-stow nvim tmux zsh ghostty aerospace git starship gh-dash tuicr agents pi herdr
+stow nvim tmux ghostty aerospace git starship gh-dash tuicr agents pi herdr
 ```
 
 On Linux (systemd) systems, deploy the user services with:
@@ -67,7 +67,7 @@ Then SSH in:
 ssh aviralmansingka@$(terraform -chdir=ops/devbox output -raw devbox_public_ip)
 ```
 
-The devbox comes with: zsh + Oh My Zsh, tmux + TPM, Neovim via bob, Rust toolchain, Go, Node.js, Python, kubectl, k9s, lazygit, and all dotfiles stowed.
+The devbox comes with: zsh + Oh My Zsh, tmux + TPM, Neovim, Rust toolchain, Go, Node.js, Python, kubectl, k9s, lazygit, and all dotfiles stowed.
 
 To tear down:
 
@@ -83,15 +83,16 @@ terraform -chdir=ops/devbox destroy \
 `cargo install`, no `go install`, no network.
 
 ```sh
-just build           # both binaries into ~/.local/bin
+just build           # mission into ~/.local/bin, rataflow-view into rataflow/target/release
 just build-mission   # one of them
 BIN_DIR=/tmp/out just build
 ```
 
-`just build` compiles each binary into its package's own gitignored build directory, then moves it into
-`BIN_DIR` (default `~/.local/bin`). The Go and Rust toolchains are the only requirements; `install.sh` still installs
-both binaries for a fresh machine. An older `cargo install`ed `~/.cargo/bin/rataflow-view` shadows the fresh copy
-(`~/.cargo/bin` comes first on `PATH`) — delete it once.
+`just build` compiles each binary into its package's own gitignored build directory and moves `mission` into
+`BIN_DIR` (default `~/.local/bin`). `rataflow-view` is not installed by the justfile: the profile owns the
+installed copy (`nix/pkgs/rataflow-view.nix`), so a local `just build` only leaves the release binary in the
+crate's own gitignored target dir. The Go and Rust toolchains are the only requirements; a fresh machine gets
+both binaries from the Nix profile.
 
 ## Stow Packages
 
@@ -112,7 +113,7 @@ both binaries for a fresh machine. An older `cargo install`ed `~/.cargo/bin/rata
 | `terminfo`   | Custom terminfo entries                                                     |
 | `tmux`       | Tmux configuration                                                          |
 | `tuicr`      | Terminal pull-request review configuration                                  |
-| `zsh`        | Zsh shell configuration                                                     |
+| `zsh`        | Zsh shell source text; Home Manager installs `~/.zshenv` and `~/.zshrc`     |
 
 ## gh-dash PR worktrees
 
@@ -140,7 +141,7 @@ Regression check (installed Sidekick required; no live Herdr calls):
 
 ## Herdr scrollback in Neovim
 
-`Ctrl+a e` opens the focused pane's scrollback through `$EDITOR` (currently `bob run stable`; that
+`Ctrl+a e` opens the focused pane's scrollback through `$EDITOR` (`nvim`, from the Nix profile; that
 version must be installed). `helpers/herdr_scrollback.lua` recognizes Herdr's temporary files and
 re-captures the original pane via `HERDR_ACTIVE_PANE_ID` using ANSI, unwrapped output.
 

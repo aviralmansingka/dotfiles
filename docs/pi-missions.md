@@ -49,15 +49,13 @@ credentials.
 
 ## Workspace and ownership
 
-A repository keeps its existing primary Herdr workspace. `start` registers the
-mission checkout as a Herdr **worktree workspace** with
-`herdr worktree open --cwd <primary checkout> --path <mission worktree> --no-focus`.
-That call is idempotent: it returns the workspace Herdr already links to the
-repository, and creates one on first launch. The launch then opens its own tab
-there and closes a fresh workspace's empty root tab, so the workspace holds one
-tab with the driver. Herdr groups per-worktree
-workspaces under the repository, so one repository still owns one repository
-workspace plus its linked worktree workspaces.
+A repository keeps its existing primary Herdr workspace. A mission checkout is
+its own worktree, and `mission workspace` is the only thing that creates or
+revives it. Seating is a separate step with one owner, the CLI: `start` hands the
+launch to `mission deploy --mux <rex|herdr>` (see `Deploy a mission`), and the
+Herdr adapter seats the captain's tab in the shared `army` workspace with the
+mission worktree as its cwd. The extension registers no worktree and opens no
+tab, so a Rex mission and a Herdr mission take the same path.
 
 Each mission gets `~/.herdr/worktrees/<repo>/mission-<slug>` on
 `mission/<slug>`, initially from local `main`. The CLI creates the checkout and
@@ -73,10 +71,9 @@ checkout is reported as `worktree_invalid` and never deleted. An existing branch
 with no marker and no checkout at the path is reported as `unowned_branch`; a
 branch checked out in another worktree as `worktree_in_use`.
 The same path and branch remain bound across steps, retries, and revisions.
-If the Herdr workspace or the checkout is deleted but the `mission/<slug>` branch
-remains, `start` recreates the checkout at the recorded path and re-registers it
-with `herdr worktree open`. It never creates a second branch or checkout. A
-branch checked out elsewhere is reported, not duplicated.
+If the checkout is deleted but the `mission/<slug>` branch remains, `start`
+recreates the checkout at the recorded path. It never creates a second branch or
+checkout. A branch checked out elsewhere is reported, not duplicated.
 A closed mission is refused instead: `/cleanup` closes the record when it removes
 the checkout, so a retired mission never revives it. Start a new mission for new
 work.
@@ -84,40 +81,29 @@ Ownership is single-host and exclusive across missions in that vault. Unrelated
 vaults do not share a lock or ownership index.
 
 For an already running Pi session, use `/mission attach REPO/SLUG` from the root
-of its non-main linked worktree in one of the repository's Herdr workspaces — the
-mission's own worktree workspace, or the repository's primary workspace for a
-mission bound before worktree workspaces existed. The CLI
+of its non-main linked worktree, in a Herdr pane whose cwd is that worktree (the
+shared `army` workspace holds every captain, so the pane's cwd is the binding, not
+the workspace shape) or in a Rex block there. The CLI
 checks the Pi session header, repository identity, cwd, durable owner, and active
 attempt. It adopts that worktree without copying code or moving the session.
 Attachment to main, a second mission in the same worktree, or a different owning
 session is refused. Herdr remains responsible for preventing duplicate live
 attachments to the same Pi session file.
 
-`start` persists a launch intent, registers the Herdr worktree, opens the driver
-tab, and starts the driver as a full Pi agent in that pane
-(`herdr agent start <name> --kind pi --pane <pane>`). The driver is not a
-subagent: it carries no subagent identity, loadout file, wall-clock timer, or
-watchdog. `start` then
-waits up to 60 s for the agent to reach its prompt (`herdr agent wait`), submits
-the first task (`herdr agent prompt`), and reads the session file from
-`herdr agent get` before it records the launch receipt. The task carries the
-driver contract and names that launch id, and the driver attaches with it
-through the tool.
+`start` first prepares the mission worktree (`mission workspace`), then asks the
+CLI to seat the mission: `mission deploy REPO/SLUG --mux rex|herdr`, where the mux
+is the one this session runs in (`herdr` when the session carries a Herdr pane,
+`rex` when it carries a Rex block). The CLI reserves the launch intent, seats the
+army session, the captain's window and the mission's subagent session, acks the
+launch, and reports the deployment. `start` then reads the runtime back from
+`mission show`: the record, not the launch, is the authority on where the captain
+runs. A repeat press finds the captain already seated and focuses it; `start`
+reports `launched: false` and the desk receipt says the seat is live.
 
-The driver pane inherits the launcher's configuration. Herdr sets a tab's
-environment only at creation and `worktree open` has no environment flag, so a
-launch always creates its own tab with `--env` and then closes a fresh
-workspace's empty root tab: the workspace keeps exactly one tab. The forwarded
-keys are `PI_CODING_AGENT_DIR`, `MISSION_VAULT`, `MISSION_BIN`, and
-`MISSION_STATE_DIR`. The attempt token never travels this way. This is what lets
-a checkout that is not installed (a preview or a mission worktree) hand its own
-extension to the driver. A tab Herdr just created can still be starting its
-shell, so a launch retries the `agent_pane_busy` refusal for 5 s before it fails.
-
-Herdr agent names are unique for the server. A launch names the driver
-`mission-<slug>`. A name that another session holds takes a short handle hash
-once; if that name is taken too, the launch fails and names the pane that holds
-it. The launch never renames another session's agent.
+The extension owns no mux command for a launch. It has no Herdr worktree, tab,
+agent, or prompt call: `herdr worktree open`, `tab create`, `agent start`,
+`agent wait`, `agent prompt`, and `agent get` are gone from the launch path, so
+the seat's behaviour is the CLI's for both muxes and cannot drift between them.
 
 A launch receipt stores its session
 file. Repeating start returns the recorded runtime instead of launching again.
@@ -140,12 +126,11 @@ touchpoint.
 > **Rank vocabulary.** The rank this mission deploys for that seat is the
 > **captain**, and the launch prompt has one owner: `mission plan` renders it as
 > `captain_brief` (`captainBrief` in `go/mission/cmd/mission/plan.go`), together
-> with `captain_argv` and the `subagent_session` its troopers work in. The
-> extension prompts the seat with that text (`core.mjs`), and `driverTask` in
-> `missions/core.mjs` is the fallback contract for a plan that carries no brief.
-> Both descriptions name the same seat and the same three duties; the sections
-> below that speak of the captain (`The launch description`, `Deploy into Rex`)
-> are the rank vocabulary for this seat.
+> with `captain_argv` and the `subagent_session` its troopers work in. `mission
+> deploy` writes that text into the seat as the exec line's last argument, so the
+> plan is the only description of the rank: the extension holds no second copy
+> and no fallback contract. The sections below that speak of the captain (`The
+> launch description`, `Deploy a mission`) are the rank vocabulary for this seat.
 
 1. **Hold the claim.** The driver session owns the attempt and keeps the `mission`
    tool. It reports structured progress and calls `verify` and `finish` only after
@@ -206,6 +191,47 @@ shape the answer: `step edit` needs no active attempt (`busy`) and no pending re
 tells the human that it did. `reset` stays CLI-only, because it invalidates later
 progress and needs an explicit human decision.
 
+## Ask the commander
+
+A captain pane has no watcher, so a blocked captain writes a durable question
+instead of painting an `ask_user_question` menu:
+
+```sh
+mission ask dotfiles/x --text "Which branch name should the migration use?" \
+  --step S02 --attempt attempt-1 --kind decision
+mission ask --list dotfiles/x            # pending and delivered asks
+```
+
+The CLI writes `6_missions/dotfiles/x/asks/<UTC-stamp>-<ask-id>.json` with
+`{id, handle, step, attempt, kind, text, at}` and prints the id and the path. It
+needs no token and no lock, so a captain that holds no claim can still ask. Kinds
+are `blocked` (the default), `question`, and `decision`. Empty text is refused
+with `usage`, an unknown handle with `not_found`, and a closed record with
+`closed_mission` plus the new-mission hint.
+
+The receiving half runs in the commander's own Pi session. At a session start the
+missions extension asks the Rex API whether its block sits in the window labeled
+`commander` of its own Rex session, caches the answer, and re-checks it about once
+a minute; nothing outside the ask drain depends on it. While that answer is yes,
+the session polls every mission's asks about every five seconds and, only while
+it is idle and has no pending message, delivers each undelivered ask as one
+follow-up message. Consecutive asks from one handle arrive batched, at most five
+asks per drain, oldest first. Each line names the mission, the step, and the
+kind — `[mission dotfiles/x · S02 · decision] …` — and a decision ask carries the
+command that answers it:
+
+```
+mission checkpoint accept|revise dotfiles/x C01 --note "…"
+```
+
+Delivery writes `delivered_at` and `delivered_to` into the ask's own file, so a
+commander restart cannot deliver it twice. With no commander session — extension
+unloaded, not the commander, or the commander away — nothing drains and nothing
+is lost: the asks stay on disk until that session returns.
+
+`ask_user_question` is not in the captain loadout, so a captain cannot paint a
+menu nobody watches. The commander keeps it.
+
 ## The launch description
 
 `mission plan REPO/SLUG [--mux rex]` is the read-only launch description. It
@@ -228,38 +254,69 @@ prefix plus the slug, cut to 32 characters with a short digest of the whole slug
 when it does not fit. Plan and deploy read that one label, so the same mission
 always gets the same name and two long slugs never share one.
 
-The launch prompt text lives in the CLI, not in the Pi extension. The extension
-reserves its own launch intent and asks `mission plan --launch-id <id>` for the
-brief, so one place owns the wording and the brief still names the intent the
-extension will record.
+The launch prompt text lives in the CLI, not in the Pi extension. `mission
+deploy` reserves the intent, renders the brief for it, and seats it in one call,
+so one place owns the wording and the id a captain reads is the id the record
+holds. `mission plan` stays the read-only description for a caller that only
+wants to look.
 
-## Deploy into Rex
+## Deploy a mission
 
-`mission deploy REPO/SLUG --mux rex` turns one plan into seats. It reads the plan,
-then reserves the launch intent (a `launch-<uid>` id, as the Pi extension does),
-then creates only what is missing: the `army` session with its `commander`
-window, the mission's `mission-<slug>` session, and its `captain-<slug>` window
-in army. The captain window runs the plan's argv and a brief rendered from that
-reserved intent, so the captain attaches with the id the record holds. The ack
-lands last, with the plan's derived token beside the reserved intent.
+`mission deploy REPO/SLUG --mux rex|herdr` turns one plan into seats. Deploy owns
+the decisions and the adapters own the mux vocabulary: a small `seat` interface in
+`go/mission/cmd/mission/seat.go` asks for the sessions, the captain window, focus,
+clear, and the captain's placement, and `rexSeat` and `herdrSeat` implement it. An
+unknown `--mux` is refused with `mux_unsupported` before deploy reads anything.
 
-Seating is two phases, because a block's id exists only after its window does. A
-window therefore opens on the human's login shell, deploy reads the block id
-from the `session.new_window` result, and it writes one `exec env …` line into
-that block through `block.method` with method `write`. That line starts the
-plan's absolute pi with `REX_SESSION=army`, `REX_BLOCK=<its own block>`,
+Deploy reads the plan, then reserves the launch intent (a `launch-<uid>` id), then
+creates only what is missing: the `army` session with its `commander` window, the
+mission's `mission-<slug>` session, and its `captain-<slug>` window in army. The
+captain window runs the plan's argv and a brief rendered from that reserved
+intent, so the captain attaches with the id the record holds. The ack lands last,
+with the plan's derived token beside the reserved intent.
+
+Both adapters seat the captain the same way, because the seat is the plan's and
+not the mux's: a login shell reads the plan's `exec env …` line, and deploy then
+verifies that pi took the foreground. What differs is only how the line reaches
+the shell and what seat identity it carries.
+
+A Rex window takes the captain as its own command, so that seat is one phase:
+`session.new_window` is asked for a window whose command is
+`$SHELL -l -c <exec line>`, and Rex runs it. There is no prompt, no readiness
+wait, no write, and no submit — zsh reads the line as its `-c` argument, and
+`exec` replaces it with pi, so the block's foreground is pi from the start. The
+line starts the plan's absolute pi with `REX_SESSION=army`,
 `PI_SUBAGENT_SESSION=<mission-<slug>>`, and `PI_SUBAGENT_CWD=<worktree>`; the
-brief arrives as pi's first message. The exec line is the only place a captain
-learns its own seat, so a captain started by deploy passes the subagent gate
-without any adapter help.
+brief arrives as pi's first message. It does not name `REX_BLOCK`: Rex sets that
+in the environment of the program it starts in a block, so the captain already
+reads its own block, and a window command cannot carry an id that does not exist
+until the window has been created.
+
+This replaced a typed line, and the reason is measured. Deploy used to open a
+window on `zsh -l`, poll the block's `pwd` method for readiness, then type the
+exec line and send the newline as its own write. But Rex answers `pwd` with an
+empty object about 0.02 s after the window exists, before the shell has a working
+cwd, so the gate passed instantly and the line was typed into a still-starting
+`zsh -l`: written in that window it was dropped or truncated, the shell ended up
+inside an open quote, and the mission stayed `ready` with no attempt. Four
+deploys failed that way. A window command cannot race a prompt.
+
+The verification stays, because Rex accepting the window says only that the
+window exists, not that pi came up in it. Deploy polls the block's `process`
+until it reports pi (the foreground, or an ancestor under the login shell), and
+retries that bounded wait once; then it fails with the block, the window, and the
+foreground it saw. The retry repeats the check, not a submit, because a window
+command cannot be re-sent. It never opens a second window, because the label
+would name two.
 
 ### Seating a captain
 
-The captain's block opens the human's login shell, `$SHELL -l` (`/bin/sh -l`
-when `$SHELL` is unset, or is not a runnable absolute path), so the shell reads
-the account's profile before the exec line replaces it with pi. The captain's
-environment is then the human's environment: `PATH` comes from the login
-profile, not from the multiplexer and not from a list the seat carries.
+The captain's window runs the human's login shell, `$SHELL -l` (`/bin/sh -l`
+when `$SHELL` is unset, or is not a runnable absolute path), with the exec line
+as its `-c` argument on Rex. The shell reads the account's profile before `exec`
+replaces it with pi. The captain's environment is then the human's environment:
+`PATH` comes from the login profile, not from the multiplexer and not from a list
+the seat carries.
 
 That parity is the point of the shape. A captain seated from the multiplexer's
 minimal `PATH` lost `mission` (`spawn mission ENOENT`, so mission tracking was
@@ -272,10 +329,46 @@ pi is still named by absolute path (`captainPi`), so the seat never relies on a
 profile to find it; the login shell supplies everything else.
 
 A repeated deploy focuses the live captain window and creates nothing, so one key
-press cannot seat two captains. A resumable deployment keeps its intent: a
-failure part way leaves the record unacknowledged, and the next press reserves
-nothing new and finishes the same deployment. `--mux` has one adapter today;
-another value answers `mux_unsupported`.
+press cannot seat two captains. Liveness is the seat's own foreground process in
+both muxes, so a captain that has just arrived is never mistaken for a dead one.
+A resumable deployment keeps its intent: a failure part way leaves the record
+unacknowledged, and the next press reserves nothing new and finishes the same
+deployment.
+
+### Seating in Herdr
+
+Herdr's units are not Rex's, so the adapter maps the plan onto them rather than
+inventing names:
+
+| Plan | Rex | Herdr |
+| --- | --- | --- |
+| army session `army` | a Rex session | a workspace labeled `army`, found by label and created once |
+| commander window `commander` | the army session's first window | the army workspace's root tab, renamed |
+| captain window `captain-<slug>` | a window in army | a tab in the army workspace, cwd the mission worktree |
+| subagent session `mission-<slug>` | a Rex session troopers open windows in | the seat's `PI_SUBAGENT_SESSION`: Herdr has no session object, and troopers are tabs beside their captain |
+
+Seating is two phases here, unlike Rex. `tab create` opens a tab on the human's
+login shell and names its pane; deploy polls `pane process-info` until that pane
+reports a foreground process, writes the exec line with `pane send-text`,
+submits it with `pane send-keys enter`, and polls the foreground until it is pi.
+If the shell is still the foreground it re-sends the Enter once, then fails with
+the pane, the tab, and what the foreground still reports. A Herdr tab has no
+window command of its own, so the tab can be brought up while its shell is still
+starting, and the readiness poll is what keeps a write from landing in a shell
+that does not yet read its terminal.
+
+The Herdr exec line carries no seat identity: Herdr sets `HERDR_PANE_ID` and
+`HERDR_WORKSPACE_ID` on the pane itself, so the captain reads its own seat from
+its environment. The Rex line names `REX_SESSION=army`, the session's label,
+because mission identities are labels; `REX_BLOCK` is Rex's own answer in the
+block's environment. Everything else is the one `seatExecLine`:
+`PI_SUBAGENT_SESSION`, `PI_SUBAGENT_CWD`, the plan's absolute pi, its `--tools`
+allowlist, and the brief last.
+
+Herdr reports the Pi session file for the agent it detects in the tab. Deploy
+records it on the reserved intent when Herdr answers with one, so a later launch
+or attach adopts that session instead of starting another; the captain records
+the same file itself when it attaches.
 
 `prefix+n` (`mission_deploy_pick`) opens the deployment picker: a floating layer
 listing `mission ready`, previewed with `mission show`. Enter deploys the chosen
@@ -371,16 +464,15 @@ with `state: pending`, `handle`, `repo`, and its owner seat.
 
 The desk has no launch path of its own. A Pi session in that repository claims the
 request and calls the same `start` action the `mission` tool uses, so the worktree,
-the launch reservation, and the driver tab come from one code path. That action
-opens the mission worktree as the repository's Herdr workspace, creates its tab,
-and starts the driver agent there.
+the launch reservation, and the captain's seat come from one code path: the
+action hands the launch to `mission deploy --mux rex|herdr`, and the CLI seats it.
 
 Each request carries the seat that asked: `owner_workspace` (`HERDR_WORKSPACE_ID`),
 `owner_label` (`HERDR_PANE_ID`), and `owner_common` (the absolute git common dir).
 The sweep picks one request per tick, in this order:
 
 1. A request addressed to this session's workspace. A captain that already owns a
-   mission still serves it, because the driver runs in its own worktree workspace.
+   mission still serves it, because its seat is a tab of that workspace.
 2. An unaddressed request, from a desk that ran outside Herdr. Any idle session of
    the repository may claim it.
 3. A request whose addressed workspace is gone. Only a session in the same checkout
@@ -415,7 +507,19 @@ rather than the one it left behind; both completions stay in the append-only
 progress stream. The extension sends one report per finished interactive subagent
 through the same outbox as its lifecycle hooks, so a reload replays the report
 under its original ID instead of appending a second copy, and a judge step records
-the judge rather than the worker that spawned it.
+the judge rather than the worker that spawned it. A report whose trooper name
+starts with `judge` also carries that subagent's `--session-id`/`--session-file`,
+because the CLI refuses a judge progress that names no session; a judge report
+that has no session id can never be delivered, so it is never queued and one
+warning names the trooper instead.
+
+One undeliverable item never wedges the queue. A flush failure the extension
+retries is attempted three times, then the item leaves the outbox and joins the
+last 20 entries of a `failed` list in the session's cached state file, and the
+next tool result carries one line: `1 report could not be recorded: <trooper>
+(<error code>)`, or the same line for a hook. The tool call that flushed it
+succeeds, so a refusal the extension has no rule for cannot block every tool
+call the way a `usage` error from an anonymous judge report once did.
 Evidence belongs to the current attempt. Lifecycle hooks record only event metadata,
 tool names/call IDs, session identity, and transcript snapshots. They omit tool
 arguments and outputs. Transcripts themselves can contain sensitive conversation
@@ -492,8 +596,38 @@ The record keeps its shape. The check run fills `verifications[]` with its
 entry of the same attempt. No `state.md` field, vault directory, or CLI command
 changes for this flow.
 
-## Reload and recovery
+## The injected context and the attempt it names
 
+The attempt id a seat reads is a ledger fact, never a value a claim captured. The
+CLI renders that text when it emits it, and one file holds every renderer:
+`listedAttempt`, `attemptLine`, `stepBrief`, `stepContext`, and `driverLines` in
+`go/mission/cmd/mission/context.go`.
+
+- `mission attach` returns the claim: `context` is the step brief followed by the
+  attempt line, and `driver` is the driver and continuation lines.
+- `mission show` returns the same two fields, rendered from the record it read,
+  so a turn injects the text of that read and the extension assembles no
+  attempt id of its own.
+- `MISSION_ATTEMPT` and `MISSION_BRIEF` name the attempt the ledger lists, and the
+  brief file is written from the record on every claim and every attach replay.
+
+`listedAttempt` answers only when `active_attempt` names an attempt the `attempts`
+list holds. An id that survives a lost attempt record is a phantom: the context
+says `No active attempt: the ledger lists none`, it names no id, and the emitter
+refuses to hand out a claim for it (`stale_attempt`) instead of printing it.
+
+A re-claim — `retry` or `abandon`, then a fresh claim — is therefore named by its
+new attempt id on the very next read, and the previous attempt is named by no
+emitted line. The extension keeps the attempt it attached to in its credential
+cache, but no emitted line comes from that value: a hook or a trooper report names
+the attempt the last ledger read listed, and a queued line the CLI can no longer
+take (`not_found`, `stale_attempt`, `attempt_terminal`, `closed`, `event_conflict`,
+`invalid_handle`) is dropped instead of blocking every later event. That is the
+2026-11-05 wedge: a captured attempt id outlived its claim, so the context named
+an owner that could not attach while the ledger listed another, and the outbox
+never drained.
+
+## Reload and recovery
 Credentials and unacknowledged lifecycle events live in
 `$MISSION_STATE_DIR` or `$XDG_STATE_HOME/pi-missions` (default
 `~/.local/state/pi-missions`). Files are mode 0600, keyed by vault and session ID.
@@ -506,7 +640,7 @@ driver can investigate its own tracking. Inactive steps block editing tools.
 Shutdown snapshots the transcript and parks the attempt without releasing its
 owner. Resume the same Pi session file in the mission worktree, in a seat of the
 same kind you left it in: a Rex block with `REX_SESSION` and `REX_BLOCK`, or a
-Herdr pane in the primary workspace. Export the original `MISSION_VAULT`,
+Herdr pane whose cwd is the mission worktree. Export the original `MISSION_VAULT`,
 `MISSION_BIN`, and `MISSION_STATE_DIR` there.
 A launched driver reads those paths from its own pane environment, so they must
 be exported there when the layout is not the default: `MISSION_VAULT` defaults
@@ -519,7 +653,21 @@ registry entry: steer it with `rex send -s army -b <block> <text>` in Rex, or
 same seat. A resume that changes seat kind, such as Herdr to Rex, also needs the
 re-attach described in [Seating a captain](#seating-a-captain).
 An operator must resolve a missing credential, abandoned launch, or crashed
-verifier; this version has no takeover or lease expiry command.
+verifier. `mission abandon REPO/SLUG --attempt ID --note TEXT` is that operator's
+escape for an attempt whose process is gone: it ends the attempt without the
+attempt token, because the caller is the owner or the commander rather than the
+lost process.
+
+Liveness is one probe, the attempt's own recorded process. Signal 0 asks whether
+that process exists, and only `ESRCH` proves it gone, so `abandon` refuses with
+`busy` while the process is live, and refuses an attempt whose process this host
+cannot judge at all: a Pi seat is Herdr's child with no reported pid, and a pid
+recorded on another host means nothing here. The second refusal names
+`mission repair`. A successful abandon sets the attempt `abandoned`, appends an
+`attempt-abandoned` event carrying the note, leaves the step failed, and clears
+the active owner; `retry` then `next` offers that work again. It never edits
+`mission.md`. A repeat abandon reports `already: true` without writing, and an
+attempt that ended another way is refused with `attempt_terminal`.
 
 Every save carries the revision it was loaded from and refuses to replace a
 ledger that already moved (`revision_conflict`), so a record held across a claim
@@ -529,6 +677,42 @@ wrote it. A refused save writes a line too. `mission repair REPO/SLUG` replays a
 interrupted step edit and re-admits `attempts/NNN.md` projections that the ledger
 no longer lists. It restores the owning attempt and step, and restores a step
 whose re-admitted attempt passed its checks.
+
+Repair also reconciles a dead attempt, so no record stays unclosable. It asks the
+same liveness probe `abandon` uses, never `process_exited`: only the run wrapper
+sets that flag, so a wrapper killed with its child leaves it false on an attempt
+whose process is long gone. Repair ends an active attempt as `failed` only when
+no process answers and the attempt is quiescent.
+
+Quiescent means nothing inside a quiet window of ten minutes: no event, no
+progress note, no report, no write to the recorded session file, and an
+untouched `updated_at`. The session file is the heartbeat a seat without a pid
+offers, so its modification time is read when this host holds it. A session file
+that is missing proves nothing, and the attempt's own stamps decide; a stamp that
+will not parse does not open the window. A live pid always keeps the attempt
+`running`, however silent its stream, and any write inside the window keeps it
+`running` even after its process exited, so a working process is never misread as
+dead. The sum of `attempt-reconciled` events names the attempt, its step, and why
+repair judged it.
+
+The uninspectable case differs from `abandon` on purpose. A Pi seat is Herdr's
+child and reports no pid, so this host cannot prove its process gone; `abandon`
+refuses that attempt, and its refusal names `mission repair`. Repair ends it once
+the session file and the stream are quiet, because a wedged Pi attempt is exactly
+the record that must not stay unclosable. The event says whether the process was
+proven gone or only never inspectable. Repair keeps a `reported` attempt under
+the same rule: a lost settlement leaves its completion unverified, so the attempt
+ends `failed` and the step is offered again. The step is left `failed` on the
+attempt, the active owner is cleared, `current_step` names that step, and
+`state.status` becomes `failed`; `retry` then `next` offers the work again.
+
+Two cases refuse, and repair changes nothing. An attempt recorded on another host
+is not this host's to judge: its pid, session file, and session are evidence
+elsewhere, so repair leaves it `running` rather than guess. A step that already
+passed is never demoted, so its attempt is left for `mission abandon`. A caller
+blocked by either one is told so: the busy refusal of `claim`/`next` and the
+`attach` refusal both name `mission repair REPO/SLUG`. A repair that finds
+nothing to replay, re-admit, or reconcile writes no ledger at all.
 
 Transcript snapshots are limited to 16 MiB. The vault ledger and cached hook outbox
 are local files, with atomic replacements. Vault synchronization is not a multi-host

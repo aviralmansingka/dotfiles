@@ -97,8 +97,8 @@ Status legend:
 24. **neovide `neovim-bin` absolute `/Users/...` path + git
     `credential.helper=osxkeychain`** — [done] `neovim-bin` is unset:
     neovide never expands `~` or env vars in config paths, and unset it
-    resolves `nvim` from PATH (`~/.local/bin/nvim`, a bob symlink, is on
-    PATH via `.zshenv` for every zsh). The git config drops `osxkeychain`
+    resolves `nvim` from PATH (the profile's `nvim` is on PATH via
+    `.zshenv` for every zsh). The git config drops `osxkeychain`
     (macOS-only, and Homebrew/Apple git already default to it in the
     system gitconfig) for a documented local-only pattern in
     `~/.gitconfig`, and the no-op `[editor] tool` key is gone. All

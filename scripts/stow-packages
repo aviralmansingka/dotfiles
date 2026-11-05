@@ -7,7 +7,9 @@
 #   - `git` last: its url.insteadOf rewrites HTTPS to SSH, and an early rewrite
 #     breaks the installer-style fetches a fresh host may still need
 # The systemd units are NOT here: the flake ships them (S05).
-zsh
+# `zsh` is NOT here either: Home Manager writes ~/.zshenv, ~/.zprofile and
+# ~/.zshrc from zsh/.zshenv and zsh/.zshrc (nix/modules/shared/default.nix), so
+# a stow link would collide with the profile.
 profile
 tmux
 nvim

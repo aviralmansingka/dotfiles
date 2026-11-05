@@ -61,9 +61,13 @@ One run takes about 1 s on Linux. The SLA is 60 s; a longer run fails.
   `tic` terminfo; `stow systemd` when `systemctl` exists; the hook link.
 - Guard smoked, step not run: `herdr integration install pi`;
   `gh extension install`; `herdr integration install codex`.
-- Skipped with reason: `stow launchd` (macOS-only); `stow -R zsh`.
+- Skipped with reason: `stow launchd` (macOS-only).
+- Not stowed by design: `zsh`. Home Manager writes `~/.zshenv`,
+  `~/.zprofile`, and `~/.zshrc` (`programs.zsh` reading `zsh/.zshenv` and
+  `zsh/.zshrc`), so the pre-clean `rm -f` no longer names those two files and
+  `scripts/stow-packages` no longer lists the package.
 - Not smoked, network: Homebrew and `brew bundle`; the installer
-  curls; rustup, cargo, bob, `npm ci`; Oh My Zsh, zsh plugins, TPM.
+  curls; rustup, cargo, `npm ci`; TPM.
 - Not smoked, live service: the guarded `herdr integration install pi`
   (its `command -v herdr` guard is smoked statically and dynamically; the
   live integration still needs a real herdr); Herdr Flash; the annotate

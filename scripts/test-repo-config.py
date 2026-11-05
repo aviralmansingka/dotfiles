@@ -200,7 +200,12 @@ def check_skill_frontmatter():
 # same change that adds its stow line (or deletes the package). The former
 # kube/, tmuxinator/, neovide/, and claude/ entries were removed together
 # with their packages (claude in the Claude Code uninstall).
-STOW_GAP_ALLOWLIST = {}
+STOW_GAP_ALLOWLIST = {
+    # zsh/ is the editable source Home Manager reads (programs.zsh reads
+    # zsh/.zshenv and zsh/.zshrc and writes ~/.zshenv, ~/.zprofile and
+    # ~/.zshrc), so stow must not link those files (mission zsh-to-nix S01).
+    "zsh",
+}
 
 STOW_OPTS_WITH_ARG = {"-d", "-t", "--dir", "--target"}
 

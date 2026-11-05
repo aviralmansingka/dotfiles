@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -17,17 +18,41 @@ import (
 	"mission.local/prototype/internal/platform"
 )
 
+// cappedOutput keeps the first 1 MiB a check writes. The buffer is a field, not
+// an embedded bytes.Buffer: embedding would promote ReadFrom, and io.Copy, which
+// os/exec uses for a pipe, prefers a ReaderFrom destination over Write, which
+// bypasses the cap.
 type cappedOutput struct {
-	bytes.Buffer
+	buf       bytes.Buffer
 	truncated bool
 }
 
-func goTest(cwd string) (string, string, []byte) {
+func (b *cappedOutput) Bytes() []byte { return b.buf.Bytes() }
+
+// checkRun reports what one check process did: the facts every check turns into
+// a verdict.
+type checkRun struct {
+	exit      int // process exit code; meaningful only when exited is true
+	exited    bool
+	err       error
+	deadline  bool
+	leftover  bool
+	truncated bool
+	log       []byte
+}
+
+// runGrouped runs one required check in the attempt checkout under the shared
+// two-minute deadline, 1 MiB output cap, and process-group kill. go-test and
+// cmd: checks both come through here, so neither can drift from that contract.
+func runGrouped(cwd string, env []string, command ...string) checkRun {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	c := exec.CommandContext(ctx, "go", "test", "./...")
+	c := exec.CommandContext(ctx, command[0], command[1:]...)
 	c.Dir = cwd
-	c.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+	if env == nil {
+		env = os.Environ()
+	}
+	c.Env = env
 	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	c.WaitDelay = 3 * time.Second
 	c.Cancel = func() error {
@@ -40,25 +65,63 @@ func goTest(cwd string) (string, string, []byte) {
 	c.Stdout = &log
 	c.Stderr = &log
 	e := c.Run()
+	v := checkRun{exit: -1, err: e, deadline: ctx.Err() != nil, truncated: log.truncated, log: log.Bytes()}
 	if c.Process != nil && syscall.Kill(-c.Process.Pid, 0) == nil {
 		_ = syscall.Kill(-c.Process.Pid, syscall.SIGKILL)
-		return "inconclusive", "Test process left background work; group stopped", log.Bytes()
+		v.leftover = true
+		return v
 	}
-	if ctx.Err() != nil {
-		return "inconclusive", "Go tests exceeded the two-minute deadline", log.Bytes()
+	var exit *exec.ExitError
+	if errors.As(e, &exit) {
+		v.exited, v.exit = true, exit.ExitCode()
 	}
-	if e != nil {
-		var exit *exec.ExitError
-		if errors.As(e, &exit) {
-			return "failed", fmt.Sprintf("go test ./... exited %d", exit.ExitCode()), log.Bytes()
-		}
-		return "inconclusive", "Could not run Go tests: " + e.Error(), log.Bytes()
+	return v
+}
+
+func goTest(cwd string) (string, string, []byte) {
+	v := runGrouped(cwd, append(os.Environ(), "GOTOOLCHAIN=local"), "go", "test", "./...")
+	if v.leftover {
+		return "inconclusive", "Test process left background work; group stopped", v.log
+	}
+	if v.deadline {
+		return "inconclusive", "Go tests exceeded the two-minute deadline", v.log
+	}
+	if v.exited {
+		return "failed", fmt.Sprintf("go test ./... exited %d", v.exit), v.log
+	}
+	if v.err != nil {
+		return "inconclusive", "Could not run Go tests: " + v.err.Error(), v.log
 	}
 	summary := "go test ./... passed"
-	if log.truncated {
+	if v.truncated {
 		summary += "; log truncated at 1 MiB"
 	}
-	return "passed", summary, log.Bytes()
+	return "passed", summary, v.log
+}
+
+// cmdCheck runs a cmd: check's body through sh -c in the attempt checkout. It
+// reports the same verdicts as go-test: passed on exit 0, failed with the exit
+// code in the summary, and inconclusive when the deadline stops the process.
+func cmdCheck(name, cwd string) (string, string, []byte) {
+	body := strings.TrimSpace(strings.TrimPrefix(name, cmdCheckPrefix))
+	v := runGrouped(cwd, nil, "sh", "-c", body)
+	if v.leftover {
+		return "inconclusive", "Check process left background work; group stopped", v.log
+	}
+	if v.deadline {
+		return "inconclusive", name + " exceeded the two-minute deadline", v.log
+	}
+	if v.exited {
+		return "failed", fmt.Sprintf("%s exited %d", name, v.exit), v.log
+	}
+	if v.err != nil {
+		return "inconclusive", "Could not run " + name + ": " + v.err.Error(), v.log
+	}
+	summary := name + " passed"
+	if v.truncated {
+		summary += "; log truncated at 1 MiB"
+	}
+	return "passed", summary, v.log
 }
 func (s *Store) verify(h, id, token string) (mission.Record, error) {
 	var current mission.Record
@@ -161,6 +224,10 @@ func executeChecks(st mission.Step, cwd string, before subjectSnapshot, run *mis
 			} else {
 				res.Verdict, res.Summary, logs[i] = goTest(module)
 			}
+		default:
+			if strings.HasPrefix(res.Check, cmdCheckPrefix) {
+				res.Verdict, res.Summary, logs[i] = cmdCheck(res.Check, cwd)
+			}
 		}
 		if res.Verdict != "passed" {
 			blocked = true
@@ -183,7 +250,7 @@ func (s *Store) recordVerification(r *mission.Record, a *mission.Attempt, st mis
 	run.Ended = mission.Now()
 	for i := range run.Results {
 		res := &run.Results[i]
-		rel := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", a.Sequence), "checks", run.ID, res.Check+".log"))
+		rel := filepath.ToSlash(filepath.Join("artifacts", fmt.Sprintf("%03d", a.Sequence), "checks", run.ID, checkLogName(res.Check)))
 		p, e := s.path(r.Mission.Repo, r.Mission.Slug, rel)
 		if e != nil {
 			return e
@@ -209,11 +276,31 @@ func (s *Store) recordVerification(r *mission.Record, a *mission.Attempt, st mis
 	return nil
 }
 
+// checkLogName turns a check name into one safe evidence log file name. A cmd:
+// name is free text and can hold spaces or slashes, which must not become a path
+// or a missing directory; a name that sanitization changed carries a digest tail
+// so two different commands can never share one log.
+func checkLogName(name string) string {
+	var b strings.Builder
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('-')
+		}
+	}
+	if safe := b.String(); safe != name {
+		return safe + "-" + strings.TrimPrefix(mission.Digest([]byte(name)), "sha256:")[:8] + ".log"
+	}
+	return b.String() + ".log"
+}
+
 func (b *cappedOutput) Write(p []byte) (int, error) {
 	n := len(p)
-	remaining := (1 << 20) - b.Len()
+	remaining := (1 << 20) - b.buf.Len()
 	if remaining > 0 {
-		_, _ = b.Buffer.Write(p[:min(n, remaining)])
+		_, _ = b.buf.Write(p[:min(n, remaining)])
 	}
 	if n > remaining {
 		b.truncated = true

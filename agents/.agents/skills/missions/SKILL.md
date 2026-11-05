@@ -75,30 +75,46 @@ binding, so re-attach after the move; without it every call warns `Restore the
 mission's Herdr attachment before continuing`. Full contract:
 `docs/pi-missions.md` § Seating a captain.
 
+## Ask the commander
+
+A captain pane has no watcher, and `ask_user_question` is not in the captain's
+tool list. When a captain is blocked on a decision, a missing credential, or
+anything only the human can settle, it writes one durable question and stops:
+
+```sh
+mission ask REPO/SLUG --text "Which branch name?" --step S02 --kind decision
+```
+
+The ask lands in the mission record, and the commander's own Pi session drains it
+into that conversation. No token is needed. Kinds are `blocked`, `question`, and
+`decision`; a decision ask renders the checkpoint command that answers it. Check
+what is waiting with `mission ask --list REPO/SLUG`, which lists pending and
+delivered asks. Full contract: `docs/pi-missions.md` § Ask the commander.
+
 ## Launch or attach in Pi
 
 Discover the deferred `mission` tool through `tool_search`. Humans can use
 `/missions` to open the mission desk in a Herdr pane, or
 `/mission start REPO/SLUG`.
 
-- `mission {action:"start", handle:"REPO/SLUG"}` reserves a launch, creates or
-  reuses the mission's `mission/<slug>` worktree, registers it as a Herdr worktree
-  workspace (linked under the repository), and starts the worker as a full Pi
-  agent in that workspace (`herdr agent start`, then one `herdr agent prompt`).
-  The worker is not a subagent: it has no subagent identity, loadout, timer, or
-  watchdog.
+- `mission {action:"start", handle:"REPO/SLUG"}` prepares the mission worktree
+  (`mission workspace`) and hands the launch to the CLI: `mission deploy
+  REPO/SLUG --mux rex|herdr`, whichever mux this session runs in. The CLI seats
+  the army session, the captain's window and the mission's subagent session, and
+  the worker it seats is a full Pi agent, not a subagent: no subagent identity,
+  loadout, timer, or watchdog. The tool then reads the runtime back from
+  `mission show`; a repeat press reports the live seat instead of a second one.
 - `mission {action:"attach", handle:"REPO/SLUG"}` adopts the current existing Pi
   session. It must already run at the root of an unowned non-main linked worktree,
-  inside the mission's worktree workspace or, for missions bound before worktree
-  workspaces, the repository's primary Herdr workspace. It cannot move a live
-  session's cwd.
+  in a Herdr pane whose cwd is that worktree (the shared `army` workspace holds
+  every captain, so the pane's cwd is the binding, not the workspace). It cannot
+  move a live session's cwd.
 - `mission {action:"status", handle:"REPO/SLUG"}` and `action:"steps"` inspect work.
 - `mission {action:"next"}` claims the next eligible step in the same session and
   worktree. Resume the owning Pi session rather than opening a second owner.
 
-Revive a deleted worktree. If the Herdr workspace or the checkout is gone but the
-`mission/<slug>` branch remains, `start` recreates the checkout at the recorded
-path and registers it again with `herdr worktree open`. An existing checkout at
+Revive a deleted worktree. If the checkout is gone but the `mission/<slug>` branch
+remains, `start` recreates the checkout at the recorded path. An existing checkout at
 that path is adopted in place when it is already on `mission/<slug>` or holds a
 clean detached HEAD at the branch tip; it is never recreated. Never create a
 second branch or checkout; a branch checked out elsewhere is reported, not
@@ -113,24 +129,25 @@ eligible step without a human message, and stops only at checkpoints, reviews,
 `waiting`, and `done`. An attached session that does not own the binding stays
 explicit. At a review, wait for the user to decide and direct continuation.
 
-One repository owns one Herdr workspace, plus one linked worktree workspace per
-registered worktree; a mission's checkout owns its own. One mission owns one
-persistent linked worktree and one durable Pi owner. Attempts belong to steps, not
-to new worktrees.
+One mission owns one persistent linked worktree and one durable Pi owner in one
+seat. In Herdr every mission's captain shares the `army` workspace (one tab per
+captain); in Rex the army session holds one captain window per mission. Attempts
+belong to steps, not to new worktrees.
 Do not remove a worktree after a step. Never bypass a pending launch by launching
 again: a crash may have started the first session. Inspect its recorded session
 file and Herdr pane, then attach that session using the pending launch_id.
-A launch that fails with no worker in its pane releases its launch intent, so the
-next launch reserves again. Herdr agent names are unique for the server. A launch
-names the worker `mission-<slug>`; when another session holds that name, the
-launch takes a short handle hash once. If that name is taken too, the error names
-the pane that holds it. The launch never renames another session's agent.
+A launch has one owner, the CLI, so a Rex mission and a Herdr mission cannot
+diverge: `mission deploy` reserves the intent, seats the captain, verifies that pi
+took the seat, retries the submit once, and acks. The seat's label is derived from
+the handle, so a second press focuses the live captain instead of seating
+another.
 
 ## Work and report
 
-Read the assigned brief returned by attachment. Stay within its scope and cwd.
-Use the mission tool to report meaningful changes; it sends structured records
-through the CLI without exposing credentials to the model:
+Read the context attachment returns: the assigned step brief followed by the
+attempt line, which names the attempt the ledger lists now. Stay within its scope
+and cwd. Use the mission tool to report meaningful changes; it sends structured
+records through the CLI without exposing credentials to the model:
 
 ```json
 {"action":"progress","status":"working","summary":"Attachment validates the session header","next":"Test restart recovery"}
@@ -221,7 +238,15 @@ On Pi reload, the extension replays unacknowledged hooks with their original IDs
 and restores the attempt. A session shutdown preserves its owner and transcript;
 resume the same session file. If attach committed before its acknowledgement was
 saved, repeat attach from that same session. After a failed terminal attempt,
-inspect evidence, use `mission retry`, then explicitly pick up next. Do not edit
+inspect evidence, use `mission retry`, then explicitly pick up next. When an
+attempt's process is gone and its owner is gone with it, end it with
+`mission abandon REPO/SLUG --attempt ID --note TEXT`, then `mission retry`: no
+attempt token is needed, but a live process or a session this host cannot inspect
+is refused. When the attempt is a Pi seat that reports no process, run
+`mission repair REPO/SLUG`: it ends an active attempt whose session file and
+event stream stayed quiet past ten minutes, then `mission retry` offers the step
+again. It refuses to judge an attempt recorded on another host, and it never
+demotes a step that already passed. Do not edit
 the ledger to clear a stuck verifier, launch, or owner. Surface these for recovery.
 
 The local credential/outbox directory must survive a restart. Its loss requires
@@ -241,5 +266,5 @@ mission --json close dotfiles/session-progress --note "Shipped in #430"
 `close` sets `status: closed`, `closed_at`, and the note. It refuses open work:
 an active attempt, or a step that is not `passed`. Add `--force` to close anyway.
 A second close is safe and returns `already: true`. A closed mission refuses
-`claim`, `pickup`, `launch`, `plan`, `workspace`, `attach`, `next`, `finish`,
-`retry`, and `repair`. Start a new mission instead.
+`ask`, `claim`, `pickup`, `launch`, `plan`, `workspace`, `attach`, `next`, `finish`,
+`retry`, `repair`, and `abandon`. Start a new mission instead.

@@ -5,10 +5,6 @@
   ...
 }:
 
-let
-  ownedTools = import ../../lib/owned-tools.nix { inherit pkgs; };
-in
-
 {
   imports = [
     ../shared
@@ -30,29 +26,32 @@ in
   #
   # The path is sops' own default lookup when `SOPS_AGE_KEY_FILE` is unset, so
   # interactive `sops`, `just secrets-edit`, `sops exec-env` and the activation
-  # all read one identity on the host. Its content is
-  # `ssh-to-age -private-key -i /etc/ssh/ssh_host_ed25519_key`, mode 0400, which
-  # keeps the recipient already in .sops.yaml (age17swx…, the lab's host key) —
-  # so no recipient changes and nothing has to be rotated in.
+  # all read one identity on the host. Its content is a machine-local identity
+  # minted on the box with `age-keygen -o ~/.config/sops/age/keys.txt` (mode
+  # 0400), matching the second recipient each rule in .sops.yaml carries. Host
+  # key material is not fleet identity: a compromise of the login user no longer
+  # yields the host's SSH key, and the SSH key's exposure no longer yields the
+  # secrets.
   sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
 
-  home.packages = lib.attrValues ownedTools ++ [
+  home.packages = [
     pkgs.google-chrome
     pkgs.tailscale
   ];
 
-  home.activation.writeOwnedToolsList = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    {
-      ${lib.concatStrings (
-        lib.mapAttrsToList (aptName: pkg: ''
-          printf '${aptName} %s\n' '${pkg}'
-        '') ownedTools
-      )}
-    } > "$HOME/.local/state/fleet-owned-tools"
-    chmod 644 "$HOME/.local/state/fleet-owned-tools"
-  '';
+  # The host toolchains are the Linux half of PATH: apt owns /usr/local/go and
+  # the CUDA toolkit, so these directories are host state, not profile state.
+  # mkAfter keeps them behind the shared sessionPath, which starts with the Nix
+  # profile.
+  home.sessionPath = lib.mkAfter [
+    "/usr/local/go/bin"
+    "/usr/local/cuda/bin"
+  ];
 
   home.sessionVariables = {
     FLEET_PROFILE = "remote";
+    CUDA_HOME = "/usr/local/cuda";
   };
+
+  home.sessionSearchVariables.LD_LIBRARY_PATH = [ "/usr/local/cuda/lib64" ];
 }

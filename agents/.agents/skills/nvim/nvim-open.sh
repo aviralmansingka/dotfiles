@@ -14,11 +14,9 @@ shift || true
 FILES=("$@")
 
 # Add common nvim installation paths that may not be on PATH
-# (bob version manager, homebrew on Linux/macOS).
+# (homebrew on Linux/macOS; the profile installs nvim itself).
 if ! command -v nvim >/dev/null 2>&1; then
 	for _p in \
-		"$HOME/.local/share/bob/nightly/bin" \
-		"$HOME/.local/share/bob/stable/bin" \
 		"/home/linuxbrew/.linuxbrew/bin" \
 		"/opt/homebrew/bin"; do
 		[[ -d "$_p" ]] && PATH="$_p:$PATH"

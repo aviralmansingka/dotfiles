@@ -130,18 +130,18 @@ secrets-probe-verify:
 # Nothing is installed or fetched beyond what the Go and Rust toolchains need:
 # no `go install`, no `cargo install`, no `curl | sh`.
 #
-#   just build     -> ~/.local/bin/mission and ~/.local/bin/rataflow-view
+#   just build     -> ~/.local/bin/mission and rataflow/target/release/rataflow-view
 #
-# Both binaries are compiled into the repo's gitignored build dirs
-# (go/mission/bin/, rataflow/target/) and then moved into place, so a clean
-# checkout builds and the working tree stays clean. Set BIN_DIR to override
-# the destination directory.
+# `mission` is compiled into the repo's gitignored build dir and moved into
+# place; `rataflow-view` stays in the crate's target dir, because the installed
+# copy comes from the Nix profile (nix/pkgs/rataflow-view.nix). Set BIN_DIR to
+# override the mission destination directory.
 
 bin_dir := env("BIN_DIR", home_directory() / ".local/bin")
 
 # Dependencies run in order and stop on the first failure, so a Go error
 # never hides behind a Rust build.
-# Build mission and rataflow-view into BIN_DIR.
+# Build mission into BIN_DIR and rataflow-view into its target dir.
 build: build-mission build-rataflow-view
 
 # Compile the mission CLI from go/mission.
@@ -151,12 +151,9 @@ build-mission:
     mv -f go/mission/bin/mission {{bin_dir}}/mission
     @echo "built {{bin_dir}}/mission"
 
-# ~/.cargo/bin precedes ~/.local/bin in this machine's shell PATH (zsh/.zshenv),
-# so an old `cargo install`ed copy keeps shadowing the fresh one until it goes:
-#   rm ~/.cargo/bin/rataflow-view
-# Compile rataflow-view with --locked and install it into BIN_DIR.
+# The installed rataflow-view is a profile package (nix/pkgs/rataflow-view.nix),
+# so this recipe only compiles the checkout: the release binary lands in
+# rataflow/target/release/ and nothing is moved or installed.
 build-rataflow-view:
-    mkdir -p {{bin_dir}}
     cargo build --release --locked --manifest-path rataflow/Cargo.toml
-    mv -f rataflow/target/release/rataflow-view {{bin_dir}}/rataflow-view
-    @echo "built {{bin_dir}}/rataflow-view"
+    @echo "built rataflow/target/release/rataflow-view"

@@ -205,7 +205,7 @@ try {
 	const daemonSocket = join(tmpdir(), "herdr-nvim", "w6V_t1.sock");
 	const remoteUi = {
 		name: "nvim", pid: 4242,
-		argv: ["/home/avirus/.local/share/bob/nightly/bin/nvim", "--server", daemonSocket, "--remote-ui"],
+		argv: ["/usr/local/bin/nvim", "--server", daemonSocket, "--remote-ui"],
 	};
 	assert.equal(nvimOpen.isSidebarProcess(remoteUi, daemonSocket), true);
 	const launcher = {
@@ -729,7 +729,7 @@ esac
 	);
 	// Provision a REAL editor into the fake bin when the host has one (CI
 	// pins nvim at /usr/local/bin/nvim): the .sh children's `command -v nvim`
-	// then resolves a genuine binary and the bob-path fallback dirs stay
+	// then resolves a genuine binary and the script's fallback PATH dirs stay
 	// unused. Without a host nvim, a no-op fake still satisfies `command -v`.
 	// The fail-fast scenario's shUtilBin deliberately stays editor-free.
 	let realNvim = "";

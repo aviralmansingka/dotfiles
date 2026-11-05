@@ -95,7 +95,10 @@ fi
 export PATH="$HOME/.nix-profile/bin:$PATH"
 
 echo "==> Removing conflicting files"
-rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
+# ~/.zshenv and ~/.zshrc are absent on purpose: Home Manager writes both from
+# the profile, and deleting them here would leave the login shell without the
+# environment the switch just installed.
+rm -f "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
 
 echo "==> Deploying dotfiles via stow"
 # The list lives in scripts/stow-packages so the deploy script links the same

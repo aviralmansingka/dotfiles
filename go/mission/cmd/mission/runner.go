@@ -33,10 +33,6 @@ func runAgent(s *Store, handle, agent, cwd string, argv []string) (record missio
 	if e = os.MkdirAll(filepath.Dir(output), 0700); e != nil {
 		return mission.Record{}, e
 	}
-	brief := filepath.Join(filepath.Dir(output), "brief.md")
-	if e = atomicWrite(brief, []byte(c.Attempt.Brief)); e != nil {
-		return mission.Record{}, e
-	}
 	log, e := os.OpenFile(filepath.Join(filepath.Dir(output), "session.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
 		return mission.Record{}, e
@@ -47,8 +43,6 @@ func runAgent(s *Store, handle, agent, cwd string, argv []string) (record missio
 	cmd.Env = os.Environ()
 	exe, _ := os.Executable()
 	c.Environment["MISSION_BIN"] = exe
-	c.Environment["MISSION_BRIEF"] = brief
-	c.Environment["MISSION_STEP"] = c.Step.ID
 	for k, v := range c.Environment {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
