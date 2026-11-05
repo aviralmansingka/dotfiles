@@ -333,11 +333,17 @@ func shellLayout(cwd string) map[string]any {
 // captain inherits the human's environment instead of the multiplexer's minimal
 // PATH. That PATH is why a captain lost `mission` (spawn mission ENOENT), lost
 // `rex` (the subagent gate stayed closed), and could not deploy troopers with pi.
+//
+// options.shell names that shell, because "none" seats the captain behind
+// /usr/bin/login instead: Rex wraps a direct command in its rex-login helper,
+// and login's foreground process reports no cwd, so the mission extension cannot
+// bind the seat. Naming the shell is the `rex window new --shell zsh -- zsh -l`
+// shape: still a login shell, and its process reports the cwd.
 func captainLayout(p Plan) map[string]any {
 	return map[string]any{"block": map[string]any{
 		"flavor":  terminalFlavor,
 		"label":   p.CaptainWindow,
-		"options": map[string]any{"command": loginShellArgv(), "cwd": p.Cwd, "shell": "none"},
+		"options": map[string]any{"command": loginShellArgv(), "cwd": p.Cwd, "shell": filepath.Base(loginShell())},
 	}}
 }
 
