@@ -512,6 +512,14 @@ starts with `judge` also carries that subagent's `--session-id`/`--session-file`
 because the CLI refuses a judge progress that names no session; a judge report
 that has no session id can never be delivered, so it is never queued and one
 warning names the trooper instead.
+
+One undeliverable item never wedges the queue. A flush failure the extension
+retries is attempted three times, then the item leaves the outbox and joins the
+last 20 entries of a `failed` list in the session's cached state file, and the
+next tool result carries one line: `1 report could not be recorded: <trooper>
+(<error code>)`, or the same line for a hook. The tool call that flushed it
+succeeds, so a refusal the extension has no rule for cannot block every tool
+call the way a `usage` error from an anonymous judge report once did.
 Evidence belongs to the current attempt. Lifecycle hooks record only event metadata,
 tool names/call IDs, session identity, and transcript snapshots. They omit tool
 arguments and outputs. Transcripts themselves can contain sensitive conversation

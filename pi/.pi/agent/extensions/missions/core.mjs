@@ -274,6 +274,15 @@ export function isJudge(trooper) {
   return String(trooper ?? "").trim().toLowerCase().startsWith("judge");
 }
 
+/** How many failed flushes one outbox item may take before it is set aside. A
+ *  transient failure retries; a refusal the extension does not recognize — the
+ *  CLI's `usage` is the one that wedged a live captain — must not be retried
+ *  forever at the head of the queue, because every tool call flushes it. */
+export const OUTBOX_FAILURE_LIMIT = 3;
+
+/** How many set-aside items the state file keeps for a human to inspect. */
+export const FAILED_OUTBOX_LIMIT = 20;
+
 /** How many one-line notices a session holds for its next tool result. */
 export const OUTBOX_NOTICE_LIMIT = 20;
 
@@ -568,11 +577,34 @@ export class MissionBridge {
         // reused ID, and a trooper that finished after its attempt settled has
         // no attempt left to report on. Dropping it keeps the outbox from
         // wedging behind one undeliverable line; a transient failure retries.
-        if (!(item.report && droppableReportError(e.message))) throw e;
+        if (item.report && droppableReportError(e.message)) { /* leave it */ }
+        else {
+          // Every other failure may pass on the next flush, so it retries
+          // OUTBOX_FAILURE_LIMIT times. After that the item is set aside: a
+          // refusal this extension does not know (`usage` above all) must not
+          // sit at the head of the queue forever, because every tool call
+          // flushes the outbox. The tool call that flushed it still succeeds,
+          // and the next tool result carries one line about the item.
+          item.failures = (item.failures || 0) + 1;
+          if (item.failures < OUTBOX_FAILURE_LIMIT) { this.save(ctx); throw e; }
+          this.setAside(item, e.message);
+          this.hint.outbox.shift(); this.save(ctx);
+          continue;
+        }
       }
       this.hint.outbox.shift(); this.save(ctx);
     }
     this.error = null;
+  }
+  /** Move one item that will not be recorded out of the queue and into the last
+   *  FAILED_OUTBOX_LIMIT set-aside entries of the state file, and queue the one
+   *  line the next tool result shows. Nothing is dropped silently: a hook the
+   *  ledger needed is visible the same way a report is. */
+  setAside(item, message) {
+    const entry = { at: new Date().toISOString(), attempt: item.attempt, failures: item.failures,
+      error: String(message ?? ""), ...(item.report ? { report: item.report } : { event: item.event }) };
+    this.hint.failed = [...(this.hint.failed || []), entry].slice(-FAILED_OUTBOX_LIMIT);
+    this.notice(setAsideNotice(item, message));
   }
   /** Queue one line for the next tool result. Display only: the state file
    *  keeps the facts. */

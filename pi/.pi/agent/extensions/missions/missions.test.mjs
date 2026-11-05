@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statS
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAPTAIN_AGENT, CommanderInbox, MissionBridge, WORKER_AGENT, askMessage, driverStatus, driverTask, droppableReportError, isJudge, judgeTask, missionContinues, missionToolBlock, quiescent, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
+import { CAPTAIN_AGENT, CommanderInbox, FAILED_OUTBOX_LIMIT, MissionBridge, OUTBOX_FAILURE_LIMIT, WORKER_AGENT, askMessage, driverStatus, driverTask, droppableReportError, isJudge, judgeTask, missionContinues, missionToolBlock, outboxErrorCode, quiescent, setAsideNotice, trackingFailureBlock, trooperLine, trooperName, trooperReport, trooperStatus } from "./core.mjs";
 import { actionForKey, buildPanelModel, checkpointArgs } from "./panel.mjs";
 import { missionLaunchConfig } from "../interactive-subagents/pi-extension/subagents/mission-launch.mjs";
 
@@ -247,7 +247,7 @@ async function fixture(t, checkpoint=false) {
   env.MISSION_TOKEN="unrelated-parent-token";env.MISSION_ATTEMPT="unrelated-parent-attempt";
   // The launch is the CLI's, so the fake covers what a session still asks
   // Herdr for: the workspaces and panes it binds on, and the desk's own split.
-  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportCalls:[], workspaces:[], calls:[] };
+  const f={ env, hookFailures:0, hookIDs:[], reportFailures:0, reportRefusal:null, showFailures:0, reportCalls:[], workspaces:[], calls:[] };
   const run=async(binary,args,options={})=>{
     f.calls.push({binary,args,env:options.env});
     if(binary==="herdr") {
@@ -274,14 +274,20 @@ async function fixture(t, checkpoint=false) {
       }
       return JSON.stringify({result});
     }
+    // A record the CLI cannot answer for: the session still runs, and the read
+    // that breaks is the one the gate would otherwise trust.
+    if(binary===bin && args.includes("show") && f.showFailures-->0)
+      return JSON.stringify({ok:false,error:{code:"not_found",message:"mission vanished"}});
     if(binary===bin && args.includes("hook")) {
       f.hookIDs.push(args[args.indexOf("--event-id")+1]);
       if(f.hookFailures-->0) throw Error("Temporary CLI failure");
     }
     // A trooper report rides `progress --actor`; the fixture can lose one call
-    // so the outbox retry is exercised against the real CLI.
+    // so the outbox retry is exercised against the real CLI, or refuse every
+    // call with one CLI error code so the set-aside path is exercised.
     if(binary===bin && args.includes("progress")) {
       f.reportCalls.push(args);
+      if(f.reportRefusal) return JSON.stringify({ok:false,error:{code:f.reportRefusal,message:"a judge progress needs --session-id naming the judge session"}});
       if(f.reportFailures-->0) throw Error("Temporary CLI failure");
     }
     return (await exec(binary,args,{encoding:"utf8",...options})).stdout;
@@ -521,6 +527,77 @@ test("a judge report with no session id is never queued and warns once", async t
   assert.deepEqual(f.bridge.takeNotices(),[]);
   await f.bridge.report(f.ctx,nameless);
   assert.deepEqual(f.bridge.takeNotices(),[],"a replayed completion warns once");
+});
+
+test("a report refused three times leaves the outbox for the failed list", async t => {
+  const f=outboxFixture(t,USAGE_REFUSAL);
+  assert.equal(OUTBOX_FAILURE_LIMIT,3);assert.equal(FAILED_OUTBOX_LIMIT,20);
+  assert.equal(outboxErrorCode("usage: a judge progress needs --session-id"),"usage");
+  assert.equal(outboxErrorCode("Mission CLI returned invalid JSON"),"Mission CLI returned invalid JSON");
+  const report=trooperReport(trooperDone("trooper-S01"));
+  f.bridge.hint.outbox.push({attempt:"attempt-1",report});
+  // A failure the extension has no rule for still retries while it may pass.
+  for(let i=1;i<OUTBOX_FAILURE_LIMIT;i++) await assert.rejects(f.bridge.flush(f.ctx),/usage: a judge progress/);
+  // The flush that sets it aside returns instead of failing the tool call.
+  await f.bridge.flush(f.ctx);
+  assert.equal(f.bridge.hint.outbox.length,0);
+  const saved=JSON.parse(readFileSync(f.file,"utf8"));
+  assert.equal(saved.outbox.length,0);assert.equal(saved.failed.length,1);
+  assert.equal(saved.failed[0].report.trooper,"trooper-S01");assert.equal(saved.failed[0].failures,OUTBOX_FAILURE_LIMIT);
+  assert.match(saved.failed[0].error,/^usage: /);
+  assert.deepEqual(f.bridge.takeNotices(),["1 report could not be recorded: trooper-S01 (usage)"]);
+  // The list is bounded: only the newest entries survive.
+  for(let i=0;i<FAILED_OUTBOX_LIMIT+5;i++) f.bridge.setAside({attempt:"attempt-1",report:{...report,id:"trooper-"+i}},`io_error: ${i}`);
+  assert.equal(f.bridge.hint.failed.length,FAILED_OUTBOX_LIMIT);
+  assert.equal(f.bridge.hint.failed.at(-1).error,"io_error: 24");
+});
+
+test("a hook refused three times leaves the outbox and says a hook was lost", async t => {
+  const io=()=>JSON.stringify({ok:false,error:{code:"io_error",message:"no such file"}});
+  const f=outboxFixture(t,io);
+  f.bridge.hint.outbox.push({attempt:"attempt-1",event:{id:"event-1",type:"tool-start",session_id:"existing-pi",
+    session_file:"/tmp/pi.jsonl",summary:"Tool call call-1"}});
+  for(let i=1;i<OUTBOX_FAILURE_LIMIT;i++) await assert.rejects(f.bridge.flush(f.ctx),/io_error: /);
+  await f.bridge.flush(f.ctx);
+  assert.equal(f.bridge.hint.outbox.length,0);
+  const saved=JSON.parse(readFileSync(f.file,"utf8"));
+  assert.equal(saved.failed.length,1);assert.equal(saved.failed[0].event.type,"tool-start");
+  // A lost hook is never dropped silently: the ledger needed it, so it surfaces.
+  assert.deepEqual(f.bridge.takeNotices(),["1 hook could not be recorded: tool-start (io_error)"]);
+});
+
+test("the tool call that sets an item aside succeeds and carries one line",needsCLI,async t=>{
+  const f=await fixture(t);
+  const factory=await loadFactory();
+  const events={},tools={};
+  const pi={on:(name,fn)=>{events[name]=fn},registerTool:tool=>{tools[tool.name]=tool},registerCommand:()=>{},sendMessage:()=>{}};
+  const ctx={...f.ctx,hasUI:true,ui:{notify:()=>{},setStatus:()=>{}}};
+  factory(pi,{env:f.env,run:f.run});
+  await events.session_start({},ctx);
+  const claim=await tools.mission.execute("attach",{action:"attach",handle:f.handle},null,null,ctx);
+  assert.equal(claim.isError,undefined,claim.content?.[0]?.text);
+  // The CLI refuses this report every time with an error the extension has no
+  // rule for: the incident's own `usage` refusal.
+  f.reportRefusal="usage";
+  await events.message_end({message:trooperDone("trooper-S01")},ctx);
+  const state=()=>JSON.parse(readFileSync(join(f.cache,readdirSync(f.cache).filter(n=>n.endsWith(".json"))[0]),"utf8"));
+  assert.equal(state().outbox.length,1);
+  // Two failed flushes still fail the editing tool call, exactly as before.
+  assert.equal((await events.tool_call({toolName:"write"},ctx)).block,true);
+  // The third sets the item aside, so the tool call runs.
+  assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
+  const flushed=state();
+  assert.equal(flushed.outbox.length,0);
+  assert.deepEqual(flushed.failed.map(x=>x.report.trooper),["trooper-S01"]);
+  // Its result keeps what the tool returned and adds the one line, once.
+  const result=await events.tool_result({toolCallId:"write-1",toolName:"write",isError:false,content:[{type:"text",text:"wrote"}],details:{path:"x"}},ctx);
+  assert.equal(result.content[0].text,"wrote");
+  // The patch names only the content: an omitted field keeps its value, so the
+  // tool's own details still reach the transcript.
+  assert.deepEqual(Object.keys(result),["content"]);
+  assert.equal(result.content.at(-1).text,"1 report could not be recorded: trooper-S01 (usage)");
+  assert.equal(await events.tool_result({toolCallId:"read-1",toolName:"read",isError:false,content:[{type:"text",text:"read"}]},ctx),undefined);
+  await events.session_shutdown({},ctx);
 });
 
 test("failed checks retain ownership and successful correction settles it",needsCLI,async t=>{
@@ -1345,12 +1422,12 @@ test("a broken tracking record blocks edits and warns on reads",needsCLI,async t
   factory(pi,{env:f.env,run:f.run});
   await events.session_start({},ctx);
   await tools.mission.execute("attach-call",{action:"attach",handle:f.handle},null,null,ctx);
-  // One lost hook leaves its retry in the outbox; every later flush fails, so
-  // the record this session reads never recovers.
+  // One lost hook leaves its retry in the outbox; the record this session reads
+  // never recovers, so every tool call reports the break.
   f.hookFailures=1;
   await events.tool_execution_start({toolName:"read",toolCallId:"lost"},ctx);
   assert.ok(notifications.some(n=>/Mission tracking: /.test(n.text)),"the lost hook is reported");
-  f.hookFailures=99;
+  f.showFailures=99;
   for(const toolName of ["bash","read","grep"]) assert.equal(await events.tool_call({toolName},ctx),undefined,`${toolName} runs while tracking is broken`);
   assert.ok(notifications.some(n=>n.tone==="warning"&&/Mission tracking: /.test(n.text)));
   for(const toolName of ["write","edit"]) {
@@ -1358,7 +1435,7 @@ test("a broken tracking record blocks edits and warns on reads",needsCLI,async t
     assert.equal(blocked.block,true,`${toolName} stays blocked`);assert.match(blocked.reason,/Mission tracking must recover before work continues/);
   }
   // A recovered record restores every tool again.
-  f.hookFailures=0;
+  f.showFailures=0;
   assert.equal(await events.tool_call({toolName:"write"},ctx),undefined);
   await events.session_shutdown({},ctx);
 });
