@@ -93,10 +93,12 @@ nix/modules/
 - a gc policy mirroring `nix/modules/macbook/default.nix:23-31`.
 
 `nix/modules/nixos/probe.nix` (S02) carries only: `networking.hostName = "probe"`,
-`boot.loader.grub.device = "/dev/nvme0n1"` with `efiSupport = false` (the Nitro
-root device the Ubuntu AMI boots from), and the probe user. It sets
-`fleet.services.enableUnits = false` for the same reason
-`nix/modules/remote/probe.nix:8-10` does.
+the UEFI boot setup (systemd-boot with `boot.loader.efi.canTouchEfiVariables =
+false`, because the EC2 Nitro firmware keeps no EFI variables; see "Probe
+proof" for the measurement), the two filesystems the hand-partitioned disk
+carries by label (`/` ext4 on label `nixos`, `/boot` the vfat ESP on label
+`ESP`), and the probe user. It sets `fleet.services.enableUnits = false` for the
+same reason `nix/modules/remote/probe.nix:8-10` does.
 
 The per-host modules for the two real hosts arrive with their cutovers, not with
 S02: `nix/modules/nixos/homelab.nix` owns `hardware.nvidia` (the RTX 3060 is
@@ -378,33 +380,89 @@ Why this one:
 - The same install command is the devbox cutover path (D3), so S03 rehearses the
   devbox install on a throwaway box.
 
-The S03 commands:
+The S03 commands. `nixos-anywhere` is **1.13.0**, revision
+`58132e1d1f813b845382a2aeca4203b18d2ac807` — `nix eval --raw
+github:nix-community/nixos-anywhere#packages.aarch64-darwin.default.version`
+prints the version; the tool itself has no `--version` flag. There is no `--disk`
+flag in that release (only `--disk-encryption-keys`; an unknown option is taken
+as the ssh host) and the flake carries no disko module, so the install is three
+commands and a hand partitioning step instead of one:
 
 ```sh
 # 1. a box that lives long enough for an OS install; no --nix, kexec replaces it
 just sandbox --minutes 90 --type t3.medium
 
+# The alias `scripts/sandbox` writes holds the address and the key. Read both
+# once; every command below is dialled as root, which bypasses that alias and
+# so needs the IdentityFile spelled out.
+probe_ip=$(ssh -G probe | awk '/^hostname/{print $2}')
+probe_key=$(ssh -G probe | awk '/^identityfile/{print $2}')
+
 # 2. nixos-anywhere wants root; the Ubuntu image's `ubuntu` user has sudo
 ssh probe 'sudo mkdir -p /root/.ssh && sudo cp ~/.ssh/authorized_keys /root/.ssh/ \
   && sudo chmod 700 /root/.ssh && sudo chmod 600 /root/.ssh/authorized_keys'
 
-# 3. install the S02 configuration over the running Ubuntu box
+# 3. kexec into the NixOS installer. The AMI's 6.x/7.x AWS kernels return
+# "Address not available" from kexec_file_load, so the installer is loaded with
+# the legacy kexec_load syscall instead.
 nix run github:nix-community/nixos-anywhere -- \
-  --flake .#probe --target-host root@"$(ssh -G probe | awk '/^hostname/{print $2}')" \
-  --disk /dev/nvme0n1 --build-on remote
+  --flake .#probe --target-host root@"$probe_ip" -i "$probe_key" \
+  --build-on remote --kexec-extra-flags '--kexec-syscall' --phases kexec
+
+# 4. partition by hand (the disko substitute): one GPT disk, a 512 MiB vfat ESP
+# at p1, one ext4 root at p2, both mounted from the installer. The labels are
+# what nix/modules/nixos/probe.nix mounts.
+ssh root@"$probe_ip" -i "$probe_key" bash -s <<'EOS'
+set -e
+wipefs -a /dev/nvme0n1
+parted -s /dev/nvme0n1 -- mklabel gpt \
+  mkpart ESP fat32 1MiB 513MiB set 1 esp on \
+  mkpart root ext4 513MiB 100%
+mkfs.vfat -F32 -n ESP /dev/nvme0n1p1
+mkfs.ext4 -L nixos /dev/nvme0n1p2
+# A fresh label is not in /dev/disk/by-label until udev has re-read the disk
+# (mounting too early fails with "Can't lookup blockdev").
+udevadm settle
+partprobe /dev/nvme0n1
+udevadm settle
+mount /dev/disk/by-label/nixos /mnt
+mkdir -p /mnt/boot
+mount /dev/disk/by-label/ESP /mnt/boot
+lsblk -f /dev/nvme0n1
+EOS
+
+# 5. install onto the mounted disk and reboot into it
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#probe --target-host root@"$probe_ip" -i "$probe_key" \
+  --build-on remote --phases install,reboot
 ```
 
 `--build-on remote` builds the closure on the kexec'd NixOS installer, so the
-aarch64 Mac needs no x86_64 builder for this step. `--disk /dev/nvme0n1` is the
-Nitro root device the Ubuntu AMI boots from; `nix/modules/nixos/probe.nix` uses
-the same device for grub. `t3.micro` and the default 30 minutes are too small for
-an install, which is why the command names `--minutes 90 --type t3.medium`.
+aarch64 Mac needs no x86_64 builder for this step. Phase 5 prints `installing the
+boot loader...` and then `Copied "…/systemd-bootx64.efi" to
+"/boot/EFI/BOOT/BOOTX64.EFI"`; the reboot that follows comes from the installed
+disk with no bootloader override on the command line. A new host key comes with
+the new system: `ssh-keygen -R "$probe_ip"` before the first login. `t3.micro` and the default 30 minutes are too small for an install, which
+is why the command names `--minutes 90 --type t3.medium`.
 
 Step 2 dials the Ubuntu image's `ubuntu` user, which is the login the sandbox
-writes into the alias. After step 3 the box runs the S02 configuration, and the
+writes into the alias. After step 5 the box runs the S02 configuration, and the
 account `mkNixos` manages there is `aviral` — so the `probe` alias needs `User
 aviral` (same hostname, same `IdentityFile`) for every later command and for the
 evidence below.
+
+Why UEFI, and why this loader: `scripts/sandbox` launches an Ubuntu AMI with
+`BootMode=uefi-preferred` and a hybrid layout (p14 BIOS boot + p15 ESP), and the
+kexec'd installer reports `/sys/firmware/efi/fw_platform_size = 64`. EC2's UEFI
+firmware persists no EFI variables, so a bootloader that relies on a `Boot####`
+entry does not survive its own boot. `boot.loader.systemd-boot` with
+`canTouchEfiVariables = false` writes the loader to the ESP's removable-fallback
+path (`bootctl --variables=no install` → `/EFI/BOOT/BOOTX64.EFI`) and needs no
+entry; grub needs `efiSupport = true` + `efiInstallAsRemovable = true` +
+`device = "nodev"` for the same effect, which is why systemd-boot is the one
+option here. The S03 attempt that installed legacy-BIOS grub
+(`efiSupport = false`, no ESP) did not boot until an out-of-repo override added
+those three lines and a `/boot` filesystem.
 
 ### Evidence S03 must capture
 
@@ -414,10 +472,10 @@ All of it in `artifacts/<attempt>/step-03.md`, with the git sha the probe ran:
 | --- | --- |
 | NixOS is running, and which release | `ssh probe 'nixos-version'` |
 | the configuration builds from the flake | `nix build .#nixosConfigurations.probe.config.system.build.toplevel` — store path, plus `nix path-info --json` or a package count for the closure |
-| idempotence | `ssh probe 'nixos-rebuild switch --flake .#probe'` twice, second run reports no changes |
-| the four tools resolve from the store | `ssh probe 'command -v lazygit herdr go node'` — every path under `/nix/store` |
-| dotfiles are stowed | `ssh probe 'readlink -f ~/.zshrc'` → `~/dotfiles/zsh/.zshrc`; `ssh probe 'stow --version'` |
-| one user service runs | `ssh probe 'systemctl --user start dotfiles-auto-sync'`, then `systemctl --user status dotfiles-auto-sync` and `journalctl --user -u dotfiles-auto-sync -n 20` |
+| idempotence | `ssh probe 'nixos-rebuild switch --flake .#probe'` twice, second run reports no changes. The checkout on the box must be a Git repo that *tracks* the NixOS modules: a flake path inside a repo the branch is not committed to fails with `Path 'nix/modules/nixos' in the repository … is not tracked by Git` |
+| the four tools resolve from the store | `ssh probe 'command -v lazygit herdr go node'` — every path under `/nix/store`. `command -v` alone shows `/etc/profiles/per-user/<user>/bin/…`, so read each one with `readlink -f` |
+| dotfiles are stowed | `ssh probe 'readlink -f ~/.zshrc'` → `~/dotfiles/zsh/.zshrc`; `ssh probe 'stow --version'`. Stow the checkout under test: `main` since #501 hands `zsh` to Home Manager, so a probe of an older revision stows `scripts/stow-packages` itself (`./install.sh --stow-only` from that revision) and never sees `main`'s list |
+| one user service runs | `ssh probe 'systemctl --user start dotfiles-auto-sync'` with no drop-in under `~/.config/systemd/user/*.d`, then `systemctl --user status dotfiles-auto-sync` and `journalctl --user -u dotfiles-auto-sync -n 20` |
 | nothing failed | `ssh probe 'systemctl --failed'` and `ssh probe 'systemctl --user --failed'` |
 | the box is gone | `scripts/sandbox list` shows no instance; the `aws ec2 terminate-instances` output and the instance id are recorded |
 
