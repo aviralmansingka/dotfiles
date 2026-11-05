@@ -3,14 +3,8 @@
     "core": {
       "description": "Essential terminal and development tools",
       "packages": [
-        "git",
-        "curl",
-        "wget",
         "zsh",
-        "tmux",
-        "neovim",
-        "stow",
-        "just"
+        "neovim"
       ]
     },
     "development": {
@@ -24,11 +18,8 @@
     "languages": {
       "description": "Programming language runtimes",
       "packages": [
-        "golang",
         "python3",
         "python3-pip",
-        "nodejs",
-        "npm",
         "bun",
         "rust",
         "luarocks"
@@ -37,20 +28,12 @@
     "tools": {
       "description": "Command-line utilities and productivity tools",
       "packages": [
-        "fd",
-        "ripgrep",
-        "fzf",
         "gh",
         "tree",
-        "yq",
-        "eza",
         "lazygit",
         "tig",
         "tuicr",
-        "starship",
-        "zoxide",
-        "direnv",
-        "jq"
+        "direnv"
       ]
     },
     "cloud": {
@@ -65,48 +48,36 @@
     },
     "python": {
       "description": "Python development tools",
-      "packages": [
-        "uv"
-      ]
+      "packages": []
     }
   },
   "package_mappings": {
     "ubuntu": {
-      "fd": "fd-find",
       "build-essential": "build-essential",
       "python3-pip": "python3-pip",
-      "golang": "golang-go",
       "awscli": "awscli",
       "bun": null,
       "rust": "cargo",
-      "tuicr": null,
-      "just": "just"
+      "tuicr": null
     },
     "alpine": {
-      "fd": "fd",
       "build-essential": null,
       "python3-pip": "py3-pip",
-      "golang": "go",
       "awscli": "aws-cli",
       "bun": null,
-      "tuicr": null,
-      "just": "just"
+      "tuicr": null
     },
     "macos": {
-      "fd": "fd",
       "build-essential": null,
       "python3-pip": null,
-      "golang": "go",
       "awscli": "awscli",
       "bun": "bun",
-      "neovim": null,
-      "just": "just"
+      "neovim": null
     }
   },
   "os_specific": {
     "ubuntu": {
       "additional": [
-        "fd-find",
         "build-essential"
       ]
     },
@@ -121,14 +92,6 @@
     }
   },
   "special_installations": {
-    "fzf": {
-      "ubuntu": "package",
-      "alpine": "package",
-      "macos": "package"
-    },
-    "eza": {
-      "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then EZA_ARCH=\"x86_64\"; else EZA_ARCH=\"aarch64\"; fi && wget -qO eza.tar.gz https://github.com/eza-community/eza/releases/latest/download/eza_${EZA_ARCH}-unknown-linux-gnu.tar.gz && tar -xzf eza.tar.gz && chmod +x eza && mv eza /usr/local/bin/eza && rm eza.tar.gz"
-    },
     "k9s": {
       "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then K9S_ARCH=\"amd64\"; else K9S_ARCH=\"arm64\"; fi && wget https://github.com/derailed/k9s/releases/latest/download/k9s_linux_${K9S_ARCH}.deb && apt install -y ./k9s_linux_${K9S_ARCH}.deb && rm k9s_linux_${K9S_ARCH}.deb"
     },
@@ -144,23 +107,8 @@
     "rust": {
       "ubuntu": "package"
     },
-    "uv": {
-      "ubuntu": "curl -LsSf https://astral.sh/uv/install.sh | sh && mv /root/.local/bin/uv /usr/local/bin/uv"
-    },
-    "yq": {
-      "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then YQ_ARCH=\"amd64\"; else YQ_ARCH=\"arm64\"; fi && wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${YQ_ARCH} && chmod +x /usr/local/bin/yq"
-    },
-    "starship": {
-      "ubuntu": "curl -sS https://starship.rs/install.sh | sh -s -- -y"
-    },
-    "zoxide": {
-      "ubuntu": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-    },
     "direnv": {
       "ubuntu": "curl -sfL https://direnv.net/install.sh | bash"
-    },
-    "jq": {
-      "ubuntu": "package"
     }
   },
   "casks": {
