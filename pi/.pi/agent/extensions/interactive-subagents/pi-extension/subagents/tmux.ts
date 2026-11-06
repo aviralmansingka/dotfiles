@@ -124,6 +124,10 @@ function rebalanceSurfaces(hintPane?: string): void {
 export interface SurfaceOptions {
   session?: string;
   cwd?: string;
+  /** Block to anchor a child beside. Rex floats children in this block's
+   *  window when the child stays in the anchor's session; tmux and Herdr
+   *  ignore it and use their own anchoring. */
+  anchor?: string;
 }
 
 /**
