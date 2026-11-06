@@ -102,13 +102,13 @@ H.run("markdown_reader_spec", function()
     "",
     "- [Offtake pack](https://app.notion.com/p/" .. string.rep("x", 90) .. ")",
   })
-  H.eq(reader.content_width(linked), #"- Offtake pack", "an inline link counts only its title")
+  H.eq(reader.content_width(linked), #"- Offtake pack" + 2, "an inline link counts its title plus the 2-cell icon")
 
   local wiki = prose_buf({ "See [[3_logs/2026-W30/backlog|Weekly Note]] now." })
-  H.eq(reader.content_width(wiki), #"See Weekly Note now.", "a wiki link alias counts, not the path")
+  H.eq(reader.content_width(wiki), #"See Weekly Note now." + 2, "a wiki link alias counts, not the path")
 
   local bare_wiki = prose_buf({ "See [[3_logs/2026-W30/backlog]] now." })
-  H.eq(reader.content_width(bare_wiki), #"See backlog now.", "a bare wiki link counts its last path segment")
+  H.eq(reader.content_width(bare_wiki), #"See backlog now." + 2, "a bare wiki link counts its last path segment")
 
   -- ── enable / close ──────────────────────────────────────────────────────
   vim.o.columns, vim.o.lines = 120, 40

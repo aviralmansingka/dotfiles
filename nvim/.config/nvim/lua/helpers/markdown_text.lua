@@ -1,17 +1,26 @@
 -- Markdown text measured as it renders. Link destinations do not occupy
--- visible columns, so width calculations count the title only.
+-- visible columns. Render-markdown draws a source icon and a space before
+-- every link title, so each link counts as that 2-cell icon plus the title.
+local ICON = "  " -- one glyph cell and one space
+
 local M = {}
 
 function M.display_text(line)
-  -- wiki links: keep the alias, else the target's last path segment
-  line = line:gsub("%[%[([^%]|]*)|([^%]]*)%]%]", "%2")
-  line = line:gsub("%[%[([^%]]*)%]%]", function(target)
-    return target:match("([^/]+)$") or target
+  -- wiki links: icon + alias, else icon + the target's last path segment
+  line = line:gsub("%[%[([^%]|]*)|([^%]]*)%]%]", function(_, alias)
+    return ICON .. alias
   end)
-  -- inline links and images: keep the bracketed text
-  line = line:gsub("!?%[([^%]]*)%]%b()", "%1")
-  -- reference links: keep the text
-  line = line:gsub("%[([^%]]*)%]%[[^%]]*%]", "%1")
+  line = line:gsub("%[%[([^%]]*)%]%]", function(target)
+    return ICON .. (target:match("([^/]+)$") or target)
+  end)
+  -- inline links and images: icon + the bracketed text
+  line = line:gsub("!?%[([^%]]*)%]%b()", function(title)
+    return ICON .. title
+  end)
+  -- reference links: icon + the text
+  line = line:gsub("%[([^%]]*)%]%[[^%]]*%]", function(title)
+    return ICON .. title
+  end)
   return line
 end
 
