@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>tb-vim demo</title>
+  <style>
+    body {
+      font: 15px/1.6 ui-serif, Georgia, serif;
+      max-width: 46rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #222;
+    }
+    h1 { font-size: 1.4rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .row a, .row button {
+      font: 13px ui-monospace, monospace;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      padding: 2px 8px;
+      background: #f6f6f6;
+      color: #0645ad;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    p { margin: 1.6rem 0; }
+    input { font: inherit; padding: 4px 6px; }
+  </style>
+
+  <h1>tb-vim demo page</h1>
+  <p>Press <b>?</b> for the key list. Press <b>f</b> for link hints.</p>
+
+  <div class="row" id="links"></div>
+
+  <p><input placeholder="type here to test insert guard" /></p>
+
+  <div id="body"></div>
+
+  <script>
+    const words =
+      "the quick brown fox jumps over the lazy dog while the terminal keeps painting pixels".split(" ");
+    const links = document.getElementById("links");
+    for (let i = 1; i <= 40; i++) {
+      const a = document.createElement("a");
+      a.href = `#link-${i}`;
+      a.textContent = `link ${i}`;
+      links.appendChild(a);
+    }
+    const body = document.getElementById("body");
+    for (let i = 1; i <= 60; i++) {
+      const p = document.createElement("p");
+      p.id = `link-${i}`;
+      p.textContent = `(${i}) ` + Array.from({ length: 26 }, (_, j) => words[(i + j) % words.length]).join(" ");
+      body.appendChild(p);
+    }
+  </script>
+</html>
