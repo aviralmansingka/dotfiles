@@ -7,11 +7,11 @@ customRules:
 config:
   # AV001 - Conceal-aware line length
   # Link destinations do not occupy visible columns.
-  # Matches the wrap width in after/ftplugin/markdown.lua (99), so every
-  # line stays strictly under the 100-column guide. Tables, fenced diagrams
-  # and link destinations stay exempt.
+  # Warns above 100 visible columns. The wrap in after/ftplugin/markdown.lua
+  # targets 99, so the 100th column stays free and every wrapped line passes.
+  # Tables, fenced diagrams and link destinations stay exempt.
   AV001:
-    line_length: 99
+    line_length: 100
 
   # Replaced by AV001 so formatting and diagnostics share one calculation.
   MD013: false
