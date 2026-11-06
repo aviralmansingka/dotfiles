@@ -105,8 +105,39 @@ H.run("markdown_wrap_spec", function()
   H.eq(out[1]:sub(-2), "  ", "the hard break keeps its trailing spaces")
   H.truthy(#out > 2, "the next paragraph still wraps")
 
+  -- a fence block ends at its own closing fence, and prose after it wraps
+  local fence = {
+    "```text",
+    "   map.md",
+    "```",
+    "",
+    "A paragraph after a fence with " .. string.rep("word ", 30) .. "end.",
+  }
+  out = format.format(fence, 60)
+  H.eq(out[1], "```text", "the opening fence stays")
+  H.eq(out[3], "```", "the closing fence stays")
+  H.truthy(#out > 4, "prose after the fence still wraps")
+
+  -- an unclosed fence runs to the end of the buffer, unwrapped
+  local open = { "```lua", string.rep("code ", 40) }
+  H.eq(dump(format.format(open, 60)), dump(open), "an unclosed fence passes through whole")
+
+  -- two fences do not swallow the prose between them
+  local pair = { "```a", "x", "```", string.rep("word ", 30), "```b", "y", "```" }
+  out = format.format(pair, 60)
+  H.eq(out[#out], "```", "the second fence closes")
+  H.truthy(#out > 7, "prose between fences wraps")
+
+  -- a pipe line without a delimiter row is prose and wraps
+  out = format.format({ "| " .. string.rep("cell ", 30) .. "|" }, 60)
+  H.truthy(#out > 1, "a lone pipe line wraps as prose")
+
+  -- a real table passes through whole
+  local table_doc = { "| a | b |", "|---|---|", "| " .. string.rep("cell ", 30) .. "| b |" }
+  H.eq(dump(format.format(table_doc, 60)), dump(table_doc), "a table with a delimiter row passes through")
+
   -- idempotent
-  local long = { "A paragraph with a [link](https://example.com/very/long/path) and " .. string.rep("word ", 40) }
+  local long = {"A paragraph with a [link](https://example.com/very/long/path) and " .. string.rep("word ", 40) }
   local once = format.format(long, 60)
   H.eq(dump(format.format(once, 60)), dump(once), "a second pass changes nothing")
 end)

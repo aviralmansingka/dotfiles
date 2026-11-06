@@ -16,8 +16,18 @@ local function is_heading(line)
   return line:match("^%s*#+%s") ~= nil
 end
 
-local function is_table(line)
+local function is_pipe(line)
   return line:match("^%s*|") ~= nil
+end
+
+--- A table starts at a pipe line and a delimiter row follows it. A lone pipe
+--- line is a paragraph, so it wraps like prose.
+local function table_start(lines, index)
+  if not is_pipe(lines[index]) then
+    return false
+  end
+  local separator = lines[index + 1]
+  return separator ~= nil and separator:match("^%s*|?%s*:?%-+[%s|:%-]*$") ~= nil
 end
 
 local function is_html(line)
@@ -98,16 +108,35 @@ function M.format(lines, width)
 
   while i <= n do
     local line = lines[i]
-    if is_blank(line) or is_heading(line) or is_table(line) or is_html(line) then
+    if is_blank(line) or is_heading(line) then
       out[#out + 1] = line
       i = i + 1
-    elseif is_fence(line) then
-      local fence = line:match("^%s*(```+)") or line:match("^%s*(~~~+)")
-      local close = fence:sub(1, 3)
-      repeat
+    elseif table_start(lines, i) then
+      -- a real table passes through as a block
+      while i <= n and not is_blank(lines[i]) and is_pipe(lines[i]) do
         out[#out + 1] = lines[i]
         i = i + 1
-      until i > n or (lines[i]:match("^%s*" .. close))
+      end
+    elseif is_html(line) then
+      -- an HTML block runs until a blank line, as CommonMark says
+      out[#out + 1] = line
+      i = i + 1
+      while i <= n and not is_blank(lines[i]) do
+        out[#out + 1] = lines[i]
+        i = i + 1
+      end
+    elseif is_fence(line) then
+      local fence = line:match("^%s*(```+)") or line:match("^%s*(~~~+)")
+      out[#out + 1] = line
+      i = i + 1
+      while i <= n do
+        local current = lines[i]
+        out[#out + 1] = current
+        i = i + 1
+        if current:match("^%s*" .. fence) then
+          break
+        end
+      end
     else
       local prefix, cont, content, kind = prefix_of(line)
       local chunks, words = {}, { content }
@@ -120,7 +149,7 @@ function M.format(lines, width)
 
       while i <= n and not br do
         local current = lines[i]
-        if is_blank(current) or is_heading(current) or is_table(current) or is_html(current) or is_fence(current) then
+        if is_blank(current) or is_heading(current) or is_pipe(current) or is_html(current) or is_fence(current) then
           break
         end
 
