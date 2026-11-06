@@ -1,6 +1,6 @@
 {
-  "defaultProvider": "fireworks",
-  "defaultModel": "accounts/fireworks/routers/deepseek-flash-latest",
+  "defaultProvider": "opengateway",
+  "defaultModel": "deepseek/deepseek-v4.1-flash-ultrafast",
   "defaultThinkingLevel": "max",
   "defaultTools": [
     "+tool_search",
