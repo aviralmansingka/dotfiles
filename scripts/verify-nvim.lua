@@ -4520,8 +4520,8 @@ local function validate_markdown_formatting()
       { stdin = vim.trim(string.rep("visible words ", 12)) .. "\n", text = true }
     )
     :wait()
-  if long_visible.code == 0 or not (long_visible.stderr or ""):find("AV001", 1, true) then
-    fail("overlong visible prose should report AV001:\n" .. (long_visible.stderr or ""))
+  if long_visible.code ~= 0 then
+    fail("line length is not linted; an overlong prose line must pass:\n" .. (long_visible.stderr or ""))
   end
 
   vim.api.nvim_buf_delete(buf, { force = true })

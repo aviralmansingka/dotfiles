@@ -1,19 +1,12 @@
 # Global markdownlint configuration
 # Symlinked to ~/.markdownlint-cli2.yaml via stow
-
-customRules:
-  - "./.markdownlint-rules/visual-line-length.cjs"
-
+#
+# Structural rules only: nothing here lints line length. The nvim wrap
+# (helpers/markdown_wrap) owns prose width and measures the rendered title,
+# so a long link destination never draws a warning.
 config:
-  # AV001 - Conceal-aware line length
-  # Link destinations do not occupy visible columns.
-  # Warns above 100 visible columns. The wrap in after/ftplugin/markdown.lua
-  # targets 99, so the 100th column stays free and every wrapped line passes.
-  # Tables, fenced diagrams and link destinations stay exempt.
-  AV001:
-    line_length: 100
-
-  # Replaced by AV001 so formatting and diagnostics share one calculation.
+  # MD013 - Line length
+  # Disabled: the wrap owns width, and linting it twice only fights itself.
   MD013: false
 
   # MD033 - Inline HTML

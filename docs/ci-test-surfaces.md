@@ -162,7 +162,7 @@ renderer PR):
 | X9 | Workflow structural lint | actionlint; no `paths` filter on trigger of a workflow owning a required check; gate on `needs.*.result`; teardown `if: always()` semantics | #175 (the fast-gate PR), #14/#16 |
 | X10 | Terraform offline checks | `fmt -check`, `validate`, no hardcoded `profile =`, OIDC trust scoping | #6/#7/#8 |
 | X11 | nvim headless smoke (NEW job; `verify-nvim` offline subset already exists — wire it) | keymaps registered (octo `<leader>O*` silent drop), augroups exist (Lazy `init` clobber), cwd_picker pure fns + highlight groups (#139/#140 both pure regressions), `agent_send` allow-list incl. `blocked`, `markdown_ansi` SGR parser, indent stance, mermaid fence walk | #37, #138–#140, #220, #99, #188, #181/#182 |
-| X12 | markdownlint fixture check | AV001 wraps at ≤99 visible columns, links untouched | #238 |
+| X12 | markdownlint config check | no line-length rule, MD013 off, no custom rule dir | #238 |
 | X13 | Config consumer-shape lint | gh-dash scope/template fields; herdr config.toml key allow-list (vendored); `.claude` settings no stale refs | #199, #156–#158, #8/#9 |
 | X14 | Attachment-leases verifiers (offline candidates) | phase contracts on repo fixtures | audit-wiring |
 

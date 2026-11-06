@@ -492,16 +492,8 @@ def check_ghdash_config():
 
 
 # --------------------------------------------------------------------------
-# X12 — markdownlint AV001 wrap contract
+# X12 — markdownlint carries no line-length rule
 # --------------------------------------------------------------------------
-
-LINK_DESTINATION_RE = re.compile(r"\]\([^)]*\)")
-
-
-def visible_length(line):
-    """Column count with link destinations concealed (AV001 semantics)."""
-    return len(LINK_DESTINATION_RE.sub("]()", line.rstrip()).rstrip())
-
 
 def check_markdownlint():
     rel_cfg = "nvim/.markdownlint-cli2.yaml"
@@ -513,92 +505,26 @@ def check_markdownlint():
         return False, [f"FAIL {rel_cfg}: does not parse as YAML: {exc}"]
 
     config = (cfg or {}).get("config") or {}
-    av001 = config.get("AV001")
-    if not isinstance(av001, dict) or av001.get("line_length") != 80:
+    if "AV001" in config:
         problems.append(
-            f"FAIL {rel_cfg}: config.AV001.line_length must be 80, got "
-            f"{av001!r} (#238)")
+            f"FAIL {rel_cfg}: config.AV001 must be gone; the nvim wrap owns "
+            f"line length and lint warns about none of it")
     if config.get("MD013") is not False:
         problems.append(
-            f"FAIL {rel_cfg}: MD013 must stay disabled (AV001 replaces it)")
-    rules = (cfg or {}).get("customRules") or []
-    if "./.markdownlint-rules/visual-line-length.cjs" not in rules:
+            f"FAIL {rel_cfg}: MD013 must stay disabled; nothing lints line "
+            f"length")
+    if (cfg or {}).get("customRules"):
         problems.append(
-            f"FAIL {rel_cfg}: customRules must load the AV001 rule")
-    if not (REPO / "nvim" / ".markdownlint-rules" / "visual-line-length.cjs").is_file():
-        problems.append("FAIL nvim/.markdownlint-rules/visual-line-length.cjs: "
-                        "custom rule file is missing")
+            f"FAIL {rel_cfg}: customRules must stay empty; the wrap rule is "
+            f"removed")
+    if (REPO / "nvim" / ".markdownlint-rules").exists():
+        problems.append(
+            "FAIL nvim/.markdownlint-rules: the unused AV001 rule dir must "
+            "stay deleted")
 
-    # The wrap guide in nvim must agree with AV001.
-    lua = (REPO / "nvim" / ".config" / "nvim" / "after" / "ftplugin"
-           / "markdown.lua").read_text()
-    tw = re.search(r"vim\.opt_local\.textwidth\s*=\s*(\d+)", lua)
-    cc = re.search(r'vim\.opt_local\.colorcolumn\s*=\s*"(\d+)"', lua)
-    if not tw or not cc:
-        problems.append(
-            "FAIL nvim/.config/nvim/after/ftplugin/markdown.lua: wrap guide "
-            "(textwidth/colorcolumn) not found")
-    elif int(tw.group(1)) != 80 or int(cc.group(1)) != 80:
-        problems.append(
-            f"FAIL markdown.lua: wrap guide is textwidth={tw.group(1)} "
-            f"colorcolumn={cc.group(1)}; both must match AV001's 80 (#238)")
     if problems:
         return False, problems
-    return True, ["AV001 wraps at 80 and matches the nvim wrap guide "
-                  "(textwidth 80, colorcolumn 80)"]
-
-
-def check_markdownlint_fix():
-    """Behavioral half of X12. Runs the real fixer on a fixture when the
-    binary exists; SKIPs with a message otherwise (CI provisioning
-    decides, and a missing tool never hangs or fails the lane)."""
-    binary = shutil.which("markdownlint-cli2")
-    if not binary:
-        return "SKIP", ["markdownlint-cli2 is not on PATH; the fixture fix "
-                        "check is skipped (CI decides provisioning)"]
-    fixture_prose = (
-        "This paragraph runs past the eighty column limit on purpose so the "
-        "fixer must wrap it into several shorter lines that each stay within "
-        "the visible limit that the rule keeps.")
-    destination = ("https://example.com/a/destination/that/alone/exceeds/"
-                   "eighty/visible/columns/by/a/wide/margin/untouched")
-    fixture_link = f"A line with a [short label]({destination}) and text."
-    problems = []
-    with tempfile.TemporaryDirectory(prefix="repo-config-mdlint-") as tmp:
-        tmpdir = Path(tmp)
-        (tmpdir / ".markdownlint-cli2.yaml").write_bytes(
-            (REPO / "nvim" / ".markdownlint-cli2.yaml").read_bytes())
-        shutil.copytree(REPO / "nvim" / ".markdownlint-rules",
-                        tmpdir / ".markdownlint-rules")
-        fixture = tmpdir / "fixture.md"
-        fixture.write_text(f"{fixture_prose}\n\n{fixture_link}\n")
-        out = subprocess.run(
-            [binary, "--fix", "fixture.md"],
-            cwd=tmpdir, capture_output=True, text=True, timeout=60,
-        )
-        if out.returncode != 0:
-            return False, [f"FAIL markdownlint fixture: markdownlint-cli2 "
-                           f"--fix exited {out.returncode}: "
-                           f"{(out.stdout + out.stderr).strip()[:300]}"]
-        fixed = fixture.read_text()
-        for lineno, line in enumerate(fixed.split("\n"), start=1):
-            if line.strip() and visible_length(line) > 80:
-                problems.append(
-                    f"FAIL markdownlint fixture line {lineno}: "
-                    f"{visible_length(line)} visible columns (> 80) after "
-                    f"--fix (#238)")
-        if destination not in fixed:
-            problems.append(
-                "FAIL markdownlint fixture: --fix changed the long link "
-                "destination; destinations must stay untouched (#238)")
-        if fixed.count("\n") <= fixture_prose.count("\n") + 2:
-            problems.append(
-                "FAIL markdownlint fixture: the over-long paragraph was not "
-                "wrapped by --fix")
-    if problems:
-        return False, problems
-    return True, ["--fix wraps the fixture to <= 80 visible columns and "
-                  "leaves the long link destination untouched"]
+    return True, ["no line-length rule; MD013 disabled; no custom rule dir"]
 
 
 # --------------------------------------------------------------------------
@@ -768,7 +694,6 @@ CHECKS = [
     ("X8 install-stow", check_install_stow),
     ("X8b gh-dash-config", check_ghdash_config),
     ("X12 markdownlint-config", check_markdownlint),
-    ("X12 markdownlint-fix", check_markdownlint_fix),
     ("X13 pi-settings", check_pi_settings),
     ("X13 herdr-config", check_herdr_config),
     ("X13 brewfile-deps", check_brewfile_deps),
