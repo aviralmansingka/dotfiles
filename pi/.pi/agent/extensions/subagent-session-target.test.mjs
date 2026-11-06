@@ -38,12 +38,13 @@ function fakeRex(options = {}) {
 	});
 	const newLayer = options.layerFails
 		? 'exit 1'
-		: `printf '%s' '{"block_ids":["block:child"]}'`;
+		: `printf '%s' '{"block_ids":["block:child"],"layer_id":"layer:new"}'`;
 	writeFileSync(rex, `#!/bin/sh
 printf '%s\\n' "$*" >> '${log}'
 case "$*" in
   *"ls --json"*) printf '%s' '{"sessions":[{"session_id":"session:mission","label":"mission-rex-army"}]}' ;;
   *"api call session.new_layer"*) ${newLayer} ;;
+  *"api call session.set_layer_state"*) printf '%s' '{"revision":3}' ;;
   *"api call session.close_layer"*) printf '%s' '{}' ;;
   *"session inspect"*) printf '%s' '${view}' ;;
   *"block inspect"*) printf '%s' '{"block":{"window_id":"window:anchor"}}' ;;
@@ -87,6 +88,9 @@ test("a child floats in the target session's active window", () => {
 		assert.match(created, /\/worktree/);
 		assert.match(created, /π trooper-S03/);
 		assert.ok(!fake.calls().some(line => line.includes("window new")), "a tab was created too");
+		const minimized = fake.calls().find(line => line.includes("session.set_layer_state"));
+		assert.ok(minimized, "the child was not minimized");
+		assert.match(minimized, /minimized/);
 	});
 });
 

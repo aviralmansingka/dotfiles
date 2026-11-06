@@ -350,9 +350,14 @@ const LAYER_BASE = 0.08;
 const LAYER_STEP = 0.04;
 const LAYER_STEPS = 6;
 
+/** A floated child opens minimized: its program runs, the human's view keeps
+ *  its focus. Un-minimize restores it to the cascade position. */
+const MINIMIZE_ON_CREATE = true;
+
 interface RexLayer {
   layer_id?: unknown;
   kind?: unknown;
+  state?: unknown;
   bounds?: unknown;
   blocks?: Array<{ block_id?: unknown }>;
 }
@@ -400,7 +405,10 @@ function nextLayerBounds(view: RexView | null, windowId: string): {
   h: number;
 } {
   const layers = windowById(view, windowId)?.layers ?? [];
-  const floating = layers.filter((layer) => layer.kind === "floating").length;
+  // Only a normal layer is visible, so only it can take the next offset.
+  const floating = layers.filter(
+    (layer) => layer.kind === "floating" && layer.state !== "minimized",
+  ).length;
   const step = LAYER_STEP * (floating % LAYER_STEPS);
   return { x: LAYER_BASE + step, y: LAYER_BASE + step, w: LAYER_W, h: LAYER_H };
 }
@@ -489,9 +497,23 @@ function createFloatingLayer(
         layout: { block },
       }),
     ]);
-    const parsed = JSON.parse(out) as { block_ids?: unknown };
+    const parsed = JSON.parse(out) as { block_ids?: unknown; layer_id?: unknown };
     const created = Array.isArray(parsed.block_ids) ? parsed.block_ids[0] : undefined;
-    return typeof created === "string" && created !== "" ? created : null;
+    if (typeof created !== "string" || created === "") return null;
+    const layerId = parsed.layer_id;
+    if (MINIMIZE_ON_CREATE && typeof layerId === "string" && layerId !== "") {
+      try {
+        rexSync([
+          "api",
+          "call",
+          "session.set_layer_state",
+          JSON.stringify({ session_id: session, layer_id: layerId, state: "minimized" }),
+        ]);
+      } catch {
+        // The child runs either way; a failed minimize only leaves it open.
+      }
+    }
+    return created;
   } catch {
     return null;
   }
