@@ -36,6 +36,14 @@ return {
           return { "--prose-wrap", "never" }
         end,
       },
+      -- Markdown prose wraps by the width a reader sees: link destinations do
+      -- not count. The script masks destinations, runs Prettier, then restores
+      -- them. Keep the plain `prettier` formatter for other projects and tests.
+      markdown_prettier = {
+        command = "node",
+        args = { vim.fn.stdpath("config") .. "/scripts/format-markdown.mjs", "$FILENAME" },
+        stdin = true,
+      },
       ["markdownlint-cli2"] = {
         prepend_args = { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml") },
         condition = function()
@@ -68,7 +76,7 @@ return {
       },
     },
     formatters_by_ft = {
-      markdown = { "prettier", "markdownlint-cli2" },
+      markdown = { "markdown_prettier", "markdownlint-cli2" },
       lua = { "stylua" },
       java = { "google-java-format" },
       go = { "goimports", "gofumpt" },

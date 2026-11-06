@@ -188,6 +188,9 @@ H.run("plugin_configs/conform (#31)", function()
   -- prettier prepend_args discovery, exercised against a fixture tree.
   local pre = opts.formatters.prettier.prepend_args
   H.eq(type(pre), "function", "prettier prepend_args is the discovery function")
+  local visible = opts.formatters.markdown_prettier
+  H.truthy(visible and visible.stdin, "markdown_prettier reads the buffer on stdin")
+  H.eq(visible.command, "node", "markdown_prettier runs the masking script with node")
   local tmp = vim.fn.tempname() .. "-plugin-configs"
   vim.fn.mkdir(tmp, "p")
   local function mksub(name)
@@ -239,7 +242,7 @@ H.run("plugin_configs/conform (#31)", function()
   -- Filetype gates: listed types get their formatter chain; non-listed
   -- types return nil (no formatter sneaks in).
   local fbf = opts.formatters_by_ft
-  H.eq(fbf.markdown, { "prettier", "markdownlint-cli2" }, "markdown chain")
+  H.eq(fbf.markdown, { "markdown_prettier", "markdownlint-cli2" }, "markdown chain wraps by visible width")
   H.eq(fbf.lua, { "stylua" }, "lua chain")
   H.eq(fbf.java, { "google-java-format" }, "java chain")
   H.eq(fbf.go, { "goimports", "gofumpt" }, "go chain")
