@@ -1,10 +1,17 @@
 /**
- * Rex surface layer — tab and block control via the `rex` CLI.
+ * Rex surface layer — tab, floating-layer and block control via `rex`.
  *
  * Mirrors the export contract of ./tmux.ts and ./herdr.ts so index.ts can
- * target any of the three through ./surface.ts. Each launched subagent gets a
- * labeled, unfocused Rex tab; the rest of the extension addresses that tab
- * through its root block id (e.g. `block:01a1...`), which is Rex's pane.
+ * target any of the three through ./surface.ts. A launched subagent floats in
+ * a layer over its parent's window, so the captain keeps the work in sight
+ * without opening a tab per child. The rest of the extension addresses the
+ * child by its block id (e.g. `block:01a1...`), which is Rex's pane.
+ *
+ * A floating layer belongs to one window. When the child runs in the caller's
+ * session, that window is the anchor block's window. When the child runs in
+ * another session (a mission session), it floats in that session's active
+ * window instead. A server that refuses layers falls back to a tab, so a
+ * subagent still launches.
  *
  * Rex does not set a TERM the way tmux does, so this module never infers
  * availability from TERM. `./surface.ts` uses TERM only to break a tie when
@@ -337,17 +344,166 @@ export function createSession(
 
 // ── Surface primitives ──
 
+const LAYER_W = 0.62;
+const LAYER_H = 0.55;
+const LAYER_BASE = 0.08;
+const LAYER_STEP = 0.04;
+const LAYER_STEPS = 6;
+
+interface RexLayer {
+  layer_id?: unknown;
+  kind?: unknown;
+  bounds?: unknown;
+  blocks?: Array<{ block_id?: unknown }>;
+}
+
+interface RexWindow {
+  window_id?: unknown;
+  layers?: RexLayer[];
+}
+
+interface RexView {
+  active_window_id?: unknown;
+  windows?: RexWindow[];
+}
+
+function viewOf(sessionId: string): RexView | null {
+  return rexJsonOrNull<RexView>(["session", "inspect", sessionId, "--json"]);
+}
+
+function windowById(view: RexView | null, windowId: string): RexWindow | null {
+  return (view?.windows ?? []).find((w) => w.window_id === windowId) ?? null;
+}
+
+/** The window a block sits in, scoped to the session this module knows. */
+function windowOfBlock(blockId: string): string | null {
+  const info = rexJsonOrNull<{ block?: { window_id?: unknown } }>([
+    "block",
+    "inspect",
+    ...blockArgs(blockId),
+    blockId,
+    "--json",
+  ]);
+  const id = info?.block?.window_id;
+  return typeof id === "string" && id !== "" ? id : null;
+}
+
 /**
- * Create a new tab for a subagent, anchored to nothing: Rex tabs are
- * session-scoped, so a new tab follows the agent the way a Herdr tab does.
- * The tab is created unfocused so the captain keeps their current view.
- * The π prefix keeps pi's glyph in the Rex tab header, because a named
- * window shows its label instead of the terminal title.
+ * Where the next floating child sits. The server does not offset layers, so
+ * every child would land on top of the last one; stepping by a fixed amount
+ * keeps each one reachable, and wraps back to the base corner.
+ */
+function nextLayerBounds(view: RexView | null, windowId: string): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
+  const layers = windowById(view, windowId)?.layers ?? [];
+  const floating = layers.filter((layer) => layer.kind === "floating").length;
+  const step = LAYER_STEP * (floating % LAYER_STEPS);
+  return { x: LAYER_BASE + step, y: LAYER_BASE + step, w: LAYER_W, h: LAYER_H };
+}
+
+/** The layer that holds a block, with the kind the server reports. */
+function layerOfBlock(
+  blockId: string,
+): { session: string; layerId: string; kind: string } | null {
+  const session = blockSessions.get(blockId) ?? process.env.REX_SESSION?.trim();
+  if (!session) return null;
+  const windowId = windowOfBlock(blockId);
+  if (!windowId) return null;
+  const view = viewOf(session);
+  for (const layer of windowById(view, windowId)?.layers ?? []) {
+    const holds = (layer.blocks ?? []).some((block) => block.block_id === blockId);
+    if (holds && typeof layer.layer_id === "string" && layer.layer_id !== "") {
+      return {
+        session,
+        layerId: layer.layer_id,
+        kind: typeof layer.kind === "string" ? layer.kind : "",
+      };
+    }
+  }
+  return null;
+}
+
+/** Close the floating layer that holds a block. False when it is not floating. */
+function closeFloatingLayer(blockId: string): boolean {
+  const layer = layerOfBlock(blockId);
+  if (!layer || layer.kind !== "floating") return false;
+  try {
+    rexSync([
+      "api",
+      "call",
+      "session.close_layer",
+      JSON.stringify({ session_id: layer.session, layer_id: layer.layerId }),
+    ]);
+    return true;
+  } catch {
+    // Fall through so the caller closes the block itself.
+    return false;
+  }
+}
+
+/**
+ * The window that hosts a child's floating layer. A child in the anchor's
+ * session floats over the anchor's window; a child routed to another session
+ * floats over that session's active window.
+ */
+function floatingWindowFor(session: string, anchor: string | null): string | null {
+  const view = viewOf(session);
+  if (anchor) {
+    const anchorSession = blockSessions.get(anchor) ?? process.env.REX_SESSION?.trim();
+    if (anchorSession === session) {
+      const windowId = windowOfBlock(anchor);
+      if (windowId && windowById(view, windowId)) return windowId;
+    }
+  }
+  const active = view?.active_window_id;
+  return typeof active === "string" && active !== "" ? active : null;
+}
+
+/** Create one floating layer. Null when the server refuses the call. */
+function createFloatingLayer(
+  session: string,
+  windowId: string,
+  label: string,
+  cwd: string | null,
+): string | null {
+  const bounds = nextLayerBounds(viewOf(session), windowId);
+  const block: Record<string, unknown> = {
+    flavor: "com.superlogical.terminal.shell",
+    label,
+  };
+  if (cwd) block.options = { cwd };
+  try {
+    const out = rexSync([
+      "api",
+      "call",
+      "session.new_layer",
+      JSON.stringify({
+        session_id: session,
+        window_id: windowId,
+        bounds,
+        focus: false,
+        layout: { block },
+      }),
+    ]);
+    const parsed = JSON.parse(out) as { block_ids?: unknown };
+    const created = Array.isArray(parsed.block_ids) ? parsed.block_ids[0] : undefined;
+    return typeof created === "string" && created !== "" ? created : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a new tab for a subagent. Kept for callers that explicitly want a
+ * tab; subagents now float (see createSurface).
  *
  * Returns the new tab's root block id (e.g. `block:01a1...`).
  */
-export function createSurface(name: string, options?: SurfaceOptions): string {
-  requireRex();
+function createTabSurface(name: string, options?: SurfaceOptions): string {
   const label = `π ${sanitizeLabel(name)}`;
   const session = childSessionId(options?.session);
   const cwd = childCwd(options?.cwd);
@@ -363,6 +519,35 @@ export function createSurface(name: string, options?: SurfaceOptions): string {
   // Later reads and sends resolve a block inside one session.
   if (session) rememberBlock(created, session);
   return created;
+}
+
+/**
+ * Create a floating child surface anchored to `options.anchor` (default: this
+ * process's block), so a captain's children stay in the captain's window.
+ *
+ * Returns the new block id (e.g. `block:01a1...`).
+ */
+export function createSurface(name: string, options?: SurfaceOptions): string {
+  requireRex();
+  const label = `π ${sanitizeLabel(name)}`;
+  const session = childSessionId(options?.session);
+  const cwd = childCwd(options?.cwd);
+  const anchor = options?.anchor ?? process.env.REX_BLOCK?.trim() ?? null;
+
+  if (session) {
+    const windowId = floatingWindowFor(session, anchor && anchor !== "" ? anchor : null);
+    if (windowId) {
+      const created = createFloatingLayer(session, windowId, label, cwd);
+      if (created) {
+        rememberBlock(created, session);
+        return created;
+      }
+    }
+  }
+
+  // No window to float over, or the server refused the layer: a tab still runs
+  // the child, so a launch never fails for want of a layer.
+  return createTabSurface(name, options);
 }
 
 /**
@@ -494,17 +679,111 @@ export async function readScreenAsync(surface: string, lines = 50): Promise<stri
   return tailLines(out, lines);
 }
 
-/** Close a block. */
-export function closeSurface(surface: string): void {
-  requireRex();
-  rexSync(["block", "close", ...scopeArgs(surface), surface]);
+/**
+ * The state a program reported through OSC 7501, or null when nothing
+ * reported. pi reports `app=pi`, so its state is the readiness signal Rex
+ * offers in place of an agent registry.
+ */
+async function readProgramState(
+  blockId: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      "rex",
+      ["block", "call", ...blockArgs(blockId), "program_status"],
+      { encoding: "utf8", signal, maxBuffer: 8 * 1024 * 1024 },
+    );
+    const trimmed = stdout.trim();
+    if (!trimmed) return null;
+    const records =
+      (JSON.parse(trimmed) as { records?: Array<{ app?: string; state?: string }> })
+        .records ?? [];
+    return records.find((record) => record.app === "pi")?.state ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Close the whole tab holding a block, so sibling panes close with it.
- * Best-effort, with a plain block close as the fallback.
+ * Wait until the pi running in a block reports that it is at its prompt.
+ * Mirrors ./herdr.ts: idle means ready, blocked fails the launch, and the
+ * done sentinel means the child exited before it could take the prompt.
+ */
+export async function waitForAgentReady(
+  surface: string,
+  signal?: AbortSignal,
+  timeoutMs = 30_000,
+): Promise<void> {
+  requireRex();
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    signal?.throwIfAborted();
+    const state = await readProgramState(surface, signal);
+    if (state === "idle" || state === "done") return;
+    if (state === "blocked") {
+      throw new Error(`Subagent in ${surface} was blocked during startup`);
+    }
+    const screen = await readScreenAsync(surface, 5);
+    const exited = screen.match(/__SUBAGENT_DONE_(\d+)__/);
+    if (exited) {
+      throw new Error(
+        `Subagent in ${surface} exited with code ${exited[1]} before becoming ready`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+
+  throw new Error(`Timed out waiting for subagent in ${surface} to become ready`);
+}
+
+/**
+ * Submit a prompt after waitForAgentReady. Bracketed paste keeps a multi-line
+ * brief from submitting one line at a time; Enter submits the whole paste.
+ */
+export function sendAgentPrompt(surface: string, prompt: string): void {
+  requireRex();
+  const pasted = `\u001b[200~${prompt.replaceAll("\u001b[201~", "")}\u001b[201~`;
+  rexSync(["send", ...blockArgs(surface), "--", pasted]);
+  rexSync(["send-key", ...blockArgs(surface), "enter"]);
+}
+
+/** Close a block, or the floating layer that holds it. */
+export function closeSurface(surface: string): void {
+  requireRex();
+  if (closeFloatingLayer(surface)) return;
+  rexSync(["block", "close", ...scopeArgs(surface), surface]);
+}
+
+/** True when the block is the only block of its window's tiled layer. */
+function isTiledRoot(blockId: string): boolean {
+  const session = blockSessions.get(blockId) ?? process.env.REX_SESSION?.trim();
+  if (!session) return false;
+  const windowId = windowOfBlock(blockId);
+  if (!windowId) return false;
+  const tiled = (windowById(viewOf(session), windowId)?.layers ?? []).find(
+    (layer) => layer.kind === "tiled",
+  );
+  const blocks = tiled?.blocks ?? [];
+  return blocks.length === 1 && blocks[0]?.block_id === blockId;
+}
+
+/**
+ * Close the surface a subagent lived in: its floating layer when it had one,
+ * otherwise the tab that was created for it. Best-effort, with a plain block
+ * close as the fallback. A block that shares a window with the human never
+ * closes that window.
  */
 export function closeTabForPane(blockId: string): void {
+  const layer = layerOfBlock(blockId);
+  if (layer?.kind === "floating") {
+    if (closeFloatingLayer(blockId)) return;
+    try {
+      rexSync(["block", "close", ...scopeArgs(blockId), blockId]);
+    } catch {}
+    return;
+  }
   const inspected = rexJsonOrNull<{ block?: { window_id?: string } }>([
     "block",
     "inspect",
@@ -513,7 +792,7 @@ export function closeTabForPane(blockId: string): void {
     "--json",
   ]);
   const windowId = inspected?.block?.window_id;
-  if (typeof windowId === "string" && windowId !== "") {
+  if (typeof windowId === "string" && windowId !== "" && isTiledRoot(blockId)) {
     try {
       rexSync(["window", "close", ...scopeArgs(blockId), windowId]);
       return;

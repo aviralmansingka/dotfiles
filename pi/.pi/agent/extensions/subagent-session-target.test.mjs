@@ -11,16 +11,43 @@ const require = createRequire(import.meta.url);
 const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 
-/** A fake rex that logs argv and answers session lookup and tab creation. */
-function fakeRex() {
+/**
+ * A fake rex that logs argv and answers session lookup, block inspection,
+ * floating-layer creation, tab creation and splits. `layerFails` makes
+ * `session.new_layer` exit 1 so the tab fallback can be exercised.
+ */
+function fakeRex(options = {}) {
 	const dir = mkdtempSync(join(tmpdir(), "fake-rex-"));
 	const log = join(dir, "argv.log");
 	const rex = join(dir, "rex");
+	const view = JSON.stringify({
+		active_window_id: "window:active",
+		windows: [
+			{
+				window_id: "window:anchor",
+				layers: [
+					{ layer_id: "layer:tiled", kind: "tiled", blocks: [{ block_id: "block:army" }] },
+					{ layer_id: "layer:float", kind: "floating", blocks: [{ block_id: "block:child" }] },
+				],
+			},
+			{
+				window_id: "window:active",
+				layers: [{ layer_id: "layer:other", kind: "tiled", blocks: [{ block_id: "block:root" }] }],
+			},
+		],
+	});
+	const newLayer = options.layerFails
+		? 'exit 1'
+		: `printf '%s' '{"block_ids":["block:child"]}'`;
 	writeFileSync(rex, `#!/bin/sh
 printf '%s\\n' "$*" >> '${log}'
 case "$*" in
   *"ls --json"*) printf '%s' '{"sessions":[{"session_id":"session:mission","label":"mission-rex-army"}]}' ;;
-  *"window new"*) printf '%s' '{"block_ids":["block:child"]}' ;;
+  *"api call session.new_layer"*) ${newLayer} ;;
+  *"api call session.close_layer"*) printf '%s' '{}' ;;
+  *"session inspect"*) printf '%s' '${view}' ;;
+  *"block inspect"*) printf '%s' '{"block":{"window_id":"window:anchor"}}' ;;
+  *"window new"*) printf '%s' '{"block_ids":["block:tabchild"]}' ;;
   *"split"*) printf '%s' '{"block_ids":["block:child"]}' ;;
 esac
 `);
@@ -48,28 +75,53 @@ const base = {
 	PI_SUBAGENT_CWD: "/worktree",
 };
 
-test("a child tab follows PI_SUBAGENT_SESSION and the child cwd", () => {
+test("a child floats in the target session's active window", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
 	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-rex-army" }, () => {
 		assert.equal(rex.createSurface("trooper-S03"), "block:child");
-		const created = fake.calls().find(line => line.includes("window new"));
-		assert.ok(created, "no window new call was made");
-		assert.match(created, /-s session:mission/);
-		assert.match(created, /-c \/worktree/);
+		const created = fake.calls().find(line => line.includes("session.new_layer"));
+		assert.ok(created, "no session.new_layer call was made");
+		assert.match(created, /session:mission/);
+		assert.match(created, /window:active/);
+		assert.match(created, /\/worktree/);
 		assert.match(created, /π trooper-S03/);
+		assert.ok(!fake.calls().some(line => line.includes("window new")), "a tab was created too");
 	});
 });
 
-test("without PI_SUBAGENT_SESSION a child stays in the caller's session", () => {
+test("a child in the caller's session floats over the anchor's window", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
 	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}` }, () => {
 		delete process.env.PI_SUBAGENT_SESSION;
 		rex.createSurface("trooper-S04");
+		const created = fake.calls().find(line => line.includes("session.new_layer"));
+		assert.ok(created, "no session.new_layer call was made");
+		assert.match(created, /session:army/);
+		assert.match(created, /window:anchor/);
+	});
+});
+
+test("a refused layer falls back to a tab", () => {
+	const fake = fakeRex({ layerFails: true });
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}` }, () => {
+		delete process.env.PI_SUBAGENT_SESSION;
+		assert.equal(rex.createSurface("trooper-S08"), "block:tabchild");
 		const created = fake.calls().find(line => line.includes("window new"));
-		assert.ok(created, "no window new call was made");
-		assert.match(created, /-s session:army/);
+		assert.ok(created, "no fallback tab was created");
+	});
+});
+
+test("closing a floating child closes its layer, not the tab", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}` }, () => {
+		rex.closeTabForPane("block:child");
+		const calls = fake.calls();
+		assert.ok(calls.some(line => line.includes("session.close_layer")), "no layer close");
+		assert.ok(!calls.some(line => line.includes("window close")), "the tab was closed");
 	});
 });
 
@@ -90,10 +142,10 @@ test("an explicit session argument wins over the environment", () => {
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
 	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-from-env" }, () => {
 		rex.createSurface("trooper-S06", { session: "mission-rex-army", cwd: "/explicit" });
-		const created = fake.calls().find(line => line.includes("window new"));
-		assert.ok(created, "no window new call was made");
-		assert.match(created, /-s session:mission/);
-		assert.match(created, /-c \/explicit/);
+		const created = fake.calls().find(line => line.includes("session.new_layer"));
+		assert.ok(created, "no session.new_layer call was made");
+		assert.match(created, /session:mission/);
+		assert.match(created, /\/explicit/);
 	});
 });
 
@@ -106,9 +158,9 @@ test("an explicit target session carries the child's later sends and captures", 
 		delete process.env.PI_SUBAGENT_SESSION;
 		const child = rex.createSurface("trooper-S05", { session: "mission-rex-army" });
 		assert.equal(child, "block:child");
-		const created = fake.calls().find(line => line.includes("window new"));
-		assert.match(created, /-s session:mission/);
-		assert.doesNotMatch(created, /-s session:army/);
+		const created = fake.calls().find(line => line.includes("session.new_layer"));
+		assert.match(created, /session:mission/);
+		assert.doesNotMatch(created, /session:army/);
 		// Every later call the captain makes on that block resolves inside the
 		// session that owns it: rex refuses a block target from another session.
 		rex.sendCommand(child, "echo hello");

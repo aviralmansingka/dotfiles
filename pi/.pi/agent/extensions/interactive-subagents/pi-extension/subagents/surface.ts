@@ -114,8 +114,20 @@ export const probePaneAgent = (
 /** Shell quoting is identical on every surface; no dispatch needed. */
 export const shellEscape = tmux.shellEscape;
 
-export const waitForAgentReady = herdr.waitForAgentReady;
-export const sendAgentPrompt = herdr.sendAgentPrompt;
+/** Readiness and prompt submission follow the selected surface: Rex reads
+ *  OSC 7501 program status, Herdr reads its agent registry. */
+export const waitForAgentReady = (
+  surface: string,
+  signal?: AbortSignal,
+  timeoutMs?: number,
+): Promise<void> =>
+  selectSurface() === "rex"
+    ? rex.waitForAgentReady(surface, signal, timeoutMs)
+    : herdr.waitForAgentReady(surface, signal, timeoutMs);
+export const sendAgentPrompt = (surface: string, prompt: string): void =>
+  selectSurface() === "rex"
+    ? rex.sendAgentPrompt(surface, prompt)
+    : herdr.sendAgentPrompt(surface, prompt);
 
 /**
  * Adoption validation, dispatched to the active surface. Herdr and Rex both
