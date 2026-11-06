@@ -331,7 +331,6 @@ export class NvimSession {
   private attrs = new Map<number, Record<string, number>>();
   private sgr = new Map<number, string>();
   private cursor = { row: 0, col: 0 };
-  private commandsSent = false;
   readonly ready: Promise<void>;
   mode = "normal";
   text = "";
@@ -384,11 +383,7 @@ export class NvimSession {
        vim.keymap.set({ "i", "n" }, "<C-s>", function() pcall(vim.rpcnotify, 0, "pi-submit") end, { buffer = 0, silent = true })`,
       [],
     ]).catch((error: Error) => this.options.onExit(`nvim setup failed: ${error.message}`));
-    this.commandsSent = true;
-    if (process.env.PI_NVIM_EDITOR_DEBUG) {
-      const map = await this.request("nvim_eval", ["maparg('<CR>', 'n')"]).catch(() => "ERR");
-      debug(`ready maparg_CR_n=${JSON.stringify(map)}`);
-    }
+    debug("nvim ready");
     this.options.onRender();
   }
 
@@ -411,7 +406,7 @@ export class NvimSession {
         else if (message[1] === "pi-submit") {
           debug("notification pi-submit");
           this.options.onSubmit();
-        } else debug(`notification ${String(message[1])}`);
+        }
       }
     }
   }
@@ -636,7 +631,6 @@ export class NvimEditor extends CustomEditor {
       const text = lines.join("\n").replace(/\n+$/, "");
       if (text !== this.cachedText) {
         this.cachedText = text;
-        this.onChange?.();
       }
       const height = Math.min(14, Math.max(1, await this.session.displayHeight()));
       if (height !== this.lastHeight) {
@@ -687,12 +681,12 @@ export class NvimEditor extends CustomEditor {
       if (process.env.PI_NVIM_EDITOR_DEBUG) {
         debug(`submit text=${JSON.stringify(text)} onSubmit=${typeof this.onSubmit} fn=${this.onSubmit?.toString().slice(0, 90)}`);
       }
+      if (text.trim() === "") return;
+      // Hand the text to pi first: pi may read the editor while it handles it.
+      this.onSubmit?.(text);
       this.cachedText = "";
       await this.session.setText("");
       await this.session.gotoInsert();
-      if (text.trim() === "") return;
-      this.onChange?.();
-      this.onSubmit?.(text);
     } catch {
       // ignore: nvim reports its own exit
     }
@@ -739,17 +733,24 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("nvim-editor", {
     description: "Toggle the embedded Neovim prompt",
     handler: async (_args, ctx) => {
+      // Swap outside pi's submit handling, so pi can finish the command first.
       if (current) {
+        const editor = current;
         current = undefined;
-        ctx.ui.setEditorComponent(previous as never);
+        setTimeout(() => {
+          editor.dispose();
+          ctx.ui.setEditorComponent(previous as never);
+        }, 0);
         ctx.ui.notify("nvim editor off", "info");
         return;
       }
-      enable(ctx);
+      setTimeout(() => enable(ctx), 0);
     },
   });
 
-  function enable(ctx: { ui: { setEditorComponent: (f: unknown) => void; notify: (m: string, l: string) => void } }) {
+  function enable(ctx: { ui: { setEditorComponent: (f: unknown) => void; notify: (m: string, l: string) => void; getEditorComponent?: () => unknown } }) {
+    // Remember whatever editor is installed now (another extension may own it).
+    previous = (ctx.ui.getEditorComponent?.() ?? undefined) as never;
     const factory = (tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => {
       const editor = new NvimEditor({
         tui,
@@ -779,7 +780,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
-    previous = ctx.ui.getEditorComponent() as never;
+    if (process.env.PI_NVIM_EDITOR === "0") return;
     // Let every other session_start handler install its editor first.
     setTimeout(() => claim(ctx), 0);
     setTimeout(() => claim(ctx), 500);
