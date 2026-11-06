@@ -265,12 +265,32 @@ const CSI_KEYS: Record<string, string> = {
   "\x1b[1;5D": "<C-Left>",
   "\x1b[1;3C": "<A-Right>",
   "\x1b[1;3D": "<A-Left>",
-  "\x1b[13;2u": "<CR>",
-  "\x1b\r": "<CR>",
 };
+
+function keyNameFor(code: number): string {
+  if (code === 13) return "CR";
+  if (code === 9) return "Tab";
+  if (code === 27) return "Esc";
+  if (code === 127) return "BS";
+  if (code === 32) return "Space";
+  if (code >= 33 && code <= 126) return String.fromCharCode(code);
+  return String.fromCharCode(code);
+}
+
+/** xterm modifyOtherKeys: ESC [ 27 ; <mod> ; <code> ~ */
+function decodeModifyOtherKeys(data: string): string | undefined {
+  const match = data.match(/^\x1b\[27;(\d+);(\d+)~$/);
+  if (!match) return undefined;
+  const bits = Number(match[1]) - 1;
+  const code = Number(match[2]);
+  const mods = `${bits & 1 ? "S-" : ""}${bits & 2 ? "A-" : ""}${bits & 4 ? "C-" : ""}`;
+  return `<${mods}${keyNameFor(code)}>`;
+}
 
 /** Translate one chunk of terminal bytes into nvim_input() notation. */
 export function toNvimKeys(data: string): string {
+  const modified = decodeModifyOtherKeys(data);
+  if (modified) return modified;
   let out = "";
   let i = 0;
   while (i < data.length) {
@@ -382,6 +402,9 @@ export class NvimSession {
          vim.wo.signcolumn = "no"
          vim.wo.foldcolumn = "0"
          vim.wo.list = false
+         vim.wo.cursorline = false
+         vim.wo.cursorcolumn = false
+         vim.wo.colorcolumn = ""
        end
        pcall(function() vim.bo.filetype = "markdown" end)
        pcall(function() vim.bo.buftype = "nofile" end)
@@ -391,13 +414,18 @@ export class NvimSession {
        vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "InsertLeave", "ModeChanged" }, {
          callback = function() pcall(vim.rpcnotify, 0, "pi-sync") end,
        })
-       -- Neovim decides when Enter submits, so an insert-mode Enter is always a
-       -- newline even when pi's cached mode is a keystroke behind.
-       vim.keymap.set("n", "<CR>", function() pcall(vim.rpcnotify, 0, "pi-submit") end, { buffer = 0, silent = true })
-       vim.keymap.set({ "i", "n" }, "<C-s>", function() pcall(vim.rpcnotify, 0, "pi-submit") end, { buffer = 0, silent = true })`,
+       -- Neovim owns the submit key, so no cached mode can be stale: Enter
+       -- submits in both modes, and the newline keys below insert a line break.
+       local submit = function() pcall(vim.rpcnotify, 0, "pi-submit") end
+       vim.keymap.set({ "i", "n" }, "<CR>", submit, { buffer = 0, silent = true })
+       vim.keymap.set({ "i", "n" }, "<C-s>", submit, { buffer = 0, silent = true })
+       -- Newline keys are handled in pi and pasted as a literal break, because
+       -- mapping them to <CR> would recurse into the submit mapping above.`,
       [],
     ]).catch((error: Error) => this.options.onExit(`nvim setup failed: ${error.message}`));
     debug("nvim ready");
+    // Start in insert mode: the prompt is a chat box, not a document.
+    await this.request("nvim_command", ["startinsert"]).catch(() => {});
     this.options.onRender();
   }
 
@@ -677,19 +705,26 @@ export class NvimEditor extends CustomEditor {
   }
 
   override handleInput(data: string): void {
+    debug(`input ${JSON.stringify(data)} mode=${this.session.mode}`);
     // Bracketed paste: hand the payload to nvim_paste so marks and undo work.
     const paste = data.match(/^\x1b\[200~([\s\S]*)\x1b\[201~$/);
     if (paste) {
       this.session.paste(paste[1]);
       return;
     }
-    const mode = this.session.mode;
+    const keys = toNvimKeys(data);
+    // ctrl+j / shift+enter / alt+enter insert a line break. This bypasses the
+    // submit mapping, which would otherwise fire on <CR>.
+    if (keys === "<C-j>" || keys === "<NL>" || keys === "<S-CR>" || keys === "<A-CR>") {
+      this.session.paste("\n");
+      return;
+    }
     // ctrl+c in normal mode is pi's interrupt/clear, not vim's escape.
-    if (mode.startsWith("normal") && data === "\x03") {
+    if (this.session.mode.startsWith("normal") && data === "\x03") {
       super.handleInput(data);
       return;
     }
-    this.session.input(toNvimKeys(data));
+    this.session.input(keys);
   }
 
   private async submit(): Promise<void> {
