@@ -29,3 +29,15 @@ rex.bind("ctrl+a>ctrl+a", "pane.send_key", { key = "ctrl+a" })
 
 -- App UI (C-a b expands and minimizes the sidebar/tab viewer)
 rex.bind("ctrl+a>b", "client.sidebar.toggle")
+
+-- Activity page with its search focused. by_priority shows the activity view
+-- without toggling it shut when it is already open (tmux has no counterpart).
+rex.action{
+  name  = "activity_search",
+  title = "Activity Search",
+  run = function()
+    rex.client.queue("client.sidebar.activity.by_priority")
+    rex.client.queue("client.sidebar.filter.focus")
+  end,
+}
+rex.bind("ctrl+a>s", "activity_search")
