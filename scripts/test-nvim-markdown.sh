@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # Offline markdown-layer cluster suite (headless nvim, markdown/mermaid/links).
 #
-# Paths: nvim/.config/nvim/lua/helpers/markdown_links.lua nvim/.config/nvim/lua/helpers/mermaid_render.lua nvim/.config/nvim/lua/helpers/markdown_ansi.lua nvim/.config/nvim/lua/helpers/reader.lua nvim/.config/nvim/lua/plugins/markdown.lua
+# Paths: nvim/.config/nvim/lua/helpers/markdown_links.lua nvim/.config/nvim/lua/helpers/markdown_motions.lua nvim/.config/nvim/lua/helpers/mermaid_render.lua nvim/.config/nvim/lua/helpers/markdown_ansi.lua nvim/.config/nvim/lua/helpers/reader.lua nvim/.config/nvim/after/ftplugin/markdown.lua nvim/.config/nvim/lua/plugins/markdown.lua
 #
-# Runs the five markdown-layer specs with `nvim --headless -u NONE` through
+# Runs the six markdown-layer specs with `nvim --headless -u NONE` through
 # the shared tests/ci/harness.lua: markdown_links (treesitter link select/
 # edit/paste), mermaid_render_state (render guards + inline auto-render state
 # machine), markdown_ansi_autocmds (reload idempotency + byte preservation),
-# markdown_plugin (plugins/markdown.lua wiring, #159 PencilSoft wrap, todo
-# scan filters), markdown_reader (centered reading column: eligibility,
-# layout, auto rule, resize, close). No plugin bootstrap, no network, no mmdflux/grok-mermaid
+# markdown_plugin (plugins/markdown.lua wiring, #159 PencilSoft wrap, motion
+# mapping, todo scan filters), markdown_reader (centered reading column:
+# eligibility, layout, auto rule, resize, close, no soft wrap), and
+# markdown_motions (h/l/w/b/e across concealed link syntax). No plugin
+# bootstrap, no network, no mmdflux/grok-mermaid
 # binaries (all stubbed), no $HOME mutation: fixture trees are mktemp'd and
 # XDG_CONFIG_HOME is pinned to a temp copy so the treesitter query shadow
 # reads this worktree's file, never a stowed config.
@@ -80,6 +82,7 @@ specs=(
   "markdown_ansi_autocmds_spec.lua"
   "markdown_plugin_spec.lua"
   "markdown_reader_spec.lua"
+  "markdown_motions_spec.lua"
 )
 
 passed=0

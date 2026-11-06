@@ -4,8 +4,9 @@
 --   * the column arithmetic (the 'textwidth' the prose wraps at, window - 8,
 --     auto wherever it fits; a buffer without 'textwidth' falls back to 100,
 --     and a wider table or diagram line sets the column on its midpoint);
---   * enable/close leaves a symmetric two-filler layout, restores wrap and
---     linebreak, and maps q/<Esc> only while the column is open;
+--   * enable/close leaves a symmetric two-filler layout, keeps soft wrap off
+--     (the column only ever shows hard-wrapped prose), restores the entry
+--     values, and maps q/<Esc> only while the column is open;
 --   * the auto rule (a window too narrow for a 40-cell column stays alone,
 --     every other window gets the column);
 --   * a resize re-cuts the fillers, a window close and a buffer switch drop
@@ -114,7 +115,8 @@ H.run("markdown_reader_spec", function()
   vim.o.columns, vim.o.lines = 120, 40
   local buf = prose_buf()
   vim.api.nvim_set_current_buf(buf)
-  vim.wo.wrap, vim.wo.linebreak = false, false
+  vim.wo.wrap = true -- the reader must leave wrap OFF for prose
+  vim.wo.linebreak = false
   vim.wo.fillchars = "eob:~,fold:-"
   H.eq(win_count(), 1, "one window before the reader")
 
@@ -130,7 +132,7 @@ H.run("markdown_reader_spec", function()
   H.eq(text_width, 99, "the text sits in a 99-cell column")
   H.eq(math.abs(left_blank - right_blank) <= 1, true,
     string.format("the column is centered (left %d, right %d)", left_blank, right_blank))
-  H.eq(vim.wo[win].wrap, true, "the column wraps prose")
+  H.eq(vim.wo[win].wrap, false, "the column never soft-wraps prose")
   H.eq(vim.wo[win].linebreak, true, "the column breaks lines at words")
   local has_blank_vert = false
   local keeps_eob = false
@@ -156,7 +158,7 @@ H.run("markdown_reader_spec", function()
   reader.close()
   H.eq(win_count(), 1, "closing the reader drops both fillers")
   H.eq(reader.is_open(), false, "the reader reports itself closed")
-  H.eq(vim.wo[win].wrap, false, "the previous wrap value comes back")
+  H.eq(vim.wo[win].wrap, true, "the previous wrap value comes back")
   H.eq(vim.wo[win].linebreak, false, "the previous linebreak value comes back")
   H.eq(vim.wo[win].fillchars, "eob:~,fold:-", "the previous fillchars value comes back")
   H.eq(mapped(buf, "q"), false, "q is unbound after the close")
@@ -171,7 +173,7 @@ H.run("markdown_reader_spec", function()
   vim.o.columns = 80
   reader.maybe_auto(vim.api.nvim_get_current_win())
   H.eq(win_count(), 3, "an 80-cell window gets the column on its own")
-  H.eq(vim.wo.wrap, true, "auto mode wraps prose too")
+  H.eq(vim.wo.wrap, false, "auto mode keeps soft wrap off too")
   local narrow = target_info(vim.api.nvim_get_current_win())
   H.eq(narrow.width - narrow.textoff, 72, "the 80-cell window fits a 72-cell column")
   reader.close()
@@ -184,7 +186,7 @@ H.run("markdown_reader_spec", function()
   vim.o.columns = 140
   reader.maybe_auto(vim.api.nvim_get_current_win())
   H.eq(win_count(), 3, "a wide window gets the column on its own")
-  H.eq(vim.wo.wrap, true, "auto mode wraps prose too")
+  H.eq(vim.wo.wrap, false, "auto mode keeps soft wrap off too")
   reader.close()
 
   -- a filetype that lands while the buffer is current reaches the autocmd
@@ -195,17 +197,17 @@ H.run("markdown_reader_spec", function()
   end, 10)
   H.eq(win_count(), 3, "the FileType autocmd auto-enables the column")
 
-  -- a second markdown buffer keeps the column: the markdown FileType callback
-  -- resets wrap, and the reader puts it back
+  -- a second markdown buffer keeps the column: a stray wrap write (a global
+  -- option, PencilSoft) is undone again by the reader's FileType sync
   local second = prose_buf({ "# Other", "", "More prose." })
   vim.api.nvim_win_set_buf(vim.api.nvim_get_current_win(), second)
-  vim.wo.wrap = false -- what the markdown FileType callback does
+  vim.wo.wrap = true -- what a global option write or PencilSoft can do
   vim.api.nvim_exec_autocmds("FileType", { pattern = "markdown" })
   vim.wait(1000, function()
-    return vim.wo.wrap == true
+    return vim.wo.wrap == false
   end, 10)
   H.eq(reader.is_open(), true, "a markdown buffer switch keeps the column")
-  H.eq(vim.wo.wrap, true, "the column re-applies wrap after the switch")
+  H.eq(vim.wo.wrap, false, "the column re-applies wrap=false after the switch")
   H.eq(win_count(), 3, "the fillers survive a markdown buffer switch")
 
   -- ── a buffer switch drops the column ────────────────────────────────────

@@ -438,8 +438,8 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 ### Markdown editing
 
 - Markdown headings use a six-color Gruvbox ramp: orange, yellow, green, blue, purple, red.
-- Markdown editing uses vim-pencil soft wrap.
-- Markdown text width is 80 (wrap guide and autoformat agree).
+- Markdown editing keeps soft wrap off: saving hard-wraps prose at a visible width, so every line fits a 100-column guide (textwidth 99).
+- Markdown `h`, `l`, `w`, `b` and `e` step over concealed link syntax (brackets and destination) and stop on visible text.
 - Markdown autoformat is enabled.
 - Markdown and Octo buffers use a visual-width-aware prose rewrapper.
 - Markdown rewrap preserves code blocks, frontmatter, lists, tables, and headings.

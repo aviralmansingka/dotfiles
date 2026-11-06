@@ -1,7 +1,9 @@
--- Markdown: wrap at 99, keep column 100 free.
+-- Markdown: hard-wrap at 99, keep column 100 free. No soft wrap: the save
+-- hook rewraps prose at a visible width, so every line already fits the
+-- column and a screen wrap would only hide the tail of a table or a diagram.
 vim.opt_local.textwidth = 99
 vim.opt_local.colorcolumn = "100"
-vim.opt_local.wrap = true
+vim.opt_local.wrap = false
 
 -- Reflow prose on save by rendered width. Link destinations do not count, so a
 -- long URL never leaves blank space in a wrapped line. The rule mirrors

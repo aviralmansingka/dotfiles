@@ -11,7 +11,9 @@ It runs headless, offline, and with no plugin manager.
 - **#99 ANSI fences.** `helpers/markdown_ansi.lua` renders ANSI colors
   inside fenced blocks. The suite keeps the reload and byte contracts.
 - **#159 PencilSoft wrap.** PencilSoft re-enabled wrap in markdown buffers.
-  The suite asserts the final window state: wrap stays off.
+  The suite asserts the final window state: wrap stays off. The ftplugin
+  agrees: markdown keeps `wrap=false`, because the save hook hard-wraps prose
+  at a visible width and the reader column shows only those lines.
 - **#181/#182/#272 mermaid render.** Mermaid fences render as ASCII art.
   The suite guards the render paths and the auto-render state machine.
 
@@ -37,7 +39,8 @@ It runs headless, offline, and with no plugin manager.
   and pins `vim.fn.expand` to a mktemp tree, never `~/vault`. It tests the
   pure path helpers, the prefix filters, the habit-section skip, and the
   section labels in the picker items. The FileType callback runs PencilSoft
-  and still leaves wrap, number, and relativenumber off. The octo callback
+  and still leaves wrap, number, and relativenumber off, and it maps the five
+  conceal-aware motions. The octo callback
   keeps its own width and format state. Every `<leader>` key is present,
   and `<leader>mm` reaches the mermaid guard. The wiring sets the parser,
   the conceal options, and the fence-detection autocmds; markdownlint
@@ -47,10 +50,20 @@ It runs headless, offline, and with no plugin manager.
   a herdr scrollback capture, never a non-prose buftype), the 100-cell
   column and the 8-cell margin, and the auto rule (the column opens
   wherever it fits, and a narrow window stays alone). Open and
-  close must leave two fillers, a centered text area, wrap and linebreak
-  on while open and back on exit, and `q`/`<Esc>` mapped only while open.
-  `:write` keeps the fillers. A resize re-cuts them, a too-narrow resize, a
-  buffer switch to an octo buffer, and a closed editing window drop them.
+  close must leave two fillers, a centered text area, soft wrap off while
+  open, the entry values back on exit, and `q`/`<Esc>` mapped only while
+  open. `:write` keeps the fillers. A resize re-cuts them, a too-narrow
+  resize, a buffer switch to an octo buffer, and a closed editing window
+  drop them.
+- `markdown_motions_spec`: `h`/`l`/`w`/`b`/`e` in markdown buffers, against
+  the two conceal layers. The treesitter highlighter supplies the inline-link
+  conceal (the `conceal ""` captures from the parser bundled with nvim, so no
+  plugin bootstrap is needed); renderer extmarks supply the wiki-link brackets
+  and a hidden destination. It asserts the forward and backward crossings,
+  counts (`3l`, `2w`), multiword labels, UTF-8 byte columns, and the native
+  fallbacks (`conceallevel=0`, no `n` in `concealcursor`, highlighter
+  stopped, non-markdown buffers). Operator-pending and visual mode keep the
+  native motions, and `.` still repeats the last change.
 
 ## How to run
 

@@ -39,7 +39,9 @@ test stubs the file system so it stays dead.
 - config/lazy.lua: extras import list; `rocks.enabled = false`; the `plugins` import resolves; the bootstrap branch never runs.
 - config/keymaps.lua: exactly one insert-mode map, `<C-/>` to `<Esc>`.
 - config/autocmds.lua: the `require("config.indent")` chain registers `IndentStance`.
-- after/ftplugin/markdown.lua: the real `FileType` event sets `textwidth` 99, `colorcolumn` 100, `wrap`.
+- after/ftplugin/markdown.lua: the real `FileType` event sets `textwidth` 99, `colorcolumn` 100, and `wrap=false`
+  (the save hook hard-wraps prose, so markdown never soft-wraps). A real `:write` and `gqq` reflow a long
+  paragraph to that width, so the hard-wrap path stays covered.
 - luasnippets/groovy.lua: 13 snippets, every trigger, the dependency template, with LuaSnip stubbed.
 
 ## How to run

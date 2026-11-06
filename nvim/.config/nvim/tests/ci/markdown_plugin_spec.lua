@@ -246,13 +246,14 @@ H.run("markdown_plugin_spec", function()
   H.eq(vim.bo.formatexpr, "v:lua.require'helpers.markdown_wrap'.formatexpr()",
     "the visible-width reflow is the markdown formatter")
   local leader = vim.g.mapleader or "\\"
-  local mapped = false
+  local mapped = {}
   for _, m in ipairs(vim.api.nvim_buf_get_keymap(md, "n")) do
-    if m.lhs == leader .. "mu" then
-      mapped = true
-    end
+    mapped[m.lhs] = true
   end
-  H.eq(mapped, true, "the FileType callback wires the markdown_links keymaps")
+  H.eq(mapped[leader .. "mu"], true, "the FileType callback wires the markdown_links keymaps")
+  for _, key in ipairs({ "h", "l", "w", "b", "e" }) do
+    H.eq(mapped[key], true, "the FileType callback wires the conceal-aware " .. key .. " motion")
+  end
 
   -- octo: no PencilSoft, its own width/wrap/format state
   vim.api.nvim_set_current_buf(octo)

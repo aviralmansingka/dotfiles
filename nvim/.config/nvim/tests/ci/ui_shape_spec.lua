@@ -15,8 +15,8 @@
 --     fix — no plugin uses luarocks, so checkhealth must not try to install
 --     hererocks).
 --   * config/keymaps.lua: exactly one insert-mode map exists.
---   * after/ftplugin/markdown.lua: the real FileType trigger sets tw=80,
---     colorcolumn=80, wrap.
+--   * after/ftplugin/markdown.lua: the real FileType trigger sets tw=99,
+--     colorcolumn=100, and no soft wrap (the save hook hard-wraps instead).
 --   * luasnippets/groovy.lua: snippet trigger/table shape through stubbed
 --     LuaSnip (no LuaSnip execution).
 
@@ -341,16 +341,42 @@ run("markdown ftplugin settings", function()
   -- editor. Setting vim.bo.filetype fires the real FileType autocmd on both
   -- 0.12 and 0.13, which sources it through `filetype plugin on`.
   vim.cmd("filetype plugin on")
-  local buf = vim.api.nvim_create_buf(false, true)
+  -- a normal buffer: the save hook runs on :write
+  local buf = vim.api.nvim_create_buf(true, false)
   vim.api.nvim_set_current_buf(buf)
   -- start from the opposite values so the flip is proof of the trigger
   vim.bo[buf].textwidth = 0
   vim.wo.colorcolumn = ""
-  vim.wo.wrap = false
+  vim.wo.wrap = true
   vim.bo[buf].filetype = "markdown" -- fires the real FileType autocmd
-  H.eq(vim.bo[buf].textwidth, 99, "markdown wraps at column 99 (buffer-local)")
+  H.eq(vim.bo[buf].textwidth, 99, "markdown hard-wraps prose at column 99 (buffer-local)")
   H.eq(vim.wo.colorcolumn, "100", "markdown shows the guide at column 100 (window-local)")
-  H.eq(vim.wo.wrap, true, "markdown wraps soft lines (window-local)")
+  H.eq(vim.wo.wrap, false, "markdown never soft-wraps: the saved prose fits the column")
+
+  -- the save hook still hard-wraps prose, and gq still uses the same width
+  local path = vim.fn.tempname() .. ".md"
+  vim.api.nvim_buf_set_name(buf, path)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { string.rep("word ", 30) .. "end" })
+  vim.cmd("write")
+  local saved = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  H.eq(#saved > 1, true, "the save hook rewraps a long paragraph")
+  local widest = 0
+  for _, line in ipairs(saved) do
+    widest = math.max(widest, #line)
+  end
+  H.eq(widest <= 99, true, "every saved line fits the 99-cell width")
+  H.eq(vim.wo.wrap, false, "a write never turns soft wrap on")
+
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { string.rep("alpha ", 30) .. "omega" })
+  vim.cmd("normal! gqq")
+  widest = 0
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+    widest = math.max(widest, #line)
+  end
+  H.eq(widest <= 99, true, "gqq reflows at the same visible width")
+  H.eq(vim.bo[buf].textwidth, 99, "gq keeps using the markdown text width")
+  vim.api.nvim_buf_delete(buf, { force = true })
+  vim.fn.delete(path)
 end)
 
 -- ── luasnippets/groovy.lua: snippet shape via stubbed LuaSnip ─────────────

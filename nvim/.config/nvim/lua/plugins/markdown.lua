@@ -70,7 +70,9 @@ return {
           vim.wo.number = false
           vim.wo.relativenumber = false
           vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
+          -- h/l/w/b/e stop on a visible cell instead of a concealed one.
           require("helpers.markdown_links").setup()
+          require("helpers.markdown_motions").setup()
         end,
       })
 

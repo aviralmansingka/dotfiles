@@ -6,8 +6,11 @@
 -- the margins, so the markdown text shows twice (head on the left, tail on
 -- the right).
 --
--- wrap and linebreak are on for prose while the reader is open. Both values
--- come back on exit, so the markdown FileType keeps its own wrap=false.
+-- wrap stays off for prose while the reader is open: the save hook keeps
+-- every line inside the column, so the column never needs a soft wrap.
+-- linebreak is set too, inert until someone turns wrap back on. Both entry
+-- values come back on exit, and the markdown FileType keeps its own
+-- wrap=false.
 
 local M = {}
 
@@ -165,8 +168,8 @@ end
 -- The reader window options. A later FileType callback (the markdown wrap
 -- reset) or a global option write can undo them, so every sync calls this.
 local function dress(win)
-  vim.wo[win].wrap = true
-  vim.wo[win].linebreak = true
+  vim.wo[win].wrap = false
+  vim.wo[win].linebreak = true -- inert until someone turns wrap back on
   vim.wo[win].fillchars = blank_vert(session.fillchars)
 end
 
