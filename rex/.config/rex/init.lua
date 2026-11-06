@@ -93,8 +93,140 @@ rex.action{
     return { index = target, count = #layers, layer_id = chosen.layer_id }
   end,
 }
+-- Cycle floating layers and hide the rest. These chords are the client's
+-- defaults for client.tab.next / client.tab.previous; this file takes them on
+-- purpose, and tabs keep C-a n / C-a p, C-a H / C-a L, Ctrl+Tab and Cmd+1-9.
 rex.bind("cmd+shift+[", "layer_cycle", { direction = "previous" })
 rex.bind("cmd+shift+]", "layer_cycle", { direction = "next" })
+
+-- Grow or shrink the focused block (Cmd+Shift++ / Cmd+Shift+-). A tiled block
+-- moves the border it shares with its sibling, and never closes it: the
+-- sibling keeps at least 10 percent. A floating layer keeps its center and
+-- scales its rect by 10 percent per press, capped at 95 percent of the window.
+local RESIZE_STEP = 0.10
+local RESIZE_MIN = 0.10
+local RESIZE_MAX = 0.95
+
+-- The split node that owns the focused block, with its two sides.
+local function split_around(view, block_id)
+  local function search(node)
+    if node.split ~= nil then
+      local sp = node.split
+      local before, after = sp.before, sp.after
+      local function holds(side)
+        return side.block_id ~= nil and side.block_id == block_id
+      end
+      if holds(before) or holds(after) then
+        return sp.direction, before, after
+      end
+      local hit = search(sp.before)
+      if hit == nil then hit = search(sp.after) end
+      return hit
+    end
+    return nil
+  end
+  for _, layer in ipairs(view.windows and view.windows[1].layers or {}) do
+    local hit = search(layer.layout)
+    if hit ~= nil then return hit end
+  end
+  return nil
+end
+
+-- The floating layer that holds the focused block, if any.
+local function floating_layer_around(view, block_id)
+  local window = active_window(view)
+  if window == nil then return nil end
+  for _, layer in ipairs(window.layers or {}) do
+    if layer.kind == "floating" then
+      for _, block in ipairs(layer.blocks or {}) do
+        if block.block_id == block_id then return layer end
+      end
+    end
+  end
+  return nil
+end
+
+local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
+
+rex.action{
+  name = "block_resize",
+  title = "Resize the Focused Block",
+  description = "Grow or shrink the focused block by 10 percent.",
+  category = "Layouts",
+  args = { direction = "string" },
+  repeats = true,
+  run = function(ctx, args)
+    local grow = args.direction == "grow"
+    local session_id = ctx.session_id or rex.session_id
+    local view, err = rex.session.view{ session_id = session_id }
+    if view == nil then error(err, 0) end
+    local block_id = ctx.block_id or view.windows and view.windows[1].focused_block_id
+    if block_id == nil then error("no focused block", 0) end
+
+    local layer = floating_layer_around(view, block_id)
+    if layer ~= nil then
+      local x, y, w, h = table.unpack(layer.bounds)
+      local scale = grow and (1 + RESIZE_STEP) or (1 - RESIZE_STEP)
+      w = clamp(w * scale, RESIZE_MIN, RESIZE_MAX)
+      h = clamp(h * scale, RESIZE_MIN, RESIZE_MAX)
+      local cx, cy = x + w / 2, y + h / 2
+      x = clamp(cx - w / 2, 0, 1 - w)
+      y = clamp(cy - h / 2, 0, 1 - h)
+      local r, e = rex.call("session.resize_layer", {
+        session_id = session_id,
+        layer_id = layer.layer_id,
+        bounds = { x, y, w, h },
+      })
+      if r == nil then error(e, 0) end
+      return { mode = "layer", w = w, h = h }
+    end
+
+    local hit = split_around(view, block_id)
+    if hit == nil then
+      return { mode = "none" }
+    end
+    local direction, before, after = table.unpack(hit)
+    local sp = nil
+    -- Re-read the split through its own node to get the current ratio.
+    local function find_split(node)
+      if node.split ~= nil then
+        local s = node.split
+        if (s.before.block_id ~= nil and s.before.block_id == block_id) or
+           (s.after.block_id ~= nil and s.after.block_id == block_id) then
+          return s
+        end
+        local f = find_split(s.before)
+        if f == nil then f = find_split(s.after) end
+        return f
+      end
+      return nil
+    end
+    for _, ly in ipairs(view.windows and view.windows[1].layers or {}) do
+      sp = find_split(ly.layout)
+      if sp ~= nil then break end
+    end
+    if sp == nil then return { mode = "none" } end
+
+    -- ratio is the before side's share. Moving the border toward the sibling
+    -- grows the focused block, whichever side it is on.
+    local focused_is_before = sp.before.block_id == block_id
+    local share = focused_is_before and sp.ratio or (1 - sp.ratio)
+    share = share + (grow and RESIZE_STEP or -RESIZE_STEP)
+    share = clamp(share, RESIZE_MIN, 1 - RESIZE_MIN)
+    local ratio = focused_is_before and share or (1 - share)
+    local r, e = rex.call("session.resize_pane", {
+      session_id = session_id,
+      direction = direction,
+      before_block_id = before.block_id,
+      after_block_id = after.block_id,
+      ratio = ratio,
+    })
+    if r == nil then error(e, 0) end
+    return { mode = "pane", ratio = ratio }
+  end,
+}
+rex.bind("cmd+shift+=", "block_resize", { direction = "grow" })
+rex.bind("cmd+shift+-", "block_resize", { direction = "shrink" })
 
 -- Minimize or restore the floating layer that holds the focused block (C-a m).
 -- A restored layer is raised and focused, so this one key both hides a floating
