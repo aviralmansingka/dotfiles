@@ -69,6 +69,14 @@ timers.
   and `none`. A voice note without a provider fails with a clear error. The
   command provider substitutes the file and mime placeholders. A shortcut
   reply needs exactly one numeric private chat in the allowlist.
+- Shortcut dictation. A `text` form field skips the audio path and the
+  transcription hook. Control bytes are stripped and a blank field is `400`.
+  With `PI_TELEGRAM_SHORTCUT_REX_SESSION` set, the note is collapsed to one
+  line, typed into the rex pane with `rex send`, and submitted with
+  `rex send-key enter`; the block comes from the pinned value or the session's
+  first block. A non-zero rex exit surfaces as a Telegram error. The endpoint
+  retries a failed bind, because a pinned Tailscale address can be absent when
+  the unit starts.
 - Telethon listener. Settings are off without credentials, and a half pair or a
   non-numeric api_id is an operator error; an unknown relay answer mode is too.
   The listener registers exactly one `NewMessage` handler restricted to the
