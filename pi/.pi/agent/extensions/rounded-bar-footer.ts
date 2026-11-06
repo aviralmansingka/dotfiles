@@ -39,35 +39,6 @@ function formatCwd(cwd: string, home: string | undefined): string {
 
 // --- rounded editor --------------------------------------------------------
 
-/**
- * Wrap already-sized content lines in the prompt bubble: `╭─⚡ …─╮`, walls, `╰─╯`.
- * Shared with the embedded nvim editor so both render the same chrome.
- */
-export function roundedBarFrame(
-	content: string[],
-	width: number,
-	borderColor: (str: string) => string,
-): string[] {
-	const target = width - 2;
-	const padInner = (line: string): string => {
-		const w = visibleWidth(line);
-		if (w < target) return line + " ".repeat(target - w);
-		return truncateToWidth(line, target, "");
-	};
-
-	const label = ` ${tokenSpeedLabel()} `;
-	const top =
-		visibleWidth(label) >= target
-			? borderColor("─".repeat(target))
-			: borderColor("─".repeat(target - visibleWidth(label)) + label);
-
-	return [
-		borderColor("╭") + top + borderColor("╮"),
-		...content.map((line) => borderColor("│") + padInner(line) + borderColor("│")),
-		borderColor("╰") + borderColor("─".repeat(target)) + borderColor("╯"),
-	];
-}
-
 class RoundedEditor extends CustomEditor {
 	render(width: number): string[] {
 		// Too narrow to frame with walls — fall back to the default render.
@@ -79,6 +50,7 @@ class RoundedEditor extends CustomEditor {
 		const inner = super.render(width - 2);
 		if (inner.length === 0) return inner;
 
+		const wall = this.borderColor("│");
 		const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 		const isBorder = (s: string) => {
 			const bare = stripAnsi(s);
@@ -98,9 +70,35 @@ class RoundedEditor extends CustomEditor {
 		// If only one border line exists (edge case), treat the last line as it.
 		if (borderSeen < 2) bottomIdx = inner.length - 1;
 
-		// Content sits between the borders; autocomplete lines stay outside the bubble.
-		const framed = roundedBarFrame(inner.slice(1, bottomIdx), width, (s) => this.borderColor(s));
-		return [...framed, ...inner.slice(bottomIdx + 1)];
+		const padInner = (line: string): string => {
+			const target = width - 2;
+			const w = visibleWidth(line);
+			if (w < target) return line + " ".repeat(target - w);
+			return truncateToWidth(line, target, "");
+		};
+
+		return inner.map((line, i) => {
+			if (i === 0) {
+				// Top border: round the corners and place the token speedometer at right.
+				const label = ` ${tokenSpeedLabel()} `;
+				if (visibleWidth(label) >= width - 2) {
+					return this.borderColor("╭") + padInner(line) + this.borderColor("╮");
+				}
+				const remaining = width - 2 - visibleWidth(label);
+				const border = this.borderColor("─".repeat(remaining) + label);
+				return this.borderColor("╭") + border + this.borderColor("╮");
+			}
+			if (i === bottomIdx) {
+				// Bottom border: round the corners.
+				return this.borderColor("╰") + padInner(line) + this.borderColor("╯");
+			}
+			if (i > bottomIdx) {
+				// Autocomplete / trailing lines live outside the bubble.
+				return line;
+			}
+			// Content line: wrap with vertical walls.
+			return wall + padInner(line) + wall;
+		});
 	}
 }
 
