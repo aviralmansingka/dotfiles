@@ -122,8 +122,8 @@ rex.action{
   end,
 }
 
--- Only the sitrep takes a key; the other two need a mission handle, which a key
--- cannot supply. Bindings land with the actions, so the keymap never names an
--- action this file has not defined.
+-- Bindings land with the actions, so the keymap never names an action this
+-- file has not defined. C-a n and C-a p belong to tab cycling, so the deploy
+-- picker sits on C-a D. Inside the picker, fzf moves with C-j and C-k.
 rex.bind("ctrl+a>m", "mission_sitrep")
-rex.bind("ctrl+a>n", "mission_deploy_pick")
+rex.bind("ctrl+a>shift+d", "mission_deploy_pick")
