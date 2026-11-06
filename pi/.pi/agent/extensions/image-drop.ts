@@ -161,6 +161,14 @@ function imageLink(title: string, filePath: string, cwd: string, hint?: string):
   return `[${title}](${pathToFileURL(localPath(filePath, cwd)).href}${linkTitle})`;
 }
 
+/**
+ * A file dropped into the terminal arrives as one write. A single "/" is a
+ * keystroke, never a drop, so it must not start the raw-path buffer.
+ */
+function isDroppedPathChunk(data: string): boolean {
+  return data.length > 1 && data.startsWith("/") && /^[^\x00-\x1f\x7f]+$/u.test(data);
+}
+
 export default function (pi: ExtensionAPI) {
   const pendingDrops = new Map<string, { path: string; image: Promise<ImageData | undefined> }>();
   let nextImageNumber = 1;
@@ -200,7 +208,11 @@ export default function (pi: ExtensionAPI) {
     };
 
     stopListening = ctx.ui.onTerminalInput((data) => {
-      if (rawPathBuffer || data === "/") {
+      // A dropped file path arrives as one write that holds more than the
+      // leading slash. A lone "/" is the user typing, so pass it straight
+      // through: buffering it made the editor paste the slash back, and the
+      // paste path prepends a space after a word character.
+      if (rawPathBuffer || isDroppedPathChunk(data)) {
         if (/^[^\x00-\x1f\x7f]+$/u.test(data)) {
           rawPathBuffer += data;
           if (rawPathTimer) clearTimeout(rawPathTimer);
