@@ -122,6 +122,37 @@ rex.action{
 }
 rex.bind("ctrl+a>m", "layer_minimize")
 
+-- Minimize every floating layer in the active window (C-a M). Restore any one
+-- with C-a N / C-a P; a layer that is already minimized is left alone, so the
+-- result reports how many it actually changed.
+rex.action{
+  name = "layer_minimize_all",
+  title = "Minimize All Floating Layers",
+  description = "Minimize every floating layer in the active window.",
+  category = "Panes",
+  run = function(ctx, args)
+    local session_id = ctx.session_id or rex.session_id
+    local view, err = rex.session.view{ session_id = session_id }
+    if view == nil then error(err, 0) end
+    local window = active_window(view)
+    if window == nil then error("no active window", 0) end
+    local minimized = 0
+    local failed = 0
+    for _, layer in ipairs(window.layers or {}) do
+      if layer.kind == "floating" and layer.state ~= "minimized" then
+        local r, e = rex.session.set_layer_state{
+          session_id = session_id,
+          layer_id = layer.layer_id,
+          state = "minimized",
+        }
+        if r == nil then failed = failed + 1 else minimized = minimized + 1 end
+      end
+    end
+    return { minimized = minimized, failed = failed }
+  end,
+}
+rex.bind("ctrl+a>shift+m", "layer_minimize_all")
+
 -- Float the focused pane into a layer of its own (C-a f). Rex does the move;
 -- the layer is normal, so the pane stays in view.
 rex.bind("ctrl+a>f", "pane.float")
