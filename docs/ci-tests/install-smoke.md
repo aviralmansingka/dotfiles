@@ -81,7 +81,7 @@ One run takes about 1 s on Linux. The SLA is 60 s; a longer run fails.
 - **Silent guards.** `install.sh` skips a guarded step without a
   message; the smoke prints the skip reason for each gated step.
 - **Intentional nvim root entries.** `stow nvim` links
-  `.markdownlint-cli2.yaml` and `.markdownlint-rules/` into the `$HOME`
+  `.markdownlint-cli2.yaml` into the `$HOME`
   root on purpose: markdownlint-cli2 picks up `~/.markdownlint-cli2.yaml`
   as the default config for every project, and nvim's conform/markdown
   wiring passes that exact path. The stray `tool-call-rendering-prototypes.md`

@@ -121,13 +121,12 @@ phase_lint() {
 
 # Static package-shape: everything tracked directly at the nvim package
 # root is symlinked into $HOME ROOT by `stow nvim`. The config tree
-# (.config/) and the intentional markdownlint pair belong there - the yaml
-# is ~/.markdownlint-cli2.yaml, the default config markdownlint-cli2 picks
-# up for every project, and its custom rule dir sits next to it (nvim's
-# conform.lua/markdown.lua pass --config ~/.markdownlint-cli2.yaml).
+# (.config/) and the global markdownlint yaml belong there - the yaml is
+# ~/.markdownlint-cli2.yaml, the default config markdownlint-cli2 picks up
+# for every project (nvim's conform.lua/markdown.lua pass --config too).
 # Anything else at the root is a stray (C35: tool-call-rendering-prototypes.md
 # was relocated to docs/ for exactly this reason).
-NVIM_ROOT_ALLOWLIST="|.config|.markdownlint-cli2.yaml|.markdownlint-rules|"
+NVIM_ROOT_ALLOWLIST="|.config|.markdownlint-cli2.yaml|"
 phase_pkgshape() {
   local entries e bad=0
   entries=$(git -C "$REPO" ls-files -- nvim | sed 's|^nvim/||' | cut -d/ -f1 | sort -u)
@@ -141,7 +140,7 @@ phase_pkgshape() {
   done <<<"$entries"
   # Allowlist hygiene: every allowlisted root entry must still be tracked.
   local keep
-  for e in .config .markdownlint-cli2.yaml .markdownlint-rules; do
+  for e in .config .markdownlint-cli2.yaml; do
     keep=$(git -C "$REPO" ls-files -- "nvim/$e")
     [ -n "$keep" ] || { bad=1; fail "pkgshape/nvim-root" "allowlisted entry '$e' is no longer tracked; drop it from NVIM_ROOT_ALLOWLIST"; }
   done
