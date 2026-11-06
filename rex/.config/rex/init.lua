@@ -93,11 +93,12 @@ rex.action{
     return { index = target, count = #layers, layer_id = chosen.layer_id }
   end,
 }
--- Cycle floating layers and hide the rest. These chords are the client's
--- defaults for client.tab.next / client.tab.previous; this file takes them on
--- purpose, and tabs keep C-a n / C-a p, C-a H / C-a L, Ctrl+Tab and Cmd+1-9.
-rex.bind("cmd+shift+[", "layer_cycle", { direction = "previous" })
-rex.bind("cmd+shift+]", "layer_cycle", { direction = "next" })
+-- Cycle floating layers and hide the rest. Cmd+Shift+j/k follows the hjkl
+-- vocabulary the pane moves already use (j next, k previous); h/l stay free
+-- because left/right mean focus direction here, not cycling. These are direct
+-- chords, so holding one repeats. Tabs keep Cmd+Shift+[ ].
+rex.bind("cmd+shift+j", "layer_cycle", { direction = "next" })
+rex.bind("cmd+shift+k", "layer_cycle", { direction = "previous" })
 
 -- Grow or shrink the focused block (Cmd+Shift++ / Cmd+Shift+-). A tiled block
 -- moves the border it shares with its sibling, and never closes it: the
@@ -117,7 +118,7 @@ local function split_around(view, block_id)
         return side.block_id ~= nil and side.block_id == block_id
       end
       if holds(before) or holds(after) then
-        return sp.direction, before, after
+        return { direction = sp.direction, before = before, after = after }
       end
       local hit = search(sp.before)
       if hit == nil then hit = search(sp.after) end
@@ -165,7 +166,7 @@ rex.action{
 
     local layer = floating_layer_around(view, block_id)
     if layer ~= nil then
-      local x, y, w, h = table.unpack(layer.bounds)
+      local x, y, w, h = unpack(layer.bounds)
       local scale = grow and (1 + RESIZE_STEP) or (1 - RESIZE_STEP)
       w = clamp(w * scale, RESIZE_MIN, RESIZE_MAX)
       h = clamp(h * scale, RESIZE_MIN, RESIZE_MAX)
@@ -185,7 +186,7 @@ rex.action{
     if hit == nil then
       return { mode = "none" }
     end
-    local direction, before, after = table.unpack(hit)
+    local direction, before, after = hit.direction, hit.before, hit.after
     local sp = nil
     -- Re-read the split through its own node to get the current ratio.
     local function find_split(node)
@@ -321,9 +322,12 @@ rex.action{
   end,
 }
 rex.bind("ctrl+a>o", "activity_search")
+-- Cmd+O runs the same search without the prefix.
+rex.bind("cmd+o", "activity_search")
 
--- Session picker with its search field focused (C-a s)
+-- Session picker with its search field focused (C-a s, Cmd+S)
 rex.bind("ctrl+a>s", "session.switch")
+rex.bind("cmd+s", "session.switch")
 
 -- tmux defaults that the map above did not cover yet. Keys follow .tmux.conf
 -- where it maps, and tmux's own defaults where that file is silent.
