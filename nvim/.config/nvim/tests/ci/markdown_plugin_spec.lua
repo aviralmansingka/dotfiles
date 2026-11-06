@@ -243,8 +243,8 @@ H.run("markdown_plugin_spec", function()
   H.eq(vim.wo.wrap, false, "#159: PencilSoft never leaves wrap enabled")
   H.eq(vim.wo.number, false, "line numbers stay off in markdown buffers")
   H.eq(vim.wo.relativenumber, false, "relative numbers stay off in markdown buffers")
-  H.eq(vim.bo.formatexpr, "v:lua.require'conform'.formatexpr()",
-    "conform stays the markdown formatter")
+  H.eq(vim.bo.formatexpr, "v:lua.require'helpers.markdown_format'.formatexpr()",
+    "the visible-width reflow is the markdown formatter")
   local leader = vim.g.mapleader or "\\"
   local mapped = false
   for _, m in ipairs(vim.api.nvim_buf_get_keymap(md, "n")) do

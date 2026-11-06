@@ -3,45 +3,24 @@ return {
   opts = {
     default_format_opts = { timeout_ms = 2000, lsp_format = "never" },
     formatters = {
-      -- Normalize Markdown structure, then let markdownlint apply its
-      -- conceal-aware visual-width rule.
-      prettier = {
-        -- Let a project's own prettier config drive prose wrapping
-        -- (e.g. mohzi-deal wraps at 80); unwrap only when there is none.
-        prepend_args = function(_, ctx)
-          local names = {
-            ".prettierrc",
-            ".prettierrc.json",
-            ".prettierrc.yaml",
-            ".prettierrc.yml",
-            ".prettierrc.toml",
-            ".prettierrc.js",
-            ".prettierrc.cjs",
-            ".prettierrc.mjs",
-            "prettier.config.js",
-            "prettier.config.mjs",
-            "prettier.config.cjs",
-          }
-          local found = vim.fs.find(names, { upward = true, path = ctx.dirname })
-          if #found > 0 then
-            return {}
-          end
-          local pkg = vim.fs.find({ "package.json" }, { upward = true, path = ctx.dirname })
-          if #pkg > 0 then
-            local ok, decoded = pcall(vim.json.decode, table.concat(vim.fn.readfile(pkg[1]), "\n"))
-            if ok and decoded and decoded.prettier ~= nil then
-              return {}
-            end
-          end
-          return { "--prose-wrap", "never" }
-        end,
-      },
       -- Markdown prose wraps by the width a reader sees: link destinations do
-      -- not count. The script masks destinations, runs Prettier, then restores
-      -- them. Keep the plain `prettier` formatter for other projects and tests.
-      markdown_prettier = {
-        command = "node",
-        args = { vim.fn.stdpath("config") .. "/scripts/format-markdown.mjs", "$FILENAME" },
+      -- not count. Prettier is off for Markdown; this script reflows prose,
+      -- lists, and quotes, and leaves structure alone.
+      markdown_wrap = {
+        command = "nvim",
+        args = function(_, ctx)
+          local width = vim.bo[ctx.buf].textwidth
+          if width <= 0 then
+            width = 99
+          end
+          return {
+            "--clean",
+            "--headless",
+            "-l",
+            vim.fn.stdpath("config") .. "/scripts/markdown_wrap.lua",
+            tostring(width),
+          }
+        end,
         stdin = true,
       },
       ["markdownlint-cli2"] = {
@@ -76,7 +55,7 @@ return {
       },
     },
     formatters_by_ft = {
-      markdown = { "markdown_prettier", "markdownlint-cli2" },
+      markdown = { "markdown_wrap", "markdownlint-cli2" },
       lua = { "stylua" },
       java = { "google-java-format" },
       go = { "goimports", "gofumpt" },

@@ -185,12 +185,11 @@ H.run("plugin_configs/conform (#31)", function()
     "default_format_opts shape"
   )
 
-  -- prettier prepend_args discovery, exercised against a fixture tree.
-  local pre = opts.formatters.prettier.prepend_args
-  H.eq(type(pre), "function", "prettier prepend_args is the discovery function")
-  local visible = opts.formatters.markdown_prettier
-  H.truthy(visible and visible.stdin, "markdown_prettier reads the buffer on stdin")
-  H.eq(visible.command, "node", "markdown_prettier runs the masking script with node")
+  -- markdown reflow: Lua script on stdin, width passed as an argument.
+  local wrap = opts.formatters.markdown_wrap
+  H.truthy(wrap and wrap.stdin, "markdown_wrap reads the buffer on stdin")
+  H.eq(wrap.command, "nvim", "markdown_wrap runs the lua reflow with nvim")
+  H.eq(type(wrap.args), "function", "markdown_wrap builds its arguments per buffer")
   local tmp = vim.fn.tempname() .. "-plugin-configs"
   vim.fn.mkdir(tmp, "p")
   local function mksub(name)
@@ -199,29 +198,6 @@ H.run("plugin_configs/conform (#31)", function()
     return d
   end
   local clean = mksub("clean")
-  local rc = mksub("rc")
-  vim.fn.writefile({ "" }, rc .. "/.prettierrc")
-  local pkgp = mksub("pkgp")
-  vim.fn.writefile({ '{"prettier": {}}' }, pkgp .. "/package.json")
-  local pkgn = mksub("pkgn")
-  vim.fn.writefile({ '{"name": "no-prettier-key"}' }, pkgn .. "/package.json")
-
-  H.eq(
-    pre(nil, { dirname = clean }),
-    { "--prose-wrap", "never" },
-    "no prettier config found → unwrap prose"
-  )
-  H.eq(pre(nil, { dirname = rc }), {}, ".prettierrc found → project config drives wrapping")
-  H.eq(
-    pre(nil, { dirname = pkgp }),
-    {},
-    "package.json prettier key found → project config drives wrapping"
-  )
-  H.eq(
-    pre(nil, { dirname = pkgn }),
-    { "--prose-wrap", "never" },
-    "package.json without prettier key → unwrap prose"
-  )
 
   -- markdownlint-cli2 prepend_args shape (config path, host-only file).
   local ml = opts.formatters["markdownlint-cli2"].prepend_args
@@ -242,7 +218,7 @@ H.run("plugin_configs/conform (#31)", function()
   -- Filetype gates: listed types get their formatter chain; non-listed
   -- types return nil (no formatter sneaks in).
   local fbf = opts.formatters_by_ft
-  H.eq(fbf.markdown, { "markdown_prettier", "markdownlint-cli2" }, "markdown chain wraps by visible width")
+  H.eq(fbf.markdown, { "markdown_wrap", "markdownlint-cli2" }, "markdown chain wraps by visible width")
   H.eq(fbf.lua, { "stylua" }, "lua chain")
   H.eq(fbf.java, { "google-java-format" }, "java chain")
   H.eq(fbf.go, { "goimports", "gofumpt" }, "go chain")

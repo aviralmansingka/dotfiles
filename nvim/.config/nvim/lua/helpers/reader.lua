@@ -32,17 +32,7 @@ function M.text_width(buf)
   return COLUMN
 end
 
---- The line as it renders. Link destinations and wiki targets do not count,
---- so a long URL cannot widen the reader column.
-local function display_text(line)
-  line = line:gsub("%[%[([^%]|]*)|([^%]]*)%]%]", "%2")
-  line = line:gsub("%[%[([^%]]*)%]%]", function(target)
-    return target:match("([^/]+)$") or target
-  end)
-  line = line:gsub("!?%[([^%]]*)%]%b()", "%1")
-  line = line:gsub("%[([^%]]*)%]%[[^%]]*%]", "%1")
-  return line
-end
+local text = require("helpers.markdown_text")
 
 --- The widest line in `buf`, in display cells. Tables and diagrams never
 --- wrap, so a long one sets the column on its own midpoint. Link syntax counts
@@ -51,7 +41,7 @@ function M.content_width(buf)
   buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
   local width = 0
   for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
-    local cells = vim.fn.strdisplaywidth(display_text(line))
+    local cells = text.width(line)
     if cells > width then
       width = cells
     end

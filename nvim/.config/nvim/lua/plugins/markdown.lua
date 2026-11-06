@@ -69,7 +69,7 @@ return {
           vim.wo.wrap = false
           vim.wo.number = false
           vim.wo.relativenumber = false
-          vim.opt_local.formatexpr = "v:lua.require'conform'.formatexpr()"
+          vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_format'.formatexpr()"
           require("helpers.markdown_links").setup()
         end,
       })
