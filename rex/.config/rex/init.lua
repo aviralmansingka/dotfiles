@@ -48,3 +48,30 @@ rex.bind("ctrl+a>o", "activity_search")
 
 -- Session picker with its search field focused (C-a s)
 rex.bind("ctrl+a>s", "session.switch")
+
+-- tmux defaults that the map above did not cover yet. Keys follow .tmux.conf
+-- where it maps, and tmux's own defaults where that file is silent.
+
+-- Move a divider (tmux: C-a C-arrow, resize-pane)
+rex.bind("ctrl+a>shift+left", "pane.resize", { direction = "left" })
+rex.bind("ctrl+a>shift+right", "pane.resize", { direction = "right" })
+rex.bind("ctrl+a>shift+up", "pane.resize", { direction = "up" })
+rex.bind("ctrl+a>shift+down", "pane.resize", { direction = "down" })
+
+-- Step to the previous pane (tmux: ; select-pane -l)
+rex.bind("ctrl+a>;", "pane.focus_previous")
+
+-- Break the focused pane out into its own tab (tmux: ! break-pane)
+rex.bind("ctrl+a>shift+1", "pane.move_to_new_tab")
+
+-- Rename and close the tab (tmux: , rename-window, & kill-window)
+rex.bind("ctrl+a>,", "client.tab.rename")
+rex.bind("ctrl+a>shift+7", "client.tab.close")
+
+-- Rename the session (tmux: $ rename-session)
+rex.bind("ctrl+a>shift+4", "session.rename")
+
+-- Jump straight to a tab by number (tmux: 0-9 select-window)
+for tab = 1, 9 do
+  rex.bind("ctrl+a>" .. tab, "client.tab.goto", { index = tab })
+end
