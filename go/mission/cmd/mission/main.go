@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"mission.local/prototype/internal/adapters/checks"
+	"mission.local/prototype/internal/adapters/gitworktree"
+	"mission.local/prototype/internal/adapters/pisession"
 	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -154,7 +156,7 @@ func execute(argv []string) int {
 	if e != nil {
 		return emit(nil, e)
 	}
-	s := newApp(store, checks.New(), writeVerb(cmd, a))
+	s := newApp(store, checks.New(), hostCatalog{}, gitworktree.Workspace{}, writeVerb(cmd, a))
 	// ui and render own their stdout, so they return an exit code directly.
 	switch cmd {
 	case "ui":
@@ -164,6 +166,16 @@ func execute(argv []string) int {
 	}
 	v, e := dispatch(cmd, a, s)
 	return emit(v, e)
+}
+
+// hostCatalog is this machine's mission catalog: gitworktree answers the Git and
+// host facts, and pisession reads the Pi session header. The core takes the one
+// port, so a test can answer for a second host without a Git or a session file.
+type hostCatalog struct{ gitworktree.Catalog }
+
+// SessionHeader reads the identity Pi wrote into a session file.
+func (hostCatalog) SessionHeader(file string) (mission.SessionHeader, error) {
+	return pisession.Header(file)
 }
 
 // writeVerb names one command and, for a group command, its subcommand. It is

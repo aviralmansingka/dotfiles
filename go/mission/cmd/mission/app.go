@@ -27,15 +27,22 @@ type App struct {
 	// Checks is the checker port: the fingerprint of an attempt's input and the
 	// presets that run a process. Tests install a fake.
 	Checks mission.Checker
+	// Catalog is the port to Git and this host: the repository a worktree
+	// belongs to, its branch, the state of an existing checkout, and the host
+	// name a binding records. Tests install a fake to answer for another host.
+	Catalog mission.Catalog
+	// Worktrees is the command side of the same port: the Git commands that
+	// create a mission branch and keep its checkout.
+	Worktrees mission.Workspace
 	// writer names the command that produced a save. The revision journal uses
 	// it to show which command wrote a revision.
 	writer string
 }
 
-// newApp wires the core to one store and one checker, with the writer every
-// save it makes.
-func newApp(v Vault, checks mission.Checker, writer string) *App {
-	return &App{Repo: v, Checks: checks, writer: writer}
+// newApp wires the core to one store, one checker, one catalog, one workspace
+// command set, with the writer every save it makes.
+func newApp(v Vault, checks mission.Checker, catalog mission.Catalog, worktrees mission.Workspace, writer string) *App {
+	return &App{Repo: v, Checks: checks, Catalog: catalog, Worktrees: worktrees, writer: writer}
 }
 
 // load reads one record and checks it against domain policy: a stored mission

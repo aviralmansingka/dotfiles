@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"mission.local/prototype/internal/adapters/checks"
+	"mission.local/prototype/internal/adapters/gitworktree"
 	"mission.local/prototype/internal/adapters/vaultfs"
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -21,7 +22,7 @@ func openApp(t *testing.T, vault string) (*App, error) {
 	if e != nil {
 		return nil, e
 	}
-	return newApp(store, checks.New(), "mission"), nil
+	return newApp(store, checks.New(), hostCatalog{}, gitworktree.Workspace{}, "mission"), nil
 }
 
 // fixture builds a vault with one registered repository and one mission.
@@ -104,11 +105,9 @@ func piFixture(t *testing.T) (*App, string, mission.PiAttachment) {
 	t.Helper()
 	s, h := fixture(t)
 	root := t.TempDir()
-	_, e := gitText(root, "init", "-b", "main")
-	must(t, e)
-	_, e = gitText(root, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "fixture")
-	must(t, e)
-	_, e = s.addRepo("dotfiles", root, "")
+	gitFixture(t, root, "init", "-b", "main")
+	gitFixture(t, root, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "fixture")
+	_, e := s.addRepo("dotfiles", root, "")
 	must(t, e)
 	r, e := s.workspace(h, "", "main", t.TempDir())
 	must(t, e)

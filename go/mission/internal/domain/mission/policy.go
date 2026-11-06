@@ -20,6 +20,12 @@ func SplitHandle(h string) (string, string, error) {
 	return p[0], p[1], nil
 }
 
+// MissionBranch is the branch a mission owns. Slugs are validated as
+// [a-z0-9]+(-[a-z0-9]+)*, so the name is a legal ref component; the core still
+// has the catalog confirm it with Git, because the branch name is a durable,
+// user-visible identity that other tooling matches on.
+func MissionBranch(slug string) string { return "mission/" + slug }
+
 // Validate is the mission definition policy: every stored mission, and every
 // mission about to be written, must still satisfy it.
 func Validate(m Mission) error {

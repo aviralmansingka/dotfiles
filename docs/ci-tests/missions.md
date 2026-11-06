@@ -101,6 +101,22 @@ One Go case pins the mission identity: branch `mission/<slug>`, a linked checkou
 under the worktree root, the `branch.<name>.missionOwner` marker, reuse on reland,
 and refusal of an unmarked `mission/<slug>` branch.
 
+The catalog cases split the same way. The Git facts — the repository a path
+belongs to, a checkout's root and Git directory, the state of an existing path
+against the mission branch, the worktree that holds a branch, the refs and branch
+names it probes, and the ownership marker — are pinned beside the adapter that
+answers them, in `internal/adapters/gitworktree`, which also runs the commands
+that create the mission branch, mark it, and keep or revive its checkout. The Pi
+session header is read in `internal/adapters/pisession`, whose cases pin a
+missing first line, an undecodable line, and an unreadable file. The policy cases
+run against a fake `mission.Catalog` in `cmd/mission`: the binding order
+(`wrong_repository`, then `isolated_worktree_required` for a path that is not its
+own checkout root, the primary checkout, a detached HEAD, or a mainline branch,
+then `worktree_busy` for another mission or another mission's running attempt),
+and the host the core records and refuses by, which a fake answers for a second
+machine. The adoption and revival cases stay end to end on real Git, because they
+prove the rules and the checkouts they decide about together.
+
 The check cases are split by what they need. The core's verdict loop — the
 declared order, the blocked-after-failure rule, the demotion of a passed check
 whose input moved, a checker that refuses a check, and the evidence log it
