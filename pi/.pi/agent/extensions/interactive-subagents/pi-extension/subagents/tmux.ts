@@ -128,6 +128,12 @@ export interface SurfaceOptions {
    *  window when the child stays in the anchor's session; tmux and Herdr
    *  ignore it and use their own anchoring. */
   anchor?: string;
+  /** Rex only: how a floating child opens. `minimized` (default) keeps the
+   *  human's view unchanged, `normal` floats it in view, `off` opens a tab. */
+  layer?: "minimized" | "normal" | "off";
+  /** Rex only: a fixed `[x, y, w, h]` window-fraction rect for the layer,
+   *  instead of the cascade. */
+  bounds?: { x: number; y: number; w: number; h: number };
 }
 
 /**

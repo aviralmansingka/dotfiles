@@ -83,6 +83,49 @@ rex.action{
 rex.bind("ctrl+a>shift+n", "layer_cycle", { direction = "next" })
 rex.bind("ctrl+a>shift+p", "layer_cycle", { direction = "previous" })
 
+-- Minimize or restore the floating layer that holds the focused block (C-a m).
+-- A restored layer is raised and focused, so this one key both hides a floating
+-- subagent and brings it back.
+rex.action{
+  name = "layer_minimize",
+  title = "Minimize or Restore the Floating Layer",
+  description = "Toggle the state of the floating layer holding the focused block.",
+  category = "Panes",
+  run = function(ctx, args)
+    local session_id = ctx.session_id or rex.session_id
+    local view, err = rex.session.view{ session_id = session_id }
+    if view == nil then error(err, 0) end
+    local window = active_window(view)
+    if window == nil then error("no active window", 0) end
+    local found
+    for _, layer in ipairs(window.layers or {}) do
+      if layer.kind == "floating" then
+        for _, block in ipairs(layer.blocks or {}) do
+          if block.block_id == window.focused_block_id then found = layer end
+        end
+      end
+    end
+    if found == nil then
+      return { count = 0 }
+    end
+    local minimize = found.state ~= "minimized"
+    local new_state = minimize and "minimized" or "normal"
+    local r, e = rex.session.set_layer_state{
+      session_id = session_id,
+      layer_id = found.layer_id,
+      state = new_state,
+      focus = not minimize,
+    }
+    if r == nil then error(e, 0) end
+    return { layer_id = found.layer_id, state = new_state }
+  end,
+}
+rex.bind("ctrl+a>m", "layer_minimize")
+
+-- Float the focused pane into a layer of its own (C-a f). Rex does the move;
+-- the layer is normal, so the pane stays in view.
+rex.bind("ctrl+a>f", "pane.float")
+
 -- Type a literal C-a in the pane (tmux: bind C-a send-prefix)
 rex.bind("ctrl+a>ctrl+a", "pane.send_key", { key = "ctrl+a" })
 

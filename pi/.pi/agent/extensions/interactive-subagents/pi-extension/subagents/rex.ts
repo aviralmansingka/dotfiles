@@ -350,9 +350,38 @@ const LAYER_BASE = 0.08;
 const LAYER_STEP = 0.04;
 const LAYER_STEPS = 6;
 
-/** A floated child opens minimized: its program runs, the human's view keeps
- *  its focus. Un-minimize restores it to the cascade position. */
-const MINIMIZE_ON_CREATE = true;
+/**
+ * How a child opens. `minimized` keeps the human's view unchanged while the
+ * program runs; `normal` floats it in view; `off` opens a tab instead.
+ * Set per launch through SurfaceOptions.layer, or for every launch through
+ * PI_SUBAGENT_LAYER (`minimized` | `normal` | `off`).
+ */
+export type LayerMode = "minimized" | "normal" | "off";
+
+function layerMode(explicit?: LayerMode): LayerMode {
+  if (explicit) return explicit;
+  const raw = process.env.PI_SUBAGENT_LAYER?.trim().toLowerCase();
+  if (raw === "off" || raw === "none" || raw === "tab") return "off";
+  if (raw === "normal" || raw === "open" || raw === "visible") return "normal";
+  return "minimized";
+}
+
+/** `x,y,w,h` as window fractions, or null for the built-in cascade. */
+function layerBoundsOverride(): { x: number; y: number; w: number; h: number } | null {
+  const raw = process.env.PI_SUBAGENT_LAYER_BOUNDS?.trim();
+  if (!raw) return null;
+  const parts = raw.split(",").map((part) => Number(part.trim()));
+  if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return null;
+  const [x, y, w, h] = parts;
+  if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > 1 || y + h > 1) return null;
+  return { x, y, w, h };
+}
+
+/** Distance between cascaded children, as a window fraction. */
+function layerStep(): number {
+  const raw = Number(process.env.PI_SUBAGENT_LAYER_STEP?.trim());
+  return Number.isFinite(raw) && raw >= 0 && raw < 1 ? raw : LAYER_STEP;
+}
 
 interface RexLayer {
   layer_id?: unknown;
@@ -408,7 +437,7 @@ function nextLayerBounds(view: RexView | null, windowId: string): {
   // Count minimized layers too: they are restored later, and two children
   // that share a corner overlap exactly once both are visible again.
   const floating = layers.filter((layer) => layer.kind === "floating").length;
-  const step = LAYER_STEP * (floating % LAYER_STEPS);
+  const step = layerStep() * (floating % LAYER_STEPS);
   return { x: LAYER_BASE + step, y: LAYER_BASE + step, w: LAYER_W, h: LAYER_H };
 }
 
@@ -476,8 +505,10 @@ function createFloatingLayer(
   windowId: string,
   label: string,
   cwd: string | null,
+  mode: LayerMode,
+  fixedBounds: { x: number; y: number; w: number; h: number } | null,
 ): string | null {
-  const bounds = nextLayerBounds(viewOf(session), windowId);
+  const bounds = fixedBounds ?? nextLayerBounds(viewOf(session), windowId);
   const block: Record<string, unknown> = {
     flavor: "com.superlogical.terminal.shell",
     label,
@@ -500,7 +531,7 @@ function createFloatingLayer(
     const created = Array.isArray(parsed.block_ids) ? parsed.block_ids[0] : undefined;
     if (typeof created !== "string" || created === "") return null;
     const layerId = parsed.layer_id;
-    if (MINIMIZE_ON_CREATE && typeof layerId === "string" && layerId !== "") {
+    if (mode === "minimized" && typeof layerId === "string" && layerId !== "") {
       try {
         rexSync([
           "api",
@@ -554,11 +585,13 @@ export function createSurface(name: string, options?: SurfaceOptions): string {
   const session = childSessionId(options?.session);
   const cwd = childCwd(options?.cwd);
   const anchor = options?.anchor ?? process.env.REX_BLOCK?.trim() ?? null;
+  const mode = layerMode(options?.layer);
+  const fixedBounds = options?.bounds ?? layerBoundsOverride();
 
-  if (session) {
+  if (session && mode !== "off") {
     const windowId = floatingWindowFor(session, anchor && anchor !== "" ? anchor : null);
     if (windowId) {
-      const created = createFloatingLayer(session, windowId, label, cwd);
+      const created = createFloatingLayer(session, windowId, label, cwd, mode, fixedBounds);
       if (created) {
         rememberBlock(created, session);
         return created;

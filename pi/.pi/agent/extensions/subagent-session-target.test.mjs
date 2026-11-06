@@ -118,6 +118,28 @@ test("a refused layer falls back to a tab", () => {
 	});
 });
 
+test("PI_SUBAGENT_LAYER=off opens a tab", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_LAYER: "off" }, () => {
+		delete process.env.PI_SUBAGENT_SESSION;
+		assert.equal(rex.createSurface("trooper-S09"), "block:tabchild");
+		assert.ok(fake.calls().some(line => line.includes("window new")), "no tab was created");
+		assert.ok(!fake.calls().some(line => line.includes("session.new_layer")), "a layer was created");
+	});
+});
+
+test("PI_SUBAGENT_LAYER=normal leaves the child open", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_LAYER: "normal" }, () => {
+		delete process.env.PI_SUBAGENT_SESSION;
+		assert.equal(rex.createSurface("trooper-S10"), "block:child");
+		assert.ok(fake.calls().some(line => line.includes("session.new_layer")), "no layer was created");
+		assert.ok(!fake.calls().some(line => line.includes("session.set_layer_state")), "the child was minimized");
+	});
+});
+
 test("closing a floating child closes its layer, not the tab", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
