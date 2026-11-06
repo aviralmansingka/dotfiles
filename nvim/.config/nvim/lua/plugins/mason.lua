@@ -32,8 +32,10 @@ return {
       "delve",
 
       -- Markdown (the in-process visible-width wrap owns prose; markdownlint
-      -- checks lines. See after/ftplugin/markdown.lua and lua/plugins/conform.lua)
+      -- checks lines; prettier runs with --prose-wrap preserve. See
+      -- after/ftplugin/markdown.lua and lua/plugins/conform.lua)
       "markdownlint-cli2",
+      "prettier",
     },
   },
 }

@@ -9,6 +9,11 @@ return {
           return true
         end,
       },
+      -- Markdown keeps the prose line breaks it has. Prettier still formats
+      -- tables, lists, and fences, and helpers.markdown_wrap owns the width.
+      prettier = {
+        prepend_args = { "--prose-wrap", "preserve" },
+      },
       -- Prefer the project venv's ruff so behavior tracks pyproject ruff
       -- config; falls back to Mason ruff outside a uv project.
       ruff_fix = {
@@ -35,10 +40,10 @@ return {
       },
     },
     formatters_by_ft = {
-      -- Markdown wraps in-process on save (helpers.markdown_wrap). Prettier is
-      -- off: it counts link destinations, and the wrap must not.
-      markdown = {},
-      ["markdown.mdx"] = {},
+      -- Prettier preserves prose breaks, so the in-process visible-width wrap
+      -- (helpers.markdown_wrap) still owns line length.
+      markdown = { "prettier" },
+      ["markdown.mdx"] = { "prettier" },
       lua = { "stylua" },
       java = { "google-java-format" },
       go = { "goimports", "gofumpt" },
