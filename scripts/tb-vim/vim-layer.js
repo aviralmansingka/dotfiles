@@ -283,6 +283,7 @@
     if (handled) e.preventDefault();
   }
 
+  window.__tbVim = { version: 1 };
   window.addEventListener("keydown", onKeyDown, true);
   ensureStyle();
   return "installed";

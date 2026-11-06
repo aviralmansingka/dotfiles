@@ -26,15 +26,24 @@ contenteditable element, so forms keep working.
 ## Install into a tab
 
 ```bash
-./tb-vim.mjs            # active tab of the first browser
-./tb-vim.mjs --all      # every open tab
-./tb-vim.mjs --watch    # keep installing into new tabs
-./tb-vim.mjs --list     # show browsers and page targets
+./tb-vim.mjs --watch      # install now and keep tabs covered (default)
+./tb-vim.mjs --once       # install into open tabs, then exit
+./tb-vim.mjs --all        # every open tab, not only the first
+./tb-vim.mjs --list       # show browsers and page targets
+./tb-vim.mjs --cdp 9222   # use a raw CDP port instead of terminal-browser
 ```
 
-The layer is registered with `Page.addScriptToEvaluateOnNewDocument`, so it
-survives navigation for the life of the tab. Without `--watch` the command
-exits at once and the layer stays installed.
+Run `--watch` in its own pane or under `nohup`, because the keys stop after a
+navigation once the process exits:
+
+```bash
+nohup node tb-vim.mjs --watch >/tmp/tb-vim.log 2>&1 &
+```
+
+Chromium drops `Page.addScriptToEvaluateOnNewDocument` registrations when the
+CDP client disconnects. In watch mode the process keeps one session per tab and
+re-evaluates the layer on every `Page.loadEventFired`, so keys survive reloads
+and full navigations.
 
 ## Try it
 
@@ -51,6 +60,8 @@ Then move focus to the browser pane and press `j`, `f`, `/`.
 2. `http://127.0.0.1:<port>/json/list` gives one WebSocket URL per page target.
 3. The installer enables `Page`, registers the layer for future documents, and
    evaluates it once for the current document.
+4. In watch mode the same session stays open. Each page load re-runs the layer,
+   which is what makes the keys survive navigation.
 
 ## Limits
 
@@ -58,4 +69,3 @@ Then move focus to the browser pane and press `j`, `f`, `/`.
 - Tab commands (`t`, `J`, `K`, `x`) live in the terminal-browser app, not the
   page, so this layer cannot provide them.
 - Each tab needs a new install unless you keep `--watch` running.
-- This is a prototype. It is not wired into the `terminal-browser` skill yet.
