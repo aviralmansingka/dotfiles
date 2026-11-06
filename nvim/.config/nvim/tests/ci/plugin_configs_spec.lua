@@ -185,11 +185,7 @@ H.run("plugin_configs/conform (#31)", function()
     "default_format_opts shape"
   )
 
-  -- markdown reflow: Lua script on stdin, width passed as an argument.
-  local wrap = opts.formatters.markdown_wrap
-  H.truthy(wrap and wrap.stdin, "markdown_wrap reads the buffer on stdin")
-  H.eq(wrap.command, "nvim", "markdown_wrap runs the lua reflow with nvim")
-  H.eq(type(wrap.args), "function", "markdown_wrap builds its arguments per buffer")
+  -- markdown leaves conform: the buffer reflows in-process on save.
   local tmp = vim.fn.tempname() .. "-plugin-configs"
   vim.fn.mkdir(tmp, "p")
   local function mksub(name)
@@ -218,7 +214,8 @@ H.run("plugin_configs/conform (#31)", function()
   -- Filetype gates: listed types get their formatter chain; non-listed
   -- types return nil (no formatter sneaks in).
   local fbf = opts.formatters_by_ft
-  H.eq(fbf.markdown, { "markdown_wrap", "markdownlint-cli2" }, "markdown chain wraps by visible width")
+  H.eq(fbf.markdown, {}, "markdown leaves conform; the in-process wrap owns it")
+  H.eq(fbf["markdown.mdx"], {}, "markdown.mdx leaves conform too")
   H.eq(fbf.lua, { "stylua" }, "lua chain")
   H.eq(fbf.java, { "google-java-format" }, "java chain")
   H.eq(fbf.go, { "goimports", "gofumpt" }, "go chain")

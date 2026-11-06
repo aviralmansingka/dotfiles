@@ -1,4 +1,4 @@
--- lua/helpers/markdown_format.lua, exercised headless.
+-- lua/helpers/markdown_wrap.lua, exercised headless.
 -- Guards the visible-width reflow:
 --   * prose wraps by rendered width, so a long link destination never leaves
 --     blank space in a line;
@@ -15,7 +15,7 @@ local H = dofile(vim.fs.dirname(here) .. "/harness.lua")
 H.setup()
 
 local text = require("helpers.markdown_text")
-local format = require("helpers.markdown_format")
+local format = require("helpers.markdown_wrap")
 
 local function widths(lines)
   local out = {}
@@ -39,7 +39,7 @@ local function dump(lines)
   return table.concat(lines, "\n")
 end
 
-H.run("markdown_format_spec", function()
+H.run("markdown_wrap_spec", function()
   local url = "https://app.notion.com/p/" .. string.rep("x", 90)
 
   -- prose wraps at the visible width, and the URL stays on one line

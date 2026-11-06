@@ -190,4 +190,23 @@ function M.formatexpr()
   return 0
 end
 
+--- Reflow the whole buffer. Keeps the cursor where it was.
+function M.buffer(bufnr)
+  bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+  local width = vim.bo[bufnr].textwidth
+  if width <= 0 then
+    width = 99
+  end
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local out = M.format(lines, width)
+  if vim.deep_equal(out, lines) then
+    return false
+  end
+  local win = vim.api.nvim_get_current_win()
+  local cursor = vim.api.nvim_win_get_cursor(win)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, out)
+  pcall(vim.api.nvim_win_set_cursor, win, cursor)
+  return true
+end
+
 return M

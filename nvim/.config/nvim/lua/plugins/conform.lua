@@ -3,26 +3,6 @@ return {
   opts = {
     default_format_opts = { timeout_ms = 2000, lsp_format = "never" },
     formatters = {
-      -- Markdown prose wraps by the width a reader sees: link destinations do
-      -- not count. Prettier is off for Markdown; this script reflows prose,
-      -- lists, and quotes, and leaves structure alone.
-      markdown_wrap = {
-        command = "nvim",
-        args = function(_, ctx)
-          local width = vim.bo[ctx.buf].textwidth
-          if width <= 0 then
-            width = 99
-          end
-          return {
-            "--clean",
-            "--headless",
-            "-l",
-            vim.fn.stdpath("config") .. "/scripts/markdown_wrap.lua",
-            tostring(width),
-          }
-        end,
-        stdin = true,
-      },
       ["markdownlint-cli2"] = {
         prepend_args = { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml") },
         condition = function()
@@ -55,7 +35,10 @@ return {
       },
     },
     formatters_by_ft = {
-      markdown = { "markdown_wrap", "markdownlint-cli2" },
+      -- Markdown wraps in-process on save (helpers.markdown_wrap). Prettier is
+      -- off: it counts link destinations, and the wrap must not.
+      markdown = {},
+      ["markdown.mdx"] = {},
       lua = { "stylua" },
       java = { "google-java-format" },
       go = { "goimports", "gofumpt" },

@@ -13,16 +13,30 @@
  * missing or exits, the default editor comes back with a notice.
  */
 import { spawn, type ChildProcess } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import { CustomEditor, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { CURSOR_MARKER, type EditorTheme, type TUI, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import type { KeybindingsManager } from "@earendil-works/pi-coding-agent";
+
+/**
+ * Prompt chrome (rounded bubble, walls, token-speed label) lives in
+ * rounded-bar-footer.ts. A static import does not bind under pi's TS loader, so
+ * the module is loaded at runtime and render falls back to bare lines until it
+ * arrives.
+ */
+type PromptFrame = (content: string[], width: number, borderColor: (str: string) => string) => string[];
+let promptFrame: PromptFrame | undefined;
+void import("./rounded-bar-footer")
+  .then((mod) => {
+    promptFrame = (mod as { roundedBarFrame?: PromptFrame }).roundedBarFrame;
+  })
+  .catch(() => {});
 
 const DEBUG_LOG = "/tmp/nvim-editor.log";
 function debug(message: string): void {
   if (!process.env.PI_NVIM_EDITOR_DEBUG) return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require("node:fs").appendFileSync(DEBUG_LOG, `${new Date().toISOString()} ${message}\n`);
+    appendFileSync(DEBUG_LOG, `${new Date().toISOString()} ${message}\n`);
   } catch {
     // logging is never fatal
   }
@@ -644,18 +658,22 @@ export class NvimEditor extends CustomEditor {
   }
 
   override render(width: number): string[] {
-    this.lastWidth = width;
     if (!this.attached) return [""];
-    // The grid can trail one resize behind, so fit every line to the width here.
-    this.session.resize(width, this.lastHeight || this.session.height);
-    return this.session
+    // One wall plus one space of breathing room on each side, like the default editor.
+    const innerWidth = Math.max(1, width - 4);
+    this.lastWidth = width;
+    this.session.resize(innerWidth, this.lastHeight || this.session.height);
+    const content = this.session
       .renderLines()
       .slice(0, Math.max(1, this.lastHeight || this.session.height))
       .map((line) => {
-      const fitted = truncateToWidth(line, width, "");
-      const missing = width - visibleWidth(fitted);
-      return missing > 0 ? fitted + " ".repeat(missing) : fitted;
-    });
+        // The grid can trail one resize behind, so fit every line to the width here.
+        const fitted = truncateToWidth(line, innerWidth, "");
+        const missing = innerWidth - visibleWidth(fitted);
+        return ` ${missing > 0 ? fitted + " ".repeat(missing) : fitted}`;
+      });
+    if (width < 6 || !promptFrame) return content;
+    return promptFrame(content, width, (str) => this.borderColor(str));
   }
 
   override handleInput(data: string): void {
