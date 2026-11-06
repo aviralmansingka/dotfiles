@@ -315,7 +315,7 @@ REPORT
 # Nothing else travels: the checkout stays where stow already reads it.
 deploy_tree() {
   printf '%s\n' flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo \
-    zsh secrets scripts/stow-packages scripts/stow-packages-darwin
+    zsh secrets scripts/stow-packages scripts/stow-packages-darwin scripts/tb-vim
 }
 
 plan() {
