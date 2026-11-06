@@ -405,10 +405,9 @@ function nextLayerBounds(view: RexView | null, windowId: string): {
   h: number;
 } {
   const layers = windowById(view, windowId)?.layers ?? [];
-  // Only a normal layer is visible, so only it can take the next offset.
-  const floating = layers.filter(
-    (layer) => layer.kind === "floating" && layer.state !== "minimized",
-  ).length;
+  // Count minimized layers too: they are restored later, and two children
+  // that share a corner overlap exactly once both are visible again.
+  const floating = layers.filter((layer) => layer.kind === "floating").length;
   const step = LAYER_STEP * (floating % LAYER_STEPS);
   return { x: LAYER_BASE + step, y: LAYER_BASE + step, w: LAYER_W, h: LAYER_H };
 }

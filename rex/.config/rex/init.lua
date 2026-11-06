@@ -26,6 +26,63 @@ rex.bind("ctrl+a>-", "pane.split.down")
 rex.bind("ctrl+a>z", "pane.zoom")
 rex.bind("ctrl+a>x", "pane.close")
 
+-- Cycle floating layers (C-a N next, C-a P previous). A layer belongs to one
+-- window, so this cycles the layers of the active window only. It restores a
+-- minimized layer before focusing it, which is how a floating subagent, opened
+-- minimized, comes back into view. Nothing is bound here when a window has no
+-- floating layers; the key reports how many it found.
+local function active_window(view)
+  for _, window in ipairs(view.windows or {}) do
+    if window.window_id == view.active_window_id then return window end
+  end
+  return nil
+end
+
+rex.action{
+  name = "layer_cycle",
+  title = "Cycle Floating Layers",
+  description = "Focus the next or previous floating layer in the active window.",
+  category = "Panes",
+  args = { direction = "string" },
+  run = function(ctx, args)
+    local session_id = ctx.session_id or rex.session_id
+    local view, err = rex.session.view{ session_id = session_id }
+    if view == nil then error(err, 0) end
+    local window = active_window(view)
+    if window == nil then error("no active window", 0) end
+    local layers = {}
+    for _, layer in ipairs(window.layers or {}) do
+      if layer.kind == "floating" then layers[#layers + 1] = layer end
+    end
+    if #layers == 0 then return { count = 0 } end
+    -- The layer holding the focused block is the one to move away from.
+    local current = nil
+    for i, layer in ipairs(layers) do
+      for _, block in ipairs(layer.blocks or {}) do
+        if block.block_id == window.focused_block_id then current = i end
+      end
+    end
+    local step = args.direction == "previous" and -1 or 1
+    local target
+    if current == nil then
+      target = step > 0 and 1 or #layers
+    else
+      target = ((current - 1 + step) % #layers) + 1
+    end
+    local layer = layers[target]
+    local r, e = rex.session.set_layer_state{
+      session_id = session_id,
+      layer_id = layer.layer_id,
+      state = "normal",
+      focus = true,
+    }
+    if r == nil then error(e, 0) end
+    return { index = target, count = #layers, layer_id = layer.layer_id }
+  end,
+}
+rex.bind("ctrl+a>shift+n", "layer_cycle", { direction = "next" })
+rex.bind("ctrl+a>shift+p", "layer_cycle", { direction = "previous" })
+
 -- Type a literal C-a in the pane (tmux: bind C-a send-prefix)
 rex.bind("ctrl+a>ctrl+a", "pane.send_key", { key = "ctrl+a" })
 
