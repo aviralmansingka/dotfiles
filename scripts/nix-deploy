@@ -356,19 +356,23 @@ if [ "$IS_LOCAL" = 1 ]; then
     #      in it rather than only what git tracks;
     #   2. the prebuild and the switch then name the same tree, so a broken
     #      evaluation fails before anything on the Mac is activated.
+    # The `path:` scheme makes Nix copy the directory as plain files. Without it
+    # Nix treats the nearest enclosing git repository as the source, so a stage
+    # under $HOME is invisible when $HOME is itself a repo.
     stage="$HOME/$STAGE_ROOT/$PROFILE-$ATTR"
+    stage_ref="path:$stage"
     echo "==> staging the deploy tree at $stage"
     rm -rf "$stage"
     mkdir -p "$stage"
     # shellcheck disable=SC2046 # deploy_tree is a newline-separated list
     tar -C "$ROOT" -cf - $(deploy_tree) | tar -C "$stage" -xf -
     echo "==> building the activation package"
-    if ! nix_flake build "$stage#homeConfigurations.$ATTR.activationPackage" -o "$stage/result"; then
+    if ! nix_flake build "$stage_ref#homeConfigurations.$ATTR.activationPackage" -o "$stage/result"; then
       echo "nix-deploy: build failed; nothing was switched" >&2
       exit 5
     fi
     echo "==> switching with the freshly built activation package"
-    if ! home-manager switch --flake "$stage#$ATTR"; then
+    if ! home-manager switch --flake "$stage_ref#$ATTR"; then
       echo "nix-deploy: switch failed; the previous generation is still active" >&2
       exit 5
     fi
@@ -417,6 +421,8 @@ STAGE_BASE='$(eval echo ~)'
 [ -n "$REMOTE_USER" ] && STAGE_BASE="/home/$REMOTE_USER"
 # tar over ssh copies exactly the deploy tree; --no-same-owner keeps the stage
 # owned by the target user. The checkout is excluded by construction.
+# The staged tree is addressed with `path:` on the target too, so a $HOME that
+# happens to be a git repository cannot hide the files from Nix.
 # shellcheck disable=SC2046 # deploy_tree is a newline-separated list
 if ! tar -C "$ROOT" -cf - $(deploy_tree) |
   $SSH_CMD "$SSH_TARGET" "mkdir -p \"$STAGE_BASE/$STAGE_DIR\" && tar -C \"$STAGE_BASE/$STAGE_DIR\" -xf -"; then
@@ -444,13 +450,13 @@ echo "==> switching on $HOST"
 # put /nix/var/nix/profiles/default/bin on PATH via /etc/profile.d/nix.sh.
 if [ -n "$REMOTE_USER" ] && [ "$ADHOC" = 0 ]; then
   REMOTE_ROOT="/home/$REMOTE_USER/$STAGE_DIR"
-  REMOTE_CMD="chown -R $REMOTE_USER:$REMOTE_USER \"$REMOTE_ROOT\" && su - $REMOTE_USER -s /bin/bash -c 'cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" NIX_CONFIG=\"experimental-features = nix-command flakes\" nix run \"$REMOTE_ROOT#home-manager\" -- switch --flake \"$REMOTE_ROOT#$ATTR\"'"
+  REMOTE_CMD="chown -R $REMOTE_USER:$REMOTE_USER \"$REMOTE_ROOT\" && su - $REMOTE_USER -s /bin/bash -c 'cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" NIX_CONFIG=\"experimental-features = nix-command flakes\" nix run \"path:$REMOTE_ROOT#home-manager\" -- switch --flake \"path:$REMOTE_ROOT#$ATTR\"'"
 else
   REMOTE_ROOT="\$HOME/$STAGE_DIR"
   if [ "$PROFILE" = "macbook" ]; then
-    REMOTE_CMD="cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" home-manager switch --flake \"$REMOTE_ROOT#$ATTR\""
+    REMOTE_CMD="cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" home-manager switch --flake \"path:$REMOTE_ROOT#$ATTR\""
   else
-    REMOTE_CMD="cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" nix --extra-experimental-features \"nix-command flakes\" run \"$REMOTE_ROOT#home-manager\" -- switch --flake \"$REMOTE_ROOT#$ATTR\""
+    REMOTE_CMD="cd \"$REMOTE_ROOT\" && PATH=\"\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:\$PATH\" nix --extra-experimental-features \"nix-command flakes\" run \"path:$REMOTE_ROOT#home-manager\" -- switch --flake \"path:$REMOTE_ROOT#$ATTR\""
   fi
 fi
 
