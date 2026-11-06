@@ -252,11 +252,37 @@ function M.open()
     { label = "Vault", kind = "vault" },
   }
 
-  vim.ui.select(sources, {
+  -- Small menu next to the cursor instead of the full picker window.
+  local win_row, win_col = unpack(vim.api.nvim_win_get_position(0))
+  local row = win_row + (vim.fn.line(".") - vim.fn.line("w0")) + 1
+  local col = win_col + vim.fn.virtcol(".") - 1
+  local width, height = 34, 7
+  row = math.min(math.max(row, 0), math.max(vim.o.lines - height - vim.o.cmdheight - 1, 0))
+  col = math.min(math.max(col, 0), math.max(vim.o.columns - width - 1, 0))
+
+  Snacks.picker.select(sources, {
     prompt = "Link source",
     format_item = function(source)
       return GLYPHS[source.kind] .. " " .. source.label
     end,
+    snacks = {
+      hidden = { "preview" },
+      layout = {
+        layout = {
+          backdrop = false,
+          width = width,
+          height = height,
+          row = row,
+          col = col,
+          border = "rounded",
+          box = "vertical",
+          title = "{title}",
+          title_pos = "center",
+          { win = "input", height = 1, border = "bottom" },
+          { win = "list", border = "none" },
+        },
+      },
+    },
   }, function(source)
     if source then
       M.pick(source.kind)
