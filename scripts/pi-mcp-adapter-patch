@@ -1,0 +1,135 @@
+#!/usr/bin/env node
+// Re-apply the vendored OAuth-URL fix to pi-mcp-adapter's proxy-modes.ts.
+// Upstream calls console.log("MCP Auth: Open this URL ...") from mcp-auth-flow
+// when the caller passes no onAuthorizationUrl; in an interactive pi session
+// that raw stdout write lands mid-frame and corrupts the footer. Idempotent:
+// MARKER means an already patched file. See docs/ci-tests/pi-mcp-adapter-patch.md.
+const fs = require("node:fs");
+const path = require("node:path");
+const os = require("node:os");
+const { parseArgs } = require("node:util");
+
+const MARKER = "function reportAuthorizationUrl(";
+
+const HELPER = `/**
+ * Show an authorization URL inside the terminal UI instead of writing it to
+ * stdout. A raw stdout write lands mid-frame in an interactive session and
+ * corrupts the footer, so report a notification plus a transcript line the
+ * user can copy.
+ */
+function reportAuthorizationUrl(state: McpExtensionState, serverName: string, authorizationUrl: string): void {
+  state.ui?.notify(\`MCP server "\${serverName}" needs OAuth. Open: \${authorizationUrl}\`, "info");
+  state.sendMessage?.(
+    {
+      customType: "mcp-oauth-required",
+      content: [
+        {
+          type: "text" as const,
+          text: \`Open this URL to authenticate MCP server "\${serverName}":\\n\${authorizationUrl}\`,
+        },
+      ],
+      display: true,
+      details: { server: serverName, authorizationUrl },
+    },
+  );
+}
+
+function ensureBackgroundAuthWatcher(`;
+
+const AUTH_OPTIONS_OLD = `  const authOptions = {
+    authStorageOptions: state.authStorageOptions,
+    runtime: state.oauthRuntime,
+    openAuthorizationUrl: state.openBrowser,
+  };
+`;
+
+const AUTH_OPTIONS_NEW = `  const authOptions = {
+    authStorageOptions: state.authStorageOptions,
+    runtime: state.oauthRuntime,
+    openAuthorizationUrl: state.openBrowser,
+    onAuthorizationUrl: (authorizationUrl: string) =>
+      reportAuthorizationUrl(state, serverName, authorizationUrl),
+  };
+`;
+
+const AUTO_AUTH_OLD = `  try {
+    if (state.authStorageOptions) {
+      await authenticate(
+        serverName,
+        serverUrl,
+        definition,
+        signal
+          ? { authStorageOptions: state.authStorageOptions, signal, runtime: state.oauthRuntime }
+          : { authStorageOptions: state.authStorageOptions, runtime: state.oauthRuntime },
+      );
+    } else {
+      if (signal) {
+        await authenticate(serverName, serverUrl, definition, { signal, runtime: state.oauthRuntime });
+      } else {
+        await authenticate(serverName, serverUrl, definition, { runtime: state.oauthRuntime });
+      }
+    }
+    return { status: "success" };
+`;
+
+const AUTO_AUTH_NEW = `  const autoAuthOptions = {
+    ...(state.authStorageOptions ? { authStorageOptions: state.authStorageOptions } : {}),
+    runtime: state.oauthRuntime,
+    openAuthorizationUrl: state.openBrowser,
+    onAuthorizationUrl: (authorizationUrl: string) =>
+      reportAuthorizationUrl(state, serverName, authorizationUrl),
+  };
+  try {
+    await authenticate(serverName, serverUrl, definition, signal ? { ...autoAuthOptions, signal } : autoAuthOptions);
+    return { status: "success" };
+`;
+
+const EDITS = [
+  ["helper insertion point (function ensureBackgroundAuthWatcher)", "function ensureBackgroundAuthWatcher(", HELPER],
+  ["background auth options (ensureBackgroundAuthWatcher)", AUTH_OPTIONS_OLD, AUTH_OPTIONS_NEW],
+  ["auto-auth authenticate block (attemptAutoAuth)", AUTO_AUTH_OLD, AUTO_AUTH_NEW],
+];
+
+function readVersion(file) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(path.dirname(file), "package.json"), "utf8")).version || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+const { values } = parseArgs({
+  options: { check: { type: "boolean" }, file: { type: "string" } },
+});
+
+const agentDir = process.env.PI_CODING_AGENT_DIR || path.join(os.homedir(), ".pi", "agent");
+const file = values.file || path.join(agentDir, "npm", "node_modules", "pi-mcp-adapter", "proxy-modes.ts");
+if (!fs.existsSync(file)) {
+  console.log("pi-mcp-adapter not installed");
+  process.exit(0);
+}
+
+const text = fs.readFileSync(file, "utf8");
+if (values.check) {
+  console.log(text.includes(MARKER) ? "patched" : "unpatched");
+  process.exit(text.includes(MARKER) ? 0 : 1);
+}
+if (text.includes(MARKER)) {
+  console.log(`already patched (${readVersion(file)})`);
+  process.exit(0);
+}
+
+const version = readVersion(file);
+for (const [label, from, to] of EDITS) {
+  const count = text.split(from).length - 1;
+  if (count === 1) continue;
+  process.stderr.write(
+    `pi-mcp-adapter ${version}: anchor "${label}" matched ${count} times in ${file}; nothing written.\n` +
+      "The upgrade changed proxy-modes.ts. Re-derive the anchors in scripts/pi-mcp-adapter-patch.\n",
+  );
+  process.exit(1);
+}
+let patched = text;
+for (const [, from, to] of EDITS) patched = patched.replace(from, to);
+fs.writeFileSync(file, patched);
+console.log(`patched (${version})`);

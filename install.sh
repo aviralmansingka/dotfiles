@@ -121,6 +121,10 @@ for pkg in $(stow_list "$DOTFILES_DIR/scripts/stow-packages"); do
         if [[ -x "$DOTFILES_DIR/scripts/pi-settings-sync" ]]; then
             "$DOTFILES_DIR/scripts/pi-settings-sync"
         fi
+        # A vendored upstream fix: pi-mcp-adapter's OAuth URL must reach the TUI.
+        if [[ -x "$DOTFILES_DIR/scripts/pi-mcp-adapter-patch" ]]; then
+            "$DOTFILES_DIR/scripts/pi-mcp-adapter-patch" || true
+        fi
         stow -d "$DOTFILES_DIR" -t "$HOME" "$pkg"
         ;;
     git)

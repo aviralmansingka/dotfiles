@@ -47,6 +47,13 @@ deferred and name them in the profiles that need them. The MCP namespace proxies
 (`mcp__browserbase`, `mcp__oreilly`, `mcp__mcp`) stay direct: the adapter re-activates them and
 `mcp:<server>` references in tool-groups and slow-mode rely on them.
 
+## pi-mcp-adapter OAuth URL patch
+
+The pi-mcp-adapter OAuth URL must reach the TUI through `onAuthorizationUrl` (notification plus
+transcript message), never `console.log`: in an interactive session a raw stdout write corrupts
+the footer. `scripts/pi-mcp-adapter-patch` re-applies the vendored fix and `install.sh` runs it;
+after an adapter upgrade, `--check` reports drift and the anchors need re-deriving.
+
 ## Homelab STT and the RTX 3060
 
 The pi-stt speech-to-text worker runs natively on the homelab host; the libvirt VM / vfio-pci passthrough path was
