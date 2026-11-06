@@ -88,7 +88,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Format-on-save is enabled for Markdown, Python, Java, Lua, Go, C, and C++.
 - LSP formatting fallback is disabled.
 - Default formatting timeout is 2 seconds.
-- Markdown formatting uses Prettier while preserving prose wrapping, then a custom visual-width rewrapper.
+- Markdown wraps prose by visible width in process; link destinations do not count.
 - Lua formatting uses Stylua.
 - Java formatting uses Google Java Format.
 - Go formatting uses goimports followed by gofumpt.
@@ -332,7 +332,7 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 - Python integrations expect Ruff.
 - Python integrations expect debugpy.
 - Python integrations use uv workspace metadata when present.
-- Formatting and build integrations expect Prettier.
+- Formatting and build integrations expect markdownlint, Stylua, Google Java Format, goimports/gofumpt, and buildifier.
 - Formatting and build integrations expect Stylua.
 - Formatting and build integrations expect Google Java Format.
 - Formatting and build integrations expect buildifier.

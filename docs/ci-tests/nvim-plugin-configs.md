@@ -16,7 +16,7 @@ This suite checks the small plugin-config contracts in `lua/plugins/`. It loads 
 - `java.lua`: the real `Path.new` / `Path:append` wraps run against a fake `neotest-java.model.path` that fails on both crash sites before the patch; a second patch run adds no wrapper.
 - `noice.lua`: the `<C-b>` scroll-map deletion stays; noice's signature help stays disabled (blink.cmp owns it — the BUGS.md #3 fix). The former `neovide.lua` (late font, Cmd maps) was removed with Neovide.
 - `mason.lua`: `basedpyright`, `debugpy`, `clang-format`, and `jdtls` are pinned; `pyright` is absent; every entry is a string.
-- `conform.lua`: no `format_on_save` key; the prettier `prepend_args` and the ruff command discovery run against a fixture tree; non-listed filetypes return nil.
+- `conform.lua`: no `format_on_save` key; markdown leaves conform for the in-process wrap; the ruff command discovery runs against a fixture tree; non-listed filetypes return nil.
 - `lsp.lua`: the signatureHelp border wrap; the `lua_ls` settings shape.
 - `c.lua`: clangd args, the clang-format map, treesitter pins, the DAP entry, the pure helpers `c_compile_args`, `c_source_and_binary`, and `show_build_errors` with stubbed `vim.fn`, and the FileType wiring for `<leader>C*` maps and `:Cbuild` commands.
 - `build-files.lua`: the gradle, starpls, and groovy server shapes; the macOS JDK path is a presence check only.

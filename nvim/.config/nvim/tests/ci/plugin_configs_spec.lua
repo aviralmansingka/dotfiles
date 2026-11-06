@@ -11,7 +11,7 @@
 --     owns it — the BUGS.md #3 fix).
 --   * mason.lua pins (#25): basedpyright in, pyright out.
 --   * conform.lua (#31): no format_on_save key (LazyVim owns the handler);
---     prettier prepend_args discovery shape; ruff venv discovery.
+--     markdown leaves conform for the in-process wrap; ruff venv discovery.
 --   * lsp.lua: signatureHelp border wrap; lua_ls settings shape.
 --   * c.lua (#187-era): clangd args, clang-format on save, pure build
 --     helpers, DAP build+launch config, FileType keymap wiring.

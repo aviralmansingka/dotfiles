@@ -31,9 +31,8 @@ return {
       "impl",
       "delve",
 
-      -- Markdown (conform runs prettier, then markdownlint-cli2 — see
-      -- lua/plugins/conform.lua and after/ftplugin/markdown.lua)
-      "prettier",
+      -- Markdown (the in-process visible-width wrap owns prose; markdownlint
+      -- checks lines. See after/ftplugin/markdown.lua and lua/plugins/conform.lua)
       "markdownlint-cli2",
     },
   },

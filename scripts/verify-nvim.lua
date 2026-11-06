@@ -4405,36 +4405,31 @@ local function validate_vault_features()
 end
 
 local function validate_markdown_formatting()
-  load_plugin("vim-pencil")
-  load_plugin("conform.nvim")
+  -- Open a real Markdown file first so filetype detection and the
+  -- after/ftplugin run in the same order as a normal edit.
+  local path = vim.fn.tempname() .. ".md"
+  vim.fn.writefile({ "# probe" }, path)
+  vim.cmd("edit " .. vim.fn.fnameescape(path))
+  local buf = vim.api.nvim_get_current_buf()
   load_plugin("nvim-lint")
 
-  local buf = vim.api.nvim_create_buf(true, false)
-  vim.api.nvim_set_current_buf(buf)
-  vim.api.nvim_buf_set_name(buf, vim.fn.tempname() .. ".md")
-  vim.cmd("setfiletype markdown")
-
   if vim.bo[buf].textwidth ~= 0 then
-    fail("markdown should leave hard wrapping to Conform; got textwidth=" .. vim.bo[buf].textwidth)
+    fail("markdown leaves hard wrapping to PencilSoft; got textwidth=" .. vim.bo[buf].textwidth)
   end
-  if vim.bo[buf].formatexpr ~= "v:lua.require'conform'.formatexpr()" then
-    fail("markdown gq should use Conform; got formatexpr=" .. vim.inspect(vim.bo[buf].formatexpr))
+  if vim.bo[buf].formatexpr ~= "v:lua.require'helpers.markdown_wrap'.formatexpr()" then
+    fail("markdown gq should use the visible-width wrap; got formatexpr=" .. vim.inspect(vim.bo[buf].formatexpr))
   end
-  if not vim.wo.wrap then
-    fail("markdown should use soft display wrapping")
+  if vim.wo.wrap then
+    fail("markdown keeps soft wrap off for conceal; got wrap=true")
   end
   if vim.b[buf].pencil_wrap_mode ~= 2 then
     fail("markdown should use PencilSoft; got pencil_wrap_mode=" .. vim.inspect(vim.b[buf].pencil_wrap_mode))
   end
 
-  local conform = require("conform")
-  local formatter_names = vim.tbl_map(function(formatter)
-    return formatter.name
-  end, conform.list_formatters(buf))
-  assert_sequence(formatter_names, { "prettier", "markdownlint-cli2" }, "markdown formatter chain")
+  local wrap = require("helpers.markdown_wrap")
 
   local tick = string.char(96)
-  local within_limit = vim.trim(string.rep("word ", 21))
+  local within_limit = vim.trim(string.rep("word ", 17))
   local long_code = "command " .. string.rep("argument ", 16)
   local long_heading = "## " .. vim.trim(string.rep("heading ", 18))
   local long_table = "| " .. vim.trim(string.rep("column content ", 10)) .. " |"
@@ -4453,7 +4448,7 @@ local function validate_markdown_formatting()
     "",
     within_limit,
     "",
-    "This ordinary prose paragraph contains enough repeated words to exceed the configured width and should be wrapped cleanly by Prettier before Markdownlint checks it.",
+    "This ordinary prose paragraph contains enough repeated words to exceed the configured width and should be wrapped cleanly by the visible-width wrap before Markdownlint checks it.",
     "",
     "Read the [long documentation link](" .. long_url .. ") before continuing with the remaining prose.",
     "",
@@ -4466,14 +4461,14 @@ local function validate_markdown_formatting()
     long_table,
   }
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  conform.format({ bufnr = buf, async = false, timeout_ms = 10000 })
+  wrap.buffer(buf)
   local formatted = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
   if vim.fn.index(formatted, "   " .. tick .. tick .. tick .. "text") < 0 then
     fail("Markdown formatters should preserve an indented fenced block inside a list: " .. vim.inspect(formatted))
   end
   if vim.fn.index(formatted, within_limit) < 0 then
-    fail("Markdown formatters should preserve prose between 80 and 120 characters: " .. vim.inspect(formatted))
+    fail("Markdown formatters should preserve prose under the wrap width: " .. vim.inspect(formatted))
   end
   local link_line
   for _, line in ipairs(formatted) do
@@ -4489,7 +4484,7 @@ local function validate_markdown_formatting()
   then
     fail("long link destination should not force a prose break: " .. vim.inspect(formatted))
   end
-  conform.format({ bufnr = buf, async = false, timeout_ms = 10000 })
+  wrap.buffer(buf)
   local formatted_again = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   if not vim.deep_equal(formatted, formatted_again) then
     fail("Markdown formatter chain should be idempotent: " .. vim.inspect(formatted_again))
