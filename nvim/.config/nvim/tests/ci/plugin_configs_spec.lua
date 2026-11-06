@@ -214,8 +214,17 @@ H.run("plugin_configs/conform (#31)", function()
   -- Filetype gates: listed types get their formatter chain; non-listed
   -- types return nil (no formatter sneaks in).
   local fbf = opts.formatters_by_ft
-  H.eq(fbf.markdown, {}, "markdown leaves conform; the in-process wrap owns it")
-  H.eq(fbf["markdown.mdx"], {}, "markdown.mdx leaves conform too")
+  H.eq(fbf.markdown, { "prettier" }, "markdown formats with prettier")
+  H.eq(fbf["markdown.mdx"], { "prettier" }, "markdown.mdx formats with prettier too")
+  H.eq(
+    opts.formatters.prettier.prepend_args,
+    { "--prose-wrap", "preserve" },
+    "prettier keeps prose breaks; the visible-width wrap owns line length"
+  )
+  H.eq(fbf.javascript, { "prettier" }, "javascript formats with prettier")
+  H.eq(fbf.typescript, { "prettier" }, "typescript formats with prettier")
+  H.eq(fbf.yaml, { "prettier" }, "yaml formats with prettier")
+  H.eq(fbf.json, { "prettier" }, "json formats with prettier")
   H.eq(fbf.lua, { "stylua" }, "lua chain")
   H.eq(fbf.java, { "google-java-format" }, "java chain")
   H.eq(fbf.go, { "goimports", "gofumpt" }, "go chain")
