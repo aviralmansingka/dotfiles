@@ -14,6 +14,8 @@ rex.bind("ctrl+a>l", "pane.focus.right")
 -- Tabs are tmux windows (tmux: H/L previous/next window, c new window)
 rex.bind("ctrl+a>shift+h", "client.tab.previous")
 rex.bind("ctrl+a>shift+l", "client.tab.next")
+rex.bind("ctrl+a>n", "client.tab.next")
+rex.bind("ctrl+a>p", "client.tab.previous")
 rex.bind("ctrl+a>c", "client.tab.new")
 
 -- Splits (tmux: | split-window -h, - split-window -v)
@@ -42,3 +44,6 @@ rex.action{
   end,
 }
 rex.bind("ctrl+a>s", "activity_search")
+
+-- Session picker with its search field focused (C-a S)
+rex.bind("ctrl+a>shift+s", "session.switch")
