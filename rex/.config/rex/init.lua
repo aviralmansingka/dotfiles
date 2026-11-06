@@ -41,9 +41,11 @@ end
 rex.action{
   name = "layer_cycle",
   title = "Cycle Floating Layers",
-  description = "Focus the next or previous floating layer in the active window.",
+  description = "Focus the next or previous floating layer and hide the rest.",
   category = "Panes",
   args = { direction = "string" },
+  -- Hold the key to walk the stack without pressing it again.
+  repeats = true,
   run = function(ctx, args)
     local session_id = ctx.session_id or rex.session_id
     local view, err = rex.session.view{ session_id = session_id }
@@ -69,19 +71,30 @@ rex.action{
     else
       target = ((current - 1 + step) % #layers) + 1
     end
-    local layer = layers[target]
+    local chosen = layers[target]
+    -- One layer in view at a time: hide the others before raising this one, so
+    -- the stack the human sees is exactly the layer they asked for.
+    for i, layer in ipairs(layers) do
+      if i ~= target and layer.state ~= "minimized" then
+        rex.session.set_layer_state{
+          session_id = session_id,
+          layer_id = layer.layer_id,
+          state = "minimized",
+        }
+      end
+    end
     local r, e = rex.session.set_layer_state{
       session_id = session_id,
-      layer_id = layer.layer_id,
+      layer_id = chosen.layer_id,
       state = "normal",
       focus = true,
     }
     if r == nil then error(e, 0) end
-    return { index = target, count = #layers, layer_id = layer.layer_id }
+    return { index = target, count = #layers, layer_id = chosen.layer_id }
   end,
 }
-rex.bind("ctrl+a>shift+n", "layer_cycle", { direction = "next" })
-rex.bind("ctrl+a>shift+p", "layer_cycle", { direction = "previous" })
+rex.bind("cmd+shift+[", "layer_cycle", { direction = "previous" })
+rex.bind("cmd+shift+]", "layer_cycle", { direction = "next" })
 
 -- Minimize or restore the floating layer that holds the focused block (C-a m).
 -- A restored layer is raised and focused, so this one key both hides a floating

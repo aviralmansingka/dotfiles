@@ -76,7 +76,7 @@ const base = {
 	PI_SUBAGENT_CWD: "/worktree",
 };
 
-test("a child floats in the target session's active window", () => {
+test("a child in another session floats in that session's first window", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
 	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-rex-army" }, () => {
@@ -84,7 +84,8 @@ test("a child floats in the target session's active window", () => {
 		const created = fake.calls().find(line => line.includes("session.new_layer"));
 		assert.ok(created, "no session.new_layer call was made");
 		assert.match(created, /session:mission/);
-		assert.match(created, /window:active/);
+		assert.match(created, /window:anchor/);
+		assert.doesNotMatch(created, /window:active/);
 		assert.match(created, /\/worktree/);
 		assert.match(created, /π trooper-S03/);
 		assert.ok(!fake.calls().some(line => line.includes("window new")), "a tab was created too");
@@ -94,7 +95,7 @@ test("a child floats in the target session's active window", () => {
 	});
 });
 
-test("a child in the caller's session floats over the anchor's window", () => {
+test("a child in the caller's session floats in the tab it came from", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
 	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}` }, () => {
@@ -104,6 +105,7 @@ test("a child in the caller's session floats over the anchor's window", () => {
 		assert.ok(created, "no session.new_layer call was made");
 		assert.match(created, /session:army/);
 		assert.match(created, /window:anchor/);
+		assert.doesNotMatch(created, /window:active/);
 	});
 });
 

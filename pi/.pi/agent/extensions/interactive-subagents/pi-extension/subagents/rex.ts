@@ -344,10 +344,14 @@ export function createSession(
 
 // ── Surface primitives ──
 
-const LAYER_W = 0.62;
-const LAYER_H = 0.55;
-const LAYER_BASE = 0.08;
-const LAYER_STEP = 0.04;
+// Centered, 80% of the window on each axis. Bounds are window fractions, so
+// the layer keeps that share as the window resizes. No cascade by default:
+// one layer is visible at a time, and identical bounds keep a restored child
+// exactly where the last one was.
+const LAYER_W = 0.8;
+const LAYER_H = 0.8;
+const LAYER_BASE = 0.1;
+const LAYER_STEP = 0;
 const LAYER_STEPS = 6;
 
 /**
@@ -411,15 +415,25 @@ function windowById(view: RexView | null, windowId: string): RexWindow | null {
 
 /** The window a block sits in, scoped to the session this module knows. */
 function windowOfBlock(blockId: string): string | null {
-  const info = rexJsonOrNull<{ block?: { window_id?: unknown } }>([
-    "block",
-    "inspect",
-    ...blockArgs(blockId),
-    blockId,
-    "--json",
-  ]);
-  const id = info?.block?.window_id;
-  return typeof id === "string" && id !== "" ? id : null;
+  const session = blockSessions.get(blockId) ?? process.env.REX_SESSION?.trim();
+  if (!session) return null;
+  return windowHoldingBlock(session, blockId);
+}
+
+/**
+ * The window of one session whose layers hold a block. Read from the session
+ * view, so it answers from the same snapshot the caller is about to change.
+ */
+function windowHoldingBlock(session: string, blockId: string): string | null {
+  for (const window of viewOf(session)?.windows ?? []) {
+    for (const layer of window.layers ?? []) {
+      if ((layer.blocks ?? []).some((block) => block.block_id === blockId)) {
+        const id = window.window_id;
+        return typeof id === "string" && id !== "" ? id : null;
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -447,7 +461,7 @@ function layerOfBlock(
 ): { session: string; layerId: string; kind: string } | null {
   const session = blockSessions.get(blockId) ?? process.env.REX_SESSION?.trim();
   if (!session) return null;
-  const windowId = windowOfBlock(blockId);
+  const windowId = windowHoldingBlock(session, blockId);
   if (!windowId) return null;
   const view = viewOf(session);
   for (const layer of windowById(view, windowId)?.layers ?? []) {
@@ -487,16 +501,23 @@ function closeFloatingLayer(blockId: string): boolean {
  * floats over that session's active window.
  */
 function floatingWindowFor(session: string, anchor: string | null): string | null {
-  const view = viewOf(session);
+  // The tab the caller runs in, resolved from the caller's block. This is the
+  // only tab that can hold the child: a layer belongs to one window, and a
+  // window belongs to one session.
   if (anchor) {
     const anchorSession = blockSessions.get(anchor) ?? process.env.REX_SESSION?.trim();
     if (anchorSession === session) {
-      const windowId = windowOfBlock(anchor);
-      if (windowId && windowById(view, windowId)) return windowId;
+      const windowId = windowHoldingBlock(session, anchor);
+      if (windowId) return windowId;
     }
   }
-  const active = view?.active_window_id;
-  return typeof active === "string" && active !== "" ? active : null;
+  // A child in another session (a mission trooper) cannot float in the
+  // caller's tab. Take that session's first window, never `active_window_id`:
+  // the active window follows whatever tab the human is looking at, which is
+  // exactly how a child ends up in the wrong tab after a tab switch.
+  const first = (viewOf(session)?.windows ?? [])[0];
+  const id = first?.window_id;
+  return typeof id === "string" && id !== "" ? id : null;
 }
 
 /** Create one floating layer. Null when the server refuses the call. */
