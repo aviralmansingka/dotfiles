@@ -23,21 +23,34 @@ page layer over the browser's CDP port instead.
 Keys are ignored while focus is in an input, textarea, select or a
 contenteditable element, so forms keep working.
 
+## Install with nix
+
+Home Manager installs `tb-vim` from `nix/pkgs/tb-vim.nix` on every host that
+imports the shared module. The flake packages `scripts/tb-vim` as a
+`writeShellApplication` with Node on its runtime path, so no manual setup is
+needed after a profile switch.
+
+```bash
+nix build --impure --expr '(import <nixpkgs> {}).callPackage ./nix/pkgs/tb-vim.nix {}'
+```
+
 ## Install into a tab
 
 ```bash
-./tb-vim.mjs --watch      # install now and keep tabs covered (default)
-./tb-vim.mjs --once       # install into open tabs, then exit
-./tb-vim.mjs --all        # every open tab, not only the first
-./tb-vim.mjs --list       # show browsers and page targets
-./tb-vim.mjs --cdp 9222   # use a raw CDP port instead of terminal-browser
+tb-vim --watch      # install now and keep tabs covered (default)
+tb-vim --once       # install into open tabs, then exit
+tb-vim --all        # every open tab, not only the first
+tb-vim --list       # show browsers and page targets
+tb-vim --cdp 9222   # use a raw CDP port instead of terminal-browser
 ```
+
+From the repo, use `./tb-vim.mjs` instead of `tb-vim`.
 
 Run `--watch` in its own pane or under `nohup`, because the keys stop after a
 navigation once the process exits:
 
 ```bash
-nohup node tb-vim.mjs --watch >/tmp/tb-vim.log 2>&1 &
+nohup tb-vim --watch >/tmp/tb-vim.log 2>&1 &
 ```
 
 Chromium drops `Page.addScriptToEvaluateOnNewDocument` registrations when the

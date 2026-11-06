@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Install vim-style navigation into terminal-browser tabs over CDP.
 //
-//   ./tb-vim.mjs --watch      install now and keep every tab covered (default)
-//   ./tb-vim.mjs --once       install into open tabs, then exit
-//   ./tb-vim.mjs --all        every open tab, not only the first
-//   ./tb-vim.mjs --list       show browsers and page targets
-//   ./tb-vim.mjs --cdp 9222   use a raw CDP port instead of terminal-browser
+//   tb-vim --watch      install now and keep every tab covered (default)
+//   tb-vim --once       install into open tabs, then exit
+//   tb-vim --all        every open tab, not only the first
+//   tb-vim --list       show browsers and page targets
+//   tb-vim --cdp 9222   use a raw CDP port instead of terminal-browser
 //
 // Chromium drops script registrations when the CDP client disconnects, so the
 // layer is re-evaluated after each page load while this process stays alive.

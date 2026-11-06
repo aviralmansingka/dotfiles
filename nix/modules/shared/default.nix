@@ -17,6 +17,10 @@ let
       null
     else
       pkgs.callPackage ../../pkgs/rataflow-view.nix { inherit rataflowSrc; };
+
+  # In-repo script package: vim keys for terminal-browser tabs. The source
+  # lives in scripts/tb-vim, so no flake input is needed.
+  tb-vim = pkgs.callPackage ../../pkgs/tb-vim.nix { };
 in
 
 {
@@ -31,7 +35,8 @@ in
   # `stow` comes from the profile: install.sh bootstraps Nix, the profile
   # installs stow, then install.sh stows the file packages with it.
   home.packages =
-    lib.optional (rataflow-view != null) rataflow-view
+    [ tb-vim ]
+    ++ lib.optional (rataflow-view != null) rataflow-view
     ++ (
       with pkgs;
       [
