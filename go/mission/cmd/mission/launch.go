@@ -61,8 +61,8 @@ type launchOwner struct {
 // deskOwner reads the seat from the desk's environment. A desk outside Herdr
 // still records its checkout family, so the request cannot be adopted by a
 // session of another repository.
-func deskOwner(cwd string) launchOwner {
-	common, _ := gitCommon(cwd)
+func (s *App) deskOwner(cwd string) launchOwner {
+	common, _ := s.Catalog.Common(cwd)
 	return launchOwner{Workspace: os.Getenv("HERDR_WORKSPACE_ID"), Label: os.Getenv("HERDR_PANE_ID"), Common: common}
 }
 

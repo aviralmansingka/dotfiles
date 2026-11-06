@@ -414,7 +414,7 @@ func addMission(t *testing.T, s *App, slug string) string {
 // adoption is provably in-place.
 func missionCheckout(t *testing.T, s *App, h, repo, worktrees, slug string, mark bool) string {
 	t.Helper()
-	branch := missionBranch(slug)
+	branch := mission.MissionBranch(slug)
 	cwd := filepath.Join(worktrees, "mission-"+slug)
 	gitFixture(t, repo, "branch", branch, "main")
 	gitFixture(t, repo, "worktree", "add", cwd, branch)
@@ -444,7 +444,7 @@ func TestMissionWorkspaceAdoptsCheckoutOnBranch(t *testing.T) {
 	w, e := s.workspace(h, "", "main", worktrees)
 	must(t, e)
 	b := w.State.Runtime
-	if b == nil || b.Cwd != realPath(t, cwd) || b.Branch != missionBranch("adopt-same") {
+	if b == nil || b.Cwd != realPath(t, cwd) || b.Branch != mission.MissionBranch("adopt-same") {
 		t.Fatalf("adoption binding = %+v", b)
 	}
 	if b.BaseCommit != gitFixture(t, repo, "rev-parse", "refs/heads/"+b.Branch) {
@@ -523,7 +523,7 @@ func TestMissionWorkspaceAdoptsUnmarkedCheckout(t *testing.T) {
 	w, e := s.workspace(h, "", "main", worktrees)
 	must(t, e)
 	b := w.State.Runtime
-	if b.Cwd != realPath(t, cwd) || b.Branch != missionBranch("unmarked-slug") {
+	if b.Cwd != realPath(t, cwd) || b.Branch != mission.MissionBranch("unmarked-slug") {
 		t.Fatalf("adoption binding = %+v", b)
 	}
 	if mark := gitFixture(t, repo, "config", "--get", "branch."+b.Branch+".missionOwner"); mark != s.Repo.VaultPath()+":"+h {
@@ -537,14 +537,14 @@ func TestMissionWorkspaceAdoptsUnmarkedCheckout(t *testing.T) {
 
 	// The branch checked out in another worktree is never duplicated.
 	second := addMission(t, s, "unmarked-elsewhere")
-	gitFixture(t, repo, "branch", missionBranch("unmarked-elsewhere"), "main")
-	gitFixture(t, repo, "worktree", "add", filepath.Join(worktrees, "elsewhere"), missionBranch("unmarked-elsewhere"))
+	gitFixture(t, repo, "branch", mission.MissionBranch("unmarked-elsewhere"), "main")
+	gitFixture(t, repo, "worktree", "add", filepath.Join(worktrees, "elsewhere"), mission.MissionBranch("unmarked-elsewhere"))
 	_, e = s.workspace(second, "", "main", worktrees)
 	wantCode(t, e, "worktree_in_use")
 
 	// A path that is not the mission checkout is reported, not adopted.
 	third := addMission(t, s, "unmarked-foreign")
-	gitFixture(t, repo, "branch", missionBranch("unmarked-foreign"), "main")
+	gitFixture(t, repo, "branch", mission.MissionBranch("unmarked-foreign"), "main")
 	foreign := filepath.Join(worktrees, "mission-unmarked-foreign")
 	must(t, os.MkdirAll(foreign, 0700))
 	must(t, os.WriteFile(filepath.Join(foreign, "notes.txt"), []byte("keep me"), 0600))

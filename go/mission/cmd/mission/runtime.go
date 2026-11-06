@@ -1,25 +1,14 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
+	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
 )
-
-func gitText(cwd string, args ...string) (string, error) {
-	b, e := exec.Command("git", append([]string{"-C", cwd}, args...)...).CombinedOutput()
-	if e != nil {
-		return "", mission.Problem("git_error", "%s: %s", strings.Join(args, " "), strings.TrimSpace(string(b)))
-	}
-	return strings.TrimSpace(string(b)), nil
-}
 
 func readBounded(path string, max int64) ([]byte, error) {
 	f, e := os.Open(path)
@@ -37,39 +26,31 @@ func readBounded(path string, max int64) ([]byte, error) {
 	return b, nil
 }
 
+// checkBinding is the binding policy: an attempt runs only inside a checkout of
+// the registered repository, at the root of its own linked worktree, on a branch
+// that is not the mainline, and no other mission or attempt writes there. It
+// answers the repository's common Git directory that the binding records.
 func (s *App) checkBinding(r mission.Record, cwd, branch string) (string, error) {
 	repo, e := s.Repo.Repo(r.Mission.Repo)
 	if e != nil {
 		return "", e
 	}
-	common, e := gitCommon(repo.Bindings[platform.Machine()])
+	common, e := s.Catalog.Common(repo.Bindings[s.Catalog.Machine()])
 	if e != nil {
 		return "", e
 	}
-	actual, e := gitCommon(cwd)
+	actual, e := s.Catalog.Common(cwd)
 	if e != nil {
 		return "", e
 	}
 	if common != actual {
 		return "", mission.Problem("wrong_repository", "mission worktree must belong to the registered repository")
 	}
-	root, e := gitText(cwd, "rev-parse", "--show-toplevel")
+	root, gitDir, e := s.Catalog.Checkout(cwd)
 	if e != nil {
 		return "", e
 	}
-	root, e = filepath.EvalSymlinks(root)
-	if e != nil {
-		return "", e
-	}
-	gd, e := gitText(cwd, "rev-parse", "--absolute-git-dir")
-	if e != nil {
-		return "", e
-	}
-	gd, e = filepath.EvalSymlinks(gd)
-	if e != nil {
-		return "", e
-	}
-	if root != cwd || gd == common || branch == "" || branch == "main" || branch == "master" {
+	if root != cwd || gitDir == common || branch == "" || branch == "main" || branch == "master" {
 		return "", mission.Problem("isolated_worktree_required", "attach from the root of a non-main linked worktree")
 	}
 	all, e := s.list()
@@ -80,7 +61,7 @@ func (s *App) checkBinding(r mission.Record, cwd, branch string) (string, error)
 		if other.Handle == r.Handle {
 			continue
 		}
-		if b := other.State.Runtime; b != nil && b.Machine == platform.Machine() && b.Cwd == cwd {
+		if b := other.State.Runtime; b != nil && b.Machine == s.Catalog.Machine() && b.Cwd == cwd {
 			return "", mission.Problem("worktree_busy", "worktree belongs to mission %s", other.Handle)
 		}
 		for _, a := range other.State.Attempts {
@@ -90,150 +71,6 @@ func (s *App) checkBinding(r mission.Record, cwd, branch string) (string, error)
 		}
 	}
 	return common, nil
-}
-
-// missionBranch is the mission's branch. Slugs are validated as
-// [a-z0-9]+(-[a-z0-9]+)*, so the name is a legal ref component; callers still
-// confirm it with `git check-ref-format --branch` because the branch name is a
-// durable, user-visible identity that other tooling matches on.
-func missionBranch(slug string) string { return "mission/" + slug }
-
-// checkoutBranch reports the branch checked out at cwd when cwd is the root of
-// its own Git checkout. A detached HEAD reports "", and an error means cwd is
-// not a checkout at all.
-func checkoutBranch(cwd string) (string, error) {
-	top, e := gitText(cwd, "rev-parse", "--show-toplevel")
-	if e != nil {
-		return "", e
-	}
-	real, e := filepath.EvalSymlinks(cwd)
-	if e != nil {
-		return "", e
-	}
-	t, e := filepath.EvalSymlinks(top)
-	if e != nil {
-		return "", e
-	}
-	if t != real {
-		return "", mission.Problem("worktree_invalid", "%s is not the root of its own checkout", cwd)
-	}
-	return gitText(cwd, "branch", "--show-current")
-}
-
-// branchWorktree reports the checkout that has branch checked out, and "" when
-// the branch is free. A branch has at most one worktree; a second checkout
-// would mean a second writer, so callers report it instead of creating one.
-func branchWorktree(checkout, branch string) (string, error) {
-	out, e := gitText(checkout, "worktree", "list", "--porcelain")
-	if e != nil {
-		return "", e
-	}
-	dir := ""
-	for _, line := range strings.Split(out, "\n") {
-		if p, ok := strings.CutPrefix(line, "worktree "); ok {
-			dir = p
-			continue
-		}
-		if dir != "" && line == "branch refs/heads/"+branch {
-			return dir, nil
-		}
-	}
-	return "", nil
-}
-
-// How an existing path relates to the mission branch.
-const (
-	checkoutNone     = ""         // not a checkout at this path
-	checkoutSame     = "same"     // already on the mission branch
-	checkoutDetached = "detached" // clean detached HEAD at the branch tip
-	checkoutDirty    = "dirty"    // detached HEAD with local changes
-	checkoutOther    = "other"    // a checkout on another branch or commit
-)
-
-// checkoutState classifies an existing path against the mission branch without
-// touching the working tree.
-func checkoutState(cwd, branch string) string {
-	head, e := checkoutBranch(cwd)
-	if e != nil {
-		return checkoutNone
-	}
-	if head != "" {
-		if head == branch {
-			return checkoutSame
-		}
-		return checkoutOther
-	}
-	tip, e := gitText(cwd, "rev-parse", "--verify", "refs/heads/"+branch)
-	if e != nil {
-		return checkoutOther
-	}
-	at, e := gitText(cwd, "rev-parse", "HEAD")
-	if e != nil || at != tip {
-		return checkoutOther
-	}
-	dirty, e := gitText(cwd, "status", "--porcelain")
-	if e != nil {
-		return checkoutOther
-	}
-	if dirty != "" {
-		return checkoutDirty
-	}
-	return checkoutDetached
-}
-
-// ensureWorktree keeps an existing mission checkout, or revives a deleted one.
-// A checkout that was removed from Herdr or deleted on disk stays registered in
-// Git until a prune, and a plain add then fails with "missing but already
-// registered worktree". The branch stays the mission's identity: never create a
-// second branch or a second checkout, and never switch a checkout that carries
-// someone else's work.
-func ensureWorktree(checkout, cwd, branch string) error {
-	if _, e := os.Stat(cwd); e == nil {
-		switch checkoutState(cwd, branch) {
-		case checkoutSame:
-			return nil
-		case checkoutDetached:
-			// The detached HEAD already is the branch tip, so carrying the
-			// checkout over to its branch moves no work.
-			_, e := gitText(cwd, "checkout", branch)
-			return e
-		case checkoutDirty:
-			return mission.Problem("worktree_dirty", "%s has a detached HEAD with uncommitted changes; commit or stash them before adopting %s", cwd, branch)
-		case checkoutOther:
-			head, _ := checkoutBranch(cwd)
-			return mission.Problem("worktree_mismatch", "%s is on branch %s, not %s; move it aside first", cwd, platform.Fallback(head, "a detached HEAD"), branch)
-		}
-		// A leftover empty directory is safe to replace. Anything else may be
-		// the user's data, so refuse to delete it.
-		entries, e := os.ReadDir(cwd)
-		if e != nil {
-			return e
-		}
-		if len(entries) > 0 {
-			return mission.Problem("worktree_invalid", "%s exists and is not the mission checkout; move it aside first", cwd)
-		}
-		if e = os.RemoveAll(cwd); e != nil {
-			return e
-		}
-	} else if !os.IsNotExist(e) {
-		return e
-	}
-	if _, e := gitText(checkout, "worktree", "prune"); e != nil {
-		return e
-	}
-	if e := os.MkdirAll(filepath.Dir(cwd), 0700); e != nil {
-		return e
-	}
-	if _, e := gitText(checkout, "worktree", "add", cwd, branch); e != nil {
-		// Git versions phrase this two ways: "already checked out" and
-		// "is already used by worktree". Both mean the branch has an owner.
-		msg := e.Error()
-		if strings.Contains(msg, "already checked out") || strings.Contains(msg, "already used by worktree") {
-			return mission.Problem("worktree_in_use", "branch %s is checked out in another worktree; inspect that checkout instead of adding a second one", branch)
-		}
-		return e
-	}
-	return nil
 }
 
 // A mission keeps its worktree across steps, retries, and checkpoint revisions.
@@ -247,17 +84,17 @@ func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
 		if e != nil {
 			return e
 		}
-		checkout := repo.Bindings[platform.Machine()]
+		checkout := repo.Bindings[s.Catalog.Machine()]
 		if checkout == "" {
 			return mission.Problem("no_checkout", "register this machine's repository checkout")
 		}
 		if b := r.State.Runtime; b != nil {
-			if b.Machine != platform.Machine() {
+			if b.Machine != s.Catalog.Machine() {
 				return mission.Problem("wrong_machine", "worktree is bound on %s", b.Machine)
 			}
 			// A closed Herdr workspace or a deleted checkout revives on the
 			// recorded branch instead of failing the relaunch.
-			if e = ensureWorktree(checkout, b.Cwd, b.Branch); e != nil {
+			if e = s.Worktrees.Ensure(checkout, b.Cwd, b.Branch); e != nil {
 				return e
 			}
 			if cwd != "" {
@@ -269,7 +106,7 @@ func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
 					return mission.Problem("worktree_mismatch", "mission is bound to %s", b.Cwd)
 				}
 			}
-			branch, e := gitText(b.Cwd, "branch", "--show-current")
+			branch, e := s.Catalog.Branch(b.Cwd)
 			if e != nil {
 				return e
 			}
@@ -282,18 +119,18 @@ func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
 		branch, baseCommit := "", ""
 		if cwd == "" {
 			base = platform.Fallback(base, "main")
-			if _, e = gitText(checkout, "check-ref-format", "--branch", base); e != nil {
+			if e = s.Catalog.ValidBranch(checkout, base); e != nil {
 				return e
 			}
-			baseCommit, e = gitText(checkout, "rev-parse", "--verify", "refs/heads/"+base)
+			baseCommit, e = s.Catalog.Ref(checkout, base)
 			if e != nil {
 				return e
 			}
 			// Missions own mission/<slug>. The checkout lives in the shared Herdr
 			// worktree root so the Herdr worktree registration (done by the Pi
 			// extension) finds an existing linked worktree instead of creating one.
-			branch = missionBranch(r.Mission.Slug)
-			if _, e = gitText(checkout, "check-ref-format", "--branch", branch); e != nil {
+			branch = mission.MissionBranch(r.Mission.Slug)
+			if e = s.Catalog.ValidBranch(checkout, branch); e != nil {
 				return mission.Problem("invalid_branch", "%s is not a valid git branch name for mission slug %s", branch, r.Mission.Slug)
 			}
 			if root == "" {
@@ -306,24 +143,27 @@ func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
 			}
 			cwd = filepath.Join(root, "mission-"+r.Mission.Slug)
 			owner := s.Repo.VaultPath() + ":" + h
-			key := "branch." + branch + ".missionOwner"
 			claim := false // the branch is ours but its marker still needs writing
-			if _, exists := gitText(checkout, "rev-parse", "--verify", "refs/heads/"+branch); exists == nil {
-				mark, _ := gitText(checkout, "config", "--get", key)
+			if _, exists := s.Catalog.Ref(checkout, branch); exists == nil {
+				mark, _ := s.Catalog.Owner(checkout, branch)
 				if mark != owner {
 					// The checkout already sitting at the mission path is this
 					// mission's work in practice: adopt it and record the marker a
 					// fresh binding would have written instead of refusing.
-					switch checkoutState(cwd, branch) {
-					case checkoutSame, checkoutDetached:
+					state, e := s.Catalog.State(cwd, branch)
+					if e != nil {
+						return e
+					}
+					switch state {
+					case mission.CheckoutSame, mission.CheckoutDetached:
 						claim = true
-					case checkoutDirty:
+					case mission.CheckoutDirty:
 						return mission.Problem("worktree_dirty", "%s has a detached HEAD with uncommitted changes; commit or stash them before adopting %s", cwd, branch)
-					case checkoutOther:
-						head, _ := checkoutBranch(cwd)
+					case mission.CheckoutOther:
+						head, _ := s.Catalog.Branch(cwd)
 						return mission.Problem("worktree_mismatch", "%s is on branch %s, not %s; move it aside first", cwd, platform.Fallback(head, "a detached HEAD"), branch)
 					default:
-						other, e := branchWorktree(checkout, branch)
+						other, e := s.Catalog.Holder(checkout, branch)
 						if e != nil {
 							return e
 						}
@@ -336,23 +176,23 @@ func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
 						return mission.Problem("unowned_branch", "branch %s already exists without this mission's ownership marker", branch)
 					}
 				}
-				baseCommit, e = gitText(checkout, "rev-parse", "refs/heads/"+branch)
+				baseCommit, e = s.Catalog.Ref(checkout, branch)
 				if e != nil {
 					return e
 				}
 			} else {
-				if _, e = gitText(checkout, "branch", branch, base); e != nil {
+				if e = s.Worktrees.CreateBranch(checkout, branch, base); e != nil {
 					return e
 				}
-				if _, e = gitText(checkout, "config", key, owner); e != nil {
+				if e = s.Worktrees.MarkOwner(checkout, branch, owner); e != nil {
 					return e
 				}
 			}
-			if e = ensureWorktree(checkout, cwd, branch); e != nil {
+			if e = s.Worktrees.Ensure(checkout, cwd, branch); e != nil {
 				return e
 			}
 			if claim {
-				if _, e = gitText(checkout, "config", key, owner); e != nil {
+				if e = s.Worktrees.MarkOwner(checkout, branch, owner); e != nil {
 					return e
 				}
 			}
@@ -365,7 +205,7 @@ func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
 		if e != nil {
 			return e
 		}
-		actual, e := gitText(cwd, "branch", "--show-current")
+		actual, e := s.Catalog.Branch(cwd)
 		if e != nil {
 			return e
 		}
@@ -377,7 +217,7 @@ func (s *App) workspace(h, cwd, base, root string) (mission.Record, error) {
 		if e != nil {
 			return e
 		}
-		r.State.Runtime = &mission.RuntimeBinding{Machine: platform.Machine(), Common: common, Cwd: cwd, Branch: branch, Base: base, BaseCommit: baseCommit}
+		r.State.Runtime = &mission.RuntimeBinding{Machine: s.Catalog.Machine(), Common: common, Cwd: cwd, Branch: branch, Base: base, BaseCommit: baseCommit}
 		return nil
 	})
 }
@@ -389,10 +229,10 @@ func (s *App) attachBinding(r *mission.Record, p mission.PiAttachment, cwd, bran
 	}
 	b := r.State.Runtime
 	if b == nil {
-		b = &mission.RuntimeBinding{Machine: platform.Machine(), Common: common, Cwd: cwd, Branch: branch}
+		b = &mission.RuntimeBinding{Machine: s.Catalog.Machine(), Common: common, Cwd: cwd, Branch: branch}
 		r.State.Runtime = b
 	}
-	if b.Machine != platform.Machine() || b.Common != common || b.Cwd != cwd || b.Branch != branch {
+	if b.Machine != s.Catalog.Machine() || b.Common != common || b.Cwd != cwd || b.Branch != branch {
 		return mission.Problem("worktree_mismatch", "mission runtime binding differs from this worktree")
 	}
 	if b.SessionID != "" && b.SessionID != p.SessionID {
@@ -415,7 +255,9 @@ func (s *App) attachBinding(r *mission.Record, p mission.PiAttachment, cwd, bran
 	return nil
 }
 
-func validatePiSession(p *mission.PiAttachment) error {
+// validatePiSession is the attachment policy: a named session, in a session file
+// whose header names that same session and the worktree it claims.
+func (s *App) validatePiSession(p *mission.PiAttachment) error {
 	if p.SessionID == "" || p.SessionFile == "" || p.Cwd == "" || p.Workspace == "" || p.Pane == "" || len(p.Token) < 32 {
 		return mission.Problem("usage", "attach needs session-id, session-file, cwd, workspace, pane, and a private token of at least 32 characters")
 	}
@@ -436,21 +278,17 @@ func validatePiSession(p *mission.PiAttachment) error {
 	if e != nil {
 		return e
 	}
-	f, e := os.Open(p.SessionFile)
+	h, e := s.Catalog.SessionHeader(p.SessionFile)
 	if e != nil {
 		return e
 	}
-	defer f.Close()
-	scan := bufio.NewScanner(f)
-	scan.Buffer(make([]byte, 4096), 65536)
-	if !scan.Scan() {
+	if errors.Is(h.HeaderErr, io.EOF) {
 		return mission.Problem("invalid_session", "Pi session file has no header")
 	}
-	var header struct{ Type, ID, Cwd string }
-	if e = json.Unmarshal(scan.Bytes(), &header); e != nil || header.Type != "session" || header.ID != p.SessionID {
+	if h.HeaderErr != nil || h.Type != "session" || h.ID != p.SessionID {
 		return mission.Problem("invalid_session", "Pi header identity does not match")
 	}
-	actual, e := filepath.EvalSymlinks(header.Cwd)
+	actual, e := filepath.EvalSymlinks(h.Cwd)
 	if e != nil || actual != p.Cwd {
 		return mission.Problem("session_cwd_mismatch", "Pi session header must name the mission worktree")
 	}
@@ -463,7 +301,7 @@ func (s *App) attach(h string, p mission.PiAttachment) (mission.Claim, error) {
 	} else if e = requireOpen(r); e != nil {
 		return mission.Claim{}, e
 	}
-	if e := validatePiSession(&p); e != nil {
+	if e := s.validatePiSession(&p); e != nil {
 		return mission.Claim{}, e
 	}
 	// Replaying an attach recovers the same attempt, never a second writer.
@@ -582,7 +420,7 @@ func (s *App) launch(h, file, launchID string) (map[string]any, error) {
 		if b == nil {
 			return mission.Problem("worktree_required", "prepare a mission workspace first")
 		}
-		if b.Machine != platform.Machine() {
+		if b.Machine != s.Catalog.Machine() {
 			return mission.Problem("wrong_machine", "runtime belongs to another machine")
 		}
 		if file != "" {

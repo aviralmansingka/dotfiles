@@ -277,8 +277,7 @@ func cmdCheckCheckout(t *testing.T) (*App, string, string) {
 	t.Helper()
 	s, h := fixture(t)
 	dir := t.TempDir()
-	_, e := gitText(dir, "init", "-b", "main")
-	must(t, e)
+	gitFixture(t, dir, "init", "-b", "main")
 	must(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.test/cmdcheck\n\ngo 1.26\n"), 0o600))
 	return s, h, dir
 }

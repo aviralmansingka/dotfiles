@@ -4,9 +4,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"mission.local/prototype/internal/domain/mission"
 	"mission.local/prototype/internal/platform"
@@ -35,7 +33,7 @@ func (s *App) ready(repo string) ([]mission.Work, error) {
 		if e != nil {
 			return nil, e
 		}
-		out = append(out, mission.Work{Handle: r.Handle, Title: r.Mission.Title, Step: st, Goal: r.Mission.Goal, Cwd: rr.Bindings[platform.Machine()]})
+		out = append(out, mission.Work{Handle: r.Handle, Title: r.Mission.Title, Step: st, Goal: r.Mission.Goal, Cwd: rr.Bindings[s.Catalog.Machine()]})
 	}
 	return out, nil
 }
@@ -81,7 +79,7 @@ func (s *App) claim(h, agent, session, cwd string, managed bool, pi ...*mission.
 			return e
 		}
 		if cwd == "" {
-			cwd = repo.Bindings[platform.Machine()]
+			cwd = repo.Bindings[s.Catalog.Machine()]
 		}
 		if cwd == "" {
 			return mission.Problem("no_checkout", "register a checkout binding on this machine")
@@ -95,7 +93,7 @@ func (s *App) claim(h, agent, session, cwd string, managed bool, pi ...*mission.
 			return e
 		}
 		branch := ""
-		if r.State.Runtime != nil && r.State.Runtime.Machine != platform.Machine() {
+		if r.State.Runtime != nil && r.State.Runtime.Machine != s.Catalog.Machine() {
 			return mission.Problem("wrong_machine", "mission worktree is bound on %s", r.State.Runtime.Machine)
 		}
 		allBindings, e := s.list()
@@ -103,7 +101,7 @@ func (s *App) claim(h, agent, session, cwd string, managed bool, pi ...*mission.
 			return e
 		}
 		for _, other := range allBindings {
-			if other.Handle != h && other.State.Runtime != nil && other.State.Runtime.Machine == platform.Machine() && other.State.Runtime.Cwd == cwd {
+			if other.Handle != h && other.State.Runtime != nil && other.State.Runtime.Machine == s.Catalog.Machine() && other.State.Runtime.Cwd == cwd {
 				return mission.Problem("worktree_busy", "worktree belongs to mission %s", other.Handle)
 			}
 		}
@@ -117,42 +115,30 @@ func (s *App) claim(h, agent, session, cwd string, managed bool, pi ...*mission.
 			if !managed {
 				return mission.Problem("managed_required", "writer missions require mission run so process exit is observed")
 			}
-			binding := repo.Bindings[platform.Machine()]
-			a, e := gitCommon(binding)
+			binding := repo.Bindings[s.Catalog.Machine()]
+			a, e := s.Catalog.Common(binding)
 			if e != nil {
 				return e
 			}
-			b, e := gitCommon(cwd)
+			b, e := s.Catalog.Common(cwd)
 			if e != nil || a != b {
 				return mission.Problem("wrong_repository", "writer cwd must belong to the registered repository")
 			}
-			o, e := exec.Command("git", "-C", cwd, "branch", "--show-current").Output()
+			branch, e = s.Catalog.Branch(cwd)
 			if e != nil {
 				return e
 			}
-			branch = strings.TrimSpace(string(o))
 			if branch == "" || branch == "main" || branch == "master" {
 				return mission.Problem("isolated_worktree_required", "writer missions require an existing non-main worktree")
 			}
-			o, e = exec.Command("git", "-C", cwd, "rev-parse", "--absolute-git-dir").Output()
+			root, gitDir, e := s.Catalog.Checkout(cwd)
 			if e != nil {
 				return e
 			}
-			gd, e := filepath.EvalSymlinks(strings.TrimSpace(string(o)))
-			if e != nil {
-				return e
-			}
-			if gd == b {
+			if gitDir == b {
 				return mission.Problem("isolated_worktree_required", "use a linked worktree; the primary checkout is reserved")
 			}
-			o, e = exec.Command("git", "-C", cwd, "rev-parse", "--show-toplevel").Output()
-			if e != nil {
-				return e
-			}
-			cwd, e = filepath.EvalSymlinks(strings.TrimSpace(string(o)))
-			if e != nil {
-				return e
-			}
+			cwd = root
 			all, e := s.list()
 			if e != nil {
 				return e
@@ -173,7 +159,7 @@ func (s *App) claim(h, agent, session, cwd string, managed bool, pi ...*mission.
 		if _, e = s.Repo.Path(r.Mission.Repo, r.Mission.Slug, artifact); e != nil {
 			return e
 		}
-		a := mission.Attempt{ID: mission.UID("attempt-"), Sequence: seq, Step: st.ID, Agent: agent, Status: "running", Started: mission.Now(), Updated: mission.Now(), Machine: platform.Machine(), SessionID: session, Cwd: cwd, Branch: branch, Managed: managed, TokenHash: mission.Digest([]byte(token)), SpecHash: r.State.SpecHash, Brief: r.Mission.Body, Artifact: artifact, Events: []mission.Event{}}
+		a := mission.Attempt{ID: mission.UID("attempt-"), Sequence: seq, Step: st.ID, Agent: agent, Status: "running", Started: mission.Now(), Updated: mission.Now(), Machine: s.Catalog.Machine(), SessionID: session, Cwd: cwd, Branch: branch, Managed: managed, TokenHash: mission.Digest([]byte(token)), SpecHash: r.State.SpecHash, Brief: r.Mission.Body, Artifact: artifact, Events: []mission.Event{}}
 		if attachment != nil {
 			if e := s.attachBinding(r, *attachment, cwd, branch); e != nil {
 				return e
@@ -230,13 +216,6 @@ func (s *App) pickup(repo, agent, session, cwd string) (mission.Claim, error) {
 		}
 	}
 	return mission.Claim{}, mission.Problem("no_work", "no ready research work matches this agent; writer missions use run with a worktree")
-}
-func gitCommon(p string) (string, error) {
-	o, e := exec.Command("git", "-C", p, "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
-	if e != nil {
-		return "", mission.Problem("invalid_repository", "%s is not a git checkout", p)
-	}
-	return filepath.EvalSymlinks(strings.TrimSpace(string(o)))
 }
 func authorize(a *mission.Attempt, token string) error {
 	if token == "" || subtle.ConstantTimeCompare([]byte(a.TokenHash), []byte(mission.Digest([]byte(token)))) != 1 {

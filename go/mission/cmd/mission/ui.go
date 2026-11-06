@@ -468,7 +468,7 @@ func (m *desk) launchSelected() {
 		m.notice = "Already owned by a Pi session · attach to it instead"
 		return
 	}
-	l, created, e := requestLaunch(m.launchDir, deskOwner("."), r.Handle, r.Mission.Repo, time.Now())
+	l, created, e := requestLaunch(m.launchDir, m.store.deskOwner("."), r.Handle, r.Mission.Repo, time.Now())
 	if e != nil {
 		m.notice = ""
 		m.err = mission.Problem("launch_failed", "cannot write the launch request: %v", e)
