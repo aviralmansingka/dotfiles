@@ -4,6 +4,10 @@
 # Structural rules only: nothing here lints line length. The nvim wrap
 # (helpers/markdown_wrap) owns prose width and measures the rendered title,
 # so a long link destination never draws a warning.
+#
+# A repository-level .markdownlint.json replaces this whole config block, not
+# just the keys it names. Vault notes therefore mirror these rules in
+# /Users/aviral/vault/.markdownlint.json; keep the two in step.
 config:
   # MD013 - Line length
   # Disabled: the wrap owns width, and linting it twice only fights itself.
