@@ -32,8 +32,9 @@ rex.bind("ctrl+a>ctrl+a", "pane.send_key", { key = "ctrl+a" })
 -- App UI (C-a b expands and minimizes the sidebar/tab viewer)
 rex.bind("ctrl+a>b", "client.sidebar.toggle")
 
--- Activity page with its search focused (tmux has no counterpart).
--- Rex has no query for whether the page is open, so this one key toggles it:
+-- Activity page with its search focused (tmux has no counterpart). It lists
+-- every tab and focuses the one you pick. C-a o, where o stands for overview.
+-- Rex has no query for whether the page is open, so this key toggles it:
 -- a press opens it with the filter focused, the next press closes it.
 rex.action{
   name  = "activity_search",
@@ -43,7 +44,7 @@ rex.action{
     rex.client.queue("client.sidebar.filter.focus")
   end,
 }
-rex.bind("ctrl+a>s", "activity_search")
+rex.bind("ctrl+a>o", "activity_search")
 
--- Session picker with its search field focused (C-a S)
-rex.bind("ctrl+a>shift+s", "session.switch")
+-- Session picker with its search field focused (C-a s)
+rex.bind("ctrl+a>s", "session.switch")
