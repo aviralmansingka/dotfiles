@@ -17,6 +17,17 @@ import { CustomEditor, type ExtensionAPI } from "@earendil-works/pi-coding-agent
 import { CURSOR_MARKER, type EditorTheme, type TUI, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import type { KeybindingsManager } from "@earendil-works/pi-coding-agent";
 
+const DEBUG_LOG = "/tmp/nvim-editor.log";
+function debug(message: string): void {
+  if (!process.env.PI_NVIM_EDITOR_DEBUG) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require("node:fs").appendFileSync(DEBUG_LOG, `${new Date().toISOString()} ${message}\n`);
+  } catch {
+    // logging is never fatal
+  }
+}
+
 // ---------------------------------------------------------------------------
 // msgpack (encode + incremental decode) — the nvim rpc wire format
 // ---------------------------------------------------------------------------
@@ -374,6 +385,10 @@ export class NvimSession {
       [],
     ]).catch((error: Error) => this.options.onExit(`nvim setup failed: ${error.message}`));
     this.commandsSent = true;
+    if (process.env.PI_NVIM_EDITOR_DEBUG) {
+      const map = await this.request("nvim_eval", ["maparg('<CR>', 'n')"]).catch(() => "ERR");
+      debug(`ready maparg_CR_n=${JSON.stringify(map)}`);
+    }
     this.options.onRender();
   }
 
@@ -393,7 +408,10 @@ export class NvimSession {
       } else if (kind === 2) {
         if (message[1] === "redraw") this.applyRedraw(message[2] as MsgpackValue[][]);
         else if (message[1] === "pi-sync") this.options.onSync();
-        else if (message[1] === "pi-submit") this.options.onSubmit();
+        else if (message[1] === "pi-submit") {
+          debug("notification pi-submit");
+          this.options.onSubmit();
+        } else debug(`notification ${String(message[1])}`);
       }
     }
   }
@@ -666,6 +684,9 @@ export class NvimEditor extends CustomEditor {
     try {
       const lines = await this.session.getLines();
       const text = lines.join("\n").replace(/\n+$/, "");
+      if (process.env.PI_NVIM_EDITOR_DEBUG) {
+        debug(`submit text=${JSON.stringify(text)} onSubmit=${typeof this.onSubmit} fn=${this.onSubmit?.toString().slice(0, 90)}`);
+      }
       this.cachedText = "";
       await this.session.setText("");
       await this.session.gotoInsert();
@@ -713,6 +734,7 @@ export class NvimEditor extends CustomEditor {
 export default function (pi: ExtensionAPI) {
   let current: NvimEditor | undefined;
   let previous: ReturnType<NonNullable<Parameters<ExtensionAPI["on"]>[1]>> | undefined;
+  let myFactory: unknown;
 
   pi.registerCommand("nvim-editor", {
     description: "Toggle the embedded Neovim prompt",
@@ -744,13 +766,23 @@ export default function (pi: ExtensionAPI) {
       current = editor;
       return editor;
     };
+    myFactory = factory;
     ctx.ui.setEditorComponent(factory);
+  }
+
+  /** Other extensions also replace the editor on session_start; claim it last. */
+  function claim(ctx: Parameters<typeof enable>[0] & { ui: { getEditorComponent: () => unknown } }) {
+    if (current && ctx.ui.getEditorComponent() === myFactory) return;
+    if (current) return; // a live nvim editor was replaced by someone else; do not fight it
+    enable(ctx);
   }
 
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
     previous = ctx.ui.getEditorComponent() as never;
-    enable(ctx);
+    // Let every other session_start handler install its editor first.
+    setTimeout(() => claim(ctx), 0);
+    setTimeout(() => claim(ctx), 500);
   });
 
   pi.on("session_shutdown", () => {
