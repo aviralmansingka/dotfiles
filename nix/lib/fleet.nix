@@ -26,7 +26,12 @@ let
 
   # Modules that need the in-repo crate receive it as an argument: the crate is
   # a flake input, so it is not reachable as a relative path from a module.
-  crateArgs = { inherit rataflowSrc; };
+  # `rexFlake` follows the same pattern, so a host module can import the Rex
+  # home-manager module without the flake knowing which hosts want Rex.
+  crateArgs = {
+    inherit rataflowSrc;
+    rexFlake = rex;
+  };
 
   # Every host that is not a Linux `remote` profile: the system its packages are
   # built for, and the one module that carries the host delta. A standalone Home

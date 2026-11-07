@@ -44,6 +44,35 @@ variable "probe_ssh_cidr" {
   default     = "0.0.0.0/0"
 }
 
+# ---- Mumbai Rex host (mumbai.tf) ------------------------------------------
+# Enabled by default: the box is a long-lived fleet host, not a one-shot
+# probe. Set mumbai_enabled=false to destroy it without touching anything
+# else this root manages.
+
+variable "mumbai_enabled" {
+  type        = bool
+  description = "Create the Mumbai EC2 Rex host"
+  default     = true
+}
+
+variable "mumbai_instance_type" {
+  type        = string
+  description = "EC2 instance type for the Mumbai Rex host"
+  default     = "t3.small"
+}
+
+variable "mumbai_ssh_public_key_path" {
+  type        = string
+  description = "Local path to the SSH public key that may log in to the Mumbai host (only read when mumbai_enabled is true)"
+  default     = "~/.ssh/id_rsa.pub"
+}
+
+variable "mumbai_ssh_cidr" {
+  type        = string
+  description = "CIDR allowed to reach the Mumbai host on port 22"
+  default     = "0.0.0.0/0"
+}
+
 variable "probe_sops_version" {
   type        = string
   description = "sops release the probe installs (must be >= the encryption version in secrets/probe.yaml)"

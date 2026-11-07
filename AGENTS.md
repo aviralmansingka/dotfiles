@@ -35,6 +35,13 @@ steers back automatically; on clean completion its tab closes and the picker row
 Branches are ownership-marked (`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool
 does not own is refused. Teardown after ship stays with `/cleanup`.
 
+`/worktree` is the human entry point, and it is a prompt template, not an extension command:
+`pi/.pi/agent/prompts/worktree.md`. The text after the command is either a branch (`feat/build-skill`) or a theme
+("the changes in this conversation"). The agent derives the type, slug, and worker task from that text and the
+conversation. It asks no questions and always passes `base: "main"`, so a worktree never starts from the current
+branch. Under Rex the tool opens the worker tab with `rex window new`, a `π <name>` label, `--focus=false`, and
+`-c <worktree>`.
+
 ## Captain prompt budget: deferred tools
 
 Extension tools captains rarely call register with `exposure: "deferred"`: `quiz`, `explain`,

@@ -19,6 +19,13 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Rex, from Superlogical's own flake. It packages the release binary, so no
+    # source build and no apt repository: the server, the CLI and the terminfo
+    # arrive through nix like every other package in the profile. The channel
+    # URL always serves that channel's newest release; flake.lock pins the
+    # exact one, and `nix flake update rex` moves to the next.
+    rex.url = "https://pkgs.superlogical.com/rex/nix/preview.tar.gz";
   };
 
   outputs =
@@ -27,6 +34,7 @@
       nixpkgs,
       home-manager,
       sops-nix,
+      rex,
     }:
     let
       lib = nixpkgs.lib;
@@ -35,6 +43,7 @@
           nixpkgs
           home-manager
           sops-nix
+          rex
           lib
           ;
         rataflowSrc = ./rataflow;
@@ -47,6 +56,9 @@
         remote = fleet.mkRemote "homelab";
         remote-devbox = fleet.mkRemote "devbox";
         remote-probe = fleet.mkRemote "probe";
+        # The Mumbai EC2 box: the fleet's Rex server host. Same shared remote
+        # profile plus the Rex home-manager module.
+        remote-mumbai = fleet.mkRemote "mumbai";
         macbook = fleet.mkHome "macbook";
       };
 
@@ -79,6 +91,13 @@
           system = "x86_64-linux";
           ssh = "probe";
           localNames = [ "probe" ];
+        };
+        mumbai = {
+          kind = "home-manager";
+          attr = "remote-mumbai";
+          system = "x86_64-linux";
+          ssh = "mumbai";
+          localNames = [ "mumbai" ];
         };
         mac = {
           kind = "home-manager";
