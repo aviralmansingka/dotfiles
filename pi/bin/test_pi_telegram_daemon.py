@@ -2568,6 +2568,161 @@ class TestShortcutEndpoint(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
 
+    def test_shortcut_dictation_goes_to_rex_when_configured(self):
+        calls, sent = [], []
+        saved = (daemon.SHORTCUT_REX_SESSION, daemon.SHORTCUT_REX_BLOCK)
+        daemon.SHORTCUT_REX_SESSION = "walkie"
+        daemon.SHORTCUT_REX_BLOCK = "block:abc"
+
+        def fake_run(cmd, **kwargs):
+            calls.append((cmd, kwargs.get("input")))
+            return daemon.subprocess.CompletedProcess(cmd, 0, "", "")
+
+        try:
+            with patch.object(daemon.subprocess, "run", side_effect=fake_run), \
+                 patch.object(daemon, "send_telegram",
+                              side_effect=lambda cid, text, reply_to_message_id=None: sent.append(text)), \
+                 patch.object(daemon, "log"):
+                daemon.handle_shortcut_text(MagicMock(), "walk  the dog\nplease")
+        finally:
+            daemon.SHORTCUT_REX_SESSION, daemon.SHORTCUT_REX_BLOCK = saved
+        self.assertEqual(sent, [])
+        self.assertEqual(calls[0][0], ["rex", "send", "-s", "walkie", "-b", "block:abc"])
+        self.assertEqual(calls[0][1], "walk the dog please")  # one line: a newline would submit twice
+        self.assertEqual(calls[1][0], ["rex", "send-key", "-s", "walkie", "-b", "block:abc", "enter"])
+
+    def test_rex_note_block_resolves_the_first_session_block(self):
+        saved = (daemon.SHORTCUT_REX_BLOCK,)
+        daemon.SHORTCUT_REX_BLOCK = ""
+        payload = json.dumps({"blocks": [{"block_id": "block:first"}, {"block_id": "block:second"}]})
+        try:
+            with patch.object(daemon.subprocess, "run",
+                              return_value=daemon.subprocess.CompletedProcess([], 0, payload, "")):
+                self.assertEqual(daemon.rex_note_block("walkie"), "block:first")
+        finally:
+            (daemon.SHORTCUT_REX_BLOCK,) = saved
+
+    def test_rex_delivery_failure_reports_to_telegram(self):
+        saved = (daemon.SHORTCUT_REX_SESSION, daemon.SHORTCUT_REX_BLOCK)
+        daemon.SHORTCUT_REX_SESSION = "walkie"
+        daemon.SHORTCUT_REX_BLOCK = "block:abc"
+        sent = []
+        try:
+            with patch.object(daemon.subprocess, "run",
+                              return_value=daemon.subprocess.CompletedProcess([], 3, "", "bad target")), \
+                 patch.object(daemon, "send_telegram",
+                              side_effect=lambda cid, text, reply_to_message_id=None: sent.append(text)), \
+                 patch.object(daemon, "log"):
+                daemon._run_shortcut_text(MagicMock(), "hello")
+        finally:
+            daemon.SHORTCUT_REX_SESSION, daemon.SHORTCUT_REX_BLOCK = saved
+        self.assertEqual(len(sent), 1)
+        self.assertIn("rex send failed", sent[0])
+
+    def test_shortcut_listener_retries_a_failed_bind(self):
+        calls = {"served": 0}
+
+        class FlakyServer:
+            def __init__(self, address, pi, relay):
+                calls["served"] += 1
+                if calls["served"] < 3:
+                    raise OSError(99, "Cannot assign requested address")
+                self.address = address
+
+            def serve_forever(self):
+                calls["bound"] = self.address
+
+        saved = (daemon.SHORTCUT_TOKEN, daemon.SHORTCUT_PORT,
+                 daemon.SHORTCUT_BIND_RETRY_SECONDS)
+        daemon.SHORTCUT_TOKEN = "test-token"
+        daemon.SHORTCUT_PORT = 8766
+        daemon.SHORTCUT_BIND_RETRY_SECONDS = 0
+        try:
+            with patch.object(daemon, "ShortcutHTTPServer", FlakyServer), \
+                 patch.object(daemon, "log"):
+                thread = daemon.start_shortcut_listener(MagicMock())
+                self.assertIsNotNone(thread)
+                thread.join(timeout=2)
+        finally:
+            (daemon.SHORTCUT_TOKEN, daemon.SHORTCUT_PORT,
+             daemon.SHORTCUT_BIND_RETRY_SECONDS) = saved
+        self.assertEqual(calls["served"], 3)
+        self.assertEqual(calls["bound"], (daemon.SHORTCUT_HOST or "0.0.0.0", 8766))
+
+    def test_sanitize_shortcut_text_strips_control_bytes(self):
+        self.assertEqual(daemon.sanitize_shortcut_text(b"  hi\x03ther\x1b\nworld \x00"), "hither\nworld")
+        self.assertEqual(daemon.sanitize_shortcut_text(b"  \r\n\t "), "")
+
+    def test_handle_shortcut_text_asks_and_replies(self):
+        asked, sent = [], []
+
+        class FakePi:
+            def ask(self, message, chat_id=None, reply_to=None, images=None):
+                asked.append((chat_id, message))
+                return "agent reply"
+
+        with patch.object(daemon, "send_telegram",
+                          side_effect=lambda cid, text, reply_to_message_id=None: sent.append((cid, text))), \
+             patch.object(daemon, "transcribe_with_command") as transcribe, \
+             patch.object(daemon, "ChatActionLoop"):
+            daemon.handle_shortcut_text(FakePi(), "say hello")
+        transcribe.assert_not_called()
+        self.assertEqual(asked[0][0], "123456789")
+        self.assertIn("iOS Shortcut dictation", asked[0][1])
+        self.assertIn("say hello", asked[0][1])
+        self.assertEqual(sent, [("123456789", "agent reply")])
+
+    def test_shortcut_dictation_failure_reports_to_telegram(self):
+        pi = MagicMock()
+        pi.ask.side_effect = RuntimeError("agent down")
+        sent = []
+        with patch.object(daemon, "send_telegram",
+                          side_effect=lambda cid, text, reply_to_message_id=None: sent.append(text)), \
+             patch.object(daemon, "ChatActionLoop"), patch.object(daemon, "log"):
+            daemon._run_shortcut_text(pi, "words")
+        self.assertEqual(sent, ["Pi shortcut note error: agent down"])
+
+    def test_http_accepts_dictation_field(self):
+        pi = MagicMock()
+        with patch.object(daemon, "_run_shortcut_text") as run_text, \
+             patch.object(daemon, "_run_shortcut_note") as run_note:
+            server = daemon.ShortcutHTTPServer(("127.0.0.1", 0), pi)
+            port = server.server_address[1]
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                base = f"http://127.0.0.1:{port}{daemon.SHORTCUT_PATH}"
+                body, boundary = self._multipart({
+                    "token": (None, b"test-token"), "text": (None, b" hello there \x03")})
+                with self._post(base, body, boundary) as r:
+                    self.assertEqual(r.status, 200)
+                    self.assertIn(b'"ok": true', r.read())
+                deadline = time.time() + 2
+                while time.time() < deadline and not run_text.called:
+                    time.sleep(0.01)
+                run_text.assert_called_once_with(pi, "hello there")
+                run_note.assert_not_called()
+            finally:
+                server.shutdown()
+                server.server_close()
+
+    def test_http_rejects_blank_dictation_without_a_file(self):
+        pi = MagicMock()
+        with patch.object(daemon, "_run_shortcut_text") as run_text:
+            server = daemon.ShortcutHTTPServer(("127.0.0.1", 0), pi)
+            port = server.server_address[1]
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                base = f"http://127.0.0.1:{port}{daemon.SHORTCUT_PATH}"
+                body, boundary = self._multipart({
+                    "token": (None, b"test-token"), "text": (None, b"   \n\t ")})
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    self._post(base, body, boundary)
+                self.assertEqual(ctx.exception.code, 400)
+                self.assertFalse(run_text.called)
+            finally:
+                server.shutdown()
+                server.server_close()
+
 
 # ---------------------------------------------------------------------------
 # Telethon user-session voice-note intake (offline, fake client)

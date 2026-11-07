@@ -101,6 +101,17 @@ SHORTCUT_SEND_TO_TELEGRAM = os.environ.get("PI_TELEGRAM_SHORTCUT_SEND_TELEGRAM_R
 # Pin the pi session file so daemon restarts continue the same conversation.
 # Without this, each restart starts a fresh session.
 PI_SESSION = os.environ.get("PI_TELEGRAM_SESSION", "").strip()
+# Send shortcut notes into a rex session instead of the daemon's own agent.
+# Set to a session label or id; the rex server must run on this host. Empty
+# keeps the Telegram answer path. The block is resolved on each note unless
+# PI_TELEGRAM_SHORTCUT_REX_BLOCK pins one.
+SHORTCUT_REX_SESSION = os.environ.get("PI_TELEGRAM_SHORTCUT_REX_SESSION", "").strip()
+SHORTCUT_REX_BLOCK = os.environ.get("PI_TELEGRAM_SHORTCUT_REX_BLOCK", "").strip()
+REX_BIN = os.environ.get("PI_TELEGRAM_REX_BIN", "rex").strip() or "rex"
+REX_TIMEOUT_SECONDS = 10
+# A pinned Tailscale address can be missing when this unit starts. Retry the
+# endpoint bind instead of dying once.
+SHORTCUT_BIND_RETRY_SECONDS = 15
 
 # --- Telethon user-session voice-note intake ------------------------------
 # The owner's iPhone shortcut sends a voice note to Saved Messages. A bot
@@ -1559,9 +1570,9 @@ def handle_switch(pi: "PiRPC", arg: str) -> str:
 def parse_multipart(body: bytes, boundary: str) -> dict[str, tuple[Optional[str], bytes]]:
     """Parse multipart/form-data into {field name: (filename or None, bytes)}.
 
-    Deliberately small: shortcut posts carry one text field (`token`) and one
-    file field (`file`). The client-chosen random boundary never appears in
-    part data, so a plain split is safe.
+    Deliberately small: shortcut posts carry `token` plus either a dictated
+    `text` field or a `file` field. The client-chosen random boundary never
+    appears in part data, so a plain split is safe.
     """
     delim = b"--" + boundary.encode("utf-8")
     fields: dict[str, tuple[Optional[str], bytes]] = {}
@@ -1595,6 +1606,46 @@ def shortcut_target_chat_id() -> str:
     # ponytail: require one numeric DM; add an explicit target setting for multiple DMs.
     private_chats = [c for c in ALLOWED_CHATS if c.isascii() and c.isdigit() and int(c) > 0]
     return private_chats[0] if len(private_chats) == 1 else ""
+
+
+def rex_note_block(session: str) -> str:
+    """Resolve the pane that takes notes: the pinned block, else the session's first one."""
+    if SHORTCUT_REX_BLOCK:
+        return SHORTCUT_REX_BLOCK
+    out = subprocess.run(
+        [REX_BIN, "block", "ls", "-s", session, "--json"],
+        capture_output=True, text=True, timeout=REX_TIMEOUT_SECONDS,
+    )
+    if out.returncode != 0:
+        raise RuntimeError(f"rex block ls failed ({out.returncode}): {out.stderr.strip()}")
+    blocks = (json.loads(out.stdout or "{}").get("blocks") or [])
+    if not blocks:
+        raise RuntimeError(f"rex session {session!r} has no block")
+    return blocks[0]["block_id"]
+
+
+def deliver_to_rex(session: str, text: str) -> None:
+    """Type a note into the rex pane and press Return.
+
+    `rex send` writes bytes into the pty, so a newline inside the note would
+    submit a second line. Collapse to one line first; control bytes are already
+    gone, but a raw ESC or Ctrl-C here would be a real key.
+    """
+    block = rex_note_block(session)
+    line = " ".join(text.split())
+    sent = subprocess.run(
+        [REX_BIN, "send", "-s", session, "-b", block],
+        input=line, text=True, capture_output=True, timeout=REX_TIMEOUT_SECONDS,
+    )
+    if sent.returncode != 0:
+        raise RuntimeError(f"rex send failed ({sent.returncode}): {sent.stderr.strip()}")
+    key = subprocess.run(
+        [REX_BIN, "send-key", "-s", session, "-b", block, "enter"],
+        capture_output=True, text=True, timeout=REX_TIMEOUT_SECONDS,
+    )
+    if key.returncode != 0:
+        raise RuntimeError(f"rex send-key failed ({key.returncode}): {key.stderr.strip()}")
+    log(f"Shortcut note delivered to rex session {session!r} block {block}")
 
 
 def handle_shortcut_audio(
@@ -1653,6 +1704,9 @@ def handle_shortcut_audio(
         audio_path.unlink(missing_ok=True)
     if not transcript.strip():
         raise RuntimeError("Transcription came back empty")
+    if SHORTCUT_REX_SESSION:
+        deliver_to_rex(SHORTCUT_REX_SESSION, transcript)
+        return
     prompt = (
         "iOS Shortcut voice-note transcript from the owner "
         f"at unix timestamp {int(time.time())}:\n\n{transcript}"
@@ -1660,6 +1714,41 @@ def handle_shortcut_audio(
     with ChatActionLoop(chat_id):
         reply = pi.ask(prompt, chat_id=chat_id)
     send_telegram_reply(chat_id, reply)
+
+
+# C0/C1 except tab and newline: a terminal would act on these as keys.
+CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+def sanitize_shortcut_text(raw: bytes) -> str:
+    """Decode a dictated form field and drop bytes a terminal would act on."""
+    return CONTROL_CHARS.sub("", raw.decode("utf-8", "replace")).strip()
+
+
+def handle_shortcut_text(pi: "PiRPC", text: str) -> None:
+    """Take a shortcut dictation: no audio, no transcription, straight to the agent."""
+    if SHORTCUT_REX_SESSION:
+        deliver_to_rex(SHORTCUT_REX_SESSION, text)
+        return
+    chat_id = shortcut_target_chat_id()
+    if not chat_id:
+        raise RuntimeError("PI_TELEGRAM_ALLOWED_CHATS must contain exactly one numeric private chat id")
+    prompt = (
+        "iOS Shortcut dictation from the owner "
+        f"at unix timestamp {int(time.time())}:\n\n{text}"
+    )
+    with ChatActionLoop(chat_id):
+        reply = pi.ask(prompt, chat_id=chat_id)
+    send_telegram_reply(chat_id, reply)
+
+
+def _report_shortcut_error(e: Exception) -> None:
+    chat_id = shortcut_target_chat_id()
+    if chat_id:
+        try:
+            send_telegram(chat_id, f"Pi shortcut note error: {e}")
+        except Exception as send_err:
+            log(f"Also failed to send shortcut error over Telegram: {send_err}")
 
 
 def _run_shortcut_note(
@@ -1672,12 +1761,15 @@ def _run_shortcut_note(
         handle_shortcut_audio(pi, filename, data, relay)
     except Exception as e:
         log(f"Shortcut audio failed: {e}")
-        chat_id = shortcut_target_chat_id()
-        if chat_id:
-            try:
-                send_telegram(chat_id, f"Pi shortcut note error: {e}")
-            except Exception as send_err:
-                log(f"Also failed to send shortcut error over Telegram: {send_err}")
+        _report_shortcut_error(e)
+
+
+def _run_shortcut_text(pi: "PiRPC", text: str) -> None:
+    try:
+        handle_shortcut_text(pi, text)
+    except Exception as e:
+        log(f"Shortcut dictation failed: {e}")
+        _report_shortcut_error(e)
 
 
 class ShortcutHandler(BaseHTTPRequestHandler):
@@ -1722,14 +1814,22 @@ class ShortcutHandler(BaseHTTPRequestHandler):
             log(f"Shortcut endpoint rejected bad token from {self.client_address[0]}")
             self._respond(403, {"ok": False, "error": "bad token"})
             return
+        text = sanitize_shortcut_text(fields.get("text", (None, b""))[1] or b"")
         filename, data = fields.get("file", (None, b""))
-        if not data:
-            self._respond(400, {"ok": False, "error": "missing file field"})
+        if not text and not data:
+            self._respond(400, {"ok": False, "error": "missing text or file field"})
             return
         pi = getattr(self.server, "pi", None)
         relay = getattr(self.server, "relay", None)
         if pi is None:
             self._respond(503, {"ok": False, "error": "agent not ready"})
+            return
+        if text:
+            threading.Thread(
+                target=_run_shortcut_text, args=(pi, text),
+                daemon=True, name="shortcut-dictation",
+            ).start()
+            self._respond(200, {"ok": True, "chars": len(text)})
             return
         threading.Thread(
             target=_run_shortcut_note, args=(pi, filename, data, relay),
@@ -1752,18 +1852,32 @@ def start_shortcut_listener(pi: "PiRPC", relay: Any = None) -> Optional[threadin
 
     `relay` is the Telethon listener when one is configured: the endpoint then
     uploads each note into the intake chat instead of answering directly.
+
+    The bind is retried: when the host is pinned to a Tailscale address, this
+    unit starts before Tailscale assigns it, and a one-shot bind leaves the
+    phone posting into nothing for days.
     """
     if not (SHORTCUT_TOKEN and SHORTCUT_PORT):
         log("Shortcut endpoint disabled (PI_TELEGRAM_SHORTCUT_TOKEN/PORT not set)")
         return None
-    try:
-        httpd = ShortcutHTTPServer((SHORTCUT_HOST or "0.0.0.0", SHORTCUT_PORT), pi, relay)
-    except OSError as e:
-        log(f"Shortcut endpoint failed to bind {SHORTCUT_HOST}:{SHORTCUT_PORT}: {e}")
-        return None
-    t = threading.Thread(target=httpd.serve_forever, daemon=True, name="shortcut-listener")
+    address = (SHORTCUT_HOST or "0.0.0.0", SHORTCUT_PORT)
+
+    def serve() -> None:
+        while True:
+            try:
+                httpd = ShortcutHTTPServer(address, pi, relay)
+                break
+            except OSError as e:
+                log(
+                    f"Shortcut endpoint cannot bind {address[0]}:{address[1]} ({e}); "
+                    f"retrying in {SHORTCUT_BIND_RETRY_SECONDS}s"
+                )
+                time.sleep(SHORTCUT_BIND_RETRY_SECONDS)
+        log(f"Shortcut audio endpoint on http://{address[0]}:{address[1]}{SHORTCUT_PATH}")
+        httpd.serve_forever()
+
+    t = threading.Thread(target=serve, daemon=True, name="shortcut-listener")
     t.start()
-    log(f"Shortcut audio endpoint on http://{SHORTCUT_HOST or '0.0.0.0'}:{SHORTCUT_PORT}{SHORTCUT_PATH}")
     return t
 
 
