@@ -1817,6 +1817,10 @@ class ShortcutHandler(BaseHTTPRequestHandler):
         text = sanitize_shortcut_text(fields.get("text", (None, b""))[1] or b"")
         filename, data = fields.get("file", (None, b""))
         if not text and not data:
+            # Name the fields and sizes, never the values: an empty `text` part
+            # means the phone sent a dictation that held only whitespace.
+            seen = ", ".join(f"{name}={len(payload)}B" for name, (_, payload) in fields.items())
+            log(f"Shortcut post had no usable field ({seen or 'no fields'})")
             self._respond(400, {"ok": False, "error": "missing text or file field"})
             return
         pi = getattr(self.server, "pi", None)
