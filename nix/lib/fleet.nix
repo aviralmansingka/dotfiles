@@ -5,6 +5,7 @@
   nixpkgs,
   home-manager,
   sops-nix,
+  rex,
   rataflowSrc,
   lib,
 }:
@@ -19,6 +20,9 @@ let
     # is the image default (`ubuntu`), so the profile manages that user and no
     # `su` is needed the way the devbox needs it.
     probe = "x86_64-linux";
+    # The Mumbai EC2 box (ap-south-1): the fleet's Rex server host, same shape
+    # as the probe — vanilla Ubuntu, image default user — but long-lived.
+    mumbai = "x86_64-linux";
     mac = "aarch64-darwin";
   };
 
