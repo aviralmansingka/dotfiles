@@ -70,13 +70,30 @@ about one second, and it fires from the lock screen.
 If check 1 fails, fall back to a Siri phrase: "Hey Siri, run Walkie". Siri runs
 non-privileged actions while locked.
 
-## Later: send to rex instead
+## Where the note lands
 
-The same shortcut can reach a rex session later. Swap the URL for a second
-target and replace the Telegram reply with a pane write:
+Both halves run on the homelab, so a note never crosses to the Mac:
+
+- `pi-telegram.service` serves the endpoint at `100.113.153.49:8766`.
+- `rex.service` owns the `walkie` session, whose pane runs `pi`.
+- `PI_TELEGRAM_SHORTCUT_REX_SESSION=walkie` turns the Telegram answer into a
+  pane write: the note is collapsed to one line, typed with `rex send`, and
+  submitted with `rex send-key enter`.
+
+Unset that variable and the note goes back to the bot answer in Telegram. The
+phone needs no change either way; both paths use the same URL and token.
 
 ```sh
-printf '%s' "$text" | rex send -b "$BLOCK" && rex send-key -b "$BLOCK" enter
+ssh homelab 'rex capture -s walkie --trim | tail -20'   # read the answer
 ```
 
-The sanitising and token rules stay the same. One shortcut, two destinations.
+Two open items: `just deploy remote homelab` fails with `cannot connect to
+socket at /nix/var/nix/daemon-socket/socket: Permission denied`, so the key is
+live through the `pi-telegram.service.d/10-walkie.conf` drop-in rather than the
+sops env. The sops ciphertext already carries it; remove the drop-in once the
+deploy works. And confirm the `walkie` session survives a rex restart, or
+recreate it:
+
+```sh
+ssh homelab 'rex new walkie -- pi'
+```
