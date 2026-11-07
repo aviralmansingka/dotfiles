@@ -316,14 +316,11 @@ const WorktreeParams = Type.Object({
 });
 
 const DESCRIPTION =
-	"Create or reuse a linked Git worktree from the repo's local main, and launch an auto-exit worker " +
-	"subagent that does the change work there, unfocused. Use this instead of editing the main checkout: " +
-	"main stays the neutral checked-out branch and the worktree gets its own checkout and session. The " +
-	"checkout lands at ~/.herdr/worktrees/<repo>/<branch>. Under Herdr the worktree joins the repo's " +
-	"shared workspace with its own picker row; under Rex the worker opens in a labeled tab. The worker's " +
-	"result arrives automatically as a steer message when it finishes — never poll for it. After the work " +
-	"ships, tear down with /cleanup from a session in that worktree. Requires Herdr or Rex; refuses " +
-	"branches and worktrees the tool does not own.";
+	"Put change work in a linked Git worktree based on the repo's local main, and run an auto-exit " +
+	"worker subagent there. Use this instead of editing the main checkout. The checkout lands at " +
+	"~/.herdr/worktrees/<repo>/<branch> and gets its own session: under Herdr it joins the repo's " +
+	"shared workspace, under Rex it opens a labeled tab. The worker's result steers back automatically. " +
+	"Tear down with /cleanup from that worktree after the work ships.";
 
 export default function worktreeExtension(pi: ExtensionAPI): void {
 	pi.registerTool({
@@ -331,9 +328,9 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 		label: "worktree",
 		description: DESCRIPTION,
 		promptSnippet:
-			"Make repo changes with the worktree tool instead of editing the main checkout: it creates or reuses " +
-			"a linked worktree from local main and runs an auto-exit worker subagent there; " +
-			"the worker's result steers back automatically.",
+			"Make repo changes with the worktree tool instead of editing the main checkout. It bases the " +
+			"worktree on local main, never on the current branch, and runs an auto-exit worker there; the " +
+			"worker's result steers back automatically.",
 		parameters: WorktreeParams,
 		annotations: {
 			readOnlyHint: false,
