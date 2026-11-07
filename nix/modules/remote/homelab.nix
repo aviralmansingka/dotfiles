@@ -35,6 +35,13 @@
     "pi-stt-worker.env".mode = "0400";
     "pi-telegram.env".mode = "0400";
     "pi-whatsapp.env".mode = "0400";
+    # The pi-mcp-adapter's encrypted OAuth store key (Notion and any other
+    # OAuth MCP on this host). Headless Linux has no Secret Service, so the
+    # adapter's `encrypted-file` backend is the only persistent store; this
+    # file is the external secret mechanism the adapter's docs require.
+    # Sourced from ~/.zshenv below so every shell — interactive pi sessions
+    # and ssh commands alike — carries the key.
+    "pi-mcp-oauth.env".mode = "0400";
   };
 
   home.packages = with pkgs; [
@@ -46,4 +53,13 @@
     # kernel modules stay with apt; guest definitions are no longer tracked here.
     libvirt
   ];
+
+  # Every zsh reads this, interactive or not, so the OAuth store key reaches
+  # the environment wherever pi or the adapter CLI runs. The guard keeps a
+  # missing deployment from breaking shells on a fresh box.
+  programs.zsh.envExtra = '''
+    if [ -f "$HOME/.config/sops-nix/secrets/pi-mcp-oauth.env" ]; then
+      source "$HOME/.config/sops-nix/secrets/pi-mcp-oauth.env"
+    fi
+  ''';
 }
