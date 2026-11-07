@@ -57,9 +57,9 @@
   # Every zsh reads this, interactive or not, so the OAuth store key reaches
   # the environment wherever pi or the adapter CLI runs. The guard keeps a
   # missing deployment from breaking shells on a fresh box.
-  programs.zsh.envExtra = '''
+  programs.zsh.envExtra = ''
     if [ -f "$HOME/.config/sops-nix/secrets/pi-mcp-oauth.env" ]; then
       source "$HOME/.config/sops-nix/secrets/pi-mcp-oauth.env"
     fi
-  ''';
+  '';
 }
