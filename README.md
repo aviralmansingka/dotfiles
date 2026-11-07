@@ -328,6 +328,11 @@ systemctl --user restart pi-telegram.service
 
 `~/bin/pi-telegram-run --telethon-login` runs the same helper through the venv.
 
+A tap-free variant posts `text` instead of `file`: Shortcuts' `Dictate Text`
+action with `Stop Listening: After Pause` needs no screen tap, so the endpoint
+takes dictated words directly and skips transcription. Both fields share the
+same token and target chat. Setup recipe: `docs/iphone-walkie-shortcut.md`.
+
 The shortcut keeps posting to the local endpoint (`/shortcut-audio`, port 8766 on
 Tailscale), and that endpoint stays the phone intake. When the Telethon session is
 connected, the daemon uploads the note into the bot DM through the user session, as a
