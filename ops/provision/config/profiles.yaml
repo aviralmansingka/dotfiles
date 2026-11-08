@@ -1,0 +1,30 @@
+# Approved host profiles for the private fleet provisioning API.
+#
+# The API accepts only the profile, region, and size *names* below. Every
+# concrete value (instance type, disk size, tags, secret-bundle references, flake
+# target) is resolved from this file, so a client cannot choose an executable, a
+# flake URL, an OpenBao path, a Terraform state path, or an IAM role.
+#
+# secret_bundles holds approved OpenBao *references* only. No secret value ever
+# appears in this file, in a job record, or in a workflow payload.
+profiles:
+  - name: rex
+    display_name: Managed Rex host
+    provider: aws
+    regions:
+      - ap-south-1
+    sizes:
+      # Logical size -> approved instance shape. S02 may add "large" once the
+      # cost estimate is approved; nothing else has to change.
+      standard:
+        instance_type: t3.medium
+        disk_gb: 40
+    tags:
+      fleet-owner: homelab
+      fleet-tier: managed
+      fleet-provider: aws
+    secret_bundles:
+      - bao:secret/data/hosts/rex/canary
+    # Approved flake target for this logical profile. Numbered fleet hosts get
+    # their shared Rex configuration in S04; the flake ref stays server-side.
+    flake_ref: .#homeConfigurations.remote-mumbai.activationPackage

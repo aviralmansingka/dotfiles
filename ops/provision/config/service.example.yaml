@@ -1,0 +1,57 @@
+# Example non-secret service configuration for the fleet provisioning API.
+#
+# Copy to /etc/fleet-provision/service.yaml and adjust the paths. This file holds
+# NO credential values: only file paths and OpenBao *references*. Client bearer
+# tokens are stored as SHA-256 digests in the tokens file (mode 0600); the
+# plaintext token lives in the operator's mode-0600 curl config.
+#
+# Publication model: the backend binds to loopback and is published only through
+# Tailscale Serve on the tailnet hostname (https://provision.<tailnet>.ts.net).
+# Tailscale Serve terminates TLS, so the loopback hop needs no certificate. Set
+# api.tls.cert_file/key_file if you front it with a real certificate instead;
+# binding off loopback requires both TLS files and allow_non_loopback: true.
+api:
+  listen: 127.0.0.1:8080
+  allow_non_loopback: false
+  tls:
+    cert_file: ""
+    key_file: ""
+
+temporal:
+  host_port: 127.0.0.1:7233
+  namespace: fleet-provision
+  task_queue: fleet-provision
+
+storage:
+  # Durable host inventory and idempotency reservations. Job execution lives in
+  # Temporal; S06 moves this document to PostgreSQL.
+  state_file: /var/lib/fleet-provision/store.json
+
+tokens:
+  # YAML document with client_id, token_sha256 (64 hex), description, revoked.
+  # Mode 0600; at least one digest is required.
+  file: /etc/fleet-provision/tokens.yaml
+
+profiles_file: /etc/fleet-provision/profiles.yaml
+
+limits:
+  max_concurrent_jobs: 4
+  terraform_state_locks: 1
+  max_concurrent_provisioning: 2
+
+providers:
+  aws:
+    region: ap-south-1
+    credentials:
+      # Credentials are acquired inside activities from OpenBao. These are
+      # references, never values, and never reach a workflow payload.
+      kind: openbao_approle
+      role_id_ref: bao:kv/homelab/provision/aws/role-id
+      secret_id_ref: bao:kv/homelab/provision/aws/secret-id
+    bootstrap:
+      # Approved bootstrap SSH source (homelab egress). S02 enforces it.
+      ssh_source_ref: bao:kv/homelab/provision/bootstrap/ssh-source-cidr
+
+logging:
+  level: info
+  format: json
