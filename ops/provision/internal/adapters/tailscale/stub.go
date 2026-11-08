@@ -1,5 +1,6 @@
-// Package tailscale holds the tailnet device adapter. S01 ships only a stub:
-// S03 enrolls devices and S07 removes them.
+// Package tailscale holds the tailnet adapters. S03 mints enrollment keys
+// (mint.go) and looks up existing devices (devices.go); S07 removes devices, and
+// the stub below still refuses that.
 package tailscale
 
 import (

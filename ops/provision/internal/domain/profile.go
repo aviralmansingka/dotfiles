@@ -29,6 +29,10 @@ type Profile struct {
 	// FlakeRef is the approved flake target for this profile. It is resolved
 	// server-side; clients cannot supply or override it.
 	FlakeRef string `json:"flake_ref"`
+	// TailnetTag is the tailnet tag a host of this profile joins with. It is the
+	// only source of a tag in the service: no client request carries one, and the
+	// enrollment path fails closed when a profile declares none.
+	TailnetTag string `json:"tailnet_tag"`
 }
 
 var (
@@ -92,6 +96,15 @@ func ValidateProfile(p Profile) error {
 	}
 	if err := validateFlakeRef(p.FlakeRef); err != nil {
 		return fmt.Errorf("profile %q: %w", p.Name, err)
+	}
+	// A declared tag must be well formed here, so a typo fails at configuration
+	// load time. An absent tag is allowed at load time and rejected at enrollment
+	// time by ResolveTailnetTag, which is the step that would otherwise put a host
+	// on the wrong policy.
+	if p.TailnetTag != "" {
+		if err := ValidateTailnetTag(p.TailnetTag); err != nil {
+			return fmt.Errorf("profile %q: %w", p.Name, err)
+		}
 	}
 	return nil
 }

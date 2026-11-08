@@ -89,6 +89,7 @@ func CreateHostWorkflow(ctx workflow.Context, in CreateHostInput) (Status, error
 	if err := workflow.ExecuteActivity(ctx, ActivityEnrollHost, EnrollHostInput{
 		HostID:         in.Spec.HostID,
 		Name:           in.Spec.Name,
+		ResourceID:     created.ResourceID,
 		PrivateAddress: created.PrivateAddress,
 		Profile:        in.Spec.Profile,
 		SecretBundles:  in.Spec.SecretBundles,

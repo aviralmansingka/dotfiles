@@ -82,6 +82,7 @@ func (a *Activities) EnrollHost(ctx context.Context, in workflows.EnrollHostInpu
 	result, err := a.Enroller.Enroll(ctx, application.EnrollRequest{
 		HostID:         in.HostID,
 		Name:           in.Name,
+		InstanceID:     in.ResourceID,
 		PrivateAddress: in.PrivateAddress,
 		Profile:        in.Profile,
 		SecretBundles:  in.SecretBundles,
@@ -89,8 +90,18 @@ func (a *Activities) EnrollHost(ctx context.Context, in workflows.EnrollHostInpu
 	if err != nil {
 		return workflows.EnrollHostOutput{}, a.activityError("enroll_host", in.HostID, err)
 	}
-	a.log("host.enrolled", "host_id", in.HostID, "device_id", result.DeviceID)
-	return workflows.EnrollHostOutput{DeviceID: result.DeviceID, HostKeyFingerprint: result.HostKey}, nil
+	a.log("host.enrolled",
+		"host_id", in.HostID,
+		"device_id", result.DeviceID,
+		"tailnet_tag", result.TailnetTag,
+		"resumed", result.Resumed,
+	)
+	return workflows.EnrollHostOutput{
+		DeviceID:           result.DeviceID,
+		HostKeyFingerprint: result.HostKey,
+		TailnetTag:         result.TailnetTag,
+		Resumed:            result.Resumed,
+	}, nil
 }
 
 // DeployProfile deploys the approved flake profile.

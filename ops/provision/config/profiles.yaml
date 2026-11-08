@@ -28,3 +28,8 @@ profiles:
     # Approved flake target for this logical profile. Numbered fleet hosts get
     # their shared Rex configuration in S04; the flake ref stays server-side.
     flake_ref: .#homeConfigurations.remote-mumbai.activationPackage
+    # Tailnet tag every host of this profile joins with. This is the only source
+    # of a tag: a create request has no field for one, the enrollment key is
+    # minted with exactly this tag, and the device lookup searches by it, so a
+    # retry finds the host it already registered instead of minting a second.
+    tailnet_tag: tag:aws-host

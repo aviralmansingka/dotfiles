@@ -25,7 +25,81 @@ type Service struct {
 	ProfilesFile string              `yaml:"profiles_file"`
 	Limits       Limits              `yaml:"limits"`
 	Providers    map[string]Provider `yaml:"providers"`
+	Enrollment   Enrollment          `yaml:"enrollment"`
 	Logging      Logging             `yaml:"logging"`
+}
+
+// Enrollment locates the trusted-SSH enrollment adapters. Every field is a path,
+// a URL, or an OpenBao reference: no credential value has a field here, and an
+// inline secret in YAML is an unknown key that fails to decode.
+type Enrollment struct {
+	Tailscale TailscaleEnrollment `yaml:"tailscale"`
+	OpenBao   OpenBaoEnrollment   `yaml:"openbao"`
+	SSH       SSHEnrollment       `yaml:"ssh"`
+}
+
+// TailscaleEnrollment is the API endpoint and the OAuth client identity.
+// OAuthClientID is public; the client secret is read from OAuthSecretRef.
+type TailscaleEnrollment struct {
+	BaseURL        string `yaml:"base_url"`
+	Tailnet        string `yaml:"tailnet"`
+	OAuthClientID  string `yaml:"oauth_client_id"`
+	OAuthSecretRef string `yaml:"oauth_secret_ref"`
+}
+
+// OpenBaoEnrollment locates the OpenBao API and the access-token file. The token
+// is read once at start-up from the file, never from the environment at call time.
+type OpenBaoEnrollment struct {
+	Address   string `yaml:"address"`
+	TokenFile string `yaml:"token_file"`
+	Namespace string `yaml:"namespace"`
+}
+
+// SSHEnrollment is the bootstrap login key path and the private directory for the
+// per-enrollment known_hosts file. The key itself is never read by the service.
+type SSHEnrollment struct {
+	IdentityFile  string `yaml:"identity_file"`
+	KnownHostsDir string `yaml:"known_hosts_dir"`
+	RemoteKeyPath string `yaml:"remote_key_path"`
+}
+
+// Configured reports whether the enrollment adapters are configured at all. When
+// they are not, the worker keeps the refusing stub, so a job cannot reach
+// "ready" without a real enrollment.
+func (e Enrollment) Configured() bool {
+	return e.Tailscale.OAuthSecretRef != "" && e.SSH.IdentityFile != "" && e.OpenBao.TokenFile != ""
+}
+
+// Validate fails closed on a half-configured enrollment block.
+func (e Enrollment) Validate() error {
+	if e.Tailscale.OAuthSecretRef == "" && e.SSH.IdentityFile == "" && e.OpenBao.TokenFile == "" {
+		return nil
+	}
+	if e.Tailscale.OAuthSecretRef == "" {
+		return errors.New("enrollment.tailscale.oauth_secret_ref is required")
+	}
+	if err := domain.ValidateSecretRef(e.Tailscale.OAuthSecretRef); err != nil {
+		return fmt.Errorf("enrollment.tailscale.oauth_secret_ref: %w", err)
+	}
+	if e.Tailscale.OAuthClientID == "" {
+		return errors.New("enrollment.tailscale.oauth_client_id is required")
+	}
+	if e.OpenBao.TokenFile == "" {
+		return errors.New("enrollment.openbao.token_file is required")
+	}
+	if e.OpenBao.Address == "" {
+		return errors.New("enrollment.openbao.address is required")
+	}
+	if e.SSH.IdentityFile == "" {
+		return errors.New("enrollment.ssh.identity_file is required")
+	}
+	if strings.ContainsAny(e.SSH.IdentityFile, " \t") {
+		return errors.New("enrollment.ssh.identity_file must not contain whitespace")
+	}
+	if e.SSH.RemoteKeyPath != "" && !strings.HasPrefix(e.SSH.RemoteKeyPath, "/run/") {
+		return errors.New("enrollment.ssh.remote_key_path must live under /run")
+	}
+	return nil
 }
 
 // API is the HTTP listener configuration.
@@ -226,6 +300,9 @@ func (s *Service) Validate() error {
 	if err := aws.Terraform.Validate(); err != nil {
 		return err
 	}
+	if err := s.Enrollment.Validate(); err != nil {
+		return fmt.Errorf("enrollment: %w", err)
+	}
 	switch s.Logging.Format {
 	case "", "json", "text":
 	default:
@@ -301,6 +378,9 @@ type profileSpec struct {
 	Tags          map[string]string   `yaml:"tags"`
 	SecretBundles []string            `yaml:"secret_bundles"`
 	FlakeRef      string              `yaml:"flake_ref"`
+	// TailnetTag is the approved tag hosts of this profile join with. It is the
+	// only source of a tag in the service.
+	TailnetTag string `yaml:"tailnet_tag"`
 }
 
 type sizeSpec struct {
@@ -338,6 +418,7 @@ func LoadProfiles(path string) (domain.Catalog, error) {
 			Tags:          spec.Tags,
 			SecretBundles: spec.SecretBundles,
 			FlakeRef:      spec.FlakeRef,
+			TailnetTag:    spec.TailnetTag,
 		})
 	}
 	catalog, err := domain.NewCatalog(profiles)

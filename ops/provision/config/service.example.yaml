@@ -78,6 +78,31 @@ providers:
       owner_tag: homelab
       test_run_tag: manual
 
+enrollment:
+  # Trusted-SSH enrollment (S03). The tailnet tag is not here on purpose: it comes
+  # from the approved profile in profiles.yaml, so no request and no config value
+  # outside the profile can choose it.
+  tailscale:
+    base_url: https://api.tailscale.com
+    # "-" means the tailnet the OAuth client belongs to.
+    tailnet: "-"
+    # Public client id. The client secret is read from OpenBao through the
+    # reference below, at call time, and only into the token request body.
+    oauth_client_id: kExampleClientId
+    oauth_secret_ref: bao:secret/data/fleet/tailscale-oauth
+  openbao:
+    address: http://127.0.0.1:8200
+    # Mode 0600, read once at start-up. No token value appears in this file.
+    token_file: /etc/fleet-provision/openbao-token
+  ssh:
+    # Path of the operator's bootstrap login key. The service passes the path to
+    # ssh -i and never reads, copies, or logs the key itself.
+    identity_file: /etc/fleet-provision/ssh/bootstrap_ed25519
+    # One private known_hosts file per enrollment is written here, mode 0600.
+    known_hosts_dir: /run/fleet-provision/known-hosts
+    # Delivered over stdin, mode 0600, removed on success and on failure.
+    remote_key_path: /run/fleet-enroll/auth-key
+
 logging:
   level: info
   format: json

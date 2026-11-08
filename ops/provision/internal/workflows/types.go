@@ -94,19 +94,27 @@ type CreateHostResourceOutput struct {
 	PrivateAddress string `json:"private_address"`
 }
 
-// EnrollHostInput asks for a trusted-SSH tailnet enrollment.
+// EnrollHostInput asks for a trusted-SSH tailnet enrollment. It carries the
+// provider resource id because the host public key is fetched over SSM against
+// exactly that instance. It carries no tailnet tag: the tag is resolved
+// server-side from the approved profile.
 type EnrollHostInput struct {
 	HostID         string   `json:"host_id"`
 	Name           string   `json:"name"`
+	ResourceID     string   `json:"resource_id"`
 	PrivateAddress string   `json:"private_address"`
 	Profile        string   `json:"profile"`
 	SecretBundles  []string `json:"secret_bundles"`
 }
 
-// EnrollHostOutput reports the enrolled identity without credentials.
+// EnrollHostOutput reports the enrolled identity without credentials. The host
+// key is a SHA-256 fingerprint, and no enrollment key can appear here: the key is
+// never a field of any payload.
 type EnrollHostOutput struct {
 	DeviceID           string `json:"device_id"`
 	HostKeyFingerprint string `json:"host_key_fingerprint"`
+	TailnetTag         string `json:"tailnet_tag"`
+	Resumed            bool   `json:"resumed"`
 }
 
 // DeployProfileInput asks for the approved flake profile deployment.

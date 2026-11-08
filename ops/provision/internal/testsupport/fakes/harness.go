@@ -82,6 +82,7 @@ func Catalog(t *testing.T) domain.Catalog {
 		Tags:          map[string]string{"fleet-tier": "managed"},
 		SecretBundles: []string{"bao:secret/data/hosts/rex/canary"},
 		FlakeRef:      ".#homeConfigurations.remote-mumbai.activationPackage",
+		TailnetTag:    domain.ApprovedTailnetTag,
 	}})
 	if err != nil {
 		t.Fatalf("build catalog: %v", err)

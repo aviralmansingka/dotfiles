@@ -1,6 +1,7 @@
 // Package ssh holds the trusted-SSH bootstrap and flake-deployment adapters.
-// S01 ships only stubs: S03 adds verified-host-key enrollment and S04 the
-// profile deployment.
+// S03 implements enrollment with a pinned host key; the stub below is only used
+// when enrollment is not configured, so a job cannot reach "ready" without it.
+// S04 implements the profile deployment.
 package ssh
 
 import (
@@ -10,7 +11,8 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 )
 
-// Stub refuses enrollment and deployment.
+// Stub refuses enrollment and deployment. It is the composition fallback when the
+// enrollment adapters are not configured, never a silent success.
 type Stub struct{}
 
 // NewStub builds the SSH stub.
@@ -25,7 +27,7 @@ var (
 func (*Stub) Enroll(_ context.Context, _ application.EnrollRequest) (application.EnrollResult, error) {
 	return application.EnrollResult{}, &domain.NotImplementedError{
 		Component: "trusted ssh enrollment",
-		Step:      "S03 adds verified-host-key bootstrap",
+		Step:      "enrollment adapters are not configured for this worker",
 	}
 }
 

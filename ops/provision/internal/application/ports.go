@@ -190,17 +190,43 @@ type HostProvider interface {
 // EnrollRequest carries the trust anchor for SSH bootstrap. The enrollment key
 // itself is acquired inside the adapter from OpenBao; it is never a field here.
 type EnrollRequest struct {
-	HostID         string
-	Name           string
+	HostID string
+	Name   string
+	// InstanceID is the provider resource the host key must belong to. The
+	// enroller reads the key over SSM addressed to exactly this instance and
+	// refuses a result that names any other.
+	InstanceID     string
 	PrivateAddress string
 	Profile        string
-	SecretBundles  []string
+	// TailnetTag is resolved server-side from the approved profile. A request
+	// that carries a tag from anywhere else is rejected before it gets here.
+	TailnetTag string
+	// KeyPolicy is the resolved fixed policy the enrollment key is minted with.
+	// The adapter validates it again before it builds a request body.
+	KeyPolicy     domain.AuthKeyPolicy
+	SecretBundles []string
+}
+
+// KeyPolicyOrDefault returns the resolved policy, falling back to the approved
+// policy only when none was resolved (a direct adapter call in a test).
+func (r EnrollRequest) KeyPolicyOrDefault() domain.AuthKeyPolicy {
+	if r.KeyPolicy == (domain.AuthKeyPolicy{}) {
+		return domain.ApprovedAuthKeyPolicy()
+	}
+	return r.KeyPolicy
 }
 
 // EnrollResult reports the enrolled tailnet identity (no credentials).
 type EnrollResult struct {
 	DeviceID string
-	HostKey  string
+	// HostKey is the SHA-256 fingerprint of the pinned host key: a digest, not
+	// key material, so it may be logged and persisted.
+	HostKey string
+	// TailnetTag is the tag the device joined with, resolved server-side.
+	TailnetTag string
+	// Resumed is true when enrollment found the device already running and did
+	// not mint a new key or register a second node.
+	Resumed bool
 }
 
 // HostEnroller is the trusted-SSH bootstrap port.
@@ -250,4 +276,121 @@ type RemoveDeviceRequest struct {
 // TailnetDeviceManager is the Tailscale device port.
 type TailnetDeviceManager interface {
 	RemoveDevice(ctx context.Context, req RemoveDeviceRequest) error
+}
+
+// Tailnet device states reported by a device lookup. Only a running device is
+// resumed: a registered-but-idle record means the node never came up, so the
+// enrollment must retry rather than report success.
+const TailnetDeviceStateRunning = "running"
+
+// DeviceQuery is a device lookup keyed by the host name and the approved tag.
+// Both are server-resolved; neither is client input at this point.
+type DeviceQuery struct {
+	HostName string
+	Tag      string
+}
+
+// TailnetDevice is one registered tailnet node, without credentials.
+type TailnetDevice struct {
+	ID    string
+	Name  string
+	State string
+	Tags  []string
+}
+
+// Running reports whether the device is up.
+func (d TailnetDevice) Running() bool { return d.State == TailnetDeviceStateRunning }
+
+// HasTag reports whether the device carries tag.
+func (d TailnetDevice) HasTag(tag string) bool {
+	for _, candidate := range d.Tags {
+		if candidate == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// DeviceLookup finds an already-enrolled tailnet device. It is how a retry
+// resumes instead of registering a second node.
+type DeviceLookup interface {
+	LookupDevice(ctx context.Context, query DeviceQuery) (TailnetDevice, bool, error)
+}
+
+// AuthKeyRequest asks for one enrollment key. It carries no client-controllable
+// tag: Tag is the value the domain resolved from the approved profile, and the
+// minter re-validates it against the approved tag before building a body.
+type AuthKeyRequest struct {
+	HostID string
+	// HostName becomes the key description so an operator can attribute a key to
+	// a host without reading anything else.
+	HostName string
+	Tag      string
+	Policy   domain.AuthKeyPolicy
+}
+
+// AuthKey is one minted enrollment key. Key is a Secret: its String, GoString,
+// and JSON forms are redacted, so it cannot reach a log or a payload by accident.
+type AuthKey struct {
+	ID      string
+	Key     Secret
+	Expiry  time.Time
+	Tailnet string
+}
+
+// AuthKeyMinter mints a short-lived, single-use, preauthorized enrollment key.
+// The HTTP client behind it and the secret source it reads are adapter details.
+type AuthKeyMinter interface {
+	MintAuthKey(ctx context.Context, req AuthKeyRequest) (AuthKey, error)
+}
+
+// SSMRunRequest is one command run on an instance through SSM. It is addressed
+// by instance id and carries a comment that the result must echo, so a reply
+// from another invocation cannot be mistaken for this one.
+type SSMRunRequest struct {
+	InstanceID string
+	Comment    string
+	// Command is the shell program text, never a credential.
+	Command string
+}
+
+// SSMRunResult is one SSM invocation's report. InstanceID and Comment must match
+// the request; a mismatch means the answer belongs to a different host.
+type SSMRunResult struct {
+	InstanceID string
+	Comment    string
+	Status     string
+	ExitCode   int
+	Stdout     string
+	Stderr     string
+}
+
+// SSMRunner runs a command on an instance over the SSM control plane. IAM
+// authorizes the call, so the reply is authenticated independently of any host
+// key: this is the trust anchor for the first key fetch.
+type SSMRunner interface {
+	RunCommand(ctx context.Context, req SSMRunRequest) (SSMRunResult, error)
+}
+
+// SSHRunRequest is one local OpenSSH invocation built by the adapter. Args holds
+// the complete argv (including StrictHostKeyChecking and UserKnownHostsFile) and
+// Stdin is the only channel a credential may travel on.
+type SSHRunRequest struct {
+	// Label names the step for logs. It must never contain key material.
+	Label string
+	Args  []string
+	Stdin []byte
+}
+
+// SSHRunResult is one SSH invocation's exit status and captured output.
+type SSHRunResult struct {
+	ExitCode int
+	Stdout   string
+	Stderr   string
+}
+
+// SSHRunner executes a fully-built ssh argv. The adapter owns argv construction;
+// an implementation only starts the process and pipes stdin.
+type SSHRunner interface {
+	Run(ctx context.Context, req SSHRunRequest) (SSHRunResult, error)
 }

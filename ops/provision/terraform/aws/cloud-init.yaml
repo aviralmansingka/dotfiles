@@ -1,10 +1,11 @@
 #cloud-config
-# Public bootstrap for a fleet host (S02).
+# Public bootstrap for a fleet host (S02 prerequisites, S03 tailscaled).
 #
-# This file installs Nix prerequisites and the multi-user Nix daemon, and
-# nothing else. It contains no secret, no token, no enrollment key, and no
-# fleet credential of any kind: the provisioning service acquires those later
-# over an SSM session and delivers them out of band.
+# This file installs Nix prerequisites, the multi-user Nix daemon, and the system
+# `tailscaled` daemon. It contains no secret, no token, no enrollment key, no
+# auth key, and no tailnet tag: the provisioning service mints a single-use key
+# later, over a verified SSH session, and `tailscale up` runs as an explicit
+# bootstrap step from the worker, not from this file.
 package_update: true
 package_upgrade: false
 
@@ -12,6 +13,7 @@ packages:
   - ca-certificates
   - curl
   - git
+  - iptables
   - xz-utils
 
 write_files:
@@ -24,6 +26,15 @@ write_files:
       experimental-features = nix-command flakes
       sandbox = true
 
+  # The enrollment session writes exactly one file here and deletes it again.
+  # /run is a tmpfs, so the directory is recreated on every boot by tmpfiles:
+  # group-writable by the login user (who owns the key file), nothing else.
+  - path: /etc/tmpfiles.d/fleet-enroll.conf
+    owner: root:root
+    permissions: "0644"
+    content: |
+      d /run/fleet-enroll 0770 root ubuntu -
+
 runcmd:
   - mkdir -p /nix
   # Upstream multi-user installer: daemon plus /nix, the same installer the
@@ -33,3 +44,27 @@ runcmd:
   - rm -f /tmp/nix-install.sh
   # The remote deploy runs as a user unit with no login session.
   - loginctl enable-linger ubuntu
+
+  # --- tailscaled: explicit system bootstrap step (S03) ------------------------
+  # Tailscale ships an apt repository; the official installer adds it and installs
+  # the daemon. It is a *system* unit (`system tailscaled`), deliberately not a
+  # Home Manager fragment: the daemon owns the tun device and the state directory
+  # and must be up before any user profile is deployed.
+  #
+  # No credential is created or stored here. The node is not enrolled by this
+  # file: enrollment happens later, from the worker, with a short-lived
+  # single-use preauthorized key delivered over a host-key-verified SSH session.
+  - curl -fsSL https://tailscale.com/install.sh -o /tmp/tailscale-install.sh
+  - sh /tmp/tailscale-install.sh
+  - rm -f /tmp/tailscale-install.sh
+  # Start at boot, before the enrollment step can reach the host.
+  - systemctl enable tailscaled
+  - systemctl start tailscaled
+  # Runtime state lives on tmpfs and is rebuilt by tmpfiles.
+  - systemd-tmpfiles --create /etc/tmpfiles.d/fleet-enroll.conf
+
+  # Readiness marker the worker may probe before it opens the enrollment session.
+  # It reports the daemon and socket only; it never carries node identity.
+  - sh -c 'for i in $(seq 1 30); do [ -S /var/run/tailscale/tailscaled.sock ] && exit 0; sleep 2; done; exit 1'
+
+final_message: "fleet bootstrap complete: nix daemon and tailscaled are installed; the node is not enrolled yet"

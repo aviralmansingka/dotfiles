@@ -239,14 +239,19 @@ func runWorker(args []string) error {
 		return err
 	}
 
-	// S02 wires the real AWS compute provider. Enrollment, deployment, OpenBao,
-	// and Tailscale are still S01 stubs: they refuse with an explicit
-	// not-implemented error, so no job can reach "ready" before those adapters
-	// land.
+	enroller, err := newEnroller(state)
+	if err != nil {
+		return err
+	}
+
+	// S02 wires the real AWS compute provider and S03 the real enrollment chain:
+	// key minting, device lookup, and the pinned-host-key bootstrap. Profile
+	// deployment (S04), OpenBao host identity (S05), and device removal (S07)
+	// remain refusing stubs, so no job can reach "ready" before those land.
 	activities := &temporaladapter.Activities{
 		Inventory:  state.store,
 		Providers:  provider,
-		Enroller:   ssh.NewStub(),
+		Enroller:   enroller,
 		Deployer:   ssh.NewStub(),
 		Authorizer: openbao.NewStub(),
 		Tailnet:    tailscale.NewStub(),
@@ -266,6 +271,71 @@ func runWorker(args []string) error {
 		"max_concurrent_jobs", state.service.Limits.MaxConcurrentJobs,
 	)
 	return bounded.Run(worker.InterruptCh())
+}
+
+// newEnroller builds the trusted-SSH enrollment chain from the approved
+// configuration: the OpenBao secret source, the Tailscale key minter and device
+// lookup, the pinned-host-key bootstrap, and the retry rule that resumes an
+// already-running device instead of minting a second identity.
+//
+// A half-configured block is refused at load time. When enrollment is not
+// configured at all the refusing stub is kept, so a job cannot reach "ready"
+// without a real enrollment step.
+func newEnroller(state *loaded) (application.HostEnroller, error) {
+	cfg := state.service.Enrollment
+	if !cfg.Configured() {
+		state.log.Warn("enrollment.not_configured",
+			"reason", "enrollment.tailscale.oauth_secret_ref, enrollment.openbao.token_file, and enrollment.ssh.identity_file are not all set; enrollment stays a refusing stub")
+		return ssh.NewStub(), nil
+	}
+	secrets, err := openbao.NewSecretSource(openbao.SecretSourceConfig{
+		Address:   cfg.OpenBao.Address,
+		TokenFile: cfg.OpenBao.TokenFile,
+		Namespace: cfg.OpenBao.Namespace,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("enrollment secret source: %w", err)
+	}
+	clientConfig := tailscale.ClientConfig{
+		HTTP:           &http.Client{Timeout: 30 * time.Second},
+		BaseURL:        cfg.Tailscale.BaseURL,
+		Tailnet:        cfg.Tailscale.Tailnet,
+		OAuthClientID:  cfg.Tailscale.OAuthClientID,
+		OAuthSecretRef: cfg.Tailscale.OAuthSecretRef,
+		Secrets:        secrets,
+		Clock:          application.WallClock{},
+		Logger:         state.log,
+	}
+	minter, err := tailscale.NewMinter(clientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("enrollment key minter: %w", err)
+	}
+	devices, err := tailscale.NewDevices(clientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("enrollment device lookup: %w", err)
+	}
+	bootstrap, err := ssh.NewEnroller(ssh.EnrollConfig{
+		// The SSM transport binding (AWS SDK) is a recorded live gate: the chain is
+		// wired end to end and an enrollment attempt fails with a named,
+		// non-retryable error instead of pretending a host key was verified.
+		Runner:        &ssh.UnavailableSSMRunner{},
+		SSH:           ssh.ExecRunner{},
+		Minter:        minter,
+		IdentityFile:  cfg.SSH.IdentityFile,
+		KnownHostsDir: cfg.SSH.KnownHostsDir,
+		RemoteKeyPath: cfg.SSH.RemoteKeyPath,
+		Logger:        state.log,
+		Clock:         application.WallClock{},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("enrollment bootstrap: %w", err)
+	}
+	return application.NewEnrollmentService(application.EnrollmentDeps{
+		Profiles: state.catalog,
+		Devices:  devices,
+		Enroller: bootstrap,
+		Logger:   state.log,
+	})
 }
 
 // newHostProvider builds the AWS compute provider from the approved
