@@ -177,12 +177,27 @@ it, so a new host is one entry and nothing else. `just targets` prints it.
 | `homelab` | x86_64-linux | Home Manager | `homeConfigurations.remote` |
 | `devbox` | x86_64-linux | Home Manager | `homeConfigurations.remote-devbox` |
 | `probe` | x86_64-linux | Home Manager | `homeConfigurations.remote-probe` |
+| `mumbai` | x86_64-linux | Home Manager | `homeConfigurations.remote-mumbai` |
 | `mac` | aarch64-darwin | nix-darwin | `darwinConfigurations.macbook` |
 
 An entry may name `managedUser` when the ssh login user is not the user the
 profile manages: the devbox is dialled as `root` while its profile manages
 `aviral`, so the deploy stages into that user's cache and switches through its
 login shell.
+
+### The API's `rex` profile
+
+`ops/provision` ships one logical profile, `rex`, and it maps to the flake
+target `homeConfigurations.remote-mumbai.activationPackage`. The mapping is
+defined in exactly one place, `ops/provision/config/profiles.yaml`; the Go suite
+(`internal/config/profiles_flake_test.go`) asserts that reference names a
+`homeConfigurations` output the flake exposes, so the two files cannot drift.
+
+The shared configuration behind that output is `nix/modules/remote/rex-host.nix`,
+parameterized by host name: system `tailscaled` only (one tailnet device per
+host), Rex on a loopback address, publication through `tailscale serve`, linger
+for the user service, and the Rex config file links. `mumbai.nix` is that module
+plus the host deltas; a numbered host imports the same module with its own name.
 
 ### The target defaults to local
 

@@ -25,8 +25,12 @@ profiles:
       fleet-provider: aws
     secret_bundles:
       - bao:secret/data/hosts/rex/canary
-    # Approved flake target for this logical profile. Numbered fleet hosts get
-    # their shared Rex configuration in S04; the flake ref stays server-side.
+    # Approved flake target for this logical profile. This is the one definition
+    # of the mapping: the API's `rex` profile is built by
+    # `homeConfigurations.remote-mumbai`, whose shared Rex configuration is
+    # nix/modules/remote/rex-host.nix. The flake ref stays server-side, and
+    # internal/config/profiles_flake_test.go asserts it names an output the flake
+    # actually exposes.
     flake_ref: .#homeConfigurations.remote-mumbai.activationPackage
     # Tailnet tag every host of this profile joins with. This is the only source
     # of a tag: a create request has no field for one, the enrollment key is
