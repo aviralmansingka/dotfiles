@@ -34,6 +34,16 @@ type Profile struct {
 var (
 	profileNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
 	regionPattern      = regexp.MustCompile(`^[a-z]{2}(-[a-z]+)+-[0-9]$`)
+	// flakeRefPattern is an allow-list for approved flake targets, not the
+	// host-name deny-list. A real target looks like
+	// `.#homeConfigurations.remote-mumbai.activationPackage`,
+	// `github:owner/repo#host`, or `path:./nix#host`: letters, digits, `.`, `-`,
+	// `_`, `~`, `:`, `/`, the URL-scheme characters `+ @ ? =`, and at most one `#`
+	// attribute-path separator. It must start with a letter, digit, or `.` (so it
+	// can never look like a CLI flag). Whitespace, newlines, `;` `$` backticks,
+	// `|`, `&`, quotes, globs, and redirection cannot match the class at all, so
+	// they fail by construction.
+	flakeRefPattern = regexp.MustCompile(`^[A-Za-z0-9.][A-Za-z0-9._~:/@?=+-]*(#[A-Za-z0-9._+-]+(\.[A-Za-z0-9._+-]+)*)?$`)
 )
 
 // ValidateProfile rejects malformed profile definitions at configuration load
@@ -80,11 +90,26 @@ func ValidateProfile(p Profile) error {
 			return fmt.Errorf("profile %q: empty secret bundle reference", p.Name)
 		}
 	}
-	if strings.TrimSpace(p.FlakeRef) == "" {
-		return fmt.Errorf("profile %q: flake_ref is required", p.Name)
+	if err := validateFlakeRef(p.FlakeRef); err != nil {
+		return fmt.Errorf("profile %q: %w", p.Name, err)
 	}
-	if strings.ContainsAny(p.FlakeRef, hostNameForbidden) {
-		return fmt.Errorf("profile %q: unsafe flake_ref", p.Name)
+	return nil
+}
+
+// validateFlakeRef accepts only allow-listed flake targets. hostNameForbidden is
+// deliberately not consulted here: it bans `#`, `:`, and `/`, which every
+// realistic flake reference contains. The allow-list keeps the guarantee the
+// deny-list was reaching for (no shell metacharacters, no whitespace, no
+// traversal) without rejecting the configuration an operator must ship.
+func validateFlakeRef(ref string) error {
+	if strings.TrimSpace(ref) == "" {
+		return fmt.Errorf("flake_ref is required")
+	}
+	if strings.Contains(ref, "..") {
+		return fmt.Errorf("unsafe flake_ref %q: path segments must not contain \"..\"", ref)
+	}
+	if !flakeRefPattern.MatchString(ref) {
+		return fmt.Errorf("unsafe flake_ref %q: must be a flake target of [A-Za-z0-9._~:/@?=+#-] with at most one #", ref)
 	}
 	return nil
 }

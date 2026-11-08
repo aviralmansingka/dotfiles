@@ -22,14 +22,14 @@ const StatusQueryName = "status"
 // Registered activity names. The registry adapter uses these exact names, so a
 // rename cannot silently desynchronize a workflow from its activity.
 const (
-	ActivityCreateHostResource   = "CreateHostResource"
-	ActivityEnrollHost           = "EnrollHost"
-	ActivityDeployProfile        = "DeployProfile"
-	ActivityAuthorizeHost        = "AuthorizeHost"
-	ActivityRevokeHostAccess     = "RevokeHostAccess"
-	ActivityRemoveDevice         = "RemoveDevice"
-	ActivityDestroyHostResource  = "DestroyHostResource"
-	ActivityRecordHostMilestone  = "RecordHostMilestone"
+	ActivityCreateHostResource  = "CreateHostResource"
+	ActivityEnrollHost          = "EnrollHost"
+	ActivityDeployProfile       = "DeployProfile"
+	ActivityAuthorizeHost       = "AuthorizeHost"
+	ActivityRevokeHostAccess    = "RevokeHostAccess"
+	ActivityRemoveDevice        = "RemoveDevice"
+	ActivityDestroyHostResource = "DestroyHostResource"
+	ActivityRecordHostMilestone = "RecordHostMilestone"
 )
 
 // Activity failure types used to carry retryability without leaking error
@@ -68,11 +68,11 @@ type CreateHostInput struct {
 
 // DeleteHostInput starts a host teardown.
 type DeleteHostInput struct {
-	Spec         HostSpec `json:"spec"`
-	JobID        string   `json:"job_id"`
-	ResourceID   string   `json:"resource_id"`
-	DeviceID     string   `json:"device_id"`
-	FlakeRevision string  `json:"flake_revision"`
+	Spec          HostSpec `json:"spec"`
+	JobID         string   `json:"job_id"`
+	ResourceID    string   `json:"resource_id"`
+	DeviceID      string   `json:"device_id"`
+	FlakeRevision string   `json:"flake_revision"`
 }
 
 // CreateHostResourceInput allocates the compute resource.
@@ -103,7 +103,7 @@ type EnrollHostInput struct {
 
 // EnrollHostOutput reports the enrolled identity without credentials.
 type EnrollHostOutput struct {
-	DeviceID          string `json:"device_id"`
+	DeviceID           string `json:"device_id"`
 	HostKeyFingerprint string `json:"host_key_fingerprint"`
 }
 
@@ -156,15 +156,15 @@ type DestroyHostResourceInput struct {
 // RecordHostMilestoneInput persists progress outside workflow history so
 // inventory survives workflow expiry.
 type RecordHostMilestoneInput struct {
-	HostID         string          `json:"host_id"`
-	JobID          string          `json:"job_id"`
-	Stage          string          `json:"stage"`
-	State          string          `json:"state"`
-	ResourceID     string          `json:"resource_id"`
-	DeviceID       string          `json:"device_id"`
-	PrivateAddress string          `json:"private_address"`
-	FlakeRevision  string          `json:"flake_revision"`
-	RexURL         string          `json:"rex_url"`
+	HostID         string           `json:"host_id"`
+	JobID          string           `json:"job_id"`
+	Stage          string           `json:"stage"`
+	State          string           `json:"state"`
+	ResourceID     string           `json:"resource_id"`
+	DeviceID       string           `json:"device_id"`
+	PrivateAddress string           `json:"private_address"`
+	FlakeRevision  string           `json:"flake_revision"`
+	RexURL         string           `json:"rex_url"`
 	Error          *domain.JobError `json:"error,omitempty"`
 }
 

@@ -29,12 +29,12 @@ const (
 type Stage string
 
 const (
-	StageQueued     Stage = "queued"
-	StageCreating   Stage = "creating"
-	StageEnrolling  Stage = "enrolling"
-	StageDeploying  Stage = "deploying"
+	StageQueued      Stage = "queued"
+	StageCreating    Stage = "creating"
+	StageEnrolling   Stage = "enrolling"
+	StageDeploying   Stage = "deploying"
 	StageAuthorizing Stage = "authorizing"
-	StageReady      Stage = "ready"
+	StageReady       Stage = "ready"
 
 	// Deletion has its own progression: access is revoked and the device is
 	// removed before provider resources are destroyed.

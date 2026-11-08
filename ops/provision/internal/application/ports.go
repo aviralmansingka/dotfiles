@@ -39,8 +39,8 @@ type JobHandle struct {
 // JobRef is the durable reference returned when a job is started. The run ID is
 // empty when the orchestrator did not report one (offline fakes).
 type JobRef struct {
-	JobID string
-	RunID string
+	JobID  string
+	RunID  string
 	HostID string
 }
 
@@ -82,12 +82,12 @@ type CreateHostSpec struct {
 
 // DeleteHostSpec is the non-secret description of a teardown.
 type DeleteHostSpec struct {
-	JobID        string
-	HostID       string
-	Name         string
-	Provider     domain.Provider
-	Region       string
-	ResourceID   string
+	JobID         string
+	HostID        string
+	Name          string
+	Provider      domain.Provider
+	Region        string
+	ResourceID    string
 	SecretBundles []string
 }
 
@@ -220,10 +220,10 @@ type ProfileDeployer interface {
 
 // AuthorizeRequest grants a host access to its approved secret bundles.
 type AuthorizeRequest struct {
-	HostID         string
-	Name           string
-	Profile        string
-	SecretBundles  []string
+	HostID        string
+	Name          string
+	Profile       string
+	SecretBundles []string
 }
 
 // HostAuthorizer is the OpenBao host-identity port.
