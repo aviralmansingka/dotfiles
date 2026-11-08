@@ -29,11 +29,13 @@ Treat repository, worktree, and session identity as three distinct concepts:
 
 Agents making repo changes do not work from `main`. `pi/.pi/agent/extensions/worktree.ts` registers the `worktree`
 tool: it creates or reuses `~/.herdr/worktrees/<repo>/<type>-<slug>` from local `main` (always `--no-focus`) and
-opens that checkout as a **user-driven session** — `herdr pane run <pane> pi` under Herdr, `rex new <label> -c
-<checkout> -- pi` under Rex (one durable session per worktree, reused by label). It launches no subagent, registers
-no name, and reports no completion steer; it takes only `branch` and `base`, so a caller that wants a worker uses
-`subagent` instead. A reused worktree never starts a second pi. Branches are ownership-marked
-(`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool does not own is refused.
+opens that checkout as a **user-driven tab in the repository's own session** — `herdr pane run <pane> pi` under
+Herdr, `rex window new -s $REX_SESSION "π <slug>" --focus=false -c <checkout> -- pi` under Rex. A Rex session is
+the analogue of a Herdr workspace, not of a worktree row, so a worktree never gets a session of its own; the tab
+is keyed by that label and reused on a repeat call. It launches no subagent, registers no name, and reports no
+completion steer; it takes only `branch` and `base`, so a caller that wants a worker uses `subagent` instead. A
+reused worktree never starts a second pi. Branches are ownership-marked (`branch.<b>.piWorktree` in git config,
+the gh-dash-open-pr pattern); anything the tool does not own is refused.
 Teardown after ship stays with `/cleanup`.
 
 `/worktree` is the human entry point, and it is a prompt template, not an extension command:
