@@ -15,10 +15,10 @@ or a base.
   type from feat, fix, explore, chore, task.
 - Call the worktree tool with `base: "main"`. Base the worktree on local main,
   never on the current branch. It takes only `branch` and `base`: it opens a
-  user-driven session, it does not launch a subagent.
+  user-driven tab in your own repository session, it does not launch a
+  subagent.
 - Do not edit the main checkout.
-- Report the branch, the path, and the tab or session it opened. That tab is
-  the human's: do not send it a task, do not poll it, and do not claim the work
-  is done.
+- Report the branch, the path, and the tab it opened. That tab is the human's:
+  do not send it a task, do not poll it, and do not claim the work is done.
 
 Work in that worktree only when the human asks you to.
