@@ -1,7 +1,7 @@
 /**
  * `worktree` — put change work in a linked Git worktree instead of the main
- * checkout, and run it through an auto-exit worker subagent that lives in
- * the worktree session's first tab.
+ * checkout, and open that checkout as a user-driven session: an unfocused
+ * Rex tab (or the Herdr worktree pane) running an ordinary `pi` there.
  *
  * Why: an agent that edits directly in the main checkout moves the repo's
  * neutral `main` branch — the picker invariants, the line-diff totals
@@ -17,27 +17,30 @@
  *      owned worktree (idempotent). Always `--no-focus`: an agent-spawned
  *      worktree never steals the human's focus.
  *   2. Read `.result.root_pane.pane_id` and the worktree path from the JSON.
- *   3. Spawn the worker through the interactive-subagents process global
- *      (`executeSubagent`) with `cwd` = the worktree and `pane` = the root
- *      pane, so the worker adopts the worktree session's first tab instead
- *      of opening its own. That machinery owns validation, the name
- *      registry, liveness/adoption, and the completion steer.
+ *   3. Start `pi` in that pane, unless the worktree was reused: a reused
+ *      surface may already host the session's own pi.
+ *
+ * No subagent. Nothing is spawned, registered, watched, or auto-exited, so
+ * the tab stays parked for the human, carries no `PI_SUBAGENT_*` identity,
+ * and never reports a completion steer. The tool passes no task: the human
+ * drives the session. There is no `task` or `agent` parameter, so a caller
+ * that wants a worker uses `subagent` instead.
  *
  * Ownership: a fresh branch is marked `branch.<b>.piWorktree` in the repo's
  * local git config — the same pattern gh-dash-open-pr uses with
  * `branch.<b>.ghDashPr`. The tool reuses only worktrees and branches it
  * owns; anything else fails loudly instead of taking over.
  *
- * Lifecycle: the worker is auto-exit. On clean completion the subagent
- * machinery closes the whole tab, which folds the worktree session row; the
+ * Lifecycle: the session is durable. Its pi exits when the human quits it, the
  * checkout and branch stay on disk, `herdr worktree open --cwd <repo>
- * --branch <b>` restores the row, and `/cleanup` (from a session in that
- * worktree) tears it down after ship.
+ * --branch <b>` restores a folded Herdr row, a repeat call reuses the Rex
+ * session by label, and `/cleanup` (from a session in that worktree) tears it
+ * down after ship.
  *
  * Two surfaces: Herdr carries a worktree API, so `herdr worktree create/open`
- * does the checkout AND makes the pane the worker adopts. Rex has no worktree
+ * does the checkout AND yields the pane pi starts in. Rex has no worktree
  * command, so this file creates the checkout with `git worktree add` itself
- * and lets the Rex surface open the worker's tab. Both surfaces share one
+ * and opens one durable session per worktree. Both surfaces share one
  * worktree root (`~/.herdr/worktrees/<repo>/<type>-<slug>`) so a checkout
  * stays usable when the human switches multiplexers. The base is the repo's
  * LOCAL `main` by convention (the picker diffs against it); pass `base`
@@ -52,12 +55,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parseWorktreeList, type WorktreeEntry } from "./cleanup.ts";
 
 const GIT_TIMEOUT_MS = 30_000;
-const HERDR_TIMEOUT_MS = 60_000;
+const MUX_TIMEOUT_MS = 60_000;
 const DEFAULT_BASE = "main";
-const DEFAULT_AGENT = "worker";
 const DEFAULT_BRANCH_TYPE = "feat";
 const BRANCH_TYPES = ["feat", "fix", "explore", "chore", "task"] as const;
-const WORKER_NAME_MAX = 32;
+const LABEL_MAX = 32;
 const OWNER_VALUE = "pi-worktree";
 
 /** Which multiplexer this session runs under, or null when neither applies. */
@@ -137,10 +139,10 @@ export function normalizeBranch(input: string): string {
 	return `${type}/${slug}`;
 }
 
-/** Widget/registry label for a worktree worker: the branch slug, without its type prefix. */
-export function workerNameFor(branch: string): string {
+/** Session/tab label for a worktree: the branch slug, without its type prefix. */
+export function labelFor(branch: string): string {
 	const slug = branch.slice(branch.indexOf("/") + 1);
-	return slug.length > WORKER_NAME_MAX ? slug.slice(0, WORKER_NAME_MAX) : slug;
+	return slug.length > LABEL_MAX ? slug.slice(0, LABEL_MAX) : slug;
 }
 
 /**
@@ -261,14 +263,24 @@ export function decideWorktreeAction(opts: {
 
 // --- herdr -----------------------------------------------------------------
 
+/** One `herdr`/`rex` call: stdout on success, a readable error otherwise. */
+function mux(bin: "herdr" | "rex", args: string[]): string {
+	try {
+		return execFileSync(bin, args, {
+			encoding: "utf8",
+			timeout: MUX_TIMEOUT_MS,
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+	} catch (error: any) {
+		const stderr = typeof error?.stderr === "string" ? error.stderr.trim() : "";
+		throw new Error(`${bin} ${args.join(" ")} failed: ${stderr || error?.message || String(error)}`);
+	}
+}
+
 function herdr(args: string[]): Record<string, any> {
 	let stdout: string;
 	try {
-		stdout = execFileSync("herdr", args, {
-			encoding: "utf8",
-			timeout: HERDR_TIMEOUT_MS,
-			stdio: ["pipe", "pipe", "pipe"],
-		});
+		stdout = mux("herdr", args);
 	} catch (error: any) {
 		// The CLI prints a JSON error object on stderr; surface its message when
 		// parseable, else the raw stderr, else the spawn error.
@@ -289,6 +301,63 @@ function herdr(args: string[]): Record<string, any> {
 	}
 }
 
+// --- rex ------------------------------------------------------------------
+
+function rexJson(args: string[]): Record<string, any> | null {
+	try {
+		const out = mux("rex", args).trim();
+		return out ? (JSON.parse(out) as Record<string, any>) : null;
+	} catch {
+		return null;
+	}
+}
+
+/** Session id whose label matches exactly, or null. */
+function rexSessionByLabel(label: string): string | null {
+	const listed = rexJson(["ls", "--json"]);
+	const hit = (listed?.sessions ?? []).find(
+		(entry: any) => entry?.label === label && typeof entry?.session_id === "string" && entry.session_id,
+	);
+	return typeof hit?.session_id === "string" ? hit.session_id : null;
+}
+
+/** First block of a Rex session, or null when it has no windows left. */
+function rexRootBlock(sessionId: string): string | null {
+	const view = rexJson(["session", "inspect", sessionId, "--json"]);
+	const block = view?.windows?.[0]?.layers?.[0]?.blocks?.[0]?.block_id;
+	return typeof block === "string" && block !== "" ? block : null;
+}
+
+/**
+ * Open — or reuse — the one durable Rex session a worktree owns, with an
+ * ordinary `pi` in its first tab. `rex new` does not switch the app's visible
+ * session, so this never steals the human's focus, and a repeat call finds the
+ * session by label instead of piling up empty sessions.
+ */
+export function openRexSession(
+	label: string,
+	cwd: string,
+): { session: string; pane: string; created: boolean } {
+	const existing = rexSessionByLabel(label);
+	if (existing) {
+		const pane = rexRootBlock(existing);
+		if (pane) return { session: existing, pane, created: false };
+	}
+	const out = mux("rex", ["new", label, "-c", cwd, "--window", label, "--json", "--", "pi"]);
+	let parsed: any;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		throw new Error(`rex new ${label} returned non-JSON output: ${out.slice(0, 200)}`);
+	}
+	const session = parsed?.session_id;
+	const pane = parsed?.initial_windows?.[0]?.block_ids?.[0];
+	if (typeof session !== "string" || !session || typeof pane !== "string" || !pane) {
+		throw new Error(`rex new ${label} returned no session or block id`);
+	}
+	return { session, pane, created: true };
+}
+
 // --- tool ------------------------------------------------------------------
 
 const WorktreeParams = Type.Object({
@@ -298,14 +367,6 @@ const WorktreeParams = Type.Object({
 			`'<type>/<slug>' with type one of ${BRANCH_TYPES.join(", ")}. An existing worktree/branch ` +
 			"owned by this tool is reused; anything else the tool does not own is refused.",
 	}),
-	task: Type.String({
-		description:
-			"Task for the worker subagent. It starts with no prior conversation context — include every " +
-			"file path, decision, and constraint it needs.",
-	}),
-	agent: Type.Optional(
-		Type.String({ description: `Worker agent to spawn (default "${DEFAULT_AGENT}")` }),
-	),
 	base: Type.Optional(
 		Type.String({
 			description:
@@ -316,11 +377,12 @@ const WorktreeParams = Type.Object({
 });
 
 const DESCRIPTION =
-	"Put change work in a linked Git worktree based on the repo's local main, and run an auto-exit " +
-	"worker subagent there. Use this instead of editing the main checkout. The checkout lands at " +
+	"Put change work in a linked Git worktree based on the repo's local main, and open that checkout " +
+	"as a user-driven session. Use this instead of editing the main checkout. The checkout lands at " +
 	"~/.herdr/worktrees/<repo>/<branch> and gets its own session: under Herdr it joins the repo's " +
-	"shared workspace, under Rex it opens a labeled tab. The worker's result steers back automatically. " +
-	"Tear down with /cleanup from that worktree after the work ships.";
+	"shared workspace, under Rex it opens a labeled tab running an ordinary pi. No subagent runs " +
+	"there and no task is passed — the human drives that session. Tear down with /cleanup from it " +
+	"after the work ships.";
 
 export default function worktreeExtension(pi: ExtensionAPI): void {
 	pi.registerTool({
@@ -329,8 +391,8 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 		description: DESCRIPTION,
 		promptSnippet:
 			"Make repo changes with the worktree tool instead of editing the main checkout. It bases the " +
-			"worktree on local main, never on the current branch, and runs an auto-exit worker there; the " +
-			"worker's result steers back automatically.",
+			"worktree on local main, never on the current branch, and opens it as a user-driven tab for " +
+			"the human; it launches no subagent and passes no task.",
 		parameters: WorktreeParams,
 		annotations: {
 			readOnlyHint: false,
@@ -410,6 +472,10 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			let rootPane: string | null = null;
 			let workspaceId: string | null = null;
 			let surfaceSession: string | null = null;
+			// Set when this call started pi; a reuse adopts a surface that may already
+			// host the session's own pi, so it never starts a second one.
+			let startedPi = false;
+			let warning: string | null = null;
 
 			if (surface === "rex") {
 				const target = worktreePathFor(primary, branch);
@@ -433,33 +499,22 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 					return fail(error?.message ?? String(error), { branch, base, surface });
 				}
 
-				// One durable Rex session per worktree, matching the Herdr model: the
-				// worker adopts that session's first block instead of opening a tab in
-				// the caller's session. The creator is keyed by label, so a repeat
-				// call reuses the same session rather than piling up new ones.
-				const createSessionFn = (globalThis as any).__pi_interactive_subagents
-					?.createWorktreeSession;
-				if (typeof createSessionFn !== "function") {
-					return fail(
-						`The worktree is ready at ${worktreePath} (branch ${branch}), but no worktree session could be ` +
-							`created: the interactive-subagents extension is not loaded. Work there directly.`,
-						{ branch, path: worktreePath, surface },
-					);
-				}
-				const created = createSessionFn(workerNameFor(branch), worktreePath);
-				if (
-					!created ||
-					typeof created.pane !== "string" ||
-					typeof created.session !== "string"
-				) {
+				// One durable Rex session per worktree, with an ordinary `pi` in its first
+				// tab. The creator is keyed by label, so a repeat call reuses the same
+				// session rather than piling up new ones.
+				try {
+					const opened = openRexSession(labelFor(branch), worktreePath);
+					rootPane = opened.pane;
+					surfaceSession = opened.session;
+					startedPi = opened.created;
+				} catch (error: any) {
 					return fail(
 						`The worktree is ready at ${worktreePath} (branch ${branch}), but its Rex session could not be ` +
-							`created. Work there directly.`,
+							`opened: ${error?.message ?? String(error)}. Start one with ` +
+							`\`rex new ${labelFor(branch)} -c ${worktreePath} -- pi\`.`,
 						{ branch, path: worktreePath, surface },
 					);
 				}
-				rootPane = created.pane;
-				surfaceSession = created.session;
 			} else {
 				const herdrCwd = primary;
 				let response: Record<string, any>;
@@ -508,91 +563,58 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 					);
 				}
 				rootPane = pane;
+				if (mode !== "reused") {
+					// `pane run` sends the text plus Enter, so pi owns the pane instead of
+					// sitting behind a shell. A reused worktree may already host pi.
+					try {
+						mux("herdr", ["pane", "run", pane, "pi"]);
+						startedPi = true;
+					} catch (error: any) {
+						warning = `pi did not start in ${pane}: ${error?.message ?? String(error)}`;
+					}
+				}
 			}
 
-			// 6. Spawn the worker through the interactive-subagents machinery.
-			// The `pane` override makes it adopt the worktree session's root pane
-			// (Herdr) or first block (Rex) instead of opening its own surface. That
-			// machinery validates the pane, registers the name, and steers the
-			// completion back here automatically.
-			const workerName = workerNameFor(branch);
+			// 6. Ack. No subagent runs here and no steer follows: the tab is the
+			// human's, parked and unfocused, with an ordinary pi at its prompt.
+			const label = labelFor(branch);
 			const where =
 				surface === "herdr"
-					? `in the worktree session's first tab (${rootPane}), unfocused`
-					: `in the worktree session "${workerName}" (${surfaceSession}), unfocused`;
+					? `in the worktree pane (${rootPane}), unfocused`
+					: `in the Rex session "${label}" (${surfaceSession}), unfocused`;
 			const reopenHint =
 				surface === "herdr"
 					? `\`herdr worktree open --cwd ${primary} --branch ${branch}\``
-					: `the session picker in Rex (label "${workerName}")`;
-			const spawnFn = (globalThis as any).__pi_interactive_subagents?.executeSubagent;
-			if (typeof spawnFn !== "function") {
-				return fail(
-					`The worktree is ready at ${worktreePath} (branch ${branch}), but the worker ` +
-						`could not launch: the interactive-subagents extension is not loaded. Open it with ` +
-						`${reopenHint} or work there directly.`,
-					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId, surface },
-				);
-			}
-			const agent = params.agent?.trim() || DEFAULT_AGENT;
-			const spawnParams: Record<string, unknown> = {
-				agent,
-				name: workerName,
-				task: params.task,
-				cwd: worktreePath,
-			};
-			// Pane adoption drives both Herdr panes and Rex blocks.
-			if (rootPane) spawnParams.pane = rootPane;
-			let spawn: any;
-			try {
-				spawn = await spawnFn(spawnParams, ctx);
-			} catch (error: any) {
-				return fail(
-					`The worktree is ready at ${worktreePath} (branch ${branch}), but the worker ` +
-						`launch failed: ${error?.message ?? String(error)}. The worktree stays — retry, or open it with ` +
-						`${reopenHint}.`,
-					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId, surface },
-				);
-			}
-			const subagent = spawn?.details ?? {};
-			if (subagent.error || subagent.status !== "started" || !subagent.sessionFile) {
-				return fail(
-					`The worktree is ready at ${worktreePath} (branch ${branch}), but the worker ` +
-						`did not start: ${subagent.error ?? "unknown spawn error"}. The worktree stays — retry, or open it ` +
-						`with ${reopenHint}.`,
-					{ branch, path: worktreePath, pane: rootPane, workspace: workspaceId, surface },
-				);
-			}
-
-			// 7. Ack — the steer with the worker's result arrives on its own.
-			const actualName =
-				typeof subagent.name === "string" && subagent.name ? subagent.name : workerName;
+					: `the session picker in Rex (label "${label}")`;
+			const startHint = startedPi
+				? ""
+				: `\n- pi: not started (the surface was reused; run \`pi\` there if it is idle)`;
 			return {
 				content: [
 					{
-					type: "text" as const,
-					text:
-						`Worktree ${mode === "reused" ? "reused" : "created"} and worker launched.\n` +
-						`- branch: ${branch}${mode === "created" ? ` (from ${base})` : ""}\n` +
-						`- path: ${worktreePath}\n` +
-						`- worker: subagent "${actualName}" (agent "${agent}", auto-exit) ${where}\n` +
-						`- session: ${subagent.sessionFile}\n\n` +
-						`The worker's result arrives automatically as a steer message — do not poll for it. ` +
-						`After the work ships, tear down with /cleanup from a session in that worktree, or reopen it any ` +
-						`time with ${reopenHint}.`,
+						type: "text" as const,
+						text:
+							`Worktree ${mode === "reused" ? "reused" : "created"}; user-driven session ${where}.\n` +
+							`- branch: ${branch}${mode === "created" ? ` (from ${base})` : ""}\n` +
+							`- path: ${worktreePath}${startHint}` +
+							(warning ? `\n- warning: ${warning}` : "") +
+							`\n\nNo subagent runs there and this tool sent no task — switch to that tab and drive it. ` +
+							`Tear down with /cleanup from a session in that worktree, or reopen it any time with ${reopenHint}.`,
+					},
+				],
+				details: {
+					branch,
+					base: mode === "created" ? base : null,
+					path: worktreePath,
+					pane: rootPane,
+					workspace: workspaceId ?? null,
+					session: surfaceSession,
+					label,
+					surface,
+					mode,
+					startedPi,
+					warning,
 				},
-			],
-			details: {
-				branch,
-				base: mode === "created" ? base : null,
-				path: worktreePath,
-				pane: rootPane,
-				workspace: workspaceId ?? null,
-				session: surfaceSession,
-				worker: actualName,
-				surface,
-				mode,
-				subagent,
-			},
 			};
 		},
 	});

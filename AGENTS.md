@@ -29,18 +29,18 @@ Treat repository, worktree, and session identity as three distinct concepts:
 
 Agents making repo changes do not work from `main`. `pi/.pi/agent/extensions/worktree.ts` registers the `worktree`
 tool: it creates or reuses `~/.herdr/worktrees/<repo>/<type>-<slug>` from local `main` (always `--no-focus`) and
-launches an auto-exit `worker` subagent in the worktree session's first tab, via `executeSubagent` with an internal
-`pane` override (guarded against the parent pane, agent-hosting panes, and cwd mismatches). The worker's result
-steers back automatically; on clean completion its tab closes and the picker row folds until `herdr worktree open`.
-Branches are ownership-marked (`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool
-does not own is refused. Teardown after ship stays with `/cleanup`.
+opens that checkout as a **user-driven session** — `herdr pane run <pane> pi` under Herdr, `rex new <label> -c
+<checkout> -- pi` under Rex (one durable session per worktree, reused by label). It launches no subagent, registers
+no name, and reports no completion steer; it takes only `branch` and `base`, so a caller that wants a worker uses
+`subagent` instead. A reused worktree never starts a second pi. Branches are ownership-marked
+(`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool does not own is refused.
+Teardown after ship stays with `/cleanup`.
 
 `/worktree` is the human entry point, and it is a prompt template, not an extension command:
 `pi/.pi/agent/prompts/worktree.md`. The text after the command is either a branch (`feat/build-skill`) or a theme
-("the changes in this conversation"). The agent derives the type, slug, and worker task from that text and the
-conversation. It asks no questions and always passes `base: "main"`, so a worktree never starts from the current
-branch. Under Rex the tool opens the worker tab with `rex window new`, a `π <name>` label, `--focus=false`, and
-`-c <worktree>`.
+("the changes in this conversation"). The agent derives the type and slug from that text and the conversation. It
+asks no questions and always passes `base: "main"`, so a worktree never starts from the current branch. It then
+reports the branch, the path, and the new tab; the human drives that tab.
 
 ## Captain prompt budget: deferred tools
 
