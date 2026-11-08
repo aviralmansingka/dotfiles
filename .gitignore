@@ -18,6 +18,12 @@ ops/terraform/*.tfvars
 ops/terraform/.terraform/
 ops/terraform/.terraform.lock.hcl
 ops/terraform/terraform.tfstate*
+# Same rules for the per-host provisioning root: `terraform init -backend=false`
+# (the recorded offline check) leaves a provider cache and a lock file behind,
+# and a plan run here would leave state. The root is a read-only template.
+ops/provision/terraform/*/.terraform/
+ops/provision/terraform/*/.terraform.lock.hcl
+ops/provision/terraform/*/terraform.tfstate*
 .td-root
 .nvimlog
 test-results/
