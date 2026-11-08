@@ -1,0 +1,189 @@
+# One provisioned fleet host: AMI lookup, key pair, security group with a
+# single-CIDR SSH ingress, a minimal SSM instance profile, and the instance
+# itself. Nothing account-wide lives here — no VPC, no route table, no DNS, no
+# IAM user, no Elastic IP — so tearing a host down cannot disturb the rest of
+# the fleet, and `terraform destroy` on another host's state cannot see it.
+
+locals {
+  # Documentation and tag value only: the state object the adapter actually
+  # opens comes from `-backend-config=key=` at init time and is built from the
+  # same host name by the Go adapter (see internal/adapters/terraform/aws.go).
+  state_key = "fleet-hosts/${var.host_name}/terraform.tfstate"
+
+  tags = {
+    Name             = var.host_name
+    ManagedBy        = "terraform"
+    "fleet-owner"    = var.fleet_owner
+    "fleet-test-run" = var.test_run
+    "fleet-provider" = "aws"
+    "fleet-profile"  = var.profile
+    "fleet-size"     = var.size_key
+    "fleet-state"    = local.state_key
+  }
+}
+
+# Ubuntu 24.04 LTS amd64 server, newest available, resolved in ap-south-1
+# explicitly. Same Canonical owner and image family as ops/terraform/mumbai.tf.
+data "aws_ami" "ubuntu" {
+  provider    = aws.ap_south_1
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+resource "aws_key_pair" "host" {
+  provider   = aws.ap_south_1
+  key_name   = "fleet-${var.host_name}"
+  public_key = var.ssh_public_key
+
+  tags = local.tags
+}
+
+resource "aws_security_group" "host" {
+  provider    = aws.ap_south_1
+  name        = "fleet-${var.host_name}"
+  description = "Fleet host ${var.host_name}: SSH bootstrap from the approved CIDR only, HTTPS egress for Nix and SSM"
+
+  # The only ingress rule. There is no 0.0.0.0/0 ingress anywhere in this root,
+  # and the variable cannot express a CIDR wider than /8.
+  ingress {
+    description = "SSH bootstrap from the approved operator CIDR"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.bootstrap_ssh_cidr]
+  }
+
+  # Egress needed by the bootstrap: cache.nixos.org, nixos.org, and the SSM
+  # service endpoints. Nothing else leaves the host.
+  egress {
+    description = "Nix installer and binary cache, plus the SSM service endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = local.tags
+}
+
+data "aws_iam_policy_document" "ec2_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+# Host-key retrieval runs over SSM Session Manager, so the instance needs the
+# EC2 service role and nothing more: no wildcard action, no inline policy, no
+# account-wide grant. The attachment is not taggable; the role and the profile
+# are.
+resource "aws_iam_role" "host" {
+  provider           = aws.ap_south_1
+  name               = "fleet-${var.host_name}-ssm"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy_attachment" "host_ssm" {
+  provider   = aws.ap_south_1
+  role       = aws_iam_role.host.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "host" {
+  provider = aws.ap_south_1
+  name     = "fleet-${var.host_name}"
+  role     = aws_iam_role.host.name
+
+  tags = local.tags
+}
+
+resource "aws_instance" "host" {
+  provider = aws.ap_south_1
+
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name               = aws_key_pair.host.key_name
+  vpc_security_group_ids = [aws_security_group.host.id]
+  iam_instance_profile   = aws_iam_instance_profile.host.name
+
+  # Public bootstrap only: packages, the Nix daemon, and lingering. No secret,
+  # no enrollment key, no fleet credential — see cloud-init.yaml.
+  user_data                   = file("${path.module}/cloud-init.yaml")
+  user_data_replace_on_change = true
+
+  # IMDSv2 required: no token-less metadata reads, so a bootstrap step cannot
+  # be tricked into signing with the instance profile.
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+    instance_metadata_tags      = "enabled"
+  }
+
+  # Encrypted gp3 root volume, sized by the approved size key, deleted with the
+  # instance so a destroyed host leaves no orphaned volume behind.
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = var.disk_gb
+    encrypted             = true
+    delete_on_termination = true
+  }
+
+  tags = local.tags
+
+  # The profile must exist before the instance starts, or SSM registration
+  # races the first boot.
+  depends_on = [aws_iam_role_policy_attachment.host_ssm]
+}
+
+output "instance_id" {
+  description = "EC2 instance id of this host (empty until the instance exists)"
+  value       = aws_instance.host.id
+}
+
+output "private_ip" {
+  description = "Private address used by the trusted-SSH bootstrap"
+  value       = aws_instance.host.private_ip
+}
+
+output "region" {
+  description = "Region every resource in this root lives in"
+  value       = "ap-south-1"
+}
+
+output "state_key" {
+  description = "S3 object key of this host's state; unique per host name"
+  value       = local.state_key
+}
+
+output "security_group_id" {
+  description = "Security group of this host, for the teardown audit"
+  value       = aws_security_group.host.id
+}

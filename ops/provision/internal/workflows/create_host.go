@@ -71,7 +71,9 @@ func CreateHostWorkflow(ctx workflow.Context, in CreateHostInput) (Status, error
 		HostID:       in.Spec.HostID,
 		Name:         in.Spec.Name,
 		Provider:     in.Spec.Provider,
+		Profile:      in.Spec.Profile,
 		Region:       in.Spec.Region,
+		Size:         in.Spec.Size,
 		InstanceType: in.Spec.InstanceType,
 		DiskGB:       in.Spec.DiskGB,
 		Tags:         in.Spec.Tags,
@@ -180,7 +182,9 @@ func DeleteHostWorkflow(ctx workflow.Context, in DeleteHostInput) (Status, error
 		HostID:     in.Spec.HostID,
 		Name:       in.Spec.Name,
 		Provider:   in.Spec.Provider,
+		Profile:    in.Spec.Profile,
 		Region:     in.Spec.Region,
+		Size:       in.Spec.Size,
 		ResourceID: in.ResourceID,
 	}).Get(ctx, nil); err != nil {
 		return failDelete(ctx, state, err)

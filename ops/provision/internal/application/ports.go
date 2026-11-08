@@ -145,12 +145,16 @@ type TokenRecord struct {
 }
 
 // ProviderCreateRequest is what a compute provider adapter receives. It carries
-// only approved, server-resolved values.
+// only approved, server-resolved values. Profile and Size are the approved
+// names; the adapter re-resolves instance type and disk size from the catalog
+// rather than trusting the values in the request.
 type ProviderCreateRequest struct {
 	HostID       string
 	Name         string
 	Provider     domain.Provider
+	Profile      string
 	Region       string
+	Size         string
 	InstanceType string
 	DiskGB       int
 	Tags         map[string]string
@@ -162,12 +166,17 @@ type ProviderResource struct {
 	PrivateAddress string
 }
 
-// ProviderDestroyRequest identifies the resource to destroy.
+// ProviderDestroyRequest identifies the resource to destroy. Profile and Size
+// are required because Terraform needs every variable to plan a destroy, and
+// the adapter re-resolves the shape from the catalog instead of trusting a
+// caller to remember it.
 type ProviderDestroyRequest struct {
 	HostID     string
 	Name       string
 	Provider   domain.Provider
+	Profile    string
 	Region     string
+	Size       string
 	ResourceID string
 }
 

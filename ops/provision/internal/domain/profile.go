@@ -138,6 +138,14 @@ func NewCatalog(profiles []Profile) (Catalog, error) {
 	return Catalog{profiles: byName}, nil
 }
 
+// Profile returns the approved profile with this name. The provider adapters
+// use it to resolve a size key server-side, so a request cannot name a shape
+// the catalog does not approve.
+func (c Catalog) Profile(name string) (Profile, bool) {
+	profile, ok := c.profiles[name]
+	return profile, ok
+}
+
 // Profiles returns the approved profiles sorted by name.
 func (c Catalog) Profiles() []Profile {
 	out := make([]Profile, 0, len(c.profiles))

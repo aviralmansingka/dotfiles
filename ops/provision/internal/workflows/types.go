@@ -80,7 +80,9 @@ type CreateHostResourceInput struct {
 	HostID       string            `json:"host_id"`
 	Name         string            `json:"name"`
 	Provider     string            `json:"provider"`
+	Profile      string            `json:"profile"`
 	Region       string            `json:"region"`
+	Size         string            `json:"size"`
 	InstanceType string            `json:"instance_type"`
 	DiskGB       int               `json:"disk_gb"`
 	Tags         map[string]string `json:"tags"`
@@ -144,12 +146,16 @@ type RemoveDeviceInput struct {
 	DeviceID string `json:"device_id"`
 }
 
-// DestroyHostResourceInput destroys the provider resource.
+// DestroyHostResourceInput destroys the provider resource. Profile and Size
+// come from the same resolved host spec that created it, so the destroy runs
+// with the identical variable set.
 type DestroyHostResourceInput struct {
 	HostID     string `json:"host_id"`
 	Name       string `json:"name"`
 	Provider   string `json:"provider"`
+	Profile    string `json:"profile"`
 	Region     string `json:"region"`
+	Size       string `json:"size"`
 	ResourceID string `json:"resource_id"`
 }
 

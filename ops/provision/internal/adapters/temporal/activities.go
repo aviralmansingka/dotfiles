@@ -60,7 +60,9 @@ func (a *Activities) CreateHostResource(ctx context.Context, in workflows.Create
 		HostID:       in.HostID,
 		Name:         in.Name,
 		Provider:     domain.Provider(in.Provider),
+		Profile:      in.Profile,
 		Region:       in.Region,
+		Size:         in.Size,
 		InstanceType: in.InstanceType,
 		DiskGB:       in.DiskGB,
 		Tags:         in.Tags,
@@ -152,7 +154,9 @@ func (a *Activities) DestroyHostResource(ctx context.Context, in workflows.Destr
 		HostID:     in.HostID,
 		Name:       in.Name,
 		Provider:   domain.Provider(in.Provider),
+		Profile:    in.Profile,
 		Region:     in.Region,
+		Size:       in.Size,
 		ResourceID: in.ResourceID,
 	}); err != nil {
 		return a.activityError("destroy_host_resource", in.HostID, err)

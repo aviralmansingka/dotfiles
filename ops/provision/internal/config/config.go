@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -77,6 +78,7 @@ type Provider struct {
 	Region      string      `yaml:"region"`
 	Credentials Credentials `yaml:"credentials"`
 	Bootstrap   Bootstrap   `yaml:"bootstrap"`
+	Terraform   Terraform   `yaml:"terraform"`
 }
 
 // Credentials references OpenBao paths. It has no field for a credential value,
@@ -87,9 +89,44 @@ type Credentials struct {
 	SecretIDRef string `yaml:"secret_id_ref"`
 }
 
-// Bootstrap is the approved SSH ingress policy reference for the provider.
+// Bootstrap is the approved SSH ingress policy reference for the provider. The
+// CIDR and the public key are the values the per-host Terraform root consumes;
+// the ref is where the operator keeps the approved value.
 type Bootstrap struct {
 	SSHSourceRef string `yaml:"ssh_source_ref"`
+	// SSHSourceCIDR is the only source address allowed to reach port 22. It is
+	// validated as IPv4 and no wider than /8, so 0.0.0.0/0 cannot be configured.
+	SSHSourceCIDR string `yaml:"ssh_source_cidr"`
+	// SSHPublicKeyFile names a `.pub` file. The adapter reads it and refuses
+	// private key material; no key material is stored in this document.
+	SSHPublicKeyFile string `yaml:"ssh_public_key_file"`
+}
+
+// Terraform locates the per-host AWS entry point. Every field is a path or a
+// non-secret label: the credentials the Terraform process runs with are the
+// worker's own, acquired from OpenBao, and never appear in this file.
+type Terraform struct {
+	// Dir is the template root (ops/provision/terraform/aws). It is read, never
+	// written.
+	Dir string `yaml:"dir"`
+	// RunDir holds one working directory per host, and with it one state path
+	// per host. Two hosts never share either.
+	RunDir string `yaml:"run_dir"`
+	// Binary is the Terraform executable, resolved on PATH. Defaults to
+	// "terraform".
+	Binary string `yaml:"binary"`
+	// TimeoutSeconds bounds one Terraform invocation.
+	TimeoutSeconds int `yaml:"timeout_seconds"`
+	// StateBucket and StateRegion locate the shared S3 bucket for state
+	// objects. StateRegion is the bucket's own region, not the resource region:
+	// the resources this root creates are all pinned to ap-south-1.
+	StateBucket string `yaml:"state_bucket"`
+	StateRegion string `yaml:"state_region"`
+	// OwnerTag is the fleet-owner tag value written to every resource, and
+	// TestRunTag the test-run value, so a live acceptance run can find and
+	// destroy exactly its own hosts.
+	OwnerTag   string `yaml:"owner_tag"`
+	TestRunTag string `yaml:"test_run_tag"`
 }
 
 // Logging configures output shape.
@@ -174,16 +211,78 @@ func (s *Service) Validate() error {
 	if aws.Region == "" {
 		return errors.New("providers.aws.region is required")
 	}
+	if err := domain.ValidateAWSRegion(aws.Region); err != nil {
+		return fmt.Errorf("providers.aws.region: %w", err)
+	}
 	if aws.Credentials.Kind != "openbao_approle" {
 		return errors.New("providers.aws.credentials.kind must be openbao_approle")
 	}
 	if aws.Credentials.RoleIDRef == "" || aws.Credentials.SecretIDRef == "" {
 		return errors.New("providers.aws.credentials.role_id_ref and secret_id_ref are required")
 	}
+	if err := aws.Bootstrap.Validate(); err != nil {
+		return err
+	}
+	if err := aws.Terraform.Validate(); err != nil {
+		return err
+	}
 	switch s.Logging.Format {
 	case "", "json", "text":
 	default:
 		return fmt.Errorf("logging.format %q must be json or text", s.Logging.Format)
+	}
+	return nil
+}
+
+// Validate enforces the approved bootstrap policy: one IPv4 CIDR source, never
+// a default route, and public key material only.
+func (b Bootstrap) Validate() error {
+	if b.SSHSourceRef == "" {
+		return errors.New("providers.aws.bootstrap.ssh_source_ref is required")
+	}
+	if b.SSHSourceCIDR == "" {
+		return errors.New("providers.aws.bootstrap.ssh_source_cidr is required")
+	}
+	if err := domain.ValidateBootstrapCIDR(b.SSHSourceCIDR); err != nil {
+		return fmt.Errorf("providers.aws.bootstrap.ssh_source_cidr: %w", err)
+	}
+	if b.SSHPublicKeyFile == "" {
+		return errors.New("providers.aws.bootstrap.ssh_public_key_file is required")
+	}
+	if !strings.HasSuffix(b.SSHPublicKeyFile, ".pub") {
+		return fmt.Errorf("providers.aws.bootstrap.ssh_public_key_file %q must name a .pub file", b.SSHPublicKeyFile)
+	}
+	return nil
+}
+
+// Validate enforces the per-host Terraform entry point's configuration. Every
+// host gets its own run directory and its own state key, so the run directory
+// must exist as a distinct path from the template root.
+func (t Terraform) Validate() error {
+	switch {
+	case t.Dir == "":
+		return errors.New("providers.aws.terraform.dir is required")
+	case t.RunDir == "":
+		return errors.New("providers.aws.terraform.run_dir is required")
+	case t.StateBucket == "":
+		return errors.New("providers.aws.terraform.state_bucket is required")
+	case t.StateRegion == "":
+		return errors.New("providers.aws.terraform.state_region is required")
+	}
+	if clean := filepath.Clean(t.Dir); clean == filepath.Clean(t.RunDir) {
+		return errors.New("providers.aws.terraform.run_dir must differ from dir; the template root is never written")
+	}
+	if t.Binary != "" && strings.ContainsAny(t.Binary, "/\\ \t") {
+		return fmt.Errorf("providers.aws.terraform.binary %q must be a bare executable name", t.Binary)
+	}
+	if t.TimeoutSeconds < 0 || t.TimeoutSeconds > 24*60*60 {
+		return errors.New("providers.aws.terraform.timeout_seconds must be between 0 and 86400")
+	}
+	if err := domain.ValidateTagValue("providers.aws.terraform.owner_tag", t.OwnerTag); err != nil {
+		return err
+	}
+	if err := domain.ValidateTagValue("providers.aws.terraform.test_run_tag", t.TestRunTag); err != nil {
+		return err
 	}
 	return nil
 }

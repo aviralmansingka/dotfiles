@@ -234,12 +234,18 @@ func runWorker(args []string) error {
 	}
 	defer state.temporal.Close()
 
-	// S01 wires stubs: every provider, enrollment, deployment, OpenBao, and
-	// Tailscale operation refuses with an explicit not-implemented error, so no
-	// job can reach "ready" before the real adapters land.
+	provider, err := newHostProvider(state)
+	if err != nil {
+		return err
+	}
+
+	// S02 wires the real AWS compute provider. Enrollment, deployment, OpenBao,
+	// and Tailscale are still S01 stubs: they refuse with an explicit
+	// not-implemented error, so no job can reach "ready" before those adapters
+	// land.
 	activities := &temporaladapter.Activities{
 		Inventory:  state.store,
-		Providers:  terraform.NewStub(),
+		Providers:  provider,
 		Enroller:   ssh.NewStub(),
 		Deployer:   ssh.NewStub(),
 		Authorizer: openbao.NewStub(),
@@ -260,6 +266,30 @@ func runWorker(args []string) error {
 		"max_concurrent_jobs", state.service.Limits.MaxConcurrentJobs,
 	)
 	return bounded.Run(worker.InterruptCh())
+}
+
+// newHostProvider builds the AWS compute provider from the approved
+// configuration. It fails rather than falling back to the refusing stub: a
+// worker that cannot create hosts must not start and must not report success.
+func newHostProvider(state *loaded) (application.HostProvider, error) {
+	aws := state.service.Providers["aws"]
+	provider, err := terraform.NewAWS(terraform.AWSConfig{
+		Profiles:         state.catalog,
+		Dir:              aws.Terraform.Dir,
+		RunDir:           aws.Terraform.RunDir,
+		SSHPublicKeyFile: aws.Bootstrap.SSHPublicKeyFile,
+		BootstrapCIDR:    aws.Bootstrap.SSHSourceCIDR,
+		StateBucket:      aws.Terraform.StateBucket,
+		StateRegion:      aws.Terraform.StateRegion,
+		OwnerTag:         aws.Terraform.OwnerTag,
+		TestRunTag:       aws.Terraform.TestRunTag,
+		Binary:           aws.Terraform.Binary,
+		Timeout:          time.Duration(aws.Terraform.TimeoutSeconds) * time.Second,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("aws host provider: %w", err)
+	}
+	return provider, nil
 }
 
 func runTokenDigest(args []string) error {

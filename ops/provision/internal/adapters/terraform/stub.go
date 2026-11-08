@@ -1,5 +1,9 @@
-// Package terraform holds the AWS EC2 compute-provider adapter. S01 ships only
-// a stub: S02 replaces it with the isolated per-host Terraform entry point.
+// Package terraform holds the AWS EC2 compute-provider adapter.
+//
+// AWS is the real provider, built on the isolated per-host Terraform root in
+// ops/provision/terraform/aws (S02). Stub stays as the explicit refusal used by
+// tests and by any composition that must not allocate resources at all: a
+// missing provider must never look like a successful one.
 package terraform
 
 import (
@@ -22,15 +26,15 @@ var _ application.HostProvider = (*Stub)(nil)
 // CreateHost implements application.HostProvider by refusing.
 func (*Stub) CreateHost(_ context.Context, _ application.ProviderCreateRequest) (application.ProviderResource, error) {
 	return application.ProviderResource{}, &domain.NotImplementedError{
-		Component: "terraform aws provider",
-		Step:      "S02 creates ops/provision/terraform/aws",
+		Component: "terraform aws provider stub",
+		Step:      "compose the real AWS provider (terraform.NewAWS) instead",
 	}
 }
 
 // DestroyHost implements application.HostProvider by refusing.
 func (*Stub) DestroyHost(_ context.Context, _ application.ProviderDestroyRequest) error {
 	return &domain.NotImplementedError{
-		Component: "terraform aws provider",
-		Step:      "S02 creates ops/provision/terraform/aws",
+		Component: "terraform aws provider stub",
+		Step:      "compose the real AWS provider (terraform.NewAWS) instead",
 	}
 }

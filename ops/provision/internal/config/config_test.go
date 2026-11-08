@@ -139,3 +139,54 @@ func TestProfilesFileRejectsUnknownKeys(t *testing.T) {
 		t.Fatal("LoadProfiles accepted an unknown profile field")
 	}
 }
+
+// TestServiceRejectsUnapprovedProviderPolicy keeps the S02 boundary at the load
+// stage: the shipped example is the baseline, and every single-value change
+// below has to be refused before a worker starts.
+func TestServiceRejectsUnapprovedProviderPolicy(t *testing.T) {
+	t.Parallel()
+	service, err := config.LoadService("../../config/service.example.yaml")
+	if err != nil {
+		t.Fatalf("LoadService: %v", err)
+	}
+	if err := service.Validate(); err != nil {
+		t.Fatalf("the shipped example does not validate: %v", err)
+	}
+
+	mutate := func(fn func(aws *config.Provider)) *config.Service {
+		copied := *service
+		copied.Providers = map[string]config.Provider{"aws": service.Providers["aws"]}
+		aws := copied.Providers["aws"]
+		fn(&aws)
+		copied.Providers["aws"] = aws
+		return &copied
+	}
+
+	cases := map[string]func(aws *config.Provider){
+		"unapproved region": func(aws *config.Provider) { aws.Region = "us-east-1" },
+		"open bootstrap cidr": func(aws *config.Provider) {
+			aws.Bootstrap.SSHSourceCIDR = "0.0.0.0/0"
+		},
+		"wide bootstrap cidr": func(aws *config.Provider) {
+			aws.Bootstrap.SSHSourceCIDR = "10.0.0.0/1"
+		},
+		"missing ssh key file": func(aws *config.Provider) { aws.Bootstrap.SSHPublicKeyFile = "" },
+		"private key path": func(aws *config.Provider) {
+			aws.Bootstrap.SSHPublicKeyFile = "/etc/fleet-provision/ssh/host-bootstrap"
+		},
+		"shared run directory": func(aws *config.Provider) {
+			aws.Terraform.RunDir = aws.Terraform.Dir
+		},
+		"missing state bucket":   func(aws *config.Provider) { aws.Terraform.StateBucket = "" },
+		"tag value with a space": func(aws *config.Provider) { aws.Terraform.OwnerTag = "two words" },
+	}
+	for name, change := range cases {
+		change := change
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := mutate(change).Validate(); err == nil {
+				t.Fatalf("Validate accepted %s", name)
+			}
+		})
+	}
+}

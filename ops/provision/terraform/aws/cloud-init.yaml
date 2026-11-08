@@ -1,0 +1,35 @@
+#cloud-config
+# Public bootstrap for a fleet host (S02).
+#
+# This file installs Nix prerequisites and the multi-user Nix daemon, and
+# nothing else. It contains no secret, no token, no enrollment key, and no
+# fleet credential of any kind: the provisioning service acquires those later
+# over an SSM session and delivers them out of band.
+package_update: true
+package_upgrade: false
+
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - xz-utils
+
+write_files:
+  # Flakes and the Nix command line, so `just deploy remote <host>` needs no
+  # manual edit on the box.
+  - path: /etc/nix/nix.conf
+    owner: root:root
+    permissions: "0644"
+    content: |
+      experimental-features = nix-command flakes
+      sandbox = true
+
+runcmd:
+  - mkdir -p /nix
+  # Upstream multi-user installer: daemon plus /nix, the same installer the
+  # EC2 bring-up notes use.
+  - curl -fsSL https://nixos.org/nix/install -o /tmp/nix-install.sh
+  - sh /tmp/nix-install.sh --daemon --yes
+  - rm -f /tmp/nix-install.sh
+  # The remote deploy runs as a user unit with no login session.
+  - loginctl enable-linger ubuntu

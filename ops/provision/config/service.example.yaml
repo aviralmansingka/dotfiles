@@ -41,6 +41,8 @@ limits:
 
 providers:
   aws:
+    # The only approved region. Anything else is refused at load time and again
+    # by the provider adapter.
     region: ap-south-1
     credentials:
       # Credentials are acquired inside activities from OpenBao. These are
@@ -49,8 +51,32 @@ providers:
       role_id_ref: bao:kv/homelab/provision/aws/role-id
       secret_id_ref: bao:kv/homelab/provision/aws/secret-id
     bootstrap:
-      # Approved bootstrap SSH source (homelab egress). S02 enforces it.
+      # Approved bootstrap SSH source (homelab egress). S02 enforces it: this
+      # CIDR, or narrower, is the only ingress rule the host gets.
       ssh_source_ref: bao:kv/homelab/provision/bootstrap/ssh-source-cidr
+      # Documentation-range example (/24). Never 0.0.0.0/0: anything wider than
+      # /8 is refused at load time and by the Terraform variables.
+      ssh_source_cidr: 203.0.113.0/24
+      # A .pub file. The adapter reads it and refuses private key material; no
+      # key material is stored in this document.
+      ssh_public_key_file: /etc/fleet-provision/ssh/host-bootstrap.pub
+    terraform:
+      # The isolated per-host entry point. Read-only: the worker copies these
+      # files into <run_dir>/<host> and runs Terraform there, so no two hosts
+      # share a working directory or a state object.
+      dir: /opt/fleet-provision/terraform/aws
+      run_dir: /var/lib/fleet-provision/terraform-runs
+      binary: terraform
+      timeout_seconds: 1800
+      # State: the existing dotfiles bucket, one object per host at
+      # fleet-hosts/<host>/terraform.tfstate. state_region is the bucket's own
+      # region, not the resource region.
+      state_bucket: aviral-dotfiles-terraform-state
+      state_region: us-east-1
+      # Owner and test-run tag values on every taggable resource, so an
+      # acceptance run can find and destroy exactly its own hosts.
+      owner_tag: homelab
+      test_run_tag: manual
 
 logging:
   level: info
