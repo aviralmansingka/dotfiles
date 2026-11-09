@@ -15,6 +15,8 @@
 #   - an unknown profile or target exits 3/2 before any work
 #   - a profile that does not apply to a target is refused
 #   - the deploy tree excludes the dotfiles checkout by construction
+#   - every repo path the flake reads at evaluation time is in the deploy tree
+#     (self-tested: dropping rex/ must fail the check)
 #
 # Usage: scripts/test-nix-deploy.sh   (exit 0 pass, 1 fail)
 set -uo pipefail
@@ -189,7 +191,8 @@ expect_rc "dry remote" 0 "exit 0"
 expect_contains "dry remote" "homeConfigurations.remote-devbox" "names the devbox attribute"
 expect_contains "dry remote" "remote switch over" "reports the remote mode"
 expect_contains "dry remote" "flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo" "lists the deploy tree only"
-expect_contains "dry remote" "terminfo zsh secrets scripts/stow-packages" "stages the encrypted secrets the sops module reads at evaluation"
+expect_contains "dry remote" "terminfo zsh secrets rex scripts/stow-packages" "stages the encrypted secrets the sops module reads at evaluation"
+expect_contains "dry remote" " rex " "stages rex/, whose lua configs rex-host.nix reads at evaluation"
 
 echo "== remote deploy copies the tree and switches over ssh"
 STUB_HOSTNAME=testmac run "remote run" remote devbox
@@ -258,6 +261,94 @@ STUB_HOSTNAME=homelab run "remote macbook" macbook mac
 expect_rc "remote macbook" 3 "refuses a macbook deploy from another host"
 expect_no_call "remote macbook" "ssh " "refuses before staging"
 expect_no_call "remote macbook" "home-manager " "never switches from the wrong host"
+
+# ---------------------------------------------- evaluation-time paths ---
+# A module that reads a repo path at evaluation time fails the switch on a fresh
+# host before it starts: `path '…-source/rex/.config/rex/init.lua' does not
+# exist`. rex-host.nix copies three files out of rex/, and rex/ was not in
+# deploy_tree(), so the first `just deploy remote <host>` on a fresh host died
+# and an operator added the directory by hand. This check is the offline
+# version of that defect.
+#
+# What it covers: every `./x` / `../x` path literal in flake.nix and in every
+# nix/**/*.nix is resolved against the file that names it. A path that stays
+# inside nix/ travels with the `nix` entry; a path that leaves nix/ must exist
+# in the checkout and its top-level directory must be one deploy_tree() stages.
+# The tree comes from `--dry-run`, so this tracks the function itself rather
+# than a copy of the list.
+#
+# What it cannot catch: a path built at run time (string interpolation, a store
+# path, `builtins.toString` of a join), a `#` inside a string that truncates the
+# line, a path literal inside a comment on the same line as real code, a module
+# imported from outside nix/, and an incomplete stage — the file is checked in
+# the checkout, not in the tar that lands on the host. A missing path on a
+# `builtins.pathExists` line is tolerated on purpose: that is how the flake
+# reads nix/adhoc/identity.nix, which nix-deploy writes on the target at staging
+# time. It also says nothing about a staged top-level directory that .gitignore
+# filters.
+remote_path_offenders() { # $1 tree (words) -> offenders on stdout, nonzero exit
+  # shellcheck disable=SC2086 # the tree list is word-split on purpose
+  python3 - "$REPO" $1 <<'PY'
+import os, re, sys
+
+repo = os.path.abspath(sys.argv[1])
+staged = {path.split("/")[0] for path in sys.argv[2:] if path}
+literal = re.compile(r"\.\.?/[A-Za-z0-9._+@/-]*")
+
+files = [os.path.join(repo, "flake.nix")]
+for root, dirs, names in os.walk(os.path.join(repo, "nix")):
+    dirs.sort()
+    files += [os.path.join(root, n) for n in sorted(names) if n.endswith(".nix")]
+
+bad = []
+for path in files:
+    source = os.path.relpath(path, repo)
+    with open(path, encoding="utf-8") as handle:
+        for lineno, line in enumerate(handle, 1):
+            code = line.split("#", 1)[0]
+            guarded = "pathExists" in code
+            for token in sorted(set(literal.findall(code))):
+                token = token.rstrip("/")
+                if token in (".", ".."):
+                    continue
+                target = os.path.normpath(os.path.join(os.path.dirname(path), token))
+                rel = os.path.relpath(target, repo)
+                if rel.startswith(".."):
+                    continue  # outside the checkout: nothing to stage
+                top = rel.split("/")[0]
+                if not os.path.exists(target):
+                    if not guarded:
+                        bad.append(f"{source}:{lineno}: {rel} does not exist")
+                elif top != "nix" and top not in staged:
+                    bad.append(
+                        f"{source}:{lineno}: {rel} reads {top}/, "
+                        "which deploy_tree() does not stage"
+                    )
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PY
+}
+
+echo "== the flake reads only paths the deploy tree stages"
+STUB_HOSTNAME=testmac run "deploy tree" remote devbox --dry-run
+TREE_WORDS="$(printf '%s' "$OUT" | sed -n 's/^copies  : //p')"
+if [ -z "$TREE_WORDS" ]; then
+  fail "remote paths" "the plan printed no deploy tree to check"
+elif OFFENDERS="$(remote_path_offenders "$TREE_WORDS")"; then
+  pass "remote paths" "every path the flake reads travels with the deploy tree"
+else
+  fail "remote paths" "$(printf '%s' "$OFFENDERS" | tr '\n' ';')"
+fi
+
+# The check only counts if it fails on the tree that shipped the defect. Drop
+# rex/ and rex-host.nix's three references must be reported.
+if OFFENDERS="$(remote_path_offenders "$(printf '%s' "$TREE_WORDS" | sed 's/\(^\| \)rex\( \|$\)/\1\2/g')")"; then
+  fail "remote paths self-test" "a tree without rex/ still passed"
+elif printf '%s' "$OFFENDERS" | grep -qF 'rex/.config/rex/init.lua'; then
+  pass "remote paths self-test" "a tree without rex/ reports the missing reference"
+else
+  fail "remote paths self-test" "reported '$(printf '%s' "$OFFENDERS" | tr '\n' ';')'"
+fi
 
 echo "== the checkout never travels"
 TREE="$(cd "$REPO" && scripts/nix-deploy remote devbox --dry-run)"
