@@ -7,7 +7,7 @@
 # the shared tests/ci/harness.lua: markdown_links (treesitter link select/
 # edit/paste), mermaid_render_state (render guards + inline auto-render state
 # machine), markdown_ansi_autocmds (reload idempotency + byte preservation),
-# markdown_plugin (plugins/markdown.lua wiring, #159 PencilSoft wrap, motion
+# markdown_plugin (plugins/markdown.lua wiring, no vim-pencil, motion
 # mapping, todo scan filters), markdown_reader (centered reading column:
 # eligibility, layout, auto rule, resize, close, no soft wrap), and
 # markdown_motions (h/l/w/b/e across concealed link syntax). No plugin
