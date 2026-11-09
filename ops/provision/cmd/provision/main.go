@@ -27,6 +27,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/idgen"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/openbao"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssh"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssm"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/store/jsonstore"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/tailscale"
 	temporaladapter "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/temporal"
@@ -239,19 +240,20 @@ func runWorker(args []string) error {
 		return err
 	}
 
-	enroller, err := newEnroller(state)
+	enrollee, agent, err := newEnrollment(state)
 	if err != nil {
 		return err
 	}
 
-	// S02 wires the real AWS compute provider and S03 the real enrollment chain:
-	// key minting, device lookup, and the pinned-host-key bootstrap. Profile
+	// Enrollment runs over SSM only: the agent check gates it, the key travels as
+	// an encrypted parameter, and the command carries a parameter path. Profile
 	// deployment (S04), OpenBao host identity (S05), and device removal (S07)
 	// remain refusing stubs, so no job can reach "ready" before those land.
 	activities := &temporaladapter.Activities{
 		Inventory:  state.store,
 		Providers:  provider,
-		Enroller:   enroller,
+		Agent:      agent,
+		Enroller:   enrollee,
 		Deployer:   ssh.NewStub(),
 		Authorizer: openbao.NewStub(),
 		Tailnet:    tailscale.NewStub(),
@@ -273,20 +275,22 @@ func runWorker(args []string) error {
 	return bounded.Run(worker.InterruptCh())
 }
 
-// newEnroller builds the trusted-SSH enrollment chain from the approved
+// newEnrollment builds the SSM-only enrollment chain from the approved
 // configuration: the OpenBao secret source, the Tailscale key minter and device
-// lookup, the pinned-host-key bootstrap, and the retry rule that resumes an
-// already-running device instead of minting a second identity.
+// lookup, the encrypted-parameter handoff, the run-command transport, and the
+// agent check that gates all of them.
 //
-// A half-configured block is refused at load time. When enrollment is not
-// configured at all the refusing stub is kept, so a job cannot reach "ready"
-// without a real enrollment step.
-func newEnroller(state *loaded) (application.HostEnroller, error) {
+// It returns the enroller and the agent probe separately because the probe is its
+// own workflow activity. A half-configured block is refused at load time. When
+// enrollment is not configured at all the refusing stubs are kept, so a job cannot
+// reach "ready" without a real enrollment step.
+func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgentProbe, error) {
 	cfg := state.service.Enrollment
 	if !cfg.Configured() {
 		state.log.Warn("enrollment.not_configured",
-			"reason", "enrollment.tailscale.oauth_secret_ref, enrollment.openbao.token_file, and enrollment.ssh.identity_file are not all set; enrollment stays a refusing stub")
-		return ssh.NewStub(), nil
+			"reason", "enrollment.tailscale.oauth_secret_ref, enrollment.openbao.token_file, and enrollment.ssm.kms_key_id are not all set; enrollment stays a refusing stub")
+		stub := ssm.NewStub()
+		return stub, stub, nil
 	}
 	secrets, err := openbao.NewSecretSource(openbao.SecretSourceConfig{
 		Address:   cfg.OpenBao.Address,
@@ -294,7 +298,7 @@ func newEnroller(state *loaded) (application.HostEnroller, error) {
 		Namespace: cfg.OpenBao.Namespace,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("enrollment secret source: %w", err)
+		return nil, nil, fmt.Errorf("enrollment secret source: %w", err)
 	}
 	clientConfig := tailscale.ClientConfig{
 		HTTP:           &http.Client{Timeout: 30 * time.Second},
@@ -308,34 +312,64 @@ func newEnroller(state *loaded) (application.HostEnroller, error) {
 	}
 	minter, err := tailscale.NewMinter(clientConfig)
 	if err != nil {
-		return nil, fmt.Errorf("enrollment key minter: %w", err)
+		return nil, nil, fmt.Errorf("enrollment key minter: %w", err)
 	}
 	devices, err := tailscale.NewDevices(clientConfig)
 	if err != nil {
-		return nil, fmt.Errorf("enrollment device lookup: %w", err)
+		return nil, nil, fmt.Errorf("enrollment device lookup: %w", err)
 	}
-	bootstrap, err := ssh.NewEnroller(ssh.EnrollConfig{
-		// The SSM transport binding (AWS SDK) is a recorded live gate: the chain is
-		// wired end to end and an enrollment attempt fails with a named,
-		// non-retryable error instead of pretending a host key was verified.
-		Runner:        &ssh.UnavailableSSMRunner{},
-		SSH:           ssh.ExecRunner{},
-		Minter:        minter,
-		IdentityFile:  cfg.SSH.IdentityFile,
-		KnownHostsDir: cfg.SSH.KnownHostsDir,
-		RemoteKeyPath: cfg.SSH.RemoteKeyPath,
-		Logger:        state.log,
-		Clock:         application.WallClock{},
+
+	// One SSM configuration for every call: the same region, the same pinned CLI
+	// binary, and the same fleet key. There is no credential field anywhere in it,
+	// because the AWS CLI runs with the worker's own credential source.
+	pollInterval := time.Duration(cfg.SSM.PollIntervalSeconds) * time.Second
+	ssmClient := ssm.ClientConfig{Binary: cfg.SSM.Binary, Region: cfg.SSM.Region, Executor: ssm.CLIExecutor{}}
+	parameters, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{
+		Client:   ssmClient,
+		KMSKeyID: cfg.SSM.KMSKeyID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("enrollment bootstrap: %w", err)
+		return nil, nil, fmt.Errorf("enrollment parameter store: %w", err)
 	}
-	return application.NewEnrollmentService(application.EnrollmentDeps{
+	runner, err := ssm.NewRunner(ssm.RunnerConfig{
+		Client:                ssmClient,
+		CommandTimeoutSeconds: cfg.SSM.CommandTimeoutSeconds,
+		PollInterval:          pollInterval,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("enrollment run-command transport: %w", err)
+	}
+	agent, err := ssm.NewAgentProbe(ssm.AgentProbeConfig{
+		Client:       ssmClient,
+		Timeout:      time.Duration(cfg.SSM.AgentTimeoutSeconds) * time.Second,
+		PollInterval: pollInterval,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("enrollment agent probe: %w", err)
+	}
+	enroller, err := ssm.NewEnroller(ssm.EnrollConfig{
+		Runner:          runner,
+		Parameters:      parameters,
+		Agent:           agent,
+		Minter:          minter,
+		ParameterPrefix: cfg.SSM.ParameterPrefix,
+		Region:          cfg.SSM.Region,
+		HostKeyPath:     cfg.SSM.HostKeyPath,
+		Logger:          state.log,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("enrollment enroller: %w", err)
+	}
+	service, err := application.NewEnrollmentService(application.EnrollmentDeps{
 		Profiles: state.catalog,
 		Devices:  devices,
-		Enroller: bootstrap,
+		Enroller: enroller,
 		Logger:   state.log,
 	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return service, agent, nil
 }
 
 // newHostProvider builds the AWS compute provider from the approved

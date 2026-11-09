@@ -187,15 +187,19 @@ type HostProvider interface {
 	DestroyHost(ctx context.Context, req ProviderDestroyRequest) error
 }
 
-// EnrollRequest carries the trust anchor for SSH bootstrap. The enrollment key
-// itself is acquired inside the adapter from OpenBao; it is never a field here.
+// EnrollRequest is everything one enrollment needs. The enrollment key itself is
+// acquired inside the adapter (minted from OpenBao-held credentials and handed to
+// the host through the SSM control plane); it is never a field here.
 type EnrollRequest struct {
 	HostID string
 	Name   string
-	// InstanceID is the provider resource the host key must belong to. The
-	// enroller reads the key over SSM addressed to exactly this instance and
-	// refuses a result that names any other.
-	InstanceID     string
+	// InstanceID is the provider resource every control-plane call is addressed
+	// to. It is the trust anchor of an SSM-only enrollment: IAM authorizes the
+	// call against exactly this instance, and a reply that names any other is
+	// refused.
+	InstanceID string
+	// PrivateAddress is inventory metadata. It is not a transport address: no
+	// enrollment step connects to it, so enrollment needs no SSH ingress.
 	PrivateAddress string
 	Profile        string
 	// TailnetTag is resolved server-side from the approved profile. A request
@@ -219,9 +223,6 @@ func (r EnrollRequest) KeyPolicyOrDefault() domain.AuthKeyPolicy {
 // EnrollResult reports the enrolled tailnet identity (no credentials).
 type EnrollResult struct {
 	DeviceID string
-	// HostKey is the SHA-256 fingerprint of the pinned host key: a digest, not
-	// key material, so it may be logged and persisted.
-	HostKey string
 	// TailnetTag is the tag the device joined with, resolved server-side.
 	TailnetTag string
 	// Resumed is true when enrollment found the device already running and did
@@ -229,7 +230,8 @@ type EnrollResult struct {
 	Resumed bool
 }
 
-// HostEnroller is the trusted-SSH bootstrap port.
+// HostEnroller is the tailnet enrollment port. The transport is the adapter's
+// decision; the SSM adapter is the only one in this tree.
 type HostEnroller interface {
 	Enroll(ctx context.Context, req EnrollRequest) (EnrollResult, error)
 }
@@ -366,31 +368,55 @@ type SSMRunResult struct {
 }
 
 // SSMRunner runs a command on an instance over the SSM control plane. IAM
-// authorizes the call, so the reply is authenticated independently of any host
-// key: this is the trust anchor for the first key fetch.
+// authorizes the call, so the reply is authenticated by the control plane and not
+// by anything the host presents: this is the trust anchor of an SSM-only
+// enrollment, and the reason no SSH ingress is needed.
+//
+// The command text reaches SSM command history, so it carries a parameter path
+// and a nonce and never a credential value.
 type SSMRunner interface {
 	RunCommand(ctx context.Context, req SSMRunRequest) (SSMRunResult, error)
 }
 
-// SSHRunRequest is one local OpenSSH invocation built by the adapter. Args holds
-// the complete argv (including StrictHostKeyChecking and UserKnownHostsFile) and
-// Stdin is the only channel a credential may travel on.
-type SSHRunRequest struct {
-	// Label names the step for logs. It must never contain key material.
-	Label string
-	Args  []string
-	Stdin []byte
+// SecureParameterRequest stores one credential value as an encrypted parameter.
+// Value is a Secret, so it cannot be formatted into a log line or a payload on
+// the way to the store.
+type SecureParameterRequest struct {
+	// Name is the parameter path, for example /fleet/enroll/rex-1/9f3c1d.
+	Name  string
+	Value Secret
 }
 
-// SSHRunResult is one SSH invocation's exit status and captured output.
-type SSHRunResult struct {
-	ExitCode int
-	Stdout   string
-	Stderr   string
+// SSMParameterStore holds the single-use parameter that carries an enrollment
+// key to exactly one host.
+//
+// Two rules make the store safe to use in a control plane that keeps history:
+// the value is written as an encrypted SecureString under the one fleet KMS key,
+// and the corresponding parameter is deleted on success *and* on failure, so the
+// path never outlives the attempt it belongs to.
+type SSMParameterStore interface {
+	PutSecureParameter(ctx context.Context, req SecureParameterRequest) error
+	// DeleteParameter removes the parameter. Deleting one that is already gone is
+	// not an error: the deletion is retried on both paths.
+	DeleteParameter(ctx context.Context, name string) error
 }
 
-// SSHRunner executes a fully-built ssh argv. The adapter owns argv construction;
-// an implementation only starts the process and pipes stdin.
-type SSHRunner interface {
-	Run(ctx context.Context, req SSHRunRequest) (SSHRunResult, error)
+// SSMAgentStatus is the control plane's report of a host's SSM agent.
+type SSMAgentStatus struct {
+	InstanceID string
+	// PingStatus is the raw control-plane value: Online, ConnectionLost,
+	// Inactive, or empty when the instance never registered.
+	PingStatus string
+	// Online reports whether the agent registered and is reachable now.
+	Online bool
+	// LastPing is the control plane's last successful contact, if any.
+	LastPing time.Time
+}
+
+// SSMAgentProbe waits for an instance's SSM agent to register. It is the gate in
+// front of enrollment: without a registered agent no command can run, so the
+// attempt fails closed before any key is minted rather than reaching for another
+// transport.
+type SSMAgentProbe interface {
+	AwaitRegistration(ctx context.Context, instanceID string) (SSMAgentStatus, error)
 }

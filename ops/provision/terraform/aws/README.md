@@ -14,9 +14,9 @@ checks.
 | File | Content |
 | --- | --- |
 | `versions.tf` | Pinned provider (`hashicorp/aws` `5.100.0`), a **partial** `s3` backend block with nothing in it, one provider pinned to `ap-south-1` |
-| `variables.tf` | Host name, **required `vpc_id` and `subnet_id`**, profile, size key, resolved instance type and disk size, `owner` and test-run tag values, SSH **public** key, an **optional** bootstrap CIDR that is empty by default (= no ingress rule at all) |
-| `main.tf` | AMI lookup, key pair, security group, SSM role and instance profile, instance, outputs |
-| `cloud-init.yaml` | Nix prerequisites, the multi-user Nix daemon, and the system `tailscaled` daemon. No secrets, no enrollment key, no tailnet tag |
+| `variables.tf` | Host name, **required `vpc_id` and `subnet_id`**, profile, size key, resolved instance type and disk size, `owner` and test-run tag values, SSH **public** key, an **optional** bootstrap CIDR that is empty by default (= no ingress rule at all), and the enrollment parameter prefix the IAM grant is scoped to |
+| `main.tf` | AMI lookup, key pair, security group, SSM role with the scoped enrollment read grant, instance profile, instance, outputs |
+| `cloud-init.yaml` | Nix prerequisites, the multi-user Nix daemon, the system `tailscaled` daemon, and the AWS CLI the enrollment script needs. No secrets, no enrollment key, no tailnet tag |
 
 The network this root joins is not here: it is the dedicated fleet VPC in
 `ops/provision/terraform/aws-network/` (`10.99.0.0/16`, public subnet
@@ -179,29 +179,53 @@ deployed:
    package;
 2. `systemctl enable tailscaled` and `systemctl start tailscaled` bring the
    daemon up at boot;
-3. `/etc/tmpfiles.d/fleet-enroll.conf` creates `/run/fleet-enroll` (`0770`,
-   `root:ubuntu`) on every boot, which is the only directory enrollment writes
-   into;
+3. `snap install aws-cli --classic` installs the CLI the host needs to read its
+   own enrollment parameter (Ubuntu 24.04 ships it only as a snap);
 4. a short readiness probe waits for `/var/run/tailscale/tailscaled.sock`.
 
 The host is **not** enrolled by cloud-init. Enrollment is an explicit step the
-worker performs later, and it is the only step that holds a credential:
+worker performs later, over SSM and only over SSM — there is no SSH path, so
+`bootstrap_ssh_cidr` can stay empty forever:
 
 ```
-SSM (IAM-authenticated)      cat /etc/ssh/ssh_host_ed25519_key.pub
-  -> validate: reply instance id and correlation comment, exit status, one well-formed ed25519 key
-  -> write a dedicated known_hosts file, mode 0600
-mint                          single-use, non-ephemeral, preauthorized key, short expiry, tag from the approved profile
-ssh (StrictHostKeyChecking=yes, UserKnownHostsFile=<that file>)
-  -> stdin into /run/fleet-enroll/auth-key (umask 077, chmod 600)
-  -> sudo -n tailscale up --auth-key=file:/run/fleet-enroll/auth-key --advertise-tags=tag:aws-host ...
-  -> rm -f /run/fleet-enroll/auth-key  (also on the failure path)
+agent check (SSM)   describe-instance-information for this instance id
+                      -> not Online within the window: fail the job, mint nothing, no fallback
+mint                single-use, non-ephemeral, preauthorized key, short expiry, tag from the approved profile
+handoff (SSM PS)    put-parameter /fleet/enroll/<host_name>/<nonce>
+                      SecureString, kms key alias/fleet-enroll, no description, value never in argv
+command (SSM RC)    send-command, addressed by instance id, comment = instance id
+                      parameters carry the parameter NAME and the nonce, never the key
+host script         aws ssm get-parameter --with-decryption > /run/fleet-enroll.key (umask 077, chmod 600)
+                      tailscale up --auth-key="file:$KEY" --advertise-tags=tag:aws-host ...
+                      rm -f $KEY  (trap on every exit path, then proved absent)
+                      tailscale status --json  (device id and tags)
+cleanup (SSM PS)    delete-parameter <that path>  (on success and on failure)
 ```
 
-A forged or changed host key aborts before a secret byte is written: the key is
-minted only after the host key is pinned, and the pin is enforced by OpenSSH on
-the delivery connection. No enrollment key is an argv word, an environment
-variable, a log field, a workflow payload, or a Terraform variable.
+`ssm send-command` parameters stay in SSM command history, which is why the key
+travels as an encrypted parameter and the history holds a parameter path. No
+enrollment key is an argv word, an SSM command parameter, an SSM comment, a
+command output line, a log field, a workflow payload, or a Terraform variable.
+
+The trust anchor is IAM, not a host key: the control plane authenticates the
+instance that ran the command, which is stronger than trusting whatever answers
+on port 22, and it removed the last reason for the worker to reach a host on 22.
+
+### The fleet KMS key (created once, before any host)
+
+Every enrollment parameter is encrypted with one fleet key, referenced by alias
+so a rotation does not move configuration. Create it once with operator
+credentials (this is not part of a host's lifecycle, and no host root creates
+it):
+
+```
+aws kms create-alias --alias-name alias/fleet-enroll \
+  --target-key-id "$(aws kms create-key --description 'fleet enrollment parameters' --query KeyMetadata.KeyId --output text)"
+```
+
+The host root resolves that alias with a `aws_kms_alias` data source, so a plan
+fails by name when the key does not exist instead of creating a host whose
+enrollment could never decrypt anything.
 
 ## Bootstrap policy
 
@@ -221,7 +245,17 @@ variable, a log field, a workflow payload, or a Terraform variable.
   endpoints. Egress stays open even when ingress is empty, because the first boot
   needs Nix and the Tailscale control plane.
 * IAM: an EC2 trust role with the AWS-managed `AmazonSSMManagedInstanceCore`
-  policy attached and nothing else. No wildcard action, no inline policy.
+  policy attached, plus one inline policy that is the enrollment handoff and
+  nothing else:
+  * `ssm:GetParameter` on
+    `arn:aws:ssm:ap-south-1:<account>:parameter/fleet/enroll/<host_name>/*` —
+    this host's own prefix only, so a host cannot read another host's key even
+    if it knows the path. No `PutParameter`, no `DeleteParameter`, no
+    `GetParametersByPath`, no wildcard resource.
+  * `kms:Decrypt` on the one fleet key ARN (resolved from
+    `alias/fleet-enroll`), with `kms:ViaService = ssm.ap-south-1.amazonaws.com`.
+  The grant is attached before the instance starts (`depends_on`), so no host
+  boots without it.
 * IMDSv2 required (`http_tokens = "required"`), hop limit 1, tags enabled.
 * Root volume: gp3, encrypted, sized by the approved size key, deleted with the
   instance.
@@ -292,6 +326,17 @@ all against a fake runner
 (`internal/adapters/terraform/{aws_test.go,root_test.go}`). `root_test.go` also
 checks the network root: one VPC and one subnet, both tagged, the dedicated
 `10.99.0.0/16` CIDR, and no ingress from `0.0.0.0/0` or `::/0` in either root.
+
+The enrollment half has its own offline suite
+(`internal/adapters/ssm/`): a fake host runs the real host script against fake
+`aws` and `tailscale` binaries, so the assertions are about what the host would
+do. It covers the key never appearing in command parameters, comments, or command
+output; the parameter deleted on the success and the failure path; the key file at
+0600 and gone afterwards; an unregistered agent aborting before anything is
+minted; and `iam_test.go`, which reads this root and asserts the instance role's
+grant is scoped to `arn:aws:ssm:ap-south-1:<account>:parameter/fleet/enroll/<host_name>/*`
+with `ssm:GetParameter` as the only SSM action and one KMS key as the only
+decrypt path.
 
 Live (needs an AWS account, credentials with EC2/IAM/SSM/S3 access, an approved
 VPC and subnet, and a network). Run the preflight above first; `terraform` and

@@ -116,6 +116,23 @@ variable "test_run" {
   }
 }
 
+variable "enrollment_parameter_prefix" {
+  description = "SSM Parameter Store prefix an enrollment key waits under: <prefix>/<host_name>/<nonce>. The instance role can read only <prefix>/<host_name>/*, so this value and enrollment.ssm.parameter_prefix in the service file must agree."
+  type        = string
+
+  # The default matches ssm.DefaultParameterPrefix in the Go adapter, and
+  # TestInstanceRoleReadsOnlyItsOwnEnrollmentPrefix asserts the agreement rather
+  # than trusting it.
+  default  = "/fleet/enroll"
+  nullable = false
+
+  # A hierarchical SSM path: /segment[/segment...], no empty segment, no traversal.
+  validation {
+    condition     = can(regex("^(/[A-Za-z0-9_.-]+)+$", var.enrollment_parameter_prefix)) && !strcontains(var.enrollment_parameter_prefix, "..")
+    error_message = "enrollment_parameter_prefix must be a hierarchical SSM parameter path such as /fleet/enroll."
+  }
+}
+
 variable "ssh_public_key" {
   description = "OpenSSH PUBLIC key material for the bootstrap login. A private key or a key path is refused."
   type        = string

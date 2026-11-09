@@ -6,6 +6,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // Sentinel errors shared across layers. Transport adapters map them to status
@@ -51,4 +52,28 @@ type NotImplementedError struct {
 
 func (e *NotImplementedError) Error() string {
 	return fmt.Sprintf("%s is not implemented in S01: %s", e.Component, e.Step)
+}
+
+// AgentNotRegisteredError reports that a host's SSM agent never registered with
+// the control plane inside the allowed window.
+//
+// It is deliberately its own type, and deliberately not retryable at the workflow
+// level: enrollment fails closed here instead of falling back to another
+// transport, waiting indefinitely, or dialling an address that might be something
+// else.
+type AgentNotRegisteredError struct {
+	InstanceID string
+	Waited     time.Duration
+	// PingStatus is the last status the control plane reported, if it knew the
+	// instance at all.
+	PingStatus string
+}
+
+func (e *AgentNotRegisteredError) Error() string {
+	status := e.PingStatus
+	if status == "" {
+		status = "never registered"
+	}
+	return fmt.Sprintf("ssm agent on instance %s did not come online within %s (ping status: %s); enrollment fails closed and does not fall back to ssh",
+		e.InstanceID, e.Waited.Round(time.Second), status)
 }

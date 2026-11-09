@@ -25,6 +25,7 @@ func RegisterWorkflows(reg worker.WorkflowRegistry) {
 // Explicit names keep the workflow package as the single source of truth.
 func RegisterActivitySet(reg worker.ActivityRegistry, acts *Activities) {
 	reg.RegisterActivityWithOptions(acts.CreateHostResource, activity.RegisterOptions{Name: workflows.ActivityCreateHostResource})
+	reg.RegisterActivityWithOptions(acts.CheckSSMAgent, activity.RegisterOptions{Name: workflows.ActivityCheckSSMAgent})
 	reg.RegisterActivityWithOptions(acts.EnrollHost, activity.RegisterOptions{Name: workflows.ActivityEnrollHost})
 	reg.RegisterActivityWithOptions(acts.DeployProfile, activity.RegisterOptions{Name: workflows.ActivityDeployProfile})
 	reg.RegisterActivityWithOptions(acts.AuthorizeHost, activity.RegisterOptions{Name: workflows.ActivityAuthorizeHost})
@@ -35,7 +36,7 @@ func RegisterActivitySet(reg worker.ActivityRegistry, acts *Activities) {
 }
 
 // NewWorker builds a bounded worker. Concurrency limits are enforced here so a
-// burst of API calls cannot fan out unbounded Terraform, SSH, or provider work.
+// burst of API calls cannot fan out unbounded Terraform, SSM, or provider work.
 func NewWorker(c client.Client, taskQueue string, options worker.Options, acts *Activities) (worker.Worker, error) {
 	if err := acts.Validate(); err != nil {
 		return nil, err

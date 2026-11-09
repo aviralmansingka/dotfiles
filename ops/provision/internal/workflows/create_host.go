@@ -37,7 +37,8 @@ func activityOptions() workflow.ActivityOptions {
 }
 
 // CreateHostWorkflow runs the approved creation lifecycle:
-// queued → creating → enrolling → deploying → authorizing → ready.
+// queued → creating → enrolling (agent check, then enrollment) → deploying →
+// authorizing → ready.
 //
 // It is deterministic: no wall clock, randomness, I/O, or map iteration. The
 // only side effects are activity executions, and the status query is a pure
@@ -85,6 +86,18 @@ func CreateHostWorkflow(ctx workflow.Context, in CreateHostInput) (Status, error
 	record(ctx, state)
 
 	advance(domain.StageEnrolling)
+	// The agent check is its own activity: it is the gate in front of enrollment,
+	// it appears in workflow history, and its failure fails the job. There is no
+	// fallback transport to try instead.
+	var agent CheckSSMAgentOutput
+	if err := workflow.ExecuteActivity(ctx, ActivityCheckSSMAgent, CheckSSMAgentInput{
+		HostID:     in.Spec.HostID,
+		InstanceID: created.ResourceID,
+	}).Get(ctx, &agent); err != nil {
+		return fail(ctx, state, err)
+	}
+	record(ctx, state)
+
 	var enrolled EnrollHostOutput
 	if err := workflow.ExecuteActivity(ctx, ActivityEnrollHost, EnrollHostInput{
 		HostID:         in.Spec.HostID,

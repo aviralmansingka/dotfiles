@@ -1,6 +1,7 @@
 # One provisioned fleet host: AMI lookup, key pair, security group with an
 # optional single-CIDR SSH ingress (none at all by default), a minimal SSM
-# instance profile, and the instance itself. Nothing account-wide lives here — no
+# instance profile with a parameter read grant scoped to this host's own
+# enrollment prefix, and the instance itself. Nothing account-wide lives here — no
 # VPC, no subnet, no route table, no DNS, no IAM user, no Elastic IP — so tearing
 # a host down cannot disturb the rest of the fleet, and `terraform destroy` on
 # another host's state cannot see it.
@@ -8,6 +9,9 @@
 # The network is input, not a lookup: the security group is created in
 # `var.vpc_id` and the instance launches in `var.subnet_id`. This root never
 # resolves a default VPC and never creates a VPC or a subnet.
+#
+# Enrollment runs over SSM, so no SSH ingress is required for it: the key pair and
+# the optional CIDR exist for a human debugging session, not for the worker.
 
 locals {
   # Documentation and tag value only: the state object the adapter actually
@@ -122,6 +126,24 @@ resource "aws_security_group" "host" {
   tags = local.tags
 }
 
+# The account id is not a credential and not client input: it is what an SSM
+# parameter ARN is made of, and the only reason this root needs it. The instance
+# role's read grant is scoped to an ARN built from it, so no wildcard resource can
+# stand in for "this account".
+data "aws_caller_identity" "current" {
+  provider = aws.ap_south_1
+}
+
+# The one fleet key every enrollment parameter is encrypted with. It is resolved
+# by alias, so a key rotation does not move configuration, and the instance role's
+# kms:Decrypt grant names exactly the resulting key ARN — never a wildcard and
+# never a second key. The key itself is fleet infrastructure, created once by the
+# operator (terraform/aws/README.md); this root only references it.
+data "aws_kms_alias" "enroll" {
+  provider = aws.ap_south_1
+  name     = "alias/fleet-enroll"
+}
+
 data "aws_iam_policy_document" "ec2_assume_role" {
   statement {
     effect  = "Allow"
@@ -151,6 +173,51 @@ resource "aws_iam_role_policy_attachment" "host_ssm" {
   provider   = aws.ap_south_1
   role       = aws_iam_role.host.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Enrollment handoff, in two statements that are both narrower than the SDK's
+# convenience policy:
+#
+#   - GetParameter, and only GetParameter, on
+#     `<prefix>/<this host's name>/*`. A host therefore cannot read another host's
+#     parameter even if it knows the path: the ARN of that path is outside this
+#     grant. Nothing here allows PutParameter or DeleteParameter, so a host cannot
+#     write, extend, or resurrect a parameter either.
+#   - Decrypt, only under the one fleet key, and only when SSM is the calling
+#     service. Account-root credentials are not granted anything else by this
+#     policy, and the role keeps AmazonSSMManagedInstanceCore for the agent.
+#
+# The command that delivers the key carries a parameter NAME and a nonce; SSM
+# command history therefore holds a parameter path, never a credential.
+data "aws_iam_policy_document" "host_enroll" {
+  statement {
+    sid    = "ReadThisHostsEnrollmentParameterOnly"
+    effect = "Allow"
+
+    actions   = ["ssm:GetParameter"]
+    resources = ["arn:aws:ssm:ap-south-1:${data.aws_caller_identity.current.account_id}:parameter${var.enrollment_parameter_prefix}/${var.host_name}/*"]
+  }
+
+  statement {
+    sid    = "DecryptWithTheFleetEnrollmentKeyOnly"
+    effect = "Allow"
+
+    actions   = ["kms:Decrypt"]
+    resources = [data.aws_kms_alias.enroll.target_key_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ssm.ap-south-1.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "host_enroll" {
+  provider = aws.ap_south_1
+  name     = "${local.name}-enroll"
+  role     = aws_iam_role.host.id
+  policy   = data.aws_iam_policy_document.host_enroll.json
 }
 
 resource "aws_iam_instance_profile" "host" {
@@ -198,7 +265,10 @@ resource "aws_instance" "host" {
 
   # The profile must exist before the instance starts, or SSM registration
   # races the first boot.
-  depends_on = [aws_iam_role_policy_attachment.host_ssm]
+  depends_on = [
+    aws_iam_role_policy_attachment.host_ssm,
+    aws_iam_role_policy.host_enroll,
+  ]
 }
 
 output "instance_id" {
@@ -207,7 +277,7 @@ output "instance_id" {
 }
 
 output "private_ip" {
-  description = "Private address used by the trusted-SSH bootstrap"
+  description = "Private address of the host, recorded for inventory and the audit trail; enrollment does not dial it"
   value       = aws_instance.host.private_ip
 }
 
@@ -234,6 +304,16 @@ output "resource_name" {
 output "state_key" {
   description = "S3 object key of this host's state; unique per host name"
   value       = local.state_key
+}
+
+output "enrollment_parameter_scope" {
+  description = "The only SSM parameter path this host's instance role can read"
+  value       = "arn:aws:ssm:ap-south-1:${data.aws_caller_identity.current.account_id}:parameter${var.enrollment_parameter_prefix}/${var.host_name}/*"
+}
+
+output "enrollment_kms_key_arn" {
+  description = "The one fleet KMS key this host's instance role may decrypt with"
+  value       = data.aws_kms_alias.enroll.target_key_arn
 }
 
 output "security_group_id" {

@@ -206,13 +206,12 @@ type Enroller struct {
 	err      error
 	calls    []application.EnrollRequest
 	nextKey  int
-	hostKey  string
 	keyValue string
 }
 
 // NewEnroller builds a fake enroller. tailnet may be nil.
 func NewEnroller(tailnet *Tailnet) *Enroller {
-	return &Enroller{tailnet: tailnet, hostKey: "SHA256:fake-host-key"}
+	return &Enroller{tailnet: tailnet}
 }
 
 var _ application.HostEnroller = (*Enroller)(nil)
@@ -233,7 +232,7 @@ func (e *Enroller) Enroll(_ context.Context, req application.EnrollRequest) (app
 	}
 	e.calls = append(e.calls, req)
 	if e.tailnet == nil {
-		return application.EnrollResult{DeviceID: "n-fake", HostKey: e.hostKey}, nil
+		return application.EnrollResult{DeviceID: "n-fake"}, nil
 	}
 	e.nextKey++
 	key := fmt.Sprintf("%s-auth-%d", strings.TrimSpace(e.keyValue), e.nextKey)
@@ -241,7 +240,7 @@ func (e *Enroller) Enroll(_ context.Context, req application.EnrollRequest) (app
 	if err != nil {
 		return application.EnrollResult{}, err
 	}
-	return application.EnrollResult{DeviceID: deviceID, HostKey: e.hostKey}, nil
+	return application.EnrollResult{DeviceID: deviceID}, nil
 }
 
 // CallCount reports how many enrollments ran.

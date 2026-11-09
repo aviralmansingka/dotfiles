@@ -54,12 +54,13 @@ providers:
       # Where the operator keeps the approved SSH source CIDR (OpenBao, as a
       # reference — never a value in this document).
       ssh_source_ref: bao:kv/homelab/provision/bootstrap/ssh-source-cidr
-      # Approved bootstrap SSH source (homelab egress). Optional: leave it empty
-      # (the zero-ingress default) and the host gets NO ingress rule at all —
-      # the tailnet is the only way in, and enrollment has no SSH path. Set one
-      # CIDR when the enrollment chain needs the trusted-SSH bootstrap. Never
-      # 0.0.0.0/0 or ::/0: anything wider than /8, and both wildcards, are
-      # refused at load time and again by the Terraform variables.
+      # Approved bootstrap SSH source (homelab egress). Optional and empty by
+      # default: with it empty the host gets NO ingress rule at all, so nothing
+      # reaches port 22 from the internet or from the homelab. Enrollment does not
+      # need it either — enrollment runs over SSM, not over SSH — so an empty value
+      # is the whole normal case and only a human debugging session argues for one
+      # CIDR. Never 0.0.0.0/0 or ::/0: anything wider than /8, and both wildcards,
+      # are refused at load time and again by the Terraform variables.
       ssh_source_cidr: ""
       # A .pub file. The adapter reads it and refuses private key material; no
       # key material is stored in this document.
@@ -91,9 +92,9 @@ providers:
       test_run_tag: manual
 
 enrollment:
-  # Trusted-SSH enrollment (S03). The tailnet tag is not here on purpose: it comes
-  # from the approved profile in profiles.yaml, so no request and no config value
-  # outside the profile can choose it.
+  # Enrollment is SSM-only (S04 fix). The tailnet tag is not here on purpose: it
+  # comes from the approved profile in profiles.yaml, so no request and no config
+  # value outside the profile can choose it.
   tailscale:
     base_url: https://api.tailscale.com
     # "-" means the tailnet the OAuth client belongs to.
@@ -106,14 +107,30 @@ enrollment:
     address: http://127.0.0.1:8200
     # Mode 0600, read once at start-up. No token value appears in this file.
     token_file: /etc/fleet-provision/openbao-token
-  ssh:
-    # Path of the operator's bootstrap login key. The service passes the path to
-    # ssh -i and never reads, copies, or logs the key itself.
-    identity_file: /etc/fleet-provision/ssh/bootstrap_ed25519
-    # One private known_hosts file per enrollment is written here, mode 0600.
-    known_hosts_dir: /run/fleet-provision/known-hosts
-    # Delivered over stdin, mode 0600, removed on success and on failure.
-    remote_key_path: /run/fleet-enroll/auth-key
+  ssm:
+    # The region of the parameter, the command, and the host. SSM names are
+    # regional, so the host script passes it explicitly.
+    region: ap-south-1
+    # Where an enrollment key waits for the host: <prefix>/<host_name>/<nonce>.
+    # terraform/aws/main.tf scopes the instance role to exactly this prefix plus
+    # the host's own name, so one host cannot read another host's parameter.
+    parameter_prefix: /fleet/enroll
+    # The one fleet KMS key. Every enrollment parameter is a SecureString encrypted
+    # with it, and the instance role may decrypt with this key and no other.
+    # Create it once with `aws kms create-key` and this alias; see
+    # terraform/aws/README.md.
+    kms_key_id: alias/fleet-enroll
+    # On the host: tmpfs, mode 0600, removed by the script after `tailscale up` and
+    # by a trap on every other exit path.
+    host_key_path: /run/fleet-enroll.key
+    # The pinned AWS CLI v2 from the flake profile. The host needs the same binary
+    # (cloud-init installs it) to read its own parameter.
+    binary: aws
+    # Wait this long for the host's SSM agent to register before the job fails.
+    # There is no SSH fallback: an agent that never registers fails the job.
+    agent_timeout_seconds: 240
+    command_timeout_seconds: 180
+    poll_interval_seconds: 5
 
 logging:
   level: info

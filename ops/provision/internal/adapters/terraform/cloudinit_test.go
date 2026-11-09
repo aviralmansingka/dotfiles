@@ -27,8 +27,9 @@ func TestShippedCloudInitInstallsTailscaledAndHoldsNoSecret(t *testing.T) {
 		"tailscale.com/install.sh",
 		"systemctl enable tailscaled",
 		"systemctl start tailscaled",
-		"/etc/tmpfiles.d/fleet-enroll.conf",
-		"d /run/fleet-enroll 0770 root ubuntu -",
+		// The host reads its own enrollment parameter, so the CLI is a bootstrap
+		// step and not an enrollment-time surprise.
+		"snap install aws-cli --classic",
 	} {
 		if !strings.Contains(document, required) {
 			t.Fatalf("cloud-init is missing %q", required)
@@ -39,6 +40,8 @@ func TestShippedCloudInitInstallsTailscaledAndHoldsNoSecret(t *testing.T) {
 	for _, forbidden := range []string{
 		"tskey-",
 		"--auth-key",
+		"fleet-enroll.key",
+		"get-parameter",
 		"OPENSSH PRIVATE KEY",
 		"client_secret",
 		"client-secret",

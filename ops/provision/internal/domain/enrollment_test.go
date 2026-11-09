@@ -1,29 +1,12 @@
 package domain_test
 
 import (
-	"encoding/base64"
-	"encoding/binary"
-	"strings"
 	"testing"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 )
 
 const testInstanceID = "i-0123456789abcdef0"
-
-// hostKeyLine builds a syntactically valid ssh-ed25519 public key line with the
-// given comment. The key body is deterministic filler: no real key material is
-// generated, read, or stored by this test.
-func hostKeyLine(comment string, seed byte) string {
-	blob := make([]byte, 0, 51)
-	blob = binary.BigEndian.AppendUint32(blob, uint32(len("ssh-ed25519")))
-	blob = append(blob, "ssh-ed25519"...)
-	blob = binary.BigEndian.AppendUint32(blob, 32)
-	for i := 0; i < 32; i++ {
-		blob = append(blob, seed+byte(i))
-	}
-	return "ssh-ed25519 " + base64.StdEncoding.EncodeToString(blob) + " " + comment
-}
 
 // TestApprovedAuthKeyPolicyIsTheFixedPolicy is the policy assertion: every field
 // of the typed value, not just the ones a caller happens to read.
@@ -141,77 +124,6 @@ func TestValidateTailnetTagRejectsNonTagShapes(t *testing.T) {
 // TestParseHostPublicKeyAcceptsOnlyThisInstancesKey is the forged-key rule: the
 // key must be a well-formed ed25519 key whose comment names the instance it was
 // fetched from.
-func TestParseHostPublicKeyAcceptsOnlyThisInstancesKey(t *testing.T) {
-	t.Parallel()
-	line := hostKeyLine("root@"+testInstanceID, 7)
-	key, err := domain.ParseHostPublicKey(line, testInstanceID)
-	if err != nil {
-		t.Fatalf("ParseHostPublicKey(valid) = %v", err)
-	}
-	if !strings.HasPrefix(key.Fingerprint, "SHA256:") {
-		t.Fatalf("fingerprint = %q, want a SHA256: digest", key.Fingerprint)
-	}
-	if strings.Contains(key.Fingerprint, "PRIVATE") {
-		t.Fatalf("fingerprint must be a digest, got %q", key.Fingerprint)
-	}
-	if want := testInstanceID + " " + key.Type + " " + key.Base64; key.KnownHostsLine(testInstanceID) != want {
-		t.Fatalf("known_hosts line = %q, want %q", key.KnownHostsLine(testInstanceID), want)
-	}
-
-	refused := map[string]string{
-		"empty":                    "",
-		"private key":              "-----BEGIN OPENSSH PRIVATE KEY-----",
-		"wrong algorithm":          strings.Replace(line, "ssh-ed25519", "ssh-rsa", 1),
-		"another instance":         hostKeyLine("root@i-0fedcba9876543210", 7),
-		"truncated body":           "ssh-ed25519 " + base64.StdEncoding.EncodeToString([]byte("short")) + " root@" + testInstanceID,
-		"body with trailing bytes": "ssh-ed25519 " + base64.StdEncoding.EncodeToString(append(mustBase64(t, strings.Fields(line)[1]), 0)) + " root@" + testInstanceID,
-	}
-	// A plain login comment is what a real EC2 host key carries; it must be
-	// accepted, and so must a key with no comment at all.
-	accepted := []string{
-		strings.Join(strings.Fields(line)[:2], " "),
-		hostKeyLine("root@ip-10-0-1-23", 7),
-	}
-	for _, candidate := range accepted {
-		if _, err := domain.ParseHostPublicKey(candidate, testInstanceID); err != nil {
-			t.Fatalf("ParseHostPublicKey(%q) = %v, want nil", candidate, err)
-		}
-	}
-	for name, candidate := range refused {
-		name, candidate := name, candidate
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if _, err := domain.ParseHostPublicKey(candidate, testInstanceID); err == nil {
-				t.Fatalf("ParseHostPublicKey(%q) must be refused", candidate)
-			}
-		})
-	}
-}
-
-// TestFingerprintIsStableAndDistinguishesKeys proves the recorded fingerprint is
-// a digest of the key, so a different key cannot carry the same value.
-func TestFingerprintIsStableAndDistinguishesKeys(t *testing.T) {
-	t.Parallel()
-	first, err := domain.ParseHostPublicKey(hostKeyLine("root@"+testInstanceID, 1), testInstanceID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	repeat, err := domain.ParseHostPublicKey(hostKeyLine("root@"+testInstanceID, 1), testInstanceID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	other, err := domain.ParseHostPublicKey(hostKeyLine("root@"+testInstanceID, 2), testInstanceID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if first.Fingerprint != repeat.Fingerprint {
-		t.Fatalf("fingerprints differ for identical keys: %q vs %q", first.Fingerprint, repeat.Fingerprint)
-	}
-	if first.Fingerprint == other.Fingerprint {
-		t.Fatal("different keys must have different fingerprints")
-	}
-}
-
 func TestValidateInstanceIDRejectsNonInstanceValues(t *testing.T) {
 	t.Parallel()
 	for _, value := range []string{"", "i-", "i-0123", "0123456789abcdef0", "i-0123456789ABCDEF0", "i-0123456789abcdef0;id"} {
@@ -236,13 +148,4 @@ func TestValidateSecretRefRejectsFlagsAndTraversal(t *testing.T) {
 			t.Fatalf("secret ref %q refused: %v", ref, err)
 		}
 	}
-}
-
-func mustBase64(t *testing.T, value string) []byte {
-	t.Helper()
-	decoded, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		t.Fatalf("decode base64: %v", err)
-	}
-	return decoded
 }

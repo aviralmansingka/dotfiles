@@ -21,8 +21,11 @@ import (
 // port from internal/application, so an S01 stub can replace a real integration
 // without touching workflow code.
 type Activities struct {
-	Inventory  application.HostInventory
-	Providers  application.HostProvider
+	Inventory application.HostInventory
+	Providers application.HostProvider
+	// Agent proves a host's SSM agent registered. It is a separate dependency
+	// because the check is its own activity, ahead of enrollment.
+	Agent      application.SSMAgentProbe
 	Enroller   application.HostEnroller
 	Deployer   application.ProfileDeployer
 	Authorizer application.HostAuthorizer
@@ -40,6 +43,8 @@ func (a *Activities) Validate() error {
 		return errors.New("temporal: host provider is required")
 	case a.Enroller == nil:
 		return errors.New("temporal: host enroller is required")
+	case a.Agent == nil:
+		return errors.New("temporal: ssm agent probe is required")
 	case a.Deployer == nil:
 		return errors.New("temporal: profile deployer is required")
 	case a.Authorizer == nil:
@@ -77,7 +82,27 @@ func (a *Activities) CreateHostResource(ctx context.Context, in workflows.Create
 	}, nil
 }
 
-// EnrollHost performs the trusted-SSH tailnet enrollment.
+// CheckSSMAgent waits for the host's SSM agent to register and records the
+// answer. It runs before enrollment, and it is the only gate: a host whose agent
+// never registers fails the job, and nothing falls back to SSH.
+func (a *Activities) CheckSSMAgent(ctx context.Context, in workflows.CheckSSMAgentInput) (workflows.CheckSSMAgentOutput, error) {
+	status, err := a.Agent.AwaitRegistration(ctx, in.InstanceID)
+	if err != nil {
+		return workflows.CheckSSMAgentOutput{}, a.activityError("check_ssm_agent", in.HostID, err)
+	}
+	a.log("host.agent.online",
+		"host_id", in.HostID,
+		"instance_id", status.InstanceID,
+		"ping_status", status.PingStatus,
+	)
+	return workflows.CheckSSMAgentOutput{
+		InstanceID: status.InstanceID,
+		PingStatus: status.PingStatus,
+		Online:     status.Online,
+	}, nil
+}
+
+// EnrollHost performs the SSM tailnet enrollment.
 func (a *Activities) EnrollHost(ctx context.Context, in workflows.EnrollHostInput) (workflows.EnrollHostOutput, error) {
 	result, err := a.Enroller.Enroll(ctx, application.EnrollRequest{
 		HostID:         in.HostID,
@@ -97,10 +122,9 @@ func (a *Activities) EnrollHost(ctx context.Context, in workflows.EnrollHostInpu
 		"resumed", result.Resumed,
 	)
 	return workflows.EnrollHostOutput{
-		DeviceID:           result.DeviceID,
-		HostKeyFingerprint: result.HostKey,
-		TailnetTag:         result.TailnetTag,
-		Resumed:            result.Resumed,
+		DeviceID:   result.DeviceID,
+		TailnetTag: result.TailnetTag,
+		Resumed:    result.Resumed,
 	}, nil
 }
 
@@ -221,8 +245,9 @@ func (a *Activities) activityError(operation, hostID string, err error) error {
 	a.log("activity.failed", "operation", operation, "host_id", hostID, "code", jobErr.Code, "error", jobErr.Message)
 	var notImplemented *domain.NotImplementedError
 	var invalid *domain.ValidationError
+	var agent *domain.AgentNotRegisteredError
 	switch {
-	case errors.As(err, &notImplemented), errors.As(err, &invalid):
+	case errors.As(err, &notImplemented), errors.As(err, &invalid), errors.As(err, &agent):
 		return temporal.NewNonRetryableApplicationError(jobErr.Message, jobErr.Code, nil)
 	default:
 		return fmt.Errorf("%s: %s", operation, jobErr.Message)

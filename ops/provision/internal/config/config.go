@@ -29,13 +29,13 @@ type Service struct {
 	Logging      Logging             `yaml:"logging"`
 }
 
-// Enrollment locates the trusted-SSH enrollment adapters. Every field is a path,
-// a URL, or an OpenBao reference: no credential value has a field here, and an
-// inline secret in YAML is an unknown key that fails to decode.
+// Enrollment locates the enrollment adapters. Every field is a path, a URL, an
+// OpenBao reference, or an approved identifier: no credential value has a field
+// here, and an inline secret in YAML is an unknown key that fails to decode.
 type Enrollment struct {
 	Tailscale TailscaleEnrollment `yaml:"tailscale"`
 	OpenBao   OpenBaoEnrollment   `yaml:"openbao"`
-	SSH       SSHEnrollment       `yaml:"ssh"`
+	SSM       SSMEnrollment       `yaml:"ssm"`
 }
 
 // TailscaleEnrollment is the API endpoint and the OAuth client identity.
@@ -55,24 +55,46 @@ type OpenBaoEnrollment struct {
 	Namespace string `yaml:"namespace"`
 }
 
-// SSHEnrollment is the bootstrap login key path and the private directory for the
-// per-enrollment known_hosts file. The key itself is never read by the service.
-type SSHEnrollment struct {
-	IdentityFile  string `yaml:"identity_file"`
-	KnownHostsDir string `yaml:"known_hosts_dir"`
-	RemoteKeyPath string `yaml:"remote_key_path"`
+// SSMEnrollment is the SSM-only enrollment path: the parameter prefix the
+// enrollment key travels under, the single fleet KMS key that encrypts it, and
+// the host script's settings.
+//
+// There is no login key path and no known_hosts directory here, because
+// enrollment opens no SSH connection: the trust anchor is IAM, not a host key. An
+// `ssh:` block in the service file is now an unknown key and fails to decode.
+type SSMEnrollment struct {
+	// Region is the region of the parameter, the command, and the host.
+	Region string `yaml:"region"`
+	// ParameterPrefix is the store path an enrollment parameter lives under. The
+	// Terraform root scopes the instance role to <prefix>/<host_name>/*, so this
+	// value and terraform/aws/main.tf must agree.
+	ParameterPrefix string `yaml:"parameter_prefix"`
+	// KMSKeyID is the one fleet key the parameters are encrypted with. It is an
+	// alias, so a rotation does not move configuration.
+	KMSKeyID string `yaml:"kms_key_id"`
+	// HostKeyPath is where the host script writes the key, on tmpfs, mode 0600.
+	HostKeyPath string `yaml:"host_key_path"`
+	// Binary is the AWS CLI executable the worker drives. Defaults to "aws".
+	Binary string `yaml:"binary"`
+	// AgentTimeoutSeconds is how long an enrollment waits for the host's SSM agent
+	// to register before it fails closed.
+	AgentTimeoutSeconds int `yaml:"agent_timeout_seconds"`
+	// CommandTimeoutSeconds bounds the one command that delivers a key.
+	CommandTimeoutSeconds int `yaml:"command_timeout_seconds"`
+	// PollIntervalSeconds is the status poll interval for both waits.
+	PollIntervalSeconds int `yaml:"poll_interval_seconds"`
 }
 
 // Configured reports whether the enrollment adapters are configured at all. When
 // they are not, the worker keeps the refusing stub, so a job cannot reach
 // "ready" without a real enrollment.
 func (e Enrollment) Configured() bool {
-	return e.Tailscale.OAuthSecretRef != "" && e.SSH.IdentityFile != "" && e.OpenBao.TokenFile != ""
+	return e.Tailscale.OAuthSecretRef != "" && e.OpenBao.TokenFile != "" && e.SSM.KMSKeyID != ""
 }
 
 // Validate fails closed on a half-configured enrollment block.
 func (e Enrollment) Validate() error {
-	if e.Tailscale.OAuthSecretRef == "" && e.SSH.IdentityFile == "" && e.OpenBao.TokenFile == "" {
+	if e.Tailscale.OAuthSecretRef == "" && e.OpenBao.TokenFile == "" && e.SSM.KMSKeyID == "" {
 		return nil
 	}
 	if e.Tailscale.OAuthSecretRef == "" {
@@ -87,17 +109,52 @@ func (e Enrollment) Validate() error {
 	if e.OpenBao.TokenFile == "" {
 		return errors.New("enrollment.openbao.token_file is required")
 	}
-	if e.OpenBao.Address == "" {
-		return errors.New("enrollment.openbao.address is required")
+	if strings.ContainsAny(e.OpenBao.TokenFile, " \t") {
+		return errors.New("enrollment.openbao.token_file must not contain whitespace")
 	}
-	if e.SSH.IdentityFile == "" {
-		return errors.New("enrollment.ssh.identity_file is required")
+	if e.SSM.Region == "" {
+		return errors.New("enrollment.ssm.region is required")
 	}
-	if strings.ContainsAny(e.SSH.IdentityFile, " \t") {
-		return errors.New("enrollment.ssh.identity_file must not contain whitespace")
+	if err := domain.ValidateAWSRegion(e.SSM.Region); err != nil {
+		return fmt.Errorf("enrollment.ssm.region: %w", err)
 	}
-	if e.SSH.RemoteKeyPath != "" && !strings.HasPrefix(e.SSH.RemoteKeyPath, "/run/") {
-		return errors.New("enrollment.ssh.remote_key_path must live under /run")
+	if e.SSM.ParameterPrefix == "" {
+		return errors.New("enrollment.ssm.parameter_prefix is required: the instance role is scoped to <prefix>/<host_name>/*")
+	}
+	if err := domain.ValidateParameterName(e.SSM.ParameterPrefix); err != nil {
+		return fmt.Errorf("enrollment.ssm.parameter_prefix: %w", err)
+	}
+	if e.SSM.ParameterPrefix != domain.ApprovedEnrollmentParameterPrefix {
+		return fmt.Errorf("enrollment.ssm.parameter_prefix must be the approved %q: terraform/aws/main.tf scopes the instance role to exactly that path",
+			domain.ApprovedEnrollmentParameterPrefix)
+	}
+	if e.SSM.KMSKeyID == "" {
+		return errors.New("enrollment.ssm.kms_key_id is required: every enrollment parameter is encrypted with one fleet key")
+	}
+	if err := domain.ValidateKMSKeyID(e.SSM.KMSKeyID); err != nil {
+		return fmt.Errorf("enrollment.ssm.kms_key_id: %w", err)
+	}
+	if e.SSM.KMSKeyID != domain.ApprovedEnrollmentKMSKeyID {
+		return fmt.Errorf("enrollment.ssm.kms_key_id must be the approved %q: the instance role decrypts with that one key, so rotate the alias instead",
+			domain.ApprovedEnrollmentKMSKeyID)
+	}
+	if e.SSM.HostKeyPath == "" {
+		return errors.New("enrollment.ssm.host_key_path is required: the key file is created on the host and removed after the join")
+	}
+	if !strings.HasPrefix(e.SSM.HostKeyPath, "/run/") {
+		return errors.New("enrollment.ssm.host_key_path must live under /run, so a reboot removes it")
+	}
+	if e.SSM.Binary != "" && strings.ContainsAny(e.SSM.Binary, "/\\ \t") {
+		return fmt.Errorf("enrollment.ssm.binary %q must be a bare executable name", e.SSM.Binary)
+	}
+	if e.SSM.AgentTimeoutSeconds < 0 || e.SSM.AgentTimeoutSeconds > 3600 {
+		return errors.New("enrollment.ssm.agent_timeout_seconds must be between 0 and 3600")
+	}
+	if e.SSM.CommandTimeoutSeconds < 0 || e.SSM.CommandTimeoutSeconds > 86400 {
+		return errors.New("enrollment.ssm.command_timeout_seconds must be between 0 and 86400")
+	}
+	if e.SSM.PollIntervalSeconds < 0 || e.SSM.PollIntervalSeconds > 300 {
+		return errors.New("enrollment.ssm.poll_interval_seconds must be between 0 and 300")
 	}
 	return nil
 }

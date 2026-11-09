@@ -17,7 +17,7 @@ type EnrollmentDeps struct {
 	// it a retry cannot tell "already enrolled" from "not enrolled yet", and a
 	// blind re-mint would register a second node for the same host.
 	Devices DeviceLookup
-	// Enroller performs the trusted-SSH bootstrap.
+	// Enroller performs the host enrollment (SSM-only in this tree).
 	Enroller HostEnroller
 	Logger   Logger
 }
@@ -132,7 +132,6 @@ func (s *EnrollmentService) Enroll(ctx context.Context, req EnrollRequest) (Enro
 	s.log.Info("host.enroll.enrolled",
 		"host_id", req.HostID,
 		"device_id", result.DeviceID,
-		"host_key", result.HostKey,
 		"tailnet_tag", plan.Tag,
 	)
 	return result, nil

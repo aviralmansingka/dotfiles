@@ -1,9 +1,6 @@
 package domain
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/binary"
 	"fmt"
 	"regexp"
 	"strings"
@@ -149,95 +146,13 @@ func ResolveEnrollment(profile Profile, clientTags []string) (EnrollmentPlan, er
 // instanceIDPattern is the shape of an EC2 instance identifier.
 var instanceIDPattern = regexp.MustCompile(`^i-[0-9a-f]{8,17}$`)
 
-// instanceIDInText finds an instance identifier anywhere in a comment, so a key
-// comment that names another instance is recognised as a foreign key.
-var instanceIDInText = regexp.MustCompile(`i-[0-9a-f]{8,17}`)
-
-// ValidateInstanceID enforces the EC2 instance-identifier shape. It bounds what
-// may be interpolated into an SSM request and into a host-key comment.
+// ValidateInstanceID enforces the EC2 instance-identifier shape. Enrollment is
+// addressed by instance id, so this bounds what can reach a control-plane call.
 func ValidateInstanceID(id string) error {
 	if !instanceIDPattern.MatchString(id) {
 		return Invalid("instance_id", "must be an EC2 instance id such as i-0123456789abcdef0")
 	}
 	return nil
-}
-
-// HostPublicKey is a parsed OpenSSH host public key with its fingerprint.
-type HostPublicKey struct {
-	Type        string
-	Base64      string
-	Comment     string
-	Fingerprint string
-}
-
-const ed25519KeyType = "ssh-ed25519"
-
-// ed25519WireLen is the length of a decoded ed25519 public key blob: a 4-byte
-// length prefix plus "ssh-ed25519", a 4-byte length prefix plus the 32-byte key.
-const ed25519WireLen = 51
-
-// ParseHostPublicKey validates one host public key line and ties it to the
-// instance it was fetched from.
-//
-// Two independent checks make a forged key fail:
-//   - the line must be a well-formed ssh-ed25519 public key of exactly 51 wire
-//     bytes, so a private key, a different algorithm, or trailing garbage cannot
-//     be accepted;
-//   - a comment that names an instance must name this one, so a key copied from
-//     another host is refused even before the pin would catch it at connect time.
-//
-// The fingerprint is what the caller may log and persist: it is a digest, not key
-// material.
-func ParseHostPublicKey(line, instanceID string) (HostPublicKey, error) {
-	if err := ValidateInstanceID(instanceID); err != nil {
-		return HostPublicKey{}, err
-	}
-	fields := strings.Fields(strings.TrimSpace(line))
-	if len(fields) < 2 {
-		return HostPublicKey{}, fmt.Errorf("host public key: expected `ssh-ed25519 <base64> <comment>`")
-	}
-	if fields[0] != ed25519KeyType {
-		return HostPublicKey{}, fmt.Errorf("host public key: type %q is not %s", fields[0], ed25519KeyType)
-	}
-	blob, err := base64.StdEncoding.DecodeString(fields[1])
-	if err != nil {
-		return HostPublicKey{}, fmt.Errorf("host public key: body is not base64")
-	}
-	if len(blob) != ed25519WireLen {
-		return HostPublicKey{}, fmt.Errorf("host public key: decoded body is %d bytes, want %d", len(blob), ed25519WireLen)
-	}
-	declared := int(binary.BigEndian.Uint32(blob[:4]))
-	if declared != len(ed25519KeyType) || string(blob[4:4+declared]) != ed25519KeyType {
-		return HostPublicKey{}, fmt.Errorf("host public key: blob does not declare %s", ed25519KeyType)
-	}
-	keyLen := int(binary.BigEndian.Uint32(blob[4+declared : 8+declared]))
-	if keyLen != 32 {
-		return HostPublicKey{}, fmt.Errorf("host public key: key material is %d bytes, want 32", keyLen)
-	}
-	comment := ""
-	if len(fields) > 2 {
-		comment = strings.Join(fields[2:], " ")
-	}
-	// A comment that names an instance must name *this* instance. EC2 host keys
-	// usually carry a login-style comment (`root@ip-10-0-1-23`) or none, so an
-	// ordinary comment is accepted; a key that explicitly belongs to another
-	// instance is not.
-	if named := instanceIDInText.FindString(comment); named != "" && named != instanceID {
-		return HostPublicKey{}, fmt.Errorf(
-			"host public key: comment names instance %s, not %s; refusing a key that does not belong to this host", named, instanceID)
-	}
-	sum := sha256.Sum256(blob)
-	return HostPublicKey{
-		Type:        ed25519KeyType,
-		Base64:      fields[1],
-		Comment:     comment,
-		Fingerprint: "SHA256:" + base64.StdEncoding.EncodeToString(sum[:]),
-	}, nil
-}
-
-// KnownHostsLine renders the pinned known_hosts entry for an address.
-func (k HostPublicKey) KnownHostsLine(address string) string {
-	return fmt.Sprintf("%s %s %s", address, k.Type, k.Base64)
 }
 
 // secretRefPattern bounds a secret reference: an OpenBao-shaped prefix, then a

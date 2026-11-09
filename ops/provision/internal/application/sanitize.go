@@ -11,6 +11,9 @@ const (
 	CodeInvalidRequest     = "invalid_request"
 	CodeNotImplemented     = "not_implemented"
 	CodeProvisioningFailed = "provisioning_failed"
+	// CodeAgentUnavailable reports a host whose SSM agent never registered. It is
+	// non-retryable: enrollment fails closed rather than trying another transport.
+	CodeAgentUnavailable = "host_agent_unavailable"
 )
 
 // SanitizeError converts any error into a client-safe JobError. Unknown errors
@@ -33,6 +36,14 @@ func SanitizeError(err error) domain.JobError {
 		return domain.JobError{
 			Code:      CodeInvalidRequest,
 			Message:   domain.SanitizeMessage(invalid.Error()),
+			Retryable: false,
+		}
+	}
+	var agent *domain.AgentNotRegisteredError
+	if errors.As(err, &agent) {
+		return domain.JobError{
+			Code:      CodeAgentUnavailable,
+			Message:   domain.SanitizeMessage(agent.Error()),
 			Retryable: false,
 		}
 	}
