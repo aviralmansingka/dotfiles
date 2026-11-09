@@ -92,8 +92,10 @@ func TestPlanDescribesTheArmy(t *testing.T) {
 		t.Fatalf("brief = %q", p.CaptainBrief)
 	}
 	// The brief is the captain contract: the three duties are stated once, here,
-	// and no profile keeps a second copy of them.
-	for _, duty := range []string{"hold the claim", "deploy a trooper for every step", "answer the commander", "never edit repository files"} {
+	// and no profile keeps a second copy of them. It also states the authority
+	// split: the captain runs its mandate without asking leave, sends its whole
+	// briefing on a block, and writes no definition except a step and its checks.
+	for _, duty := range []string{"hold the claim", "deploy a trooper for every step", "answer the commander", "never edit repository files", "You are autonomous", "state the block", "The commander answers with a few bullets", "never rewrite the mission brief", "never reset a step to weaken a check"} {
 		if !strings.Contains(p.CaptainBrief, duty) {
 			t.Fatalf("brief does not name %q:\n%s", duty, p.CaptainBrief)
 		}

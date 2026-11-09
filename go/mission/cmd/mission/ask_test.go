@@ -149,12 +149,13 @@ func TestAskListShowsPendingThenDelivered(t *testing.T) {
 }
 
 // The captain brief teaches the ask channel and the argv withholds the menu, so
-// a launch cannot paint a question nobody watches.
+// a launch cannot paint a question nobody watches. An ask carries the captain's
+// whole briefing, not a one-line question: the commander answers in bullets.
 func TestCaptainBriefNamesTheAskChannel(t *testing.T) {
 	s, h, _ := piFixture(t)
 	p, e := s.plan(h, "rex", "")
 	must(t, e)
-	for _, want := range []string{"mission ask " + h, "then stop", "Do not use ask_user_question", "nobody watches a captain pane"} {
+	for _, want := range []string{"mission ask " + h, "<full briefing>", "a briefing, not a one-line question", "the options with their trade-offs", "then stop", "Do not use ask_user_question", "nobody watches a captain pane"} {
 		if !strings.Contains(p.CaptainBrief, want) {
 			t.Fatalf("the captain brief does not say %q:\n%s", want, p.CaptainBrief)
 		}

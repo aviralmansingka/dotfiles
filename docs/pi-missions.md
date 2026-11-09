@@ -232,6 +232,30 @@ is lost: the asks stay on disk until that session returns.
 `ask_user_question` is not in the captain loadout, so a captain cannot paint a
 menu nobody watches. The commander keeps it.
 
+## Captain autonomy and edit authority
+
+A captain is autonomous inside its mandate. It picks the order of work and the
+troopers for it, and asks no permission for a move the duties already allow.
+
+Only a block that needs the human stops the work. The captain then sends one ask
+and puts its whole briefing in the text:
+
+- the block, stated plainly;
+- what it already tried, and what that showed;
+- the options, with their trade-offs;
+- the one decision it needs.
+
+The commander answers with a few bullets. A bullet says the move to take, not
+the history behind it. The commander may also change the mission itself, from
+its own session, without another ask.
+
+| Actor | May write in the mission record |
+| --- | --- |
+| Captain | One step definition and its checks, through `mission step edit` |
+| Commander | The brief, any step, any checks, checkpoint decisions, and the close |
+
+A captain never resets a step to weaken a check. It sends the block instead.
+
 ## The launch description
 
 `mission plan REPO/SLUG [--mux rex]` is the read-only launch description. It
