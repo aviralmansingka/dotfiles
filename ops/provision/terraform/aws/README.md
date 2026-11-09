@@ -14,7 +14,7 @@ checks.
 | File | Content |
 | --- | --- |
 | `versions.tf` | Pinned provider (`hashicorp/aws` `5.100.0`), a **partial** `s3` backend block with nothing in it, one provider pinned to `ap-south-1` |
-| `variables.tf` | Host name, **required `vpc_id` and `subnet_id`**, profile, size key, resolved instance type and disk size, `owner` and test-run tag values, SSH **public** key, approved bootstrap CIDR |
+| `variables.tf` | Host name, **required `vpc_id` and `subnet_id`**, profile, size key, resolved instance type and disk size, `owner` and test-run tag values, SSH **public** key, an **optional** bootstrap CIDR that is empty by default (= no ingress rule at all) |
 | `main.tf` | AMI lookup, key pair, security group, SSM role and instance profile, instance, outputs |
 | `cloud-init.yaml` | Nix prerequisites, the multi-user Nix daemon, and the system `tailscaled` daemon. No secrets, no enrollment key, no tailnet tag |
 
@@ -205,17 +205,76 @@ variable, a log field, a workflow payload, or a Terraform variable.
 
 ## Bootstrap policy
 
-* SSH ingress: one rule, port 22, source = `bootstrap_ssh_cidr`. The variable
-  refuses anything wider than `/8`, so `0.0.0.0/0` cannot be expressed.
+* SSH ingress is **opt-in and off by default**: `bootstrap_ssh_cidr` defaults to
+  the empty string, and `main.tf` feeds it through `local.bootstrap_cidrs`, so an
+  empty value makes the `dynamic "ingress"` block emit **zero rules**. The host
+  accepts nothing inbound; the tailnet is the only way in.
+* A non-empty value emits **exactly one** rule: port 22, source = that single
+  CIDR, nothing else. The variable refuses `0.0.0.0/0`, `::/0`, any mask wider
+  than `/8`, and any malformed value, and the failure names
+  `bootstrap_ssh_cidr`.
+* The service passes the value as `-var bootstrap_ssh_cidr=` on every create and
+  destroy, so the empty default is the same empty string on both paths. The
+  service configuration field (`providers.aws.bootstrap.ssh_source_cidr`) is
+  optional for the same reason: empty means no SSH ingress.
 * Egress: TCP 443 only, for `nixos.org`, `cache.nixos.org`, and the SSM
-  endpoints.
+  endpoints. Egress stays open even when ingress is empty, because the first boot
+  needs Nix and the Tailscale control plane.
 * IAM: an EC2 trust role with the AWS-managed `AmazonSSMManagedInstanceCore`
   policy attached and nothing else. No wildcard action, no inline policy.
 * IMDSv2 required (`http_tokens = "required"`), hop limit 1, tags enabled.
 * Root volume: gp3, encrypted, sized by the approved size key, deleted with the
   instance.
 
+## Size and cost
+
+`config/profiles.yaml` maps `rex` / `standard` to `t3.medium` and a **40 GiB**
+encrypted gp3 root volume. 40 GiB is the fleet default (owner decision,
+2026-11-09); no sizing text anywhere in this repository claims 20 GiB.
+
+Approximate on-demand cost, per hour that one host is running, in `ap-south-1`:
+
+| Item | Approximate price | Per hour |
+| --- | --- | --- |
+| `t3.medium` | ≈ US$0.045 per instance-hour | ≈ US$0.045 |
+| 40 GiB gp3 root volume | ≈ US$0.092 per GB-month ÷ 730 h | ≈ US$0.005 |
+| **Total** | | **≈ US$0.05 per host-hour** |
+
+That is ≈ US$36 per 30-day month per host if it is never stopped. **Approximate,
+not billing evidence:** AWS list prices change, and the figure excludes data
+transfer, S3 state, and any NAT gateway (this design has none). Check the
+account's own price list before approving a fleet budget.
+
 ## Offline versus live
+
+### The two binaries come from the flake profile, not from `PATH`
+
+`terraform` and `aws` are **profile tools** in
+`nix/modules/shared/default.nix`, pinned there the same way `herdr` is. Do not
+install either from Homebrew, apt, or a downloaded zip: a run must not depend on
+whichever copy happens to be first on `PATH`.
+
+| Tool | Pinned version | Where it comes from |
+| --- | --- | --- |
+| `terraform` | **1.17.1** | `pkgs.terraform`, pinned nixpkgs |
+| `aws` | **2.36.31** (package `awscli2`) | `pkgs.awscli2`, pinned nixpkgs |
+
+1.17.1 is the version live smoke #1 used (1.5.7 was the other one, and both roots
+only require `>= 1.5.0`). The profile carries an assertion that fails if a flake
+update moves either version, so a bump is a reviewed edit in the same change as
+the runbooks.
+
+Preflight, before any live command. It fails clearly instead of half-working with
+a stray binary:
+
+```sh
+command -v terraform >/dev/null || {
+  echo "terraform is missing: it is a profile tool (nix/modules/shared/default.nix); run 'home-manager switch' for this host, do not install it from Homebrew" >&2; exit 1; }
+command -v aws >/dev/null || {
+  echo "aws is missing: it is a profile tool (nix/modules/shared/default.nix, package awscli2); run 'home-manager switch' for this host" >&2; exit 1; }
+terraform version | head -1   # must report Terraform v1.17.1
+aws --version               # must report aws-cli/2.36.31
+```
 
 Offline (no credentials, no network):
 
@@ -235,7 +294,8 @@ checks the network root: one VPC and one subnet, both tagged, the dedicated
 `10.99.0.0/16` CIDR, and no ingress from `0.0.0.0/0` or `::/0` in either root.
 
 Live (needs an AWS account, credentials with EC2/IAM/SSM/S3 access, an approved
-VPC and subnet, and a network):
+VPC and subnet, and a network). Run the preflight above first; `terraform` and
+`aws` come from the flake profile, not from Homebrew or a random `PATH` entry:
 
 ```sh
 terraform -chdir=ops/provision/terraform/aws init -backend=false

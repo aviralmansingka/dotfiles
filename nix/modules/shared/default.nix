@@ -101,6 +101,19 @@ in
         rsync
         rustup
         uv
+        # The provisioning toolchain for ops/provision, pinned exactly like
+        # herdr: both binaries come from the flake pin, never from Homebrew or a
+        # PATH entry the operator happens to have.
+        #
+        # The pinned nixpkgs resolves terraform 1.17.1 (one of the two versions
+        # the live AWS runs used; 1.5.7 was the other) and awscli2 2.36.31, whose
+        # package ships the `aws` executable this repository's runbooks call.
+        # Both provisioning roots declare `required_version = ">= 1.5.0"`, so
+        # 1.17.1 satisfies them without a range change. The assertions below fail
+        # evaluation if a flake update moves either version, so bumping them is a
+        # reviewed edit here rather than silent drift across runs.
+        terraform
+        awscli2
         # The 1Password CLI is how any host fetches the admin age key from
         # 1Password. Only the CLI is managed here, not the 1Password desktop
         # app. nixpkgs spells the attribute `_1password-cli` (leading
@@ -111,6 +124,20 @@ in
     );
 
   programs.home-manager.enable = true;
+
+  # Exact-version gate for the provisioning toolchain. Terraform and the AWS CLI
+  # are the two binaries ops/provision's runbooks name, so an unnoticed flake
+  # update must not change them underneath a live run.
+  assertions = [
+    {
+      assertion = pkgs.terraform.version == "1.17.1";
+      message = "terraform is ${pkgs.terraform.version}, but the provisioning runbooks and live runs pin 1.17.1 (ops/provision/terraform/*/README.md). Update those runbooks in the same change as this pin, or hold nixpkgs.";
+    }
+    {
+      assertion = pkgs.awscli2.version == "2.36.31";
+      message = "awscli2 is ${pkgs.awscli2.version} (the `aws` executable), but the provisioning runbooks pin 2.36.31 (ops/provision/terraform/*/README.md). Update those runbooks in the same change as this pin, or hold nixpkgs.";
+    }
+  ];
 
   # Ghostty's terminfo entry is a compiled file, not a stowed one. It used to be
   # a `tic` call in install.sh; the profile owns it now, so the activation

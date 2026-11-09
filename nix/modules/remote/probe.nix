@@ -2,7 +2,7 @@
 # no checkout, and the image's default login user `ubuntu`. The profile manages
 # that same user, so the deploy needs no user switch (unlike the devbox, which
 # is ssh'd as root while managing aviral).
-{ pkgs, lib, ... }:
+{ lib, ... }:
 
 {
   # Nothing on a fresh box has the runtime state the user units need, so the
@@ -18,8 +18,7 @@
   sops.defaultSopsFile = ../../../secrets/probe.yaml;
 
   # Cloud work only: this host exists to prove the profile reproduces off the
-  # lab, not to mirror the devbox's tooling.
-  home.packages = with pkgs; [
-    awscli2
-  ];
+  # lab, not to mirror the devbox's tooling. `aws` (awscli2), pinned in
+  # nix/modules/shared/default.nix, arrives with every profile, so this module
+  # adds nothing of its own.
 }

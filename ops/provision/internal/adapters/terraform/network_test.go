@@ -112,7 +112,7 @@ func TestNoIngressFromAnywhere(t *testing.T) {
 					t.Fatalf("%s/%s contains %q; neither root declares network ACLs or rule resources", dir, name, needle)
 				}
 			}
-			for _, body := range blocks(source, "ingress {") {
+			for _, body := range append(blocks(source, "ingress {"), blocks(source, `content {`)...) {
 				for _, open := range []string{"0.0.0.0/0", "::/0"} {
 					if strings.Contains(body, open) {
 						t.Fatalf("%s/%s has ingress from %s:\n%s", dir, name, open, body)
@@ -135,16 +135,18 @@ func TestNoIngressFromAnywhere(t *testing.T) {
 		}
 	}
 
-	// The host's one ingress rule is the approved operator CIDR, so the scan
-	// above is not vacuous.
-	ingress := blocks(rootTerraform(t)["main.tf"], "ingress {")
-	if len(ingress) != 1 {
-		t.Fatalf("the host root has %d ingress blocks, want exactly 1", len(ingress))
+	// The host's ingress is one opt-in dynamic block, so the scan above is not
+	// vacuous: the rule exists, it emits 22/tcp, and it can only be reached
+	// through the empty-or-one-CIDR gate that TestHostIngressIsZeroByDefault
+	// pins.
+	gate := blocks(rootTerraform(t)["main.tf"], `dynamic "ingress"`)
+	if len(gate) != 1 {
+		t.Fatalf("the host root has %d dynamic ingress blocks, want exactly 1", len(gate))
 	}
-	if !strings.Contains(ingress[0], "cidr_blocks = [var.bootstrap_ssh_cidr]") {
-		t.Fatalf("the host ingress rule is not restricted to the approved CIDR:\n%s", ingress[0])
+	if !strings.Contains(gate[0], "cidr_blocks = [ingress.value]") {
+		t.Fatalf("the host ingress rule is not restricted to the approved CIDR:\n%s", gate[0])
 	}
-	if strings.Contains(ingress[0], `"0.0.0.0/0"`) {
+	if strings.Contains(gate[0], `"0.0.0.0/0"`) {
 		t.Fatal("the host ingress rule allows 0.0.0.0/0")
 	}
 
@@ -155,6 +157,120 @@ func TestNoIngressFromAnywhere(t *testing.T) {
 			t.Fatalf("%s declares a security group; the host root owns it", name)
 		}
 	}
+}
+
+// TestHostIngressIsZeroByDefault pins the owner decision that a fleet host
+// accepts nothing inbound unless an operator asks for it. The variable defaults
+// to empty, an empty value makes the ingress block emit zero rules, one value
+// emits exactly one 22/tcp rule from that CIDR, both wildcards are refused, and
+// a malformed value fails at plan against the variable by name. Egress stays
+// open, because the host needs Nix and Tailscale to come up.
+func TestHostIngressIsZeroByDefault(t *testing.T) {
+	t.Parallel()
+	files := rootTerraform(t)
+	main := files["main.tf"]
+	variables := files["variables.tf"]
+
+	// 1. The default is empty, and empty is a real value rather than a missing
+	// one, so the adapter's `-var bootstrap_ssh_cidr=` reaches the root as "".
+	variable := block(variables, `variable "bootstrap_ssh_cidr"`)
+	if variable == "" {
+		t.Fatal("variables.tf declares no bootstrap_ssh_cidr variable")
+	}
+	if got := assignedValue(variable, "default"); got != `""` {
+		t.Fatalf("bootstrap_ssh_cidr default = %q, want an empty string (zero ingress)", got)
+	}
+	if got := assignedValue(variable, "nullable"); got != "false" {
+		t.Fatalf("bootstrap_ssh_cidr nullable = %q, want false so an empty value stays an empty string", got)
+	}
+	if got := assignedValue(variable, "type"); got != "string" {
+		t.Fatalf("bootstrap_ssh_cidr type = %q, want string", got)
+	}
+
+	// 2. Both wildcards and every mask wider than /8 are refused here, at plan
+	// time, against this variable. The validation names the two wildcard
+	// spellings outright, so a request for 0.0.0.0/0 or ::/0 fails by name.
+	if !strings.Contains(variable, `!contains(["0.0.0.0/0", "::/0"], var.bootstrap_ssh_cidr)`) {
+		t.Fatalf("the bootstrap_ssh_cidr validation does not refuse both wildcards:\n%s", variable)
+	}
+	if !strings.Contains(variable, "/([89]|[12][0-9]|3[0-2])$") {
+		t.Fatalf("the bootstrap_ssh_cidr validation does not floor the mask at /8:\n%s", variable)
+	}
+	if !strings.Contains(variable, "can(cidrhost(var.bootstrap_ssh_cidr, 0))") {
+		t.Fatalf("the bootstrap_ssh_cidr validation does not reject a malformed CIDR:\n%s", variable)
+	}
+	for _, want := range []string{"bootstrap_ssh_cidr must be empty", "0.0.0.0/0 and ::/0 are not accepted"} {
+		if !strings.Contains(variable, want) {
+			t.Fatalf("the bootstrap_ssh_cidr error message never says %q:\n%s", want, variable)
+		}
+	}
+
+	// 3. The gate itself: one ternary that turns empty into an empty list and a
+	// value into a one-element list. Anything outside this shape fails the test,
+	// so a permissive edit cannot hide behind a comment.
+	locals := block(main, "locals {")
+	const gateExpression = `bootstrap_cidrs = var.bootstrap_ssh_cidr == "" ? [] : [var.bootstrap_ssh_cidr]`
+	if !strings.Contains(locals, gateExpression) {
+		t.Fatalf("main.tf local.bootstrap_cidrs is not the empty-or-one gate:\n%s", locals)
+	}
+	for _, cidr := range []string{"", "203.0.113.10/32", "203.0.113.0/24"} {
+		// The rule count follows from the asserted gate: empty is the empty list
+		// (no ingress block at all), every non-empty value is one element.
+		want := 1
+		if cidr == "" {
+			want = 0
+		}
+		if got := ingressRuleCount(cidr); got != want {
+			t.Fatalf("bootstrap_ssh_cidr %q emits %d ingress rules, want %d", cidr, got, want)
+		}
+	}
+
+	// 4. The dynamic block consumes that gate and emits exactly one 22/tcp rule
+	// from the single approved CIDR.
+	group := block(main, `resource "aws_security_group" "host"`)
+	if group == "" {
+		t.Fatal("main.tf declares no aws_security_group.host")
+	}
+	ingress := blocks(group, `dynamic "ingress"`)
+	if len(ingress) != 1 {
+		t.Fatalf("the host security group has %d ingress blocks, want exactly 1", len(ingress))
+	}
+	if got := assignedValue(ingress[0], "for_each"); got != "local.bootstrap_cidrs" {
+		t.Fatalf("ingress for_each = %q, want local.bootstrap_cidrs", got)
+	}
+	content := block(ingress[0], "content {")
+	for key, want := range map[string]string{
+		"from_port":   "22",
+		"to_port":     "22",
+		"protocol":    `"tcp"`,
+		"cidr_blocks": "[ingress.value]",
+	} {
+		if got := assignedValue(content, key); got != want {
+			t.Fatalf("ingress %s = %q, want %q", key, got, want)
+		}
+	}
+
+	// 5. Egress stays open: a host needs outbound for Nix and Tailscale.
+	egress := blocks(group, "egress {")
+	if len(egress) == 0 {
+		t.Fatal("the host security group has no egress block; Nix and Tailscale need outbound")
+	}
+	if countIn(egress, `"0.0.0.0/0"`) == 0 {
+		t.Fatal("the host security group egress is not open to the internet")
+	}
+}
+
+// ingressRuleCount is the number of ingress rules the tracked gate emits for one
+// bootstrap_ssh_cidr value. The gate is a single ternary over `= ""` (asserted
+// verbatim above), so empty yields none and any value yields exactly one. This
+// is the rule count the Terraform plan produces; no provider plugin, credential,
+// or AWS call is involved.
+func ingressRuleCount(bootstrapCIDR string) int {
+	cidrs := []string{}
+	if bootstrapCIDR != "" {
+		cidrs = append(cidrs, bootstrapCIDR)
+	}
+	return len(cidrs)
 }
 
 // TestNetworkRootOutputsFeedHostRoot pins the wiring: the network root emits

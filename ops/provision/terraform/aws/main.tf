@@ -1,9 +1,9 @@
-# One provisioned fleet host: AMI lookup, key pair, security group with a
-# single-CIDR SSH ingress, a minimal SSM instance profile, and the instance
-# itself. Nothing account-wide lives here — no VPC, no subnet, no route table, no
-# DNS, no IAM user, no Elastic IP — so tearing a host down cannot disturb the
-# rest of the fleet, and `terraform destroy` on another host's state cannot see
-# it.
+# One provisioned fleet host: AMI lookup, key pair, security group with an
+# optional single-CIDR SSH ingress (none at all by default), a minimal SSM
+# instance profile, and the instance itself. Nothing account-wide lives here — no
+# VPC, no subnet, no route table, no DNS, no IAM user, no Elastic IP — so tearing
+# a host down cannot disturb the rest of the fleet, and `terraform destroy` on
+# another host's state cannot see it.
 #
 # The network is input, not a lookup: the security group is created in
 # `var.vpc_id` and the instance launches in `var.subnet_id`. This root never
@@ -22,6 +22,13 @@ locals {
   # because a truncated name could collide with a different host.
   host_label = startswith(var.host_name, "fleet-") ? trimprefix(var.host_name, "fleet-") : var.host_name
   name       = "fleet-${local.host_label}"
+
+  # Zero ingress is the default, not a narrow CIDR that happens to be
+  # unreachable. An empty bootstrap_ssh_cidr yields an empty list here, so the
+  # dynamic ingress block below emits NO rule at all; one non-empty value yields
+  # exactly one rule. variables.tf refuses 0.0.0.0/0, ::/0, and every mask wider
+  # than /8, so a public rule cannot be expressed at all.
+  bootstrap_cidrs = var.bootstrap_ssh_cidr == "" ? [] : [var.bootstrap_ssh_cidr]
 
   # Approved tag policy: the owner tag KEY is `owner` (never `fleet-owner`), plus
   # `fleet-test-run`, so a live acceptance run can find and destroy exactly its
@@ -77,21 +84,29 @@ resource "aws_key_pair" "host" {
 resource "aws_security_group" "host" {
   provider    = aws.ap_south_1
   name        = local.name
-  description = "Fleet host ${var.host_name}: SSH bootstrap from the approved CIDR only, HTTPS egress for Nix and SSM"
+  description = "Fleet host ${var.host_name}: no ingress unless an approved bootstrap CIDR is set, HTTPS egress for Nix and SSM"
 
   # Required, explicit, and supplied by the service: there is no default-VPC
   # fallback, and this root creates no VPC of its own. A missing vpc_id fails the
   # variable validation in variables.tf before this resource is planned.
   vpc_id = var.vpc_id
 
-  # The only ingress rule. There is no 0.0.0.0/0 ingress anywhere in this root,
-  # and the variable cannot express a CIDR wider than /8.
-  ingress {
-    description = "SSH bootstrap from the approved operator CIDR"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.bootstrap_ssh_cidr]
+  # The only ingress rule, and it is opt-in: an empty bootstrap_ssh_cidr makes
+  # `local.bootstrap_cidrs` empty, so this block emits zero rules and the host
+  # accepts nothing inbound (the tailnet is the way in). A non-empty value emits
+  # exactly one 22/tcp rule from that single CIDR. There is no 0.0.0.0/0 or ::/0
+  # ingress anywhere in this root, and the variable cannot express a CIDR wider
+  # than /8.
+  dynamic "ingress" {
+    for_each = local.bootstrap_cidrs
+
+    content {
+      description = "SSH bootstrap from the approved operator CIDR"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
   }
 
   # Egress needed by the bootstrap: cache.nixos.org, nixos.org, and the SSM

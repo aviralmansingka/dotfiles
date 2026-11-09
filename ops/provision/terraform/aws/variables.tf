@@ -134,18 +134,32 @@ variable "ssh_public_key" {
 }
 
 variable "bootstrap_ssh_cidr" {
-  description = "The single approved source CIDR allowed to reach port 22 for bootstrap. 0.0.0.0/0 and anything wider than /8 are refused."
+  description = "Optional single approved source CIDR allowed to reach port 22 for bootstrap. Empty (the default) emits NO ingress rule at all; a non-empty value emits exactly one 22/tcp rule from that CIDR. 0.0.0.0/0, ::/0, and anything wider than /8 are refused."
   type        = string
 
-  # /0 through /7 (including the 0.0.0.0/0 default route) are outside the mask
-  # range, so a permissive CIDR cannot be expressed here at all.
+  # Empty is a real value here, not a missing one: it means "no SSH ingress".
+  # The host root then emits no ingress rule at all (main.tf, local.bootstrap_cidrs),
+  # so a fleet host accepts nothing inbound by default. `nullable = false` keeps
+  # the adapter's `-var bootstrap_ssh_cidr=` an empty string instead of a null,
+  # which is what makes the default reachable from the service.
+  default  = ""
+  nullable = false
+
+  # /0 through /7 are outside the mask range, so a default route cannot be
+  # expressed. The two wildcard spellings are also named outright, so a
+  # permissive value fails here — against this variable, by name — and never
+  # reaches AWS.
   validation {
-    condition     = can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/([89]|[12][0-9]|3[0-2])$", var.bootstrap_ssh_cidr))
-    error_message = "bootstrap_ssh_cidr must be a single IPv4 CIDR between /8 and /32; 0.0.0.0/0 is not accepted."
+    condition = var.bootstrap_ssh_cidr == "" || (
+      !contains(["0.0.0.0/0", "::/0"], var.bootstrap_ssh_cidr) &&
+      can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/([89]|[12][0-9]|3[0-2])$", var.bootstrap_ssh_cidr))
+    )
+    error_message = "bootstrap_ssh_cidr must be empty (no SSH ingress at all) or a single IPv4 CIDR between /8 and /32; 0.0.0.0/0 and ::/0 are not accepted."
   }
 
+  # A malformed value fails at plan against the variable that carries it.
   validation {
-    condition     = can(cidrhost(var.bootstrap_ssh_cidr, 0))
-    error_message = "bootstrap_ssh_cidr must be a valid IPv4 CIDR."
+    condition     = var.bootstrap_ssh_cidr == "" || can(cidrhost(var.bootstrap_ssh_cidr, 0))
+    error_message = "bootstrap_ssh_cidr must be empty (no SSH ingress at all) or a valid IPv4 CIDR such as 203.0.113.10/32."
   }
 }

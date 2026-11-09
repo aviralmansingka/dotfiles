@@ -781,7 +781,10 @@ func TestNewAWSRejectsPermissiveBootstrapCIDR(t *testing.T) {
 	if err := os.WriteFile(keyFile, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("write key: %v", err)
 	}
-	for _, cidr := range []string{"0.0.0.0/0", "10.0.0.0/1", "0.0.0.0/7", "::/0", "not-a-cidr", ""} {
+	// Both wildcard spellings, every mask wider than /8, an IPv6 network, and a
+	// value that is not a network at all. Empty is NOT in this list: it is the
+	// zero-ingress default, covered by TestNewAWSAcceptsEmptyBootstrapCIDR.
+	for _, cidr := range []string{"0.0.0.0/0", "::/0", "10.0.0.0/1", "0.0.0.0/7", "2001:db8::/64", "203.0.113.10/33", "not-a-cidr"} {
 		cidr := cidr
 		t.Run(cidr, func(t *testing.T) {
 			t.Parallel()
@@ -830,6 +833,74 @@ func TestNewAWSRejectsTemplateRootWithoutTerraform(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("NewAWS accepted a template root with no .tf file")
+	}
+}
+
+// TestNewAWSAcceptsEmptyBootstrapCIDR pins the zero-ingress default at the
+// adapter boundary: an empty bootstrap CIDR is accepted, and the variable is
+// still passed — as an empty value — so the root's dynamic ingress block gets an
+// empty list and emits no rule at all. Dropping the variable instead would fail
+// the apply, because every declared variable has to be supplied.
+func TestNewAWSAcceptsEmptyBootstrapCIDR(t *testing.T) {
+	t.Parallel()
+	runner := newFake()
+	templateRoot := t.TempDir()
+	for name, body := range map[string]string{
+		"versions.tf":     "terraform {}\n",
+		"main.tf":         "output \"instance_id\" { value = \"i-1\" }\n",
+		"cloud-init.yaml": "#cloud-config\n",
+	} {
+		if err := os.WriteFile(filepath.Join(templateRoot, name), []byte(body), 0o600); err != nil {
+			t.Fatalf("write template %s: %v", name, err)
+		}
+	}
+	keyFile := filepath.Join(t.TempDir(), "bootstrap.pub")
+	if err := os.WriteFile(keyFile, []byte(testPublicKey+"\n"), 0o600); err != nil {
+		t.Fatalf("write key: %v", err)
+	}
+	provider, err := terraform.NewAWS(terraform.AWSConfig{
+		Profiles:         testCatalog(t),
+		Dir:              templateRoot,
+		RunDir:           filepath.Join(t.TempDir(), "runs"),
+		SSHPublicKeyFile: keyFile,
+		BootstrapCIDR:    "",
+		StateBucket:      "fleet-state-bucket",
+		StateRegion:      "us-east-1",
+		VPCID:            testVPCID,
+		SubnetID:         testSubnetID,
+		OwnerTag:         "homelab",
+		TestRunTag:       "s04-offline",
+		Timeout:          5 * time.Second,
+		Runner:           runner,
+	})
+	if err != nil {
+		t.Fatalf("NewAWS rejected the zero-ingress default: %v", err)
+	}
+
+	if _, err := provider.CreateHost(context.Background(), createRequest("rex-03")); err != nil {
+		t.Fatalf("CreateHost: %v", err)
+	}
+	applyCall := runner.call(t, "apply", 0)
+
+	index := -1
+	for i, arg := range applyCall.Args {
+		if arg == "bootstrap_ssh_cidr=" {
+			index = i
+		}
+	}
+	if index < 1 || applyCall.Args[index-1] != "-var" {
+		t.Fatalf("apply argv has no empty -var bootstrap_ssh_cidr= pair: %v", applyCall.Args)
+	}
+	for _, arg := range applyCall.Args {
+		if strings.HasPrefix(arg, "bootstrap_ssh_cidr=") && arg != "bootstrap_ssh_cidr=" {
+			t.Fatalf("apply argv carries an unexpected bootstrap CIDR %q", arg)
+		}
+	}
+	// Nothing invents a CIDR: no documentation range, no wildcard, no default.
+	for _, forbidden := range []string{"0.0.0.0/0", "::/0", "192.0.2.1/32"} {
+		if strings.Contains(fmt.Sprint(applyCall.Args), forbidden) {
+			t.Fatalf("apply argv contains %q for a zero-ingress host: %v", forbidden, applyCall.Args)
+		}
 	}
 }
 

@@ -51,12 +51,16 @@ providers:
       role_id_ref: bao:kv/homelab/provision/aws/role-id
       secret_id_ref: bao:kv/homelab/provision/aws/secret-id
     bootstrap:
-      # Approved bootstrap SSH source (homelab egress). S02 enforces it: this
-      # CIDR, or narrower, is the only ingress rule the host gets.
+      # Where the operator keeps the approved SSH source CIDR (OpenBao, as a
+      # reference — never a value in this document).
       ssh_source_ref: bao:kv/homelab/provision/bootstrap/ssh-source-cidr
-      # Documentation-range example (/24). Never 0.0.0.0/0: anything wider than
-      # /8 is refused at load time and by the Terraform variables.
-      ssh_source_cidr: 203.0.113.0/24
+      # Approved bootstrap SSH source (homelab egress). Optional: leave it empty
+      # (the zero-ingress default) and the host gets NO ingress rule at all —
+      # the tailnet is the only way in, and enrollment has no SSH path. Set one
+      # CIDR when the enrollment chain needs the trusted-SSH bootstrap. Never
+      # 0.0.0.0/0 or ::/0: anything wider than /8, and both wildcards, are
+      # refused at load time and again by the Terraform variables.
+      ssh_source_cidr: ""
       # A .pub file. The adapter reads it and refuses private key material; no
       # key material is stored in this document.
       ssh_public_key_file: /etc/fleet-provision/ssh/host-bootstrap.pub

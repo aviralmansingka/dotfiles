@@ -168,8 +168,11 @@ type Credentials struct {
 // the ref is where the operator keeps the approved value.
 type Bootstrap struct {
 	SSHSourceRef string `yaml:"ssh_source_ref"`
-	// SSHSourceCIDR is the only source address allowed to reach port 22. It is
-	// validated as IPv4 and no wider than /8, so 0.0.0.0/0 cannot be configured.
+	// SSHSourceCIDR is the only source address allowed to reach port 22. Empty
+	// (the default) means no SSH ingress at all: the host root then emits no
+	// ingress rule, which is the zero-ingress default. A non-empty value is
+	// validated as IPv4 and no wider than /8, and both wildcards are refused, so
+	// 0.0.0.0/0 cannot be configured.
 	SSHSourceCIDR string `yaml:"ssh_source_cidr"`
 	// SSHPublicKeyFile names a `.pub` file. The adapter reads it and refuses
 	// private key material; no key material is stored in this document.
@@ -317,14 +320,12 @@ func (s *Service) Validate() error {
 	return nil
 }
 
-// Validate enforces the approved bootstrap policy: one IPv4 CIDR source, never
-// a default route, and public key material only.
+// Validate enforces the approved bootstrap policy: at most one IPv4 CIDR source,
+// never a default route, and public key material only. An empty source CIDR is
+// the zero-ingress default, not a missing value.
 func (b Bootstrap) Validate() error {
 	if b.SSHSourceRef == "" {
 		return errors.New("providers.aws.bootstrap.ssh_source_ref is required")
-	}
-	if b.SSHSourceCIDR == "" {
-		return errors.New("providers.aws.bootstrap.ssh_source_cidr is required")
 	}
 	if err := domain.ValidateBootstrapCIDR(b.SSHSourceCIDR); err != nil {
 		return fmt.Errorf("providers.aws.bootstrap.ssh_source_cidr: %w", err)

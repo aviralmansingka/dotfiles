@@ -28,14 +28,28 @@ Every taggable resource carries `owner`, `fleet-test-run`, `ManagedBy`, and a
   the t3.medium host it would serve, and this design does not need one: the
   subnet is public, and the host's only inbound path is the tailnet.
 * **No security group and no network ACL.** The host root creates the host's own
-  security group inside this VPC, with one SSH ingress rule from the approved
-  operator CIDR and HTTPS egress only. Nothing in either root allows `0.0.0.0/0`
-  or `::/0` **ingress**; egress is open by design, because the first boot needs
-  `cache.nixos.org`, `nixos.org`, and the Tailscale control plane.
+  security group inside this VPC. That group has **no ingress rule at all** by
+  default (an empty `bootstrap_ssh_cidr`), and at most one 22/tcp rule from one
+  approved CIDR when an operator sets it. HTTPS egress only. Nothing in either
+  root allows `0.0.0.0/0` or `::/0` **ingress**; egress is open by design,
+  because the first boot needs `cache.nixos.org`, `nixos.org`, and the Tailscale
+  control plane.
 * **No second subnet, no peering, no VPN.** One zone is the approved scope.
 * **No default VPC reference of any kind.**
 
 ## Wiring: network first, then hosts
+
+Both `terraform` **1.17.1** and `aws` **2.36.31** come from this repository's
+flake profile (`nix/modules/shared/default.nix`), not from Homebrew or whatever
+is on `PATH`. Before any command below:
+
+```sh
+command -v terraform >/dev/null || {
+  echo "terraform is missing: it is a profile tool (nix/modules/shared/default.nix); run 'home-manager switch' for this host" >&2; exit 1; }
+command -v aws >/dev/null || {
+  echo "aws is missing: it is a profile tool (nix/modules/shared/default.nix, package awscli2); run 'home-manager switch' for this host" >&2; exit 1; }
+terraform version | head -1   # must report Terraform v1.17.1
+```
 
 The two roots are separate, and the host root takes the network as **required
 input**. That ordering is the whole contract:
@@ -92,4 +106,6 @@ The Go suite asserts this root's shape without an AWS account: exactly one VPC a
 one subnet, both tagged, the dedicated `10.99.0.0/16` CIDR, the public subnet
 settings, gateway and default route, the two outputs the host root consumes, no
 NAT gateway, no security group or network ACL in either root, and no `0.0.0.0/0`
-or `::/0` ingress anywhere.
+or `::/0` ingress anywhere. It also pins the host root's zero-ingress default:
+an empty `bootstrap_ssh_cidr` emits no ingress rule, one `/32` emits exactly one,
+and both wildcards plus any malformed value are refused.

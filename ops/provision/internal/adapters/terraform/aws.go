@@ -73,7 +73,10 @@ type AWSConfig struct {
 	RunDir string
 	// SSHPublicKeyFile names a `.pub` file. Private key material is refused.
 	SSHPublicKeyFile string
-	// BootstrapCIDR is the only source address allowed to reach port 22.
+	// BootstrapCIDR is the only source address allowed to reach port 22, or empty
+	// for no SSH ingress at all. Empty is the default and is passed to Terraform
+	// as `-var bootstrap_ssh_cidr=`, where the root's dynamic ingress block then
+	// emits zero rules.
 	BootstrapCIDR string
 	// StateBucket and StateRegion locate the S3 bucket that holds one state
 	// object per host.

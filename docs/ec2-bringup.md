@@ -10,7 +10,16 @@ into `$HOME`. Secrets and host data stay behind, as the last section lists.
 
 ## Prerequisites
 
-- An AWS account with CLI access and working credentials.
+- An AWS account with CLI access and working credentials. The `aws` CLI is a
+  profile tool (`awscli2`, pinned to 2.36.31 in `nix/modules/shared/default.nix`),
+  so it comes from the flake profile and not from Homebrew:
+
+  ```sh
+  command -v aws >/dev/null || {
+    echo "aws is missing: it is a profile tool (nix/modules/shared/default.nix, package awscli2); run 'home-manager switch' for this host" >&2; exit 1; }
+  aws --version   # must report aws-cli/2.36.31
+  ```
+
 - An SSH key pair that exists in the region.
 - A flake checkout on the Mac, with `just` and `git` available.
 - The region. This recipe uses `ap-south-1` (Mumbai).

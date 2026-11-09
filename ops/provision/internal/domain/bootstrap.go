@@ -97,10 +97,19 @@ func ValidateSSHPublicKey(key string) error {
 	return nil
 }
 
-// ValidateBootstrapCIDR enforces the single approved SSH source range. It must
-// be IPv4 and no wider than /8, so 0.0.0.0/0 and every other default-route
-// shape is refused before Terraform or AWS ever sees it.
+// ValidateBootstrapCIDR enforces the single approved SSH source range. An empty
+// value is valid and is the zero-ingress default: the host root then emits no
+// ingress rule at all, so the bootstrapped host accepts nothing inbound. A
+// non-empty value must be IPv4 and no wider than /8, and both wildcard spellings
+// are refused by name, so 0.0.0.0/0 and ::/0 can never become a bootstrap
+// source before Terraform or AWS ever sees them.
 func ValidateBootstrapCIDR(cidr string) error {
+	if cidr == "" {
+		return nil
+	}
+	if cidr == "0.0.0.0/0" || cidr == "::/0" {
+		return Invalid("bootstrap_ssh_cidr", fmt.Sprintf("%q is a wildcard; the bootstrap source must be one approved network or empty for no SSH ingress", cidr))
+	}
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
 		return Invalid("bootstrap_ssh_cidr", fmt.Sprintf("%q is not an IP network in CIDR form", cidr))
