@@ -114,6 +114,15 @@ in
         # reviewed edit here rather than silent drift across runs.
         terraform
         awscli2
+        # The OpenBao client the provisioning service talks to the secrets
+        # store with. nixpkgs calls the attribute `openbao` though the package
+        # ships the `bao` executable, which is the name every runbook and the
+        # service config use (ops/provision/config/service.example.yaml). The
+        # pinned nixpkgs resolves openbao 2.7.2, the version the homelab node
+        # itself reports; the assertion below fails evaluation if a flake update
+        # moves it, so a bump is a reviewed edit here rather than a client that
+        # drifts under a live run.
+        openbao
         # The 1Password CLI is how any host fetches the admin age key from
         # 1Password. Only the CLI is managed here, not the 1Password desktop
         # app. nixpkgs spells the attribute `_1password-cli` (leading
@@ -125,9 +134,9 @@ in
 
   programs.home-manager.enable = true;
 
-  # Exact-version gate for the provisioning toolchain. Terraform and the AWS CLI
-  # are the two binaries ops/provision's runbooks name, so an unnoticed flake
-  # update must not change them underneath a live run.
+  # Exact-version gate for the provisioning toolchain. Terraform, the AWS CLI
+  # and the OpenBao client are the binaries ops/provision's runbooks name, so an
+  # unnoticed flake update must not change them underneath a live run.
   assertions = [
     {
       assertion = pkgs.terraform.version == "1.17.1";
@@ -136,6 +145,10 @@ in
     {
       assertion = pkgs.awscli2.version == "2.36.31";
       message = "awscli2 is ${pkgs.awscli2.version} (the `aws` executable), but the provisioning runbooks pin 2.36.31 (ops/provision/terraform/*/README.md). Update those runbooks in the same change as this pin, or hold nixpkgs.";
+    }
+    {
+      assertion = pkgs.openbao.version == "2.7.2";
+      message = "openbao is ${pkgs.openbao.version} (the `bao` executable), but the homelab OpenBao node runs 2.7.2 and the client must speak it. Bump the pin here in a reviewed change, or hold nixpkgs.";
     }
   ];
 
