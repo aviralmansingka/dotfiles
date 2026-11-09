@@ -24,6 +24,9 @@ ops/terraform/terraform.tfstate*
 ops/provision/terraform/*/.terraform/
 ops/provision/terraform/*/.terraform.lock.hcl
 ops/provision/terraform/*/terraform.tfstate*
+# A local-state smoke run adds one backend override file and no tracked edit.
+ops/provision/terraform/*/*_override.tf
+ops/provision/terraform/*/*.auto.tfvars
 .td-root
 .nvimlog
 test-results/

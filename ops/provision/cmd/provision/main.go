@@ -351,6 +351,8 @@ func newHostProvider(state *loaded) (application.HostProvider, error) {
 		BootstrapCIDR:    aws.Bootstrap.SSHSourceCIDR,
 		StateBucket:      aws.Terraform.StateBucket,
 		StateRegion:      aws.Terraform.StateRegion,
+		VPCID:            aws.Terraform.VPCID,
+		SubnetID:         aws.Terraform.SubnetID,
 		OwnerTag:         aws.Terraform.OwnerTag,
 		TestRunTag:       aws.Terraform.TestRunTag,
 		Binary:           aws.Terraform.Binary,

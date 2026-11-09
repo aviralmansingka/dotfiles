@@ -2,9 +2,15 @@
 # client input: the API accepts a profile, region, and size *name* and the
 # service resolves the concrete values from config/profiles.yaml.
 #
-# There is no variable for a credential, an account id, a subnet, a state path,
-# or a Terraform binary. A missing or malformed value fails here, at plan time,
+# There is no variable for a credential, an account id, a state path, or a
+# Terraform binary. A missing or malformed value fails here, at plan time,
 # before any AWS call.
+#
+# The network is REQUIRED input, never a lookup. `vpc_id` and `subnet_id` name
+# the owner-approved network the host joins; this root never discovers a default
+# VPC and never creates a VPC or a subnet. A missing or malformed value fails
+# against the variable by name, because an implicit default VPC does not exist
+# in every account and region (live run: `VPCIdNotSpecified` in ap-south-1).
 
 variable "host_name" {
   description = "Fleet host name. It names the tags and the per-host state key path segment."
@@ -13,6 +19,38 @@ variable "host_name" {
   validation {
     condition     = can(regex("^[a-z0-9]([a-z0-9-]{1,30})[a-z0-9]$", var.host_name))
     error_message = "host_name must be 3 to 32 characters of lowercase letters, digits, and inner hyphens."
+  }
+
+  # Every AWS name this root creates is the project prefix plus this name, with
+  # the prefix applied at most once (local.name in main.tf). 32 characters is the
+  # ceiling for a derived name, so a name that does not already carry the prefix
+  # leaves exactly six characters for it. Nothing is truncated: a truncated name
+  # could collide with a different host.
+  validation {
+    condition     = length(var.host_name) <= (startswith(var.host_name, "fleet-") ? 32 : 26)
+    error_message = "host_name must be at most 26 characters, or at most 32 when it already starts with \"fleet-\", so every derived resource name stays within 32 characters."
+  }
+}
+
+variable "vpc_id" {
+  description = "REQUIRED. VPC the host's security group is created in. There is no default-VPC fallback and no data-source lookup."
+  type        = string
+
+  # An empty value fails the pattern, so a missing `-var vpc_id=` is reported
+  # against this variable by name instead of reaching AWS as VPCIdNotSpecified.
+  validation {
+    condition     = can(regex("^vpc-[0-9a-f]{8,17}$", var.vpc_id))
+    error_message = "vpc_id must be a VPC id such as vpc-0123456789abcdef0; it is required and this root has no default-VPC fallback."
+  }
+}
+
+variable "subnet_id" {
+  description = "REQUIRED. Subnet the instance launches in. It must belong to vpc_id; there is no default-VPC fallback."
+  type        = string
+
+  validation {
+    condition     = can(regex("^subnet-[0-9a-f]{8,17}$", var.subnet_id))
+    error_message = "subnet_id must be a subnet id such as subnet-0123456789abcdef0; it is required and this root has no default-VPC fallback."
   }
 }
 
@@ -56,18 +94,20 @@ variable "disk_gb" {
   }
 }
 
-variable "fleet_owner" {
-  description = "Owner tag value written to every taggable resource. Fleet metadata, never a person's identity document."
+# The tag KEY is `owner`, the approved tag policy key. It is written as `owner`
+# and never as `fleet-owner`; the value is fleet metadata, not a person.
+variable "owner" {
+  description = "Value of the `owner` tag written to every taggable resource. Fleet metadata, never a person's identity document."
   type        = string
 
   validation {
-    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._:-]{1,63}$", var.fleet_owner))
-    error_message = "fleet_owner must be 2 to 64 characters of [A-Za-z0-9._:-]."
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._:-]{1,63}$", var.owner))
+    error_message = "owner must be 2 to 64 characters of [A-Za-z0-9._:-]."
   }
 }
 
 variable "test_run" {
-  description = "Test-run tag value written to every taggable resource, so a live acceptance run can find and destroy exactly its own hosts."
+  description = "Test-run tag value (`fleet-test-run`) written to every taggable resource, so a live acceptance run can find and destroy exactly its own hosts."
   type        = string
 
   validation {

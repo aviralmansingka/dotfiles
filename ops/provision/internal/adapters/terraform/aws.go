@@ -43,6 +43,13 @@ const (
 	defaultBinary  = "terraform"
 	defaultTimeout = 30 * time.Minute
 
+	// namePrefix is applied to a host name exactly once, and
+	// MaxResourceNameLen is the ceiling for the resulting AWS object name. A
+	// name is never truncated: truncation could collide with another host, so
+	// an over-budget name is refused instead.
+	namePrefix         = "fleet-"
+	MaxResourceNameLen = 32
+
 	// maxDiagnostic bounds the Terraform stderr an error carries.
 	maxDiagnostic = 4096
 )
@@ -72,6 +79,12 @@ type AWSConfig struct {
 	// object per host.
 	StateBucket string
 	StateRegion string
+	// VPCID and SubnetID are the owner-approved network the host joins. Both are
+	// required: the root creates the security group in VPCID and launches the
+	// instance in SubnetID, and it has no default-VPC fallback, because an
+	// implicit default VPC does not exist in every account and region.
+	VPCID    string
+	SubnetID string
 	// OwnerTag and TestRunTag are written to every taggable resource.
 	OwnerTag   string
 	TestRunTag string
@@ -95,6 +108,8 @@ type AWS struct {
 	bootstrapCIDR string
 	stateBucket   string
 	stateRegion   string
+	vpcID         string
+	subnetID      string
 	ownerTag      string
 	testRunTag    string
 	binary        string
@@ -131,6 +146,21 @@ func NewAWS(cfg AWSConfig) (*AWS, error) {
 	if cfg.StateBucket == "" || cfg.StateRegion == "" {
 		return nil, errors.New("terraform: state bucket and state region are required")
 	}
+	// The network is required input, and the message names the variable so an
+	// operator fixes the configuration instead of guessing. There is no lookup
+	// that could silently pick a different network.
+	if cfg.VPCID == "" {
+		return nil, errors.New("terraform: vpc_id is required: the root creates the host's security group in vpc_id and has no default-VPC fallback")
+	}
+	if err := domain.ValidateVPCID(cfg.VPCID); err != nil {
+		return nil, fmt.Errorf("terraform: %w", err)
+	}
+	if cfg.SubnetID == "" {
+		return nil, errors.New("terraform: subnet_id is required: the root launches the instance in subnet_id and has no default-VPC fallback")
+	}
+	if err := domain.ValidateSubnetID(cfg.SubnetID); err != nil {
+		return nil, fmt.Errorf("terraform: %w", err)
+	}
 	if err := domain.ValidateTagValue("owner tag", cfg.OwnerTag); err != nil {
 		return nil, fmt.Errorf("terraform: %w", err)
 	}
@@ -166,6 +196,8 @@ func NewAWS(cfg AWSConfig) (*AWS, error) {
 		bootstrapCIDR: cfg.BootstrapCIDR,
 		stateBucket:   cfg.StateBucket,
 		stateRegion:   cfg.StateRegion,
+		vpcID:         cfg.VPCID,
+		subnetID:      cfg.SubnetID,
 		ownerTag:      cfg.OwnerTag,
 		testRunTag:    cfg.TestRunTag,
 		binary:        binary,
@@ -180,6 +212,15 @@ func NewAWS(cfg AWSConfig) (*AWS, error) {
 // so two hosts cannot share state and a destroy cannot address a sibling.
 func StateKey(hostName string) string {
 	return path.Join(stateKeyPrefix, hostName, stateFileName)
+}
+
+// ResourceName is the AWS name of a host's objects: the project prefix applied
+// to the host name at most once, so a host already named `fleet-sm-28e571` does
+// not become `fleet-fleet-sm-28e571`. It mirrors `local.name` in
+// ops/provision/terraform/aws/main.tf, and MaxResourceNameLen is the budget both
+// sides enforce.
+func ResourceName(hostName string) string {
+	return namePrefix + strings.TrimPrefix(hostName, namePrefix)
 }
 
 // CreateHost creates this host's instance exactly once.
@@ -275,6 +316,8 @@ type hostPlan struct {
 	instanceType string
 	diskGB       int
 	ownerTag     string
+	vpcID        string
+	subnetID     string
 	stateKey     string
 	workDir      string
 }
@@ -316,12 +359,20 @@ func (a *AWS) resolve(name string, provider domain.Provider, profileName, region
 		return hostPlan{}, domain.Invalid("disk_gb", fmt.Sprintf("%d is not the resolved disk size of size %q", diskGB, size))
 	}
 
+	// The approved tag policy key is `owner`. The catalog supplies its value;
+	// a request cannot inject a different key.
 	owner := a.ownerTag
-	if tag := tags["fleet-owner"]; tag != "" {
+	if tag := tags["owner"]; tag != "" {
 		owner = tag
 	}
-	if err := domain.ValidateTagValue("fleet-owner tag", owner); err != nil {
+	if err := domain.ValidateTagValue("owner tag", owner); err != nil {
 		return hostPlan{}, err
+	}
+	// Fail here, with the name in the message, rather than at the Terraform
+	// plan: the root applies the same 32-character budget to local.name.
+	if resourceName := ResourceName(name); len(resourceName) > MaxResourceNameLen {
+		return hostPlan{}, domain.Invalid("name", fmt.Sprintf("host name %q derives the AWS object name %q (%d characters); the limit is %d, so use a name of at most 26 characters unless it already starts with %q",
+			name, resourceName, len(resourceName), MaxResourceNameLen, namePrefix))
 	}
 
 	return hostPlan{
@@ -332,6 +383,8 @@ func (a *AWS) resolve(name string, provider domain.Provider, profileName, region
 		instanceType: spec.InstanceType,
 		diskGB:       spec.DiskGB,
 		ownerTag:     owner,
+		vpcID:        a.vpcID,
+		subnetID:     a.subnetID,
 		stateKey:     StateKey(name),
 		workDir:      filepath.Join(a.runDir, name),
 	}, nil
@@ -426,7 +479,9 @@ func (a *AWS) varArgs(plan hostPlan) []string {
 		"-var", "size_key=" + plan.size,
 		"-var", "instance_type=" + plan.instanceType,
 		"-var", "disk_gb=" + strconv.Itoa(plan.diskGB),
-		"-var", "fleet_owner=" + plan.ownerTag,
+		"-var", "vpc_id=" + plan.vpcID,
+		"-var", "subnet_id=" + plan.subnetID,
+		"-var", "owner=" + plan.ownerTag,
 		"-var", "test_run=" + a.testRunTag,
 		"-var", "bootstrap_ssh_cidr=" + a.bootstrapCIDR,
 		"-var", "ssh_public_key=" + a.sshPublicKey,

@@ -21,6 +21,13 @@ import (
 // is not a key anybody owns.
 const testPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOfflinetestplaceholderonly0000000000 fleet-s02-test"
 
+// The owner-approved network the offline provider is configured with. These are
+// well-formed ids, not real resources, and no test resolves them against AWS.
+const (
+	testVPCID    = "vpc-0123456789abcdef0"
+	testSubnetID = "subnet-0123456789abcdef0"
+)
+
 // fakeTerraform is a CommandRunner that records every argv and simulates just
 // enough Terraform state to make create idempotent. It runs no process, opens no
 // network connection, and touches no AWS account.
@@ -221,6 +228,8 @@ func buildProvider(t *testing.T, runner terraform.CommandRunner) (*terraform.AWS
 		BootstrapCIDR:    "203.0.113.0/24",
 		StateBucket:      "fleet-state-bucket",
 		StateRegion:      "us-east-1",
+		VPCID:            testVPCID,
+		SubnetID:         testSubnetID,
 		OwnerTag:         "homelab",
 		TestRunTag:       "s02-offline",
 		Timeout:          5 * time.Second,
@@ -242,7 +251,7 @@ func testCatalog(t *testing.T) domain.Catalog {
 		Sizes: map[string]domain.SizeSpec{
 			"standard": {Name: "standard", InstanceType: "t3.medium", DiskGB: 40},
 		},
-		Tags:          map[string]string{"fleet-owner": "homelab", "fleet-tier": "managed"},
+		Tags:          map[string]string{"owner": "homelab", "fleet-tier": "managed"},
 		SecretBundles: []string{"bao:secret/data/hosts/rex/canary"},
 		FlakeRef:      ".#homeConfigurations.remote-mumbai.activationPackage",
 	}})
@@ -260,7 +269,7 @@ func createRequest(name string) application.ProviderCreateRequest {
 		Profile:  "rex",
 		Region:   "ap-south-1",
 		Size:     "standard",
-		Tags:     map[string]string{"fleet-owner": "homelab", "Name": name},
+		Tags:     map[string]string{"owner": "homelab", "Name": name},
 	}
 }
 
@@ -330,7 +339,9 @@ func TestCreateHostRunsOneInstanceThroughOneStatePath(t *testing.T) {
 		"-var", "size_key=standard",
 		"-var", "instance_type=t3.medium",
 		"-var", "disk_gb=40",
-		"-var", "fleet_owner=homelab",
+		"-var", "vpc_id=" + testVPCID,
+		"-var", "subnet_id=" + testSubnetID,
+		"-var", "owner=homelab",
 		"-var", "test_run=s02-offline",
 		"-var", "bootstrap_ssh_cidr=203.0.113.0/24",
 		"-var", "ssh_public_key=" + testPublicKey,
@@ -744,6 +755,8 @@ func TestNewAWSRejectsPrivateKeyMaterial(t *testing.T) {
 		BootstrapCIDR:    "203.0.113.0/24",
 		StateBucket:      "bucket",
 		StateRegion:      "us-east-1",
+		VPCID:            testVPCID,
+		SubnetID:         testSubnetID,
 		OwnerTag:         "homelab",
 		TestRunTag:       "s02-offline",
 	}
@@ -780,6 +793,8 @@ func TestNewAWSRejectsPermissiveBootstrapCIDR(t *testing.T) {
 				BootstrapCIDR:    cidr,
 				StateBucket:      "bucket",
 				StateRegion:      "us-east-1",
+				VPCID:            testVPCID,
+				SubnetID:         testSubnetID,
 				OwnerTag:         "homelab",
 				TestRunTag:       "s02-offline",
 			})
@@ -808,6 +823,8 @@ func TestNewAWSRejectsTemplateRootWithoutTerraform(t *testing.T) {
 		BootstrapCIDR:    "203.0.113.0/24",
 		StateBucket:      "bucket",
 		StateRegion:      "us-east-1",
+		VPCID:            testVPCID,
+		SubnetID:         testSubnetID,
 		OwnerTag:         "homelab",
 		TestRunTag:       "s02-offline",
 	})

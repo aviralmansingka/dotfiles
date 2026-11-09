@@ -100,7 +100,7 @@ func TestProfilesFileRejectsHostileFlakeRef(t *testing.T) {
         instance_type: t3.medium
         disk_gb: 40
     tags:
-      fleet-owner: homelab
+      owner: homelab
     secret_bundles:
       - bao:secret/data/hosts/rex/canary
     flake_ref: "` + ref + `"
@@ -179,6 +179,10 @@ func TestServiceRejectsUnapprovedProviderPolicy(t *testing.T) {
 		},
 		"missing state bucket":   func(aws *config.Provider) { aws.Terraform.StateBucket = "" },
 		"tag value with a space": func(aws *config.Provider) { aws.Terraform.OwnerTag = "two words" },
+		"missing vpc id":         func(aws *config.Provider) { aws.Terraform.VPCID = "" },
+		"malformed vpc id":       func(aws *config.Provider) { aws.Terraform.VPCID = "default" },
+		"missing subnet id":      func(aws *config.Provider) { aws.Terraform.SubnetID = "" },
+		"malformed subnet id":    func(aws *config.Provider) { aws.Terraform.SubnetID = "subnet-xyz" },
 	}
 	for name, change := range cases {
 		change := change

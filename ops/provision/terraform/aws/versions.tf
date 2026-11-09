@@ -23,19 +23,29 @@ terraform {
     }
   }
 
-  # Partial backend configuration. The bucket and its own region are fixed
-  # here; the state KEY is not. It is supplied at init time by the adapter as
-  # `-backend-config=key=fleet-hosts/<host>/terraform.tfstate`, one object per
-  # host, so two hosts can never share a state file and `destroy` can only see
-  # the resources of the host whose key it opened. See README.md.
+  # Partial backend configuration: the block is EMPTY on purpose. Nothing about
+  # the real backend — bucket, bucket region, encryption, or the state key — is
+  # in this file, and no credential or bucket name is written here at all.
   #
-  # us-east-1 is the *bucket's* region, as in ops/terraform/providers.tf. The
-  # resources in this root are all pinned to ap-south-1 below.
-  backend "s3" {
-    bucket  = "aviral-dotfiles-terraform-state"
-    region  = "us-east-1"
-    encrypt = true
-  }
+  # The adapter supplies every value at init time (`initArgs` in
+  # internal/adapters/terraform/aws.go):
+  #
+  #   -backend-config=bucket=<state bucket>
+  #   -backend-config=key=fleet-hosts/<host>/terraform.tfstate
+  #   -backend-config=region=<bucket region>
+  #   -backend-config=encrypt=true
+  #
+  # One key per host, so two hosts can never share a state file and `destroy`
+  # can only see the resources of the host whose key it opened.
+  #
+  # Because the block is partial, a smoke run can leave the tracked files
+  # untouched and use local state through a backend override file, which Terraform
+  # merges over this block (the override also switches the backend type):
+  #
+  #   terraform { backend "local" { path = "/tmp/<run>/terraform.tfstate" } }
+  #
+  # See README.md, "Backend: partial configuration", for both command forms.
+  backend "s3" {}
 }
 
 # One provider, one region, and no default provider: every resource and the AMI

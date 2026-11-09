@@ -21,6 +21,39 @@ func ValidateAWSRegion(region string) error {
 	return nil
 }
 
+// vpcIDPattern and subnetIDPattern are the AWS identifier shapes the network
+// configuration accepts. An empty value matches neither, so a missing id is
+// named in the error instead of reaching AWS as a malformed request.
+var (
+	vpcIDPattern    = regexp.MustCompile(`^vpc-[0-9a-f]{8,17}$`)
+	subnetIDPattern = regexp.MustCompile(`^subnet-[0-9a-f]{8,17}$`)
+)
+
+// ValidateVPCID enforces the VPC the host's security group is created in. The
+// value is required input: this service never resolves a default VPC, because an
+// implicit default VPC does not exist in every account and region.
+func ValidateVPCID(id string) error {
+	if strings.TrimSpace(id) == "" {
+		return Invalid("vpc_id", "is required; the AWS root creates the security group in vpc_id and has no default-VPC fallback")
+	}
+	if !vpcIDPattern.MatchString(id) {
+		return Invalid("vpc_id", fmt.Sprintf("%q is not a VPC id such as vpc-0123456789abcdef0", id))
+	}
+	return nil
+}
+
+// ValidateSubnetID enforces the subnet the instance launches in. It is required
+// input, for the same reason as ValidateVPCID.
+func ValidateSubnetID(id string) error {
+	if strings.TrimSpace(id) == "" {
+		return Invalid("subnet_id", "is required; the AWS root launches the instance in subnet_id and has no default-VPC fallback")
+	}
+	if !subnetIDPattern.MatchString(id) {
+		return Invalid("subnet_id", fmt.Sprintf("%q is not a subnet id such as subnet-0123456789abcdef0", id))
+	}
+	return nil
+}
+
 // sshPublicKeyPrefixes are the OpenSSH public key types the bootstrap accepts.
 // A private key ("-----BEGIN OPENSSH PRIVATE KEY-----") matches none of them.
 var sshPublicKeyPrefixes = []string{

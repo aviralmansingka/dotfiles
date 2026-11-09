@@ -1,8 +1,13 @@
 # One provisioned fleet host: AMI lookup, key pair, security group with a
 # single-CIDR SSH ingress, a minimal SSM instance profile, and the instance
-# itself. Nothing account-wide lives here — no VPC, no route table, no DNS, no
-# IAM user, no Elastic IP — so tearing a host down cannot disturb the rest of
-# the fleet, and `terraform destroy` on another host's state cannot see it.
+# itself. Nothing account-wide lives here — no VPC, no subnet, no route table, no
+# DNS, no IAM user, no Elastic IP — so tearing a host down cannot disturb the
+# rest of the fleet, and `terraform destroy` on another host's state cannot see
+# it.
+#
+# The network is input, not a lookup: the security group is created in
+# `var.vpc_id` and the instance launches in `var.subnet_id`. This root never
+# resolves a default VPC and never creates a VPC or a subnet.
 
 locals {
   # Documentation and tag value only: the state object the adapter actually
@@ -10,10 +15,21 @@ locals {
   # same host name by the Go adapter (see internal/adapters/terraform/aws.go).
   state_key = "fleet-hosts/${var.host_name}/terraform.tfstate"
 
+  # Every AWS name this root creates carries the project prefix exactly once: a
+  # host name that already begins with `fleet-` is used as is, so
+  # `fleet-sm-28e571` never becomes `fleet-fleet-sm-28e571`. The result is never
+  # truncated — variables.tf refuses a name that would not fit in 32 characters —
+  # because a truncated name could collide with a different host.
+  host_label = startswith(var.host_name, "fleet-") ? trimprefix(var.host_name, "fleet-") : var.host_name
+  name       = "fleet-${local.host_label}"
+
+  # Approved tag policy: the owner tag KEY is `owner` (never `fleet-owner`), plus
+  # `fleet-test-run`, so a live acceptance run can find and destroy exactly its
+  # own hosts.
   tags = {
     Name             = var.host_name
     ManagedBy        = "terraform"
-    "fleet-owner"    = var.fleet_owner
+    owner            = var.owner
     "fleet-test-run" = var.test_run
     "fleet-provider" = "aws"
     "fleet-profile"  = var.profile
@@ -52,7 +68,7 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_key_pair" "host" {
   provider   = aws.ap_south_1
-  key_name   = "fleet-${var.host_name}"
+  key_name   = local.name
   public_key = var.ssh_public_key
 
   tags = local.tags
@@ -60,8 +76,13 @@ resource "aws_key_pair" "host" {
 
 resource "aws_security_group" "host" {
   provider    = aws.ap_south_1
-  name        = "fleet-${var.host_name}"
+  name        = local.name
   description = "Fleet host ${var.host_name}: SSH bootstrap from the approved CIDR only, HTTPS egress for Nix and SSM"
+
+  # Required, explicit, and supplied by the service: there is no default-VPC
+  # fallback, and this root creates no VPC of its own. A missing vpc_id fails the
+  # variable validation in variables.tf before this resource is planned.
+  vpc_id = var.vpc_id
 
   # The only ingress rule. There is no 0.0.0.0/0 ingress anywhere in this root,
   # and the variable cannot express a CIDR wider than /8.
@@ -101,10 +122,11 @@ data "aws_iam_policy_document" "ec2_assume_role" {
 # Host-key retrieval runs over SSM Session Manager, so the instance needs the
 # EC2 service role and nothing more: no wildcard action, no inline policy, no
 # account-wide grant. The attachment is not taggable; the role and the profile
-# are.
+# are. Both are named `local.name`, so no derived name needs a suffix that would
+# push it past the 32-character budget.
 resource "aws_iam_role" "host" {
   provider           = aws.ap_south_1
-  name               = "fleet-${var.host_name}-ssm"
+  name               = local.name
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
 
   tags = local.tags
@@ -118,7 +140,7 @@ resource "aws_iam_role_policy_attachment" "host_ssm" {
 
 resource "aws_iam_instance_profile" "host" {
   provider = aws.ap_south_1
-  name     = "fleet-${var.host_name}"
+  name     = local.name
   role     = aws_iam_role.host.name
 
   tags = local.tags
@@ -130,6 +152,7 @@ resource "aws_instance" "host" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
   key_name               = aws_key_pair.host.key_name
+  subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.host.id]
   iam_instance_profile   = aws_iam_instance_profile.host.name
 
@@ -176,6 +199,21 @@ output "private_ip" {
 output "region" {
   description = "Region every resource in this root lives in"
   value       = "ap-south-1"
+}
+
+output "vpc_id" {
+  description = "VPC this host joined, echoed for the teardown audit"
+  value       = aws_security_group.host.vpc_id
+}
+
+output "subnet_id" {
+  description = "Subnet this host launched in, echoed for the teardown audit"
+  value       = aws_instance.host.subnet_id
+}
+
+output "resource_name" {
+  description = "The single prefixed name every AWS object of this host carries"
+  value       = local.name
 }
 
 output "state_key" {

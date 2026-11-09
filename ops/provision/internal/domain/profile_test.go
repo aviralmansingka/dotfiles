@@ -18,7 +18,7 @@ func approvedProfile() domain.Profile {
 		Sizes: map[string]domain.SizeSpec{
 			"standard": {Name: "standard", InstanceType: "t3.medium", DiskGB: 40},
 		},
-		Tags:          map[string]string{"fleet-owner": "homelab"},
+		Tags:          map[string]string{"owner": "homelab"},
 		SecretBundles: []string{"bao:secret/data/hosts/rex/canary"},
 		FlakeRef:      ".#homeConfigurations.remote-mumbai.activationPackage",
 	}

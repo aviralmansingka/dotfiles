@@ -196,9 +196,15 @@ type Terraform struct {
 	// the resources this root creates are all pinned to ap-south-1.
 	StateBucket string `yaml:"state_bucket"`
 	StateRegion string `yaml:"state_region"`
-	// OwnerTag is the fleet-owner tag value written to every resource, and
-	// TestRunTag the test-run value, so a live acceptance run can find and
-	// destroy exactly its own hosts.
+	// VPCID and SubnetID are the owner-approved network the hosts join. Both are
+	// required: the root has no default-VPC fallback, because a default VPC does
+	// not exist in every account and region. They are service configuration, not
+	// client input, so no request can choose a network.
+	VPCID    string `yaml:"vpc_id"`
+	SubnetID string `yaml:"subnet_id"`
+	// OwnerTag is the value of the approved `owner` tag on every resource, and
+	// TestRunTag the `fleet-test-run` value, so a live acceptance run can find
+	// and destroy exactly its own hosts.
 	OwnerTag   string `yaml:"owner_tag"`
 	TestRunTag string `yaml:"test_run_tag"`
 }
@@ -345,6 +351,12 @@ func (t Terraform) Validate() error {
 		return errors.New("providers.aws.terraform.state_bucket is required")
 	case t.StateRegion == "":
 		return errors.New("providers.aws.terraform.state_region is required")
+	}
+	if err := domain.ValidateVPCID(t.VPCID); err != nil {
+		return fmt.Errorf("providers.aws.terraform: %w", err)
+	}
+	if err := domain.ValidateSubnetID(t.SubnetID); err != nil {
+		return fmt.Errorf("providers.aws.terraform: %w", err)
 	}
 	if clean := filepath.Clean(t.Dir); clean == filepath.Clean(t.RunDir) {
 		return errors.New("providers.aws.terraform.run_dir must differ from dir; the template root is never written")

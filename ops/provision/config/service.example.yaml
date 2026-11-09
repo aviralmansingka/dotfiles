@@ -68,12 +68,20 @@ providers:
       run_dir: /var/lib/fleet-provision/terraform-runs
       binary: terraform
       timeout_seconds: 1800
+      # Owner-approved network: the dedicated fleet VPC that
+      # ops/provision/terraform/aws-network creates once, before any host
+      # (vpc 10.99.0.0/16, subnet 10.99.1.0/24 in ap-south-1a). Both values are
+      # required and neither falls back to a default VPC: this account has no
+      # default VPC in ap-south-1, and an implicit lookup would silently pick the
+      # wrong network. The owner chooses these; no client request can.
+      vpc_id: vpc-0123456789abcdef0
+      subnet_id: subnet-0123456789abcdef0
       # State: the existing dotfiles bucket, one object per host at
       # fleet-hosts/<host>/terraform.tfstate. state_region is the bucket's own
       # region, not the resource region.
       state_bucket: aviral-dotfiles-terraform-state
       state_region: us-east-1
-      # Owner and test-run tag values on every taggable resource, so an
+      # `owner` and `fleet-test-run` tag values on every taggable resource, so an
       # acceptance run can find and destroy exactly its own hosts.
       owner_tag: homelab
       test_run_tag: manual
