@@ -77,6 +77,15 @@ mission's Herdr attachment before continuing`. Full contract:
 
 ## Ask the commander
 
+A captain is autonomous inside its mandate: it asks nothing it can decide, and
+it changes no mission definition except a step and its checks. When a block
+needs the human, the captain sends one ask that carries its whole briefing — the
+block, what it tried, the options with their trade-offs, and the decision it
+needs — then stops. The commander replies with a few bullets that unblock the
+work, and may update the mission itself: the brief, the steps, the checks, a
+checkpoint decision, or the close. Full contract: `docs/pi-missions.md`
+§ Captain autonomy and edit authority.
+
 A captain pane has no watcher, and `ask_user_question` is not in the captain's
 tool list. When a captain is blocked on a decision, a missing credential, or
 anything only the human can settle, it writes one durable question and stops:
