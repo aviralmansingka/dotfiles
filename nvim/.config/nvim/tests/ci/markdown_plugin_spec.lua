@@ -5,9 +5,8 @@
 --   * the todo scan over a mktemp fixture tree (never ~/vault): legacy-log
 --     and hidden prefixes stay excluded, habit-tracking sections stay
 --     skipped, section labels land in the picker items;
---   * PencilSoft (#159): the FileType callback must leave wrap OFF even
---     when pencil itself forces wrap on, plus the number/format/keymap
---     state it owns;
+--   * vim-pencil stays out of the config: the markdown ftplugin owns the
+--     wrap, width, and guide options;
 --   * the keys table (incl. <leader>mm) and the render-markdown wiring that
 --     performs fence detection for auto-render.
 --
@@ -108,7 +107,6 @@ H.run("markdown_plugin_spec", function()
   -- ── the spec table shape ────────────────────────────────────────────────
   local rm = entry("MeanderingProgrammer/render-markdown.nvim")
   H.truthy(rm, "the render-markdown entry exists")
-  H.truthy(entry("preservim/vim-pencil"), "the vim-pencil entry exists")
   H.truthy(entry("mfussenegger/nvim-lint"), "the nvim-lint entry exists")
 
   -- ── pure path helpers through the real <leader>ft closure ───────────────
@@ -203,67 +201,9 @@ H.run("markdown_plugin_spec", function()
   H.truthy(tagged, "tagged todos list their tags in the display text")
   H.eq(tagged.tags, { "errand" }, "the tags field holds the extracted tag list")
 
-  -- ── PencilSoft must not re-enable wrap (#159) ────────────────────────────
-  -- The fixture buffers get their filetype BEFORE the autocmds exist:
-  -- assigning 'filetype' fires FileType itself, which would double-run
-  -- the callback under test.
-  local md = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(md, 0, -1, false, { "# title", "", "[docs](https://x.example.com/y)" })
-  vim.bo[md].filetype = "markdown"
-  local octo = vim.api.nvim_create_buf(false, true)
-  vim.bo[octo].filetype = "octo"
-
-  local pencil = entry("preservim/vim-pencil")
-  pencil.config()
-  pencil.config() -- idempotency: clear=true augroup re-registers once
-  local ft_autocmds = {}
-  for _, a in ipairs(vim.api.nvim_get_autocmds({ group = "markdown_editing" })) do
-    ft_autocmds[a.pattern] = ft_autocmds[a.pattern] or 0
-    ft_autocmds[a.pattern] = ft_autocmds[a.pattern] + 1
-  end
-  H.eq(ft_autocmds, { markdown = 1, octo = 1 },
-    "one FileType autocmd per supported filetype, reload-stable")
-
-  -- simulate the #159 regression: PencilSoft itself forces wrap on
-  local pencil_calls = 0
-  local restore_cmd = H.replace(vim, "cmd", function(arg)
-    if type(arg) == "string" and arg:find("PencilSoft", 1, true) then
-      pencil_calls = pencil_calls + 1
-      vim.wo.wrap = true -- what pencil did before the fix
-    end
-  end)
-
-  vim.api.nvim_set_current_buf(md)
-  vim.wo.wrap = true
-  vim.wo.number = true
-  vim.wo.relativenumber = true
-
-  vim.api.nvim_exec_autocmds("FileType", { group = "markdown_editing", pattern = "markdown" })
-  H.eq(pencil_calls, 1, "the FileType callback runs PencilSoft")
-  H.eq(vim.wo.wrap, false, "#159: PencilSoft never leaves wrap enabled")
-  H.eq(vim.wo.number, false, "line numbers stay off in markdown buffers")
-  H.eq(vim.wo.relativenumber, false, "relative numbers stay off in markdown buffers")
-  H.eq(vim.bo.formatexpr, "v:lua.require'helpers.markdown_wrap'.formatexpr()",
-    "the visible-width reflow is the markdown formatter")
-  local leader = vim.g.mapleader or "\\"
-  local mapped = {}
-  for _, m in ipairs(vim.api.nvim_buf_get_keymap(md, "n")) do
-    mapped[m.lhs] = true
-  end
-  H.eq(mapped[leader .. "mu"], true, "the FileType callback wires the markdown_links keymaps")
-  for _, key in ipairs({ "h", "l", "w", "b", "e" }) do
-    H.eq(mapped[key], true, "the FileType callback wires the conceal-aware " .. key .. " motion")
-  end
-
-  -- octo: no PencilSoft, its own width/wrap/format state
-  vim.api.nvim_set_current_buf(octo)
-  vim.wo.wrap = true
-  vim.api.nvim_exec_autocmds("FileType", { group = "markdown_editing", pattern = "octo" })
-  H.eq(pencil_calls, 1, "octo buffers never run PencilSoft")
-  H.eq(vim.wo.wrap, false, "octo keeps wrap off (conceal/wrap phantom-space fix)")
-  H.eq(vim.bo.textwidth, 120, "octo pins textwidth to 120")
-  H.eq(vim.bo.formatexpr, "", "octo disables formatexpr")
-  restore_cmd()
+  -- ── no vim-pencil: the ftplugin owns the options ─────────────────────────
+  H.eq(entry("preservim/vim-pencil"), nil,
+    "vim-pencil is gone; after/ftplugin/markdown.lua owns wrap, width, and the guide")
 
   -- ── keymap presence, incl. <leader>mm ────────────────────────────────────
   for _, lhs in ipairs({ "<leader>ft", "<leader>fT", "<leader>vf", "<leader>vt",
@@ -274,6 +214,11 @@ H.run("markdown_plugin_spec", function()
   end
   H.eq(key_entry("<leader>mm").desc, "Render mermaid fence (mmdflux ASCII)",
     "<leader>mm keeps its mermaid description")
+
+  -- <leader>mm only runs inside a markdown buffer
+  local probe = vim.api.nvim_create_buf(false, true)
+  vim.bo[probe].filetype = "markdown"
+  vim.api.nvim_set_current_buf(probe)
 
   -- <leader>mm routes to the real mermaid render_float (absent binary path)
   local mm_notify = {}

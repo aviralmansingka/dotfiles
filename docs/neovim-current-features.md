@@ -519,7 +519,7 @@ feat/nvim-mermaid change; `docs/neovim-mermaid-render.md` owns the full details.
 
 ### Inherited notetaking integrations
 
-- LazyVim inherited Markdown/notes/GitHub integrations include vim-pencil, autolist, render-markdown, markdown-preview, Obsidian, and Octo.
+- LazyVim inherited Markdown/notes/GitHub integrations include autolist, render-markdown, markdown-preview, Obsidian, and Octo. Prose wrapping is in-process (helpers/markdown_wrap); vim-pencil was removed.
 - Vault workflows expect `~/vault`.
 
 ## Editor platform features

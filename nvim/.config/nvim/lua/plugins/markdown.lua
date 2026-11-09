@@ -51,47 +51,6 @@ end
 
 return {
   {
-    "preservim/vim-pencil",
-    ft = { "markdown", "octo" },
-    config = function()
-      vim.g["pencil#wrapModeDefault"] = "soft"
-      vim.g["pencil#autoformat"] = 0
-      local group = vim.api.nvim_create_augroup("markdown_editing", { clear = true })
-
-      -- Auto-enable pencil for markdown files
-      vim.api.nvim_create_autocmd("FileType", {
-        group = group,
-        pattern = "markdown",
-        callback = function()
-          vim.cmd("PencilSoft")
-          -- Disable wrap and line numbering for markdown buffers.
-          -- Set after PencilSoft so soft-wrap does not re-enable `wrap`.
-          vim.wo.wrap = false
-          vim.wo.number = false
-          vim.wo.relativenumber = false
-          vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
-          -- h/l/w/b/e stop on a visible cell instead of a concealed one.
-          require("helpers.markdown_links").setup()
-          require("helpers.markdown_motions").setup()
-        end,
-      })
-
-      -- Conceal-aware formatting for octo buffers. Wrap is off because the
-      -- conceal-vs-wrap interaction leaves phantom whitespace when long URLs
-      -- are present in the buffer.
-      vim.api.nvim_create_autocmd("FileType", {
-        group = group,
-        pattern = "octo",
-        callback = function()
-          vim.opt_local.textwidth = 120
-          vim.opt_local.formatexpr = ""
-          vim.opt_local.wrap = false
-          require("helpers.markdown_links").setup()
-        end,
-      })
-    end,
-  },
-  {
     "mfussenegger/nvim-lint",
     opts = {
       linters = {

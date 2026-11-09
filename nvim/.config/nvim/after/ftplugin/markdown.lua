@@ -4,6 +4,13 @@
 vim.opt_local.textwidth = 99
 vim.opt_local.colorcolumn = "100"
 vim.opt_local.wrap = false
+vim.opt_local.number = false
+vim.opt_local.relativenumber = false
+vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
+
+-- h/l/w/b/e stop on a visible cell instead of a concealed one.
+require("helpers.markdown_links").setup()
+require("helpers.markdown_motions").setup()
 
 -- Reflow prose on save by rendered width. Link destinations do not count, so a
 -- long URL never leaves blank space in a wrapped line. The rule mirrors

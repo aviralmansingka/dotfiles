@@ -34,3 +34,14 @@ vim.api.nvim_create_autocmd("TextYankPost", {
   end,
 })
 
+-- LazyVim turns 'wrap' and 'spell' on for markdown. Markdown prose is
+-- hard-wrapped on save (after/ftplugin/markdown.lua), so the soft wrap only
+-- hides the tail of a table or a diagram. This autocmd registers after
+-- LazyVim's lazyvim_wrap_spell, so it runs last and wins. Spell stays on.
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("markdown_no_soft_wrap", { clear = true }),
+  pattern = "markdown",
+  callback = function()
+    vim.wo.wrap = false
+  end,
+})

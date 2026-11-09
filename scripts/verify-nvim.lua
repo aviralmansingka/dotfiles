@@ -4413,17 +4413,17 @@ local function validate_markdown_formatting()
   local buf = vim.api.nvim_get_current_buf()
   load_plugin("nvim-lint")
 
-  if vim.bo[buf].textwidth ~= 0 then
-    fail("markdown leaves hard wrapping to PencilSoft; got textwidth=" .. vim.bo[buf].textwidth)
+  if vim.bo[buf].textwidth ~= 99 then
+    fail("markdown hard-wraps prose at 99; got textwidth=" .. vim.bo[buf].textwidth)
+  end
+  if vim.wo.colorcolumn ~= "100" then
+    fail("markdown shows the guide at column 100; got colorcolumn=" .. vim.inspect(vim.wo.colorcolumn))
   end
   if vim.bo[buf].formatexpr ~= "v:lua.require'helpers.markdown_wrap'.formatexpr()" then
     fail("markdown gq should use the visible-width wrap; got formatexpr=" .. vim.inspect(vim.bo[buf].formatexpr))
   end
   if vim.wo.wrap then
     fail("markdown keeps soft wrap off for conceal; got wrap=true")
-  end
-  if vim.b[buf].pencil_wrap_mode ~= 2 then
-    fail("markdown should use PencilSoft; got pencil_wrap_mode=" .. vim.inspect(vim.b[buf].pencil_wrap_mode))
   end
 
   local wrap = require("helpers.markdown_wrap")
