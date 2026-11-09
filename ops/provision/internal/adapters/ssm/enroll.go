@@ -112,8 +112,9 @@ func NewEnroller(cfg EnrollConfig) (*Enroller, error) {
 //     command, and there is no fallback transport, so this aborts before a single
 //     secret exists;
 //  2. only then mint the enrollment key;
-//  3. store it as a SecureString at <prefix>/<host>/<nonce> under the fleet KMS
-//     key, so the command that delivers it carries a path, never a value;
+//  3. store it as a SecureString at <prefix>/<host>/<nonce> under the AWS-managed
+//     `alias/aws/ssm` key, so the command that delivers it carries a path, never a
+//     value;
 //  4. run the host script through SSM Run Command addressed by instance id: read
 //     the parameter, write /run/fleet-enroll.key 0600, `tailscale up
 //     --auth-key=file:`, remove the file;

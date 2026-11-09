@@ -391,9 +391,9 @@ type SecureParameterRequest struct {
 // key to exactly one host.
 //
 // Two rules make the store safe to use in a control plane that keeps history:
-// the value is written as an encrypted SecureString under the one fleet KMS key,
-// and the corresponding parameter is deleted on success *and* on failure, so the
-// path never outlives the attempt it belongs to.
+// the value is written as an encrypted SecureString under the AWS-managed
+// `alias/aws/ssm` key, and the corresponding parameter is deleted on success *and*
+// on failure, so the path never outlives the attempt it belongs to.
 type SSMParameterStore interface {
 	PutSecureParameter(ctx context.Context, req SecureParameterRequest) error
 	// DeleteParameter removes the parameter. Deleting one that is already gone is

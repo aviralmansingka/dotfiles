@@ -9,18 +9,21 @@ import (
 
 // Approved enrollment store settings.
 //
-// Both are approved constants rather than free configuration, because a host's
-// instance role is scoped to exactly `<prefix>/<host_name>/*` and to exactly one
-// KMS key ARN. A configurable prefix would silently widen or break that grant, so
-// the service refuses any other value; rotating the key means re-pointing the
-// alias, not editing the service file.
+// Both are constants rather than free configuration, because a host's instance
+// role is scoped to exactly `<prefix>/<host_name>/*` and its decrypt grant is
+// pinned to SSM in one region. A configurable prefix would silently widen or
+// break that grant, so the service refuses any other value.
 const (
 	// ApprovedEnrollmentParameterPrefix is the store path enrollment keys wait
 	// under: <prefix>/<host_name>/<nonce>.
 	ApprovedEnrollmentParameterPrefix = "/fleet/enroll"
-	// ApprovedEnrollmentKMSKeyID is the one fleet key every enrollment parameter
-	// is encrypted with.
-	ApprovedEnrollmentKMSKeyID = "alias/fleet-enroll"
+	// ApprovedEnrollmentKMSKeyID is the AWS-managed key every enrollment
+	// parameter is encrypted with. AWS creates it with the account, the fleet
+	// only references it, and its key policy is AWS's to change: the fleet
+	// never creates a key, an alias, or a key policy of its own. Rotating it is
+	// not an operator action either, because the key has no rotation schedule an
+	// operator can edit.
+	ApprovedEnrollmentKMSKeyID = "alias/aws/ssm"
 )
 
 // parameterNamePattern is the character set SSM accepts for a hierarchical
@@ -50,29 +53,4 @@ func ValidateParameterName(name string) error {
 		return fmt.Errorf("parameter name %q must not contain path traversal", name)
 	}
 	return nil
-}
-
-// kmsKeyIDPattern matches a KMS key id, which is a UUID.
-var kmsKeyIDPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-
-// ValidateKMSKeyID enforces the shape of a KMS key reference: an alias, a key id,
-// or a key ARN. A value that could be a shell word or a CLI flag is refused, so
-// the reference can only ever name a key.
-func ValidateKMSKeyID(keyID string) error {
-	if keyID == "" {
-		return errors.New("kms key id is required")
-	}
-	if strings.ContainsAny(keyID, " \t\"';|&$`\\") {
-		return fmt.Errorf("kms key id %q must not contain whitespace or shell metacharacters", keyID)
-	}
-	switch {
-	case strings.HasPrefix(keyID, "alias/") && len(keyID) > len("alias/"):
-		return nil
-	case strings.HasPrefix(keyID, "arn:aws:kms:") && strings.Contains(keyID, ":key/"):
-		return nil
-	case kmsKeyIDPattern.MatchString(keyID):
-		return nil
-	default:
-		return fmt.Errorf("kms key id %q must be an alias/, a key id, or a key ARN", keyID)
-	}
 }

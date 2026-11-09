@@ -134,15 +134,10 @@ data "aws_caller_identity" "current" {
   provider = aws.ap_south_1
 }
 
-# The one fleet key every enrollment parameter is encrypted with. It is resolved
-# by alias, so a key rotation does not move configuration, and the instance role's
-# kms:Decrypt grant names exactly the resulting key ARN — never a wildcard and
-# never a second key. The key itself is fleet infrastructure, created once by the
-# operator (terraform/aws/README.md); this root only references it.
-data "aws_kms_alias" "enroll" {
-  provider = aws.ap_south_1
-  name     = "alias/fleet-enroll"
-}
+# There is no fleet KMS key and no aws_kms_alias lookup here. Every enrollment
+# parameter is encrypted with the AWS-managed `alias/aws/ssm` key, which exists in
+# every account: no key resource, no alias, and no key policy is created or
+# referenced by this root, so an operator has no key-creation step before a plan.
 
 data "aws_iam_policy_document" "ec2_assume_role" {
   statement {
@@ -183,9 +178,17 @@ resource "aws_iam_role_policy_attachment" "host_ssm" {
 #     parameter even if it knows the path: the ARN of that path is outside this
 #     grant. Nothing here allows PutParameter or DeleteParameter, so a host cannot
 #     write, extend, or resurrect a parameter either.
-#   - Decrypt, only under the one fleet key, and only when SSM is the calling
-#     service. Account-root credentials are not granted anything else by this
-#     policy, and the role keeps AmazonSSMManagedInstanceCore for the agent.
+#   - Decrypt, and only when SSM in this region is the calling service. The
+#     resource is `*` because the key is AWS-managed and its ARN is not something
+#     this root resolves; `*` is safe here for two reasons. The kms:ViaService
+#     condition means the grant can only be exercised on a KMS request that SSM
+#     makes on this role's behalf in ap-south-1 — a direct `aws kms decrypt` call
+#     from the host does not carry that key, so it does not match. And the key
+#     policy on `alias/aws/ssm` is AWS's, not the fleet's: it lets this account's
+#     principals use that key only on SSM's behalf, and the fleet creates no key
+#     policy of its own that could loosen it. Together the condition and the
+#     AWS-owned key policy scope the grant more tightly than a key ARN alone
+#     would, and neither is a value an operator maintains.
 #
 # The command that delivers the key carries a parameter NAME and a nonce; SSM
 # command history therefore holds a parameter path, never a credential.
@@ -199,11 +202,11 @@ data "aws_iam_policy_document" "host_enroll" {
   }
 
   statement {
-    sid    = "DecryptWithTheFleetEnrollmentKeyOnly"
+    sid    = "DecryptOnlyThroughSSM"
     effect = "Allow"
 
     actions   = ["kms:Decrypt"]
-    resources = [data.aws_kms_alias.enroll.target_key_arn]
+    resources = ["*"]
 
     condition {
       test     = "StringEquals"
@@ -311,9 +314,9 @@ output "enrollment_parameter_scope" {
   value       = "arn:aws:ssm:ap-south-1:${data.aws_caller_identity.current.account_id}:parameter${var.enrollment_parameter_prefix}/${var.host_name}/*"
 }
 
-output "enrollment_kms_key_arn" {
-  description = "The one fleet KMS key this host's instance role may decrypt with"
-  value       = data.aws_kms_alias.enroll.target_key_arn
+output "enrollment_kms_key_alias" {
+  description = "The AWS-managed key every enrollment parameter is encrypted with; the fleet creates no key"
+  value       = "alias/aws/ssm"
 }
 
 output "security_group_id" {

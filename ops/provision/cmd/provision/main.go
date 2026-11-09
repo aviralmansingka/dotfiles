@@ -288,7 +288,7 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 	cfg := state.service.Enrollment
 	if !cfg.Configured() {
 		state.log.Warn("enrollment.not_configured",
-			"reason", "enrollment.tailscale.oauth_secret_ref, enrollment.openbao.token_file, and enrollment.ssm.kms_key_id are not all set; enrollment stays a refusing stub")
+			"reason", "enrollment.tailscale.oauth_secret_ref, enrollment.openbao.token_file, and enrollment.ssm.parameter_prefix are not all set; enrollment stays a refusing stub")
 		stub := ssm.NewStub()
 		return stub, stub, nil
 	}
@@ -319,15 +319,12 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 		return nil, nil, fmt.Errorf("enrollment device lookup: %w", err)
 	}
 
-	// One SSM configuration for every call: the same region, the same pinned CLI
-	// binary, and the same fleet key. There is no credential field anywhere in it,
+	// One SSM configuration for every call: the same region and the same pinned CLI
+	// binary. There is no credential field and no key field anywhere in it,
 	// because the AWS CLI runs with the worker's own credential source.
 	pollInterval := time.Duration(cfg.SSM.PollIntervalSeconds) * time.Second
 	ssmClient := ssm.ClientConfig{Binary: cfg.SSM.Binary, Region: cfg.SSM.Region, Executor: ssm.CLIExecutor{}}
-	parameters, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{
-		Client:   ssmClient,
-		KMSKeyID: cfg.SSM.KMSKeyID,
-	})
+	parameters, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{Client: ssmClient})
 	if err != nil {
 		return nil, nil, fmt.Errorf("enrollment parameter store: %w", err)
 	}

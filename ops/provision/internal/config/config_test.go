@@ -3,14 +3,19 @@ package config_test
 import (
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/config"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 )
 
-// shippedProfiles is the profile file that actually ships with the service.
-const shippedProfiles = "../../config/profiles.yaml"
+// Shipped files the configuration tests read.
+const (
+	shippedProfiles       = "../../config/profiles.yaml"
+	shippedServiceExample = "../../config/service.example.yaml"
+)
 
 // TestShippedProfilesLoadAndResolve is the D1 regression test at the level that
 // matters: the configuration file in the tree must load, and every approved
@@ -192,5 +197,31 @@ func TestServiceRejectsUnapprovedProviderPolicy(t *testing.T) {
 				t.Fatalf("Validate accepted %s", name)
 			}
 		})
+	}
+}
+
+// TestEnrollmentHasNoKeySetting pins the owner decision of 2026-11-09: every
+// enrollment parameter is encrypted with the AWS-managed `alias/aws/ssm` key, so
+// no service setting names a key and no operator creates one. The struct check is
+// the structural half (a field cannot come back unnoticed); the file check keeps
+// the documented example honest.
+func TestEnrollmentHasNoKeySetting(t *testing.T) {
+	t.Parallel()
+	ssmType := reflect.TypeOf(config.SSMEnrollment{})
+	for i := 0; i < ssmType.NumField(); i++ {
+		field := ssmType.Field(i)
+		if strings.Contains(strings.ToLower(field.Name), "kms") {
+			t.Fatalf("enrollment.ssm still has the key setting %q; the key is AWS-managed and not configuration", field.Name)
+		}
+	}
+	raw, err := os.ReadFile(shippedServiceExample)
+	if err != nil {
+		t.Fatalf("read %s: %v", shippedServiceExample, err)
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "kms_") && strings.Contains(trimmed, ":") {
+			t.Fatalf("the shipped example still names an enrollment key: %q", trimmed)
+		}
 	}
 }

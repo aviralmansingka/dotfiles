@@ -56,10 +56,13 @@ type OpenBaoEnrollment struct {
 }
 
 // SSMEnrollment is the SSM-only enrollment path: the parameter prefix the
-// enrollment key travels under, the single fleet KMS key that encrypts it, and
-// the host script's settings.
+// enrollment key travels under and the host script's settings.
 //
-// There is no login key path and no known_hosts directory here, because
+// There is no key field here. Every enrollment parameter is encrypted with the
+// AWS-managed `alias/aws/ssm` key, which the account already has, so no operator
+// creates a KMS key, an alias, or a key policy before the first host.
+//
+// There is no login key path and no known_hosts directory here either, because
 // enrollment opens no SSH connection: the trust anchor is IAM, not a host key. An
 // `ssh:` block in the service file is now an unknown key and fails to decode.
 type SSMEnrollment struct {
@@ -69,9 +72,6 @@ type SSMEnrollment struct {
 	// Terraform root scopes the instance role to <prefix>/<host_name>/*, so this
 	// value and terraform/aws/main.tf must agree.
 	ParameterPrefix string `yaml:"parameter_prefix"`
-	// KMSKeyID is the one fleet key the parameters are encrypted with. It is an
-	// alias, so a rotation does not move configuration.
-	KMSKeyID string `yaml:"kms_key_id"`
 	// HostKeyPath is where the host script writes the key, on tmpfs, mode 0600.
 	HostKeyPath string `yaml:"host_key_path"`
 	// Binary is the AWS CLI executable the worker drives. Defaults to "aws".
@@ -89,12 +89,12 @@ type SSMEnrollment struct {
 // they are not, the worker keeps the refusing stub, so a job cannot reach
 // "ready" without a real enrollment.
 func (e Enrollment) Configured() bool {
-	return e.Tailscale.OAuthSecretRef != "" && e.OpenBao.TokenFile != "" && e.SSM.KMSKeyID != ""
+	return e.Tailscale.OAuthSecretRef != "" && e.OpenBao.TokenFile != "" && e.SSM.ParameterPrefix != ""
 }
 
 // Validate fails closed on a half-configured enrollment block.
 func (e Enrollment) Validate() error {
-	if e.Tailscale.OAuthSecretRef == "" && e.OpenBao.TokenFile == "" && e.SSM.KMSKeyID == "" {
+	if e.Tailscale.OAuthSecretRef == "" && e.OpenBao.TokenFile == "" && e.SSM.ParameterPrefix == "" {
 		return nil
 	}
 	if e.Tailscale.OAuthSecretRef == "" {
@@ -127,16 +127,6 @@ func (e Enrollment) Validate() error {
 	if e.SSM.ParameterPrefix != domain.ApprovedEnrollmentParameterPrefix {
 		return fmt.Errorf("enrollment.ssm.parameter_prefix must be the approved %q: terraform/aws/main.tf scopes the instance role to exactly that path",
 			domain.ApprovedEnrollmentParameterPrefix)
-	}
-	if e.SSM.KMSKeyID == "" {
-		return errors.New("enrollment.ssm.kms_key_id is required: every enrollment parameter is encrypted with one fleet key")
-	}
-	if err := domain.ValidateKMSKeyID(e.SSM.KMSKeyID); err != nil {
-		return fmt.Errorf("enrollment.ssm.kms_key_id: %w", err)
-	}
-	if e.SSM.KMSKeyID != domain.ApprovedEnrollmentKMSKeyID {
-		return fmt.Errorf("enrollment.ssm.kms_key_id must be the approved %q: the instance role decrypts with that one key, so rotate the alias instead",
-			domain.ApprovedEnrollmentKMSKeyID)
 	}
 	if e.SSM.HostKeyPath == "" {
 		return errors.New("enrollment.ssm.host_key_path is required: the key file is created on the host and removed after the join")

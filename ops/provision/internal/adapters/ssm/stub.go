@@ -25,7 +25,7 @@ var (
 func (*Stub) Enroll(_ context.Context, _ application.EnrollRequest) (application.EnrollResult, error) {
 	return application.EnrollResult{}, &domain.NotImplementedError{
 		Component: "ssm enrollment",
-		Step:      "enrollment.ssm.kms_key_id and enrollment.ssm.parameter_prefix are not configured for this worker",
+		Step:      "enrollment.ssm.parameter_prefix is not configured for this worker",
 	}
 }
 

@@ -23,9 +23,6 @@ func ValidateParameterName(name string) error {
 // ParameterStoreConfig configures the homelab side of the secret handoff.
 type ParameterStoreConfig struct {
 	Client ClientConfig
-	// KMSKeyID is the one fleet key every parameter is encrypted with. Defaults to
-	// DefaultKMSKeyID.
-	KMSKeyID string
 	// TempDir is where the private handoff file is created. Defaults to the
 	// system temporary directory; tests point it at a temporary directory they
 	// own.
@@ -36,7 +33,6 @@ type ParameterStoreConfig struct {
 // enrollment key to one host.
 type ParameterStore struct {
 	client  *Client
-	keyID   string
 	tempDir string
 }
 
@@ -48,27 +44,11 @@ func NewParameterStore(cfg ParameterStoreConfig) (*ParameterStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	keyID := cfg.KMSKeyID
-	if keyID == "" {
-		keyID = DefaultKMSKeyID
-	}
-	if err := ValidateKMSKeyID(keyID); err != nil {
-		return nil, err
-	}
-	return &ParameterStore{client: client, keyID: keyID, tempDir: cfg.TempDir}, nil
+	return &ParameterStore{client: client, tempDir: cfg.TempDir}, nil
 }
 
-// ValidateKMSKeyID enforces the shape of a KMS key reference. The rule lives in
-// the domain, because the configuration and the Terraform root name the same key.
-func ValidateKMSKeyID(keyID string) error {
-	if err := domain.ValidateKMSKeyID(keyID); err != nil {
-		return fmt.Errorf("ssm: %w", err)
-	}
-	return nil
-}
-
-// PutSecureParameter stores the enrollment key as a SecureString under the fleet
-// KMS key.
+// PutSecureParameter stores the enrollment key as a SecureString under the
+// AWS-managed SSM key.
 //
 // The value must not appear in any argument, so it is handed to the CLI as
 // `--value file://<private file>`: the CLI has no stdin form for a parameter
@@ -110,7 +90,7 @@ func (p *ParameterStore) PutSecureParameter(ctx context.Context, req application
 		"ssm", "put-parameter",
 		"--name", req.Name,
 		"--type", "SecureString",
-		"--key-id", p.keyID,
+		"--key-id", DefaultKMSKeyID,
 		"--value", "file://"+path,
 		"--output", "json",
 	); err != nil {

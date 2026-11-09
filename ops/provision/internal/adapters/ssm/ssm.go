@@ -5,10 +5,11 @@
 // split between them is the security property.
 //
 //   - Handoff through SSM Parameter Store. The enrollment key is written as a
-//     SecureString at /fleet/enroll/<host>/<nonce>, encrypted with the one fleet
-//     KMS key. The instance role can read only its own prefix and decrypt only
-//     with that key, so one host cannot read another host's key even if it knows
-//     the path.
+//     SecureString at /fleet/enroll/<host>/<nonce>, encrypted with the
+//     AWS-managed `alias/aws/ssm` key — no fleet key is created, held, or rotated
+//     by an operator. The instance role can read only its own prefix, so one host
+//     cannot read another host's key even if it knows the path, and its decrypt
+//     grant only applies when SSM is the calling service.
 //   - Delivery through SSM Run Command, addressed by instance id. `ssm
 //     send-command` parameters stay in SSM command history, so the command
 //     carries the parameter NAME and the nonce and never the key. History holds a
@@ -32,10 +33,12 @@ const (
 	// binds the two values together so they cannot drift.
 	DefaultParameterPrefix = domain.ApprovedEnrollmentParameterPrefix
 
-	// DefaultKMSKeyID is the one fleet key every enrollment parameter is
-	// encrypted with. It is named by alias, so rotating the key does not move
-	// configuration; the instance role's kms:Decrypt grant is resolved from the
-	// same alias in Terraform.
+	// DefaultKMSKeyID is the AWS-managed key every enrollment parameter is
+	// encrypted with. Naming it explicitly keeps the encryption property in the
+	// code instead of borrowing a CLI default. There is nothing for an operator
+	// to create: AWS owns the key, its key policy, and its rotation, and the
+	// instance role's kms:Decrypt grant is limited by a via-service condition
+	// rather than by a key ARN.
 	DefaultKMSKeyID = domain.ApprovedEnrollmentKMSKeyID
 
 	// DefaultRegion is the region of the parameter, the command, and the host.

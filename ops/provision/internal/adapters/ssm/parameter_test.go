@@ -14,9 +14,8 @@ import (
 func newParameterStore(t *testing.T, executor *fakeExecutor) *ssm.ParameterStore {
 	t.Helper()
 	store, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{
-		Client:   ssm.ClientConfig{Executor: executor},
-		KMSKeyID: ssm.DefaultKMSKeyID,
-		TempDir:  t.TempDir(),
+		Client:  ssm.ClientConfig{Executor: executor},
+		TempDir: t.TempDir(),
 	})
 	if err != nil {
 		t.Fatalf("NewParameterStore: %v", err)
@@ -25,8 +24,8 @@ func newParameterStore(t *testing.T, executor *fakeExecutor) *ssm.ParameterStore
 }
 
 // TestPutSecureParameterKeepsTheValueOutOfArgv is the handoff rule at the CLI
-// boundary: the key reaches Parameter Store as a SecureString under the fleet key,
-// and it never becomes an argument, a description, or a hint.
+// boundary: the key reaches Parameter Store as a SecureString under the AWS-managed
+// SSM key, and it never becomes an argument, a description, or a hint.
 func TestPutSecureParameterKeepsTheValueOutOfArgv(t *testing.T) {
 	t.Parallel()
 	executor := &fakeExecutor{}
@@ -49,7 +48,7 @@ func TestPutSecureParameterKeepsTheValueOutOfArgv(t *testing.T) {
 		"ssm put-parameter",
 		"--name " + parameterPath,
 		"--type SecureString",
-		"--key-id " + ssm.DefaultKMSKeyID,
+		"--key-id alias/aws/ssm",
 	} {
 		if !strings.Contains(argv, required) {
 			t.Fatalf("argv is missing %q: %s", required, argv)
@@ -162,27 +161,31 @@ func TestDeleteParameterNamesThePathAndToleratesMissing(t *testing.T) {
 	})
 }
 
-// TestNewParameterStoreValidatesTheKeyReference keeps a key reference that could
-// be a flag or a shell word out of the CLI.
-func TestNewParameterStoreValidatesTheKeyReference(t *testing.T) {
+// TestPutSecureParameterNamesTheAWSManagedKey pins the owner decision of
+// 2026-11-09: the parameter is encrypted with the AWS-managed `alias/aws/ssm`
+// key, so the fleet creates no key, holds no key ARN, and has no rotation step.
+// The write names the key explicitly instead of borrowing a CLI default.
+func TestPutSecureParameterNamesTheAWSManagedKey(t *testing.T) {
 	t.Parallel()
-	// An empty value is not on this list: it means "use the approved fleet key",
-	// which is the default the configuration fills in anyway.
-	for _, keyID := range []string{"alias/", "--smuggled", "alias/x --value y", "arn:aws:kms"} {
-		if _, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{
-			Client:   ssm.ClientConfig{Executor: &fakeExecutor{}},
-			KMSKeyID: keyID,
-		}); err == nil {
-			t.Fatalf("NewParameterStore accepted kms key id %q", keyID)
-		}
+	executor := &fakeExecutor{}
+	store := newParameterStore(t, executor)
+	if err := store.PutSecureParameter(context.Background(), application.SecureParameterRequest{
+		Name:  parameterPath,
+		Value: application.NewSecret("tailscale:authkey", []byte(fakeAuthKey)),
+	}); err != nil {
+		t.Fatalf("PutSecureParameter: %v", err)
 	}
-	for _, keyID := range []string{"alias/fleet-enroll", "1234abcd-12ab-34cd-56ef-1234567890ab", "arn:aws:kms:ap-south-1:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"} {
-		if _, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{
-			Client:   ssm.ClientConfig{Executor: &fakeExecutor{}},
-			KMSKeyID: keyID,
-		}); err != nil {
-			t.Fatalf("NewParameterStore refused a valid key id %q: %v", keyID, err)
-		}
+	argv := executor.argv(0)
+	if !strings.Contains(argv, "--key-id "+ssm.DefaultKMSKeyID) {
+		t.Fatalf("the write does not name the aws-managed ssm key: %s", argv)
+	}
+	if ssm.DefaultKMSKeyID != "alias/aws/ssm" {
+		t.Fatalf("the adapter key is %q, want the aws-managed ssm key", ssm.DefaultKMSKeyID)
+	}
+	// No configurable key remains: a store is built from the client alone, so no
+	// service setting can point an enrollment parameter at another key.
+	if _, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{Client: ssm.ClientConfig{Executor: executor}}); err != nil {
+		t.Fatalf("NewParameterStore with no key setting: %v", err)
 	}
 }
 

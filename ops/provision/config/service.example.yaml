@@ -115,11 +115,12 @@ enrollment:
     # terraform/aws/main.tf scopes the instance role to exactly this prefix plus
     # the host's own name, so one host cannot read another host's parameter.
     parameter_prefix: /fleet/enroll
-    # The one fleet KMS key. Every enrollment parameter is a SecureString encrypted
-    # with it, and the instance role may decrypt with this key and no other.
-    # Create it once with `aws kms create-key` and this alias; see
-    # terraform/aws/README.md.
-    kms_key_id: alias/fleet-enroll
+    # There is no KMS key to name, and no operator key-creation step: every
+    # enrollment parameter is a SecureString encrypted with the AWS-managed
+    # `alias/aws/ssm` key the account already has. The instance role's
+    # kms:Decrypt grant is limited by a via-service condition instead of a key
+    # ARN, and the fleet creates no key, alias, or key policy of its own.
+    #
     # On the host: tmpfs, mode 0600, removed by the script after `tailscale up` and
     # by a trap on every other exit path.
     host_key_path: /run/fleet-enroll.key

@@ -192,7 +192,7 @@ agent check (SSM)   describe-instance-information for this instance id
                       -> not Online within the window: fail the job, mint nothing, no fallback
 mint                single-use, non-ephemeral, preauthorized key, short expiry, tag from the approved profile
 handoff (SSM PS)    put-parameter /fleet/enroll/<host_name>/<nonce>
-                      SecureString, kms key alias/fleet-enroll, no description, value never in argv
+                      SecureString, AWS-managed key alias/aws/ssm, no description, value never in argv
 command (SSM RC)    send-command, addressed by instance id, comment = instance id
                       parameters carry the parameter NAME and the nonce, never the key
 host script         aws ssm get-parameter --with-decryption > /run/fleet-enroll.key (umask 077, chmod 600)
@@ -211,21 +211,18 @@ The trust anchor is IAM, not a host key: the control plane authenticates the
 instance that ran the command, which is stronger than trusting whatever answers
 on port 22, and it removed the last reason for the worker to reach a host on 22.
 
-### The fleet KMS key (created once, before any host)
+### No KMS key to create
 
-Every enrollment parameter is encrypted with one fleet key, referenced by alias
-so a rotation does not move configuration. Create it once with operator
-credentials (this is not part of a host's lifecycle, and no host root creates
-it):
+Every enrollment parameter is encrypted with the **AWS-managed** `alias/aws/ssm`
+key. That key exists in every account, AWS owns its key policy and its rotation,
+and the host root does not look it up: there is no `aws_kms_key`, no
+`aws_kms_alias`, and no key policy in either root.
 
-```
-aws kms create-alias --alias-name alias/fleet-enroll \
-  --target-key-id "$(aws kms create-key --description 'fleet enrollment parameters' --query KeyMetadata.KeyId --output text)"
-```
-
-The host root resolves that alias with a `aws_kms_alias` data source, so a plan
-fails by name when the key does not exist instead of creating a host whose
-enrollment could never decrypt anything.
+**No operator key-creation step remains.** The `aws kms create-key` /
+`create-alias` commands an earlier revision of this file listed are gone, and so
+is the `enrollment.ssm.kms_key_id` service setting that named a fleet key. A
+worker with a stale `kms_key_id` in its service file fails to load, because the
+yaml field no longer exists.
 
 ## Bootstrap policy
 
@@ -252,8 +249,15 @@ enrollment could never decrypt anything.
     this host's own prefix only, so a host cannot read another host's key even
     if it knows the path. No `PutParameter`, no `DeleteParameter`, no
     `GetParametersByPath`, no wildcard resource.
-  * `kms:Decrypt` on the one fleet key ARN (resolved from
-    `alias/fleet-enroll`), with `kms:ViaService = ssm.ap-south-1.amazonaws.com`.
+  * `kms:Decrypt` with `resources = ["*"]` and
+    `kms:ViaService = ssm.ap-south-1.amazonaws.com`. The wildcard resource is
+    safe because the via-service condition pins the grant to KMS requests that
+    SSM makes on this role's behalf in this region — a host calling
+    `aws kms decrypt` directly does not match it — and because the key policy on
+    `alias/aws/ssm` is AWS's and admits the account's principals only for SSM's
+    use of that key.
+  * No `kms:CreateKey`, no `kms:CreateAlias`, no `kms:PutKeyPolicy`, and no key
+    policy anywhere: the fleet never creates or governs a key.
   The grant is attached before the instance starts (`depends_on`), so no host
   boots without it.
 * IMDSv2 required (`http_tokens = "required"`), hop limit 1, tags enabled.
@@ -335,8 +339,8 @@ output; the parameter deleted on the success and the failure path; the key file 
 0600 and gone afterwards; an unregistered agent aborting before anything is
 minted; and `iam_test.go`, which reads this root and asserts the instance role's
 grant is scoped to `arn:aws:ssm:ap-south-1:<account>:parameter/fleet/enroll/<host_name>/*`
-with `ssm:GetParameter` as the only SSM action and one KMS key as the only
-decrypt path.
+with `ssm:GetParameter` as the only SSM action and a `kms:Decrypt` grant that is
+limited to SSM by a via-service condition.
 
 Live (needs an AWS account, credentials with EC2/IAM/SSM/S3 access, an approved
 VPC and subnet, and a network). Run the preflight above first; `terraform` and
