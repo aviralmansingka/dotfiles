@@ -8,6 +8,13 @@
 # no tailnet tag: the provisioning service mints a single-use key later, stores it
 # as an encrypted SSM parameter, and runs `tailscale up` over SSM Run Command from
 # the worker. Nothing here opens, or needs, an inbound connection.
+#
+# The whole bootstrap is ONE runcmd shell (a block scalar) with `set -euo pipefail`
+# and an explicit root environment. cloud-init runs runcmd with `/bin/sh` and no
+# login environment, so HOME is unset; the upstream Nix installer aborts with
+# `$HOME is not set` on a real Ubuntu host, and a list of independent `runcmd`
+# entries let that failure be swallowed while the run still reported success.
+# Every install step below ends with a check that can fail the boot.
 package_update: true
 package_upgrade: false
 
@@ -29,43 +36,70 @@ write_files:
       sandbox = true
 
 runcmd:
-  - mkdir -p /nix
-  # Upstream multi-user installer: daemon plus /nix, the same installer the
-  # EC2 bring-up notes use.
-  - curl -fsSL https://nixos.org/nix/install -o /tmp/nix-install.sh
-  - sh /tmp/nix-install.sh --daemon --yes
-  - rm -f /tmp/nix-install.sh
-  # The remote deploy runs as a user unit with no login session.
-  - loginctl enable-linger ubuntu
+  # One shell, so `set -euo pipefail` covers every step and the first failure
+  # stops the boot instead of being followed by a success line.
+  - |
+    set -euo pipefail
 
-  # --- tailscaled: explicit system bootstrap step (S03) ------------------------
-  # Tailscale ships an apt repository; the official installer adds it and installs
-  # the daemon. It is a *system* unit (`system tailscaled`), deliberately not a
-  # Home Manager fragment: the daemon owns the tun device and the state directory
-  # and must be up before any user profile is deployed.
-  #
-  # No credential is created or stored here. The node is not enrolled by this
-  # file: enrollment happens later, from the worker, with a short-lived
-  # single-use preauthorized key that the host reads from SSM Parameter Store and
-  # writes to a tmpfs file that exists only for the length of one command.
-  - curl -fsSL https://tailscale.com/install.sh -o /tmp/tailscale-install.sh
-  - sh /tmp/tailscale-install.sh
-  - rm -f /tmp/tailscale-install.sh
-  # Start at boot, before the enrollment step can reach the host.
-  - systemctl enable tailscaled
-  - systemctl start tailscaled
+    # cloud-init gives runcmd no login environment: HOME is unset and the Nix
+    # installer refuses to run. Set it explicitly, for this shell and for every
+    # step below. PATH is spelled out because a system shell here is not a login
+    # shell: without it the freshly installed `/nix` profile bin is unreachable.
+    export HOME=/root
+    export USER=root
+    export PATH="/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 
-  # --- AWS CLI v2 (S04 SSM enrollment) ----------------------------------------
-  # The enrollment script runs as the SSM agent (root) and reads one SecureString
-  # parameter from Parameter Store. Ubuntu 24.04 ships the AWS CLI only as
-  # a snap, and an enrollment command that cannot find it fails closed and fails
-  # the job, so install it during bootstrap rather than at enrollment time.
-  - snap install aws-cli --classic
+    # --- Nix daemon (S02) -----------------------------------------------------
+    # Upstream multi-user installer: daemon plus /nix, the same installer the
+    # EC2 bring-up notes use. `env HOME=/root USER=root` is spelled again on the
+    # installer line on purpose: that line is the one the installer reads, and a
+    # later edit that splits these steps must not lose the environment.
+    mkdir -p /nix
+    curl -fsSL https://nixos.org/nix/install -o /tmp/nix-install.sh
+    test -s /tmp/nix-install.sh
+    env HOME=/root USER=root sh /tmp/nix-install.sh --daemon --yes
+    rm -f /tmp/nix-install.sh
+    # Fails the boot when the installer did not deliver a usable client.
+    command -v nix
+    nix --version
 
-  # Readiness markers the worker may probe before it opens an enrollment. They
-  # report the daemon, its socket, and the CLI only; they never carry node
-  # identity and never carry a credential.
-  - sh -c 'for i in $(seq 1 30); do [ -S /var/run/tailscale/tailscaled.sock ] && exit 0; sleep 2; done; exit 1'
-  - aws --version
+    # The remote deploy runs as a user unit with no login session.
+    loginctl enable-linger ubuntu
 
-final_message: "fleet bootstrap complete: nix daemon, tailscaled, and the aws cli are installed; the node is not enrolled yet"
+    # --- tailscaled: explicit system bootstrap step (S03) ---------------------
+    # Tailscale ships an apt repository; the official installer adds it and
+    # installs the daemon. It is a *system* unit (`system tailscaled`),
+    # deliberately not a Home Manager fragment: the daemon owns the tun device and
+    # the state directory and must be up before any user profile is deployed.
+    #
+    # No credential is created or stored here. The node is not enrolled by this
+    # file: enrollment happens later, from the worker, with a short-lived
+    # single-use preauthorized key that the host reads from SSM Parameter Store
+    # and writes to a tmpfs file that exists only for the length of one command.
+    curl -fsSL https://tailscale.com/install.sh -o /tmp/tailscale-install.sh
+    test -s /tmp/tailscale-install.sh
+    env HOME=/root sh /tmp/tailscale-install.sh
+    rm -f /tmp/tailscale-install.sh
+    # Start at boot, before the enrollment step can reach the host.
+    systemctl enable tailscaled
+    systemctl start tailscaled
+    # Readiness marker the worker may probe: the daemon's socket, never node
+    # identity and never a credential. Exits non-zero, so it fails the boot.
+    for i in $(seq 1 30); do
+      if [ -S /var/run/tailscale/tailscaled.sock ]; then break; fi
+      sleep 2
+      if [ "$i" = 30 ]; then echo "tailscaled socket never appeared" >&2; exit 1; fi
+    done
+
+    # --- AWS CLI v2 (S04 SSM enrollment) -------------------------------------
+    # The enrollment script runs as the SSM agent (root) and reads one SecureString
+    # parameter from Parameter Store. Ubuntu 24.04 ships the AWS CLI only as
+    # a snap, and an enrollment command that cannot find it fails closed and fails
+    # the job, so install it during bootstrap rather than at enrollment time.
+    snap install aws-cli --classic
+    aws --version
+
+    # Reached only when every step above passed. This is the success report: a
+    # failed install exits non-zero above and never prints this line, and there is
+    # no static message behind it that would print "complete" anyway.
+    echo "fleet bootstrap complete: nix daemon, tailscaled, and the aws cli are installed; the node is not enrolled yet"
