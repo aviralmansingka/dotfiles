@@ -148,21 +148,66 @@ func TestAskListShowsPendingThenDelivered(t *testing.T) {
 	}
 }
 
-// The captain brief teaches the ask channel and the argv withholds the menu, so
-// a launch cannot paint a question nobody watches. An ask carries the captain's
-// whole briefing, not a one-line question: the commander answers in bullets.
+// A waiting question must be visible on every row, so no question hides behind
+// a commander that is busy with other work. Listing and show carry the count,
+// and delivery clears it without deleting the history.
+func TestPendingAskCountShowsOnEveryRow(t *testing.T) {
+	s, h := fixture(t)
+	if _, e := askCmd(t, s, h, "--text", "Which branch?", "--step", "S01", "--json"); e != nil {
+		t.Fatal(e)
+	}
+	views, e := s.listViews()
+	must(t, e)
+	for _, v := range views {
+		if v.Handle == h && v.PendingAsks != 1 {
+			t.Fatalf("list pending_asks = %d, want 1", v.PendingAsks)
+		}
+	}
+	a, e := platform.ParseArgs([]string{"show", h})
+	must(t, e)
+	shown, e := cmdShow(a, s)
+	must(t, e)
+	if got := shown.(contextView).PendingAsks; got != 1 {
+		t.Fatalf("show pending_asks = %d, want 1", got)
+	}
+	// Delivery is written by the session that drains the ask, so the count drops
+	// and the file stays as history.
+	l, e := s.asks(h)
+	must(t, e)
+	ask := l.Pending[0].Ask
+	ask.DeliveredAt, ask.DeliveredTo = "2026-11-05T19:20:00Z", "commander-session"
+	b, e := json.Marshal(ask)
+	must(t, e)
+	must(t, platform.AtomicWrite(l.Pending[0].Path, append(b, '\n')))
+	views, e = s.listViews()
+	must(t, e)
+	for _, v := range views {
+		if v.Handle == h && v.PendingAsks != 0 {
+			t.Fatalf("pending_asks after delivery = %d, want 0", v.PendingAsks)
+		}
+	}
+}
+
+// The captain brief teaches both ask channels: the durable mission ask written
+// first, then the menu for a human who is answering in the pane. An ask carries
+// the captain's whole briefing, not a one-line question, and the loadout grants
+// the menu so the fast path exists without risking an unanswered question.
 func TestCaptainBriefNamesTheAskChannel(t *testing.T) {
 	s, h, _ := piFixture(t)
 	p, e := s.plan(h, "rex", "")
 	must(t, e)
-	for _, want := range []string{"mission ask " + h, "<full briefing>", "a briefing, not a one-line question", "the options with their trade-offs", "then stop", "Do not use ask_user_question", "nobody watches a captain pane"} {
+	for _, want := range []string{"mission ask " + h, "<full briefing>", "a briefing, not a one-line question", "it is the record", "ask_user_question", "never treat an unanswered menu as sent", "then stop"} {
 		if !strings.Contains(p.CaptainBrief, want) {
 			t.Fatalf("the captain brief does not say %q:\n%s", want, p.CaptainBrief)
 		}
 	}
+	held := false
 	for _, tool := range strings.Split(captainLoadout, ",") {
 		if tool == "ask_user_question" {
-			t.Fatalf("the captain still holds ask_user_question: %s", captainLoadout)
+			held = true
 		}
+	}
+	if !held {
+		t.Fatalf("the captain cannot ask the human a question: %s", captainLoadout)
 	}
 }

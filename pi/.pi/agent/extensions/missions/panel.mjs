@@ -146,6 +146,12 @@ function recordRows(record, now) {
     add("Review", has(definition?.question) ? `${pending} · ${definition.question}` : pending,
       words(REVIEW_LABELS, state.checkpoints?.[pending]?.status), "warning");
   }
+  // A waiting question is the owner's work, not the commander's: the row says
+  // how many wait, so a busy commander cannot hide one.
+  const asks = record.pending_asks;
+  if (Number.isInteger(asks) && asks > 0) {
+    add("Asks", `${asks} waiting for a human`, "", "warning");
+  }
   // The blocker row always states something: "none" is a fact the human reads.
   const progress = attempt?.progress || [];
   const blocker = [...progress].reverse().find(entry => has(entry.blocker))?.blocker;
