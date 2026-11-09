@@ -86,13 +86,20 @@ work, and may update the mission itself: the brief, the steps, the checks, a
 checkpoint decision, or the close. Full contract: `docs/pi-missions.md`
 § Captain autonomy and edit authority.
 
-A captain pane has no watcher, and `ask_user_question` is not in the captain's
-tool list. When a captain is blocked on a decision, a missing credential, or
-anything only the human can settle, it writes one durable question and stops:
+A captain has two ways to ask, and it writes the record first. When a captain
+is blocked on a decision, a missing credential, or anything only the human can
+settle, it writes one durable question with `mission ask`:
 
 ```sh
 mission ask REPO/SLUG --text "Which branch name?" --step S02 --kind decision
 ```
+
+Then, when a human is answering in the captain's own pane, it paints the same
+question with `ask_user_question`, so the human chooses instead of reading a
+paragraph. The menu is the fast path and the record is the durable one; a menu
+nobody answers stalls a turn, and the ask on disk is what survives it. Every
+mission row carries `pending_asks`, and the desk shows an `Asks` row while one
+waits, so a question never hides behind a busy commander.
 
 The ask lands in the mission record, and the commander's own Pi session drains it
 into that conversation. No token is needed. Kinds are `blocked`, `question`, and

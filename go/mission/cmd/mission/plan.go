@@ -86,7 +86,7 @@ func seatLabel(prefix, slug string) string {
 // a block needs the human, and writes no mission definition except a step and
 // its checks. The commander answers in a few bullets and may change the mission
 // itself.
-const captainBrief = `You are the captain of mission %[1]s, seated in its worktree as cwd for the whole mission. Before reading repository files, call mission with action=attach, handle=%[1]s, launch_id=%[2]s. Three duties, and no others: hold the claim for this mission and never edit repository files yourself; deploy a trooper for every step and judge the result through a trooper, not with your own hands; answer the commander in the %[3]s session. You are autonomous: inside those duties, decide and proceed without asking permission for each move. Deploy every trooper in the %[4]s session: pass session=%[4]s on each subagent call, so no rank tab lands in the %[3]s session. When a block needs the human, send one mission ask %[1]s --text "<full briefing>" --step <step-id> --kind blocked|question|decision. The text is a briefing, not a one-line question: state the block, what you already tried and what it showed, the options with their trade-offs, and the decision you need. The commander answers with a few bullets that unblock you, and may also update the mission, its brief, its steps, or its checks from outside; then stop and keep this session for the answer. Do not use ask_user_question; nobody watches a captain pane. Your one write to the mission definition is a step or its checks through mission step edit; never rewrite the mission brief, and never reset a step to weaken a check. Stop at checkpoints; keep this session and worktree for later steps.`
+const captainBrief = `You are the captain of mission %[1]s, seated in its worktree as cwd for the whole mission. Before reading repository files, call mission with action=attach, handle=%[1]s, launch_id=%[2]s. Three duties, and no others: hold the claim for this mission and never edit repository files yourself; deploy a trooper for every step and judge the result through a trooper, not with your own hands; answer the commander in the %[3]s session. You are autonomous: inside those duties, decide and proceed without asking permission for each move. Deploy every trooper in the %[4]s session: pass session=%[4]s on each subagent call, so no rank tab lands in the %[3]s session. When a block needs the human, send one mission ask %[1]s --text "<full briefing>" --step <step-id> --kind blocked|question|decision. The text is a briefing, not a one-line question: state the block, what you already tried and what it showed, the options with their trade-offs, and the decision you need. Write that ask before you ask anything else: it is the record, and it reaches the commander when you have no watcher. Then, when a human answers in this session, put the same question in front of them with ask_user_question, so they can choose instead of decoding a paragraph. The menu is the fast path and the mission ask is the durable one; never treat an unanswered menu as sent. The commander answers with a few bullets that unblock you, and may also update the mission, its brief, its steps, or its checks from outside; then stop and keep this session for the answer. Your one write to the mission definition is a step or its checks through mission step edit; never rewrite the mission brief, and never reset a step to weaken a check. Stop at checkpoints; keep this session and worktree for later steps.`
 
 // captainPrompt renders the brief for one launch id. Plan renders it with the id
 // a caller passes, and deploy renders it again with the intent it reserved, so
@@ -96,14 +96,15 @@ func captainPrompt(h, subagentSession, launchID string) string {
 	return fmt.Sprintf(captainBrief, h, launchID, armySession, subagentSession)
 }
 
-// captainLoadout is the captain's reach at launch: the same five tools the
+// captainLoadout is the captain's reach at launch: the same six tools the
 // mission-captain profile declares. A captain holds the claim and never edits
 // files, so no edit, write, or bash is granted to it — the profile is the
 // contract, and this allowlist is the flag that makes a launched captain obey
-// it instead of inheriting every default tool. ask_user_question is not here:
-// a captain pane has no watcher, so a blocked captain writes a durable ask with
-// `mission ask` instead of painting a menu nobody sees.
-const captainLoadout = "mission,subagent,subagent_message,read,tool_search"
+// it instead of inheriting every default tool. ask_user_question is here on
+// purpose: a human who sits in the captain pane can answer a menu, and a
+// question nobody answers stays safe because the captain wrote the same
+// question to the mission record first.
+const captainLoadout = "mission,subagent,subagent_message,read,tool_search,ask_user_question"
 
 // captainPi resolves the pi binary at plan time. A window's command is resolved
 // against the mux server's own PATH, not the caller's, and that PATH holds the

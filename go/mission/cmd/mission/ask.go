@@ -109,6 +109,37 @@ func (s *App) ask(h string, in askInput) (askFile, error) {
 
 // asks reads every ask of one mission. A missing asks directory is an empty
 // answer, not an error: most missions never ask anything.
+// askCount is how many questions wait in one mission's record. It reads the
+// asks directory alone, so every row can carry the count without loading the
+// ask, and no question can hide behind a commander that is busy with other
+// work. An ask counts once its file exists and has no delivered_at stamp.
+func (s *App) askCount(r mission.Record) int {
+	d, e := s.Repo.Path(r.Mission.Repo, r.Mission.Slug, "asks")
+	if e != nil {
+		return 0
+	}
+	ents, e := os.ReadDir(d)
+	if e != nil {
+		return 0
+	}
+	n := 0
+	for _, ent := range ents {
+		if ent.IsDir() || !strings.HasSuffix(ent.Name(), ".json") {
+			continue
+		}
+		b, e := os.ReadFile(filepath.Join(d, ent.Name()))
+		if e != nil {
+			continue
+		}
+		var ask Ask
+		if json.Unmarshal(b, &ask) != nil || ask.DeliveredAt != "" {
+			continue
+		}
+		n++
+	}
+	return n
+}
+
 func (s *App) asks(h string) (askListing, error) {
 	r, e := s.load(h)
 	if e != nil {

@@ -193,14 +193,26 @@ progress and needs an explicit human decision.
 
 ## Ask the commander
 
-A captain pane has no watcher, so a blocked captain writes a durable question
-instead of painting an `ask_user_question` menu:
+A captain has two ways to ask, and it uses both. The durable one is
+`mission ask`, which writes the question into the mission record:
 
 ```sh
 mission ask dotfiles/x --text "Which branch name should the migration use?" \
   --step S02 --attempt attempt-1 --kind decision
 mission ask --list dotfiles/x            # pending and delivered asks
 ```
+
+The fast one is `ask_user_question`, which paints a menu for a human who is
+answering in the captain's own pane. The order is always the same: write the ask
+first, then paint the menu. A menu with no watcher stalls the turn, and the
+record is what survives it, so a captain that gets no answer still has its
+question on file. A captain never treats an unanswered menu as sent.
+
+Every mission row carries `pending_asks`, and the desk draws it as an `Asks` row
+while it is above zero. That is the answer to a busy commander: a waiting
+question is visible on the mission list without opening the mission and without
+waiting for the commander's drain to reach it. `mission show` carries the same
+count.
 
 The CLI writes `6_missions/dotfiles/x/asks/<UTC-stamp>-<ask-id>.json` with
 `{id, handle, step, attempt, kind, text, at}` and prints the id and the path. It
@@ -229,8 +241,10 @@ commander restart cannot deliver it twice. With no commander session — extensi
 unloaded, not the commander, or the commander away — nothing drains and nothing
 is lost: the asks stay on disk until that session returns.
 
-`ask_user_question` is not in the captain loadout, so a captain cannot paint a
-menu nobody watches. The commander keeps it.
+A captain holds both `mission ask` and `ask_user_question`. The two channels do
+different jobs: the record outlives the pane, and the menu gets a present human
+an answer in one keypress. The commander keeps `ask_user_question` too, for its
+own questions.
 
 ## Captain autonomy and edit authority
 

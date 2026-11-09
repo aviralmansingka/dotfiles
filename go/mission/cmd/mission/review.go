@@ -22,13 +22,15 @@ type pendingReview struct {
 }
 
 // recordView is one mission record on the machine surface. It inlines the
-// record, then adds the three derived fields an agent needs to hand the owner
-// one stable line: revision, pending_review, and next_command.
+// record, then adds the derived fields an agent needs to hand the owner one
+// stable line: revision, pending_review, next_command, and the count of
+// questions that still wait for a human.
 type recordView struct {
 	mission.Record
 	Revision      int            `json:"revision"`
 	PendingReview *pendingReview `json:"pending_review"`
 	NextCommand   *string        `json:"next_command"`
+	PendingAsks   int            `json:"pending_asks"`
 }
 
 // decisionView adds the idempotency fact to one decision result.
@@ -80,7 +82,9 @@ func (s *App) listViews() ([]recordView, error) {
 	}
 	out := make([]recordView, 0, len(recs))
 	for _, r := range recs {
-		out = append(out, viewOf(r))
+		v := viewOf(r)
+		v.PendingAsks = s.askCount(r)
+		out = append(out, v)
 	}
 	return out, nil
 }
