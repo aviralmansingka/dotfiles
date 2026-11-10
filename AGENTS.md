@@ -93,6 +93,12 @@ captain approval).
 `prefix+t` toggles the per-tab persistent nvim sidebar; `prefix+o` opens its
 agent-touched file picker (ChmaraX/herdr-nvim — Herdr half machine-installed via
 `herdr plugin install`, nvim half at `nvim/.config/nvim/lua/plugins/herdr-nvim.lua`).
+`<leader>at` sends the buffer (or a prompted visual selection) to the agent that runs
+beside this nvim. The mux seam `plugins/agent/mux.lua` picks the adapter: Rex when
+`REX_SESSION`/`REX_BLOCK` are set, Herdr when `HERDR_PANE_ID` is; `rex.lua` targets the pi
+block in this window, then the session, and delivers with `rex send` + `rex send-key`.
+`plugins/herdr/agent_send.lua` is now only a compatibility shim.
+
 A live sidebar daemon is the tab's editor: `nvim_open`/`/nvim` attach to it through
 its registry socket (`<tab key>.sock` — tab id with `:`→`_` — under
 `$XDG_RUNTIME_DIR/herdr-nvim`, else the temp dir) instead of launching a duplicate

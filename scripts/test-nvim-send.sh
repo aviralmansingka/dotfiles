@@ -5,7 +5,7 @@
 # (herdr CLI, Snacks terminal, sidekick Terminal/Session, channels) is
 # stubbed through the shared nvim/tests/ci harness — no network, no live
 # herdr or tmux, no stowed ~/.config resolution.
-# Paths: nvim/.config/nvim/lua/plugins/herdr/agent_send.lua nvim/.config/nvim/lua/plugins/herdr-agent.lua nvim/.config/nvim/lua/plugins/herdr/term_send.lua nvim/.config/nvim/lua/plugins/sidekick/view_focus.lua
+# Paths: nvim/.config/nvim/lua/plugins/agent/send.lua nvim/.config/nvim/lua/plugins/agent/mux.lua nvim/.config/nvim/lua/plugins/agent/herdr.lua nvim/.config/nvim/lua/plugins/agent/rex.lua nvim/.config/nvim/lua/plugins/herdr/agent_send.lua nvim/.config/nvim/lua/plugins/herdr-agent.lua nvim/.config/nvim/lua/plugins/herdr/term_send.lua nvim/.config/nvim/lua/plugins/sidekick/view_focus.lua
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
