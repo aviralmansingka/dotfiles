@@ -86,6 +86,7 @@ total_start="$(now_ms)"
 
 # Wired existing specs (load the worktree copy via the shared harness).
 run_case "$config_root/tests/herdr_agent_send_spec.lua" "herdr_agent_send_spec" "UTC"
+run_case "$config_root/tests/rex_agent_send_spec.lua" "rex_agent_send_spec" "UTC"
 run_case "$config_root/tests/sidekick_ask_cli_spec.lua" "sidekick_ask_cli_spec" "UTC"
 
 # Glob-discovered offline cases. obsidian_spec runs once per TZ fixture set.
