@@ -79,11 +79,11 @@ Build every document in this order.
    State the subject, the place and the scope.
 4. **Date band.** 1 pt ink rule above and below, 8 pt space.
    Labels are 7 pt bold muted with 1 pt tracking.
-   Values are 8.5 pt ink: `DATE`, `PREPARED BY`, and one status field only.
+   Values are 8.5 pt ink: `DATE` and `PREPARED BY`. Do not add a status field.
 5. **Summary.** Section 1. One bold sentence, 10 pt.
 6. **Scope.** Section 2. What the document covers and what it leaves out.
 7. **Body sections.** Numbered 3 upward, in reading order.
-8. **Open items.** A three-column table: item, owner, how it closes.
+8. **Items to close.** A three-column table: item, owner, how it closes.
 9. **Figure or plan.** Last, on its own page if it is tall.
 10. **Footer.** Real footer, not a body paragraph.
 
@@ -140,7 +140,7 @@ Do not add a horizontal rule under an H2. The heading is the rule.
 - Left-align text and numbers. Do not centre cells.
 - Do not merge cells. Do not shade cells except in a card row.
 - Use this table for failure behaviour: `Failure | Effect | Action`.
-- Use this table for open items: `Item | Owner | How it closes`.
+- Use this table for the items to close: `Item | Owner | How it closes`.
 
 ## 7. Cards
 
@@ -228,7 +228,7 @@ Organise every document the same way.
 3. **The subject, layer by layer.** Rack, fabric, border, management.
 4. **Failure behaviour.** What breaks, what the effect is, what to do.
 5. **What the document does not show.** Name the gaps.
-6. **Open items.** Item, owner, how it closes.
+6. **Items to close.** Item, owner, how it closes.
 7. **The plan.** Scale, phases and the next decision.
 
 Content rules:
@@ -236,7 +236,7 @@ Content rules:
 - Put the most important number in the first paragraph.
 - Keep one decision per sentence. Keep one topic per section.
 - State the mechanism, then the number that proves it.
-- Attribute every open item to a named owner and a closing action.
+- Attribute every item to close to a named owner and a closing action.
 - Separate audience editions at the source, not with redactions.
 - Keep prices, rates and financing out of the partner edition.
 - Use absolute dates. Do not write "next week" or "soon".
