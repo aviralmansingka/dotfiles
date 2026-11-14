@@ -79,7 +79,7 @@ type model struct {
 }
 
 func newModel(dry bool, title, vault string) *model {
-	m := &model{vault: vault, dry: dry, w: 70, h: 10}
+	m := &model{vault: vault, dry: dry, w: 64, h: 11}
 	m.input = newInput("what just happened?", title)
 	m.detail = newInput("add as much detail as you like", "")
 	// A thin bar keeps the detail row reading as part of the title, not a peer.

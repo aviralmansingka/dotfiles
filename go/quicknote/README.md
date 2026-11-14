@@ -37,7 +37,8 @@ sibling.
 ```sh
 quicknote ui                 # the box: type, Enter saves, Esc cancels
 quicknote ui --dry-run       # same box, prints the note instead of writing
-quicknote ui --render --width 62 --height 10          # one frame, no terminal
+quicknote ui --render                                 # one frame at the popup's size
+quicknote ui --render --width 62 --height 10          # a narrower frame
 quicknote ui --render --blurred                       # the unfocused palette
 ```
 
@@ -68,13 +69,16 @@ Build and install with `./scripts/install-quicknote`.
 ## Rex shortcut
 
 `rex/notes.lua` binds `Cmd+Shift+N` to `capture_note`, which opens `quicknote ui`
-in a floating layer at `{0.24, 0.28, 0.52, 0.34}` with focus. The block closes when
-the box exits, and the layer goes with it, so the action needs no cleanup.
+in a floating layer with focus. Layer bounds are fractions of the window, so the
+action measures the window in cells first and cuts the layer to the card's own
+footprint, 64 columns by 11 rows: the popup ends where the card does instead of
+leaving a field of empty space around it. The block closes when the box exits,
+and the layer goes with it, so the action needs no cleanup.
 
 Try it before the branch lands:
 
 ```sh
-rex do -s "$REX_SESSION" -e "rex.session.new_layer{ bounds={0.24,0.28,0.52,0.34}, focus=true, layout=rex.layout.block{ flavor='com.superlogical.terminal.shell', options={command={'quicknote','ui'}} } }"
+rex do "$PWD/rex/.config/rex/notes.lua" --action capture_note
 ```
 
 After the dotfiles change is live, `rex config reload` installs the chord.

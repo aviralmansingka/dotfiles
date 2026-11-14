@@ -21,7 +21,11 @@ Offline tests for the fleeting-note CLI and its Rex chord. Entry:
 - The built binary is exercised end to end on a temporary vault: `created`,
   `duplicate`, and `appended` JSON results, plus the file contents.
 - The Rex wiring is asserted by text: `require("notes")` in `init.lua`, the
-  `capture_note` action launching `quicknote ui`, and the `cmd+shift+n` bind.
+  `capture_note` action launching `quicknote ui` at the card's size, and the
+  `cmd+shift+n` bind.
+- `TestCardFootprint` renders the card at the size `rex/notes.lua` cuts the
+  floating layer to and fails if the card grows past it, which is how the Lua and
+  Go constants stay in step.
 
 ## Rules
 
@@ -35,3 +39,6 @@ Offline tests for the fleeting-note CLI and its Rex chord. Entry:
 - The bubbletea model is not driven headlessly here. Cursor focus and the Tab swap
   were checked by hand; a test would need `tea.NewProgram` with a fake input.
 - Nothing checks how the card looks. Design changes are judged in a pane.
+- The layer's cell arithmetic is not asserted: Rex rounds a layer's rect outwards
+  to whole cells, and the action carries a measured slack for it (two columns, one
+  row). A Rex release that rounds differently would show as a card edge cut short.
