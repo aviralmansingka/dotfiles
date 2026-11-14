@@ -105,8 +105,8 @@ func cmdUI(args []string) int {
 	text := fs.String("text", "", "prefill the input")
 	render := fs.Bool("render", false, "print one frame and exit")
 	blurred := fs.Bool("blurred", false, "render the unfocused palette")
-	width := fs.Int("width", 70, "frame width for --render")
-	height := fs.Int("height", 10, "frame height for --render")
+	width := fs.Int("width", 64, "frame width for --render, the floating layer's own")
+	height := fs.Int("height", 11, "frame height for --render, the floating layer's own")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}

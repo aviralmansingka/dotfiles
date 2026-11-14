@@ -25,7 +25,7 @@ grep -q '^> added later$' "$note"
 
 # The Rex chord must stay wired to the binary it launches.
 grep -q 'rex.bind("cmd+shift+n", "capture_note")' "$repo_root/rex/.config/rex/notes.lua"
-grep -q "options = { command = { \"quicknote\", \"ui\" } }" "$repo_root/rex/.config/rex/notes.lua"
+grep -q 'options = { command = { "quicknote", "ui" }, size = { columns = CARD_W, rows = CARD_H } }' "$repo_root/rex/.config/rex/notes.lua"
 grep -q 'require("notes")' "$repo_root/rex/.config/rex/init.lua"
 
 echo "quicknote tests passed"
