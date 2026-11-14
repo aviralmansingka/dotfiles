@@ -12,6 +12,10 @@ local terminal = "com.superlogical.terminal.shell"
 -- that test is what keeps the two in step.
 local CARD_W, CARD_H = 64, 11
 
+-- The processing list needs more room: a dozen rows of captures plus its own
+-- chrome, and enough width for a thought to read without truncating.
+local REVIEW_W, REVIEW_H = 80, 18
+
 -- Rex rounds a layer's rect outwards to whole cells and edges it, which costs a
 -- short layer up to two columns and one row (measured at 197x53: 66x12 asked for
 -- arrives 64x11). Ask for that much extra: a spare cell falls in the card's own
@@ -74,14 +78,32 @@ local function window_cells(session_id)
   return math.floor(c + 0.5), math.floor(r + 0.5)
 end
 
--- card_bounds centers the card in the window, so the layer ends where the card
--- does instead of leaving a field of empty space around it.
-local function card_bounds(session_id)
+-- bounds_for centers a box of the given cells in the window, so the layer ends
+-- where the box does instead of leaving a field of empty space around it.
+local function bounds_for(session_id, want_w, want_h)
   local cols, rows = window_cells(session_id)
-  if cols == nil or cols < CARD_W or rows < CARD_H then return FALLBACK end
-  local w = math.min(1, (CARD_W + SLACK_W) / cols)
-  local h = math.min(1, (CARD_H + SLACK_H) / rows)
+  if cols == nil or cols < want_w or rows < want_h then return FALLBACK end
+  local w = math.min(1, (want_w + SLACK_W) / cols)
+  local h = math.min(1, (want_h + SLACK_H) / rows)
   return { (1 - w) / 2, (1 - h) / 2, w, h }
+end
+
+-- open_layer puts one command in a floating layer cut to its own size.
+local function open_layer(ctx, want_w, want_h, command)
+  local session_id = ctx.session_id or rex.session_id
+  local layer, err = rex.session.new_layer{
+    session_id = session_id,
+    bounds = bounds_for(session_id, want_w, want_h),
+    focus = true,
+    layout = rex.layout.block{
+      flavor = terminal,
+      -- The program starts at the box's own size, so it is never clipped while
+      -- the layer settles, and it draws no larger than the box.
+      options = { command = command, size = { columns = want_w, rows = want_h } },
+    },
+  }
+  if layer == nil then error(err, 0) end
+  return { layer_id = layer.layer_id }
 end
 
 rex.action{
@@ -90,23 +112,22 @@ rex.action{
   description = "Open the quicknote capture box in a floating layer.",
   category = "Notes",
   run = function(ctx, args)
-    local session_id = ctx.session_id or rex.session_id
-    local layer, err = rex.session.new_layer{
-      session_id = session_id,
-      bounds = card_bounds(session_id),
-      focus = true,
-      layout = rex.layout.block{
-        flavor = terminal,
-        -- The box starts at the card's own size, so it is never clipped while
-        -- the layer settles, and it draws no larger than the card.
-        options = { command = { "quicknote", "ui" }, size = { columns = CARD_W, rows = CARD_H } },
-      },
-    }
-    if layer == nil then error(err, 0) end
-    return { layer_id = layer.layer_id }
+    return open_layer(ctx, CARD_W, CARD_H, { "quicknote", "ui" })
   end,
 }
 
--- Cmd+Shift+N takes the note mnemonic and collides with nothing else here:
--- j/k cycle layers, =/- resize.
+-- processing walks the captures that are due and turns them into atomic notes.
+rex.action{
+  name = "process_notes",
+  title = "Process Notes",
+  description = "Walk the fleeting queue and promote captures into atomic notes.",
+  category = "Notes",
+  run = function(ctx, args)
+    return open_layer(ctx, REVIEW_W, REVIEW_H, { "quicknote", "review" })
+  end,
+}
+
+-- Cmd+Shift+N takes the note mnemonic and Cmd+Shift+P the processing one. Both
+-- collide with nothing else here: j/k cycle layers, =/- resize.
 rex.bind("cmd+shift+n", "capture_note")
+rex.bind("cmd+shift+p", "process_notes")

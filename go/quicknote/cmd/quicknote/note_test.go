@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSlug(t *testing.T) {
@@ -32,7 +33,8 @@ func TestSlug(t *testing.T) {
 }
 
 func TestNoteBody(t *testing.T) {
-	got := noteBody("buy-oat-milk", "Buy oat milk", "the barista one\nthe unsweetened one")
+	now := time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)
+	got := noteBody("buy-oat-milk", "Buy oat milk", "the barista one\nthe unsweetened one", now)
 	for _, want := range []string{
 		"tags: [fleeting]",
 		"> [!FLEETING] Buy oat milk",
@@ -44,7 +46,7 @@ func TestNoteBody(t *testing.T) {
 		}
 	}
 	// No detail still writes a note with just the title line.
-	if plain := noteBody("x", "Just a title", ""); strings.Count(plain, ">") != 1 {
+	if plain := noteBody("x", "Just a title", "", now); strings.Count(plain, ">") != 1 {
 		t.Errorf("title-only body has extra quote lines:\n%s", plain)
 	}
 }

@@ -19,7 +19,13 @@ Offline tests for the fleeting-note CLI and its Rex chord. Entry:
 - `go vet ./...` and a real `go build`, so a broken `main` fails before the binary
   runs.
 - The built binary is exercised end to end on a temporary vault: `created`,
-  `duplicate`, and `appended` JSON results, plus the file contents.
+  `duplicate`, and `appended` JSON results, plus the file contents and the
+  `captured:` stamp the processing queue ages by.
+- `review` logic: queue order (oldest first), snooze filtering (`review_due` in the
+  future hides a capture, the due date brings it back), a single `review_due` line
+  after repeated snoozes, and promotion writing an atomic note (`tags: [atomic]`,
+  empty `up:`, the capture kept as a `> [!CAPTURE]` callout, collision suffixes,
+  empty title refused). `review --render` proves the list draws without a terminal.
 - The Rex wiring is asserted by text: `require("notes")` in `init.lua`, the
   `capture_note` action launching `quicknote ui` at the card's size, and the
   `cmd+shift+n` bind.
@@ -36,8 +42,9 @@ Offline tests for the fleeting-note CLI and its Rex chord. Entry:
 
 ## Gaps
 
-- The bubbletea model is not driven headlessly here. Cursor focus and the Tab swap
-  were checked by hand; a test would need `tea.NewProgram` with a fake input.
+- The bubbletea models are not driven headlessly here: the Tab swap, the review
+  keys, and editor handoff were checked by hand in a pty. Promotion is tested
+  without an editor by calling `promote` directly.
 - Nothing checks how the card looks. Design changes are judged in a pane.
 - The layer's cell arithmetic is not asserted: Rex rounds a layer's rect outwards
   to whole cells, and the action carries a measured slack for it (two columns, one

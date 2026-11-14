@@ -18,6 +18,8 @@ func run(args []string) int {
 		switch args[0] {
 		case "ui":
 			return cmdUI(args[1:])
+		case "review":
+			return cmdReview(args[1:])
 		case "help", "-h", "--help":
 			usage(os.Stdout)
 			return 0
@@ -35,12 +37,17 @@ func usage(w io.Writer) {
   quicknote <text...>        write one note (agent, script, or shell)
   quicknote                  open the capture box (terminal only)
   quicknote ui               open the capture box
+  quicknote review           process captures into atomic notes
 
 
 Capture flags:
   --json            print the result as JSON
   --vault DIR       vault root (default $QUICKNOTE_VAULT, then ~/vault)
   --dry-run         report the entry without writing
+
+Review flags:
+  --vault DIR       vault root
+  --render          print one frame and exit (--width, --height)
 
 UI flags:
   --dry-run         show what would be saved, then exit
@@ -111,6 +118,31 @@ func cmdUI(args []string) int {
 		return 2
 	}
 	return cmdUIWith(*vault, *dry, *text, *render, *blurred, *width, *height)
+}
+
+// cmdReview is the processing pass: it walks the captures that are due and turns
+// them into atomic notes, snoozes them, or retires them.
+func cmdReview(args []string) int {
+	fs := flag.NewFlagSet("quicknote review", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	vault := fs.String("vault", "", "vault root")
+	render := fs.Bool("render", false, "print one frame and exit")
+	width := fs.Int("width", 80, "frame width for --render")
+	height := fs.Int("height", 24, "frame height for --render")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if !*render && !terminal(os.Stdin) {
+		return check(fmt.Errorf("review needs a terminal; add --render for one frame"))
+	}
+	final, err := runReview(vaultDir(*vault), *render, *width, *height)
+	if err != nil {
+		return check(err)
+	}
+	if final.problem != "" {
+		return check(fmt.Errorf("%s", final.problem))
+	}
+	return 0
 }
 
 func cmdUIWith(vault string, dry bool, text string, render, blurred bool, width, height int) int {
