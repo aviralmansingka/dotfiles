@@ -240,10 +240,21 @@ H.run("markdown_plugin_spec", function()
   package.loaded["helpers.herdr_scrollback"] = { setup = function() end }
   rm.init()
 
-  H.eq(rm.opts.custom_handlers.markdown.parse, require("helpers.markdown_ansi").parse,
-    "the ansi SGR parser is render-markdown's custom markdown parser")
+  H.eq(rm.opts.custom_handlers.markdown.parse, require("helpers.markdown_markers").parse,
+    "the marker handler owns the markdown parse and delegates to the ansi parser")
   H.eq(rm.opts.win_options.concealcursor, { default = "nvic", rendered = "nvic" },
     "rendered links stay concealed under the cursor")
+  H.eq(rm.opts.heading.setext, false,
+    "setext headings stay raw: an empty dash bullet parses as an h2 underline")
+  -- An empty box has no task node, and the plugin would fall back to the bullet
+  -- before the box. The custom tokens send `[ ]`/`[x]`/`[X]` through the
+  -- checkbox renderer itself, so an empty box looks the way it looks once text
+  -- arrives. `checkbox.bullet` stays at its default: a box never draws a bullet.
+  local custom = rm.opts.checkbox.custom
+  H.eq(rm.opts.checkbox.bullet, nil, "a checkbox keeps no bullet marker")
+  H.eq(custom.unchecked.raw, "[ ]", "an empty box is a custom checkbox token")
+  H.eq(custom.checked.raw, "[x]", "an empty checked box is a custom checkbox token")
+  H.eq(custom.checked_upper.raw, "[X]", "the uppercase checked box is covered too")
 
   local ansi_group = vim.api.nvim_get_autocmds({ group = "RenderMarkdownAnsiColors" })
   H.eq(#ansi_group, 1, "init() installs the ansi colorscheme autocmd")

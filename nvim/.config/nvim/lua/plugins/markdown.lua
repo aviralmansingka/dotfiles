@@ -69,8 +69,9 @@ return {
     ft = { "markdown" },
     config = function(_, opts)
       require("autolist").setup(opts)
-      vim.keymap.set("i", "<tab>", "<cmd>AutolistTab<cr>")
-      vim.keymap.set("i", "<s-tab>", "<cmd>AutolistShiftTab<cr>")
+      -- Insert-mode Tab and Shift-Tab live in after/ftplugin/markdown.lua: they
+      -- are buffer-local there, so they cannot leak into every other filetype
+      -- once the first markdown buffer loads this plugin.
       -- vim.keymap.set("i", "<c-t>", "<c-t><cmd>AutolistRecalculate<cr>") -- an example of using <c-t> to indent
       vim.keymap.set("i", "<CR>", "<CR><cmd>AutolistNewBullet<cr>")
       vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>")
@@ -531,7 +532,7 @@ return {
       custom_handlers = {
         markdown = {
           extends = true,
-          parse = require("helpers.markdown_ansi").parse,
+          parse = require("helpers.markdown_markers").parse,
         },
       },
       -- Override render-markdown's default win_options.concealcursor (set to "")
@@ -560,6 +561,14 @@ return {
         },
         custom = {
           todo = { raw = "[-]", rendered = "󰥔", highlight = "RenderMarkdownTodo", scope_highlight = nil },
+          -- The grammar emits no task node for a box with no item text, so the
+          -- plugin would fall back to the bullet before the box. Custom tokens
+          -- reach the checkbox renderer itself, which gives an empty `- [ ] `
+          -- line the exact look it has once text arrives: marker concealed, box
+          -- icon in the same cell, no bullet.
+          unchecked = { raw = "[ ]", rendered = "󰄱", highlight = "RenderMarkdownUnchecked", scope_highlight = nil },
+          checked = { raw = "[x]", rendered = "󰱒", highlight = "RenderMarkdownChecked", scope_highlight = nil },
+          checked_upper = { raw = "[X]", rendered = "󰱒", highlight = "RenderMarkdownChecked", scope_highlight = nil },
         },
       },
       code = {
@@ -588,6 +597,14 @@ return {
         enabled = true,
         render_modes = false,
         sign = false,
+        -- Setext headings (a paragraph underlined with `-` or `=`) stay raw.
+        -- The tree-sitter grammar reads a dash-only line as a level-2
+        -- underline instead of an empty list item
+        -- (tree-sitter-grammars/tree-sitter-markdown#202, open), so an empty
+        -- `- ` bullet, indented or not, would render as an h2 bar with a
+        -- concealed marker the moment it sits under text. The `#` form (atx)
+        -- keeps its icon, background, and conceal.
+        setext = false,
         icons = { "󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 " },
         position = "overlay",
         signs = { "󰫎 " },

@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Offline markdown-layer cluster suite (headless nvim, markdown/mermaid/links).
 #
-# Paths: nvim/.config/nvim/lua/helpers/markdown_links.lua nvim/.config/nvim/lua/helpers/markdown_motions.lua nvim/.config/nvim/lua/helpers/mermaid_render.lua nvim/.config/nvim/lua/helpers/markdown_ansi.lua nvim/.config/nvim/lua/helpers/reader.lua nvim/.config/nvim/after/ftplugin/markdown.lua nvim/.config/nvim/lua/plugins/markdown.lua
+# Paths: nvim/.config/nvim/lua/helpers/markdown_links.lua nvim/.config/nvim/lua/helpers/markdown_motions.lua nvim/.config/nvim/lua/helpers/mermaid_render.lua nvim/.config/nvim/lua/helpers/markdown_ansi.lua nvim/.config/nvim/lua/helpers/markdown_markers.lua nvim/.config/nvim/lua/helpers/reader.lua nvim/.config/nvim/after/ftplugin/markdown.lua nvim/.config/nvim/lua/plugins/markdown.lua
 #
-# Runs the six markdown-layer specs with `nvim --headless -u NONE` through
+# Runs the seven markdown-layer specs with `nvim --headless -u NONE` through
 # the shared tests/ci/harness.lua: markdown_links (treesitter link select/
 # edit/paste), mermaid_render_state (render guards + inline auto-render state
 # machine), markdown_ansi_autocmds (reload idempotency + byte preservation),
+# markdown_markers (glyphs for the unparsed empty bullet and empty checkbox),
 # markdown_plugin (plugins/markdown.lua wiring, no vim-pencil, motion
 # mapping, todo scan filters), markdown_reader (centered reading column:
 # eligibility, layout, auto rule, resize, close, no soft wrap), and
@@ -80,6 +81,7 @@ specs=(
   "markdown_links_spec.lua"
   "mermaid_render_state_spec.lua"
   "markdown_ansi_autocmds_spec.lua"
+  "markdown_markers_spec.lua"
   "markdown_plugin_spec.lua"
   "markdown_reader_spec.lua"
   "markdown_motions_spec.lua"
