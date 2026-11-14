@@ -52,6 +52,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | rataflow-view + visualize/artifact skills | test-rataflow.py | 9 offline + 16 cargo (opt-in) | 0.05 s |
 | justfile build recipes | test-just-build.py | see docs/ci-tests/just-build.md | 0.02 s |
 | Fleet secrets (sops) | test-sops-secrets.py | see docs/ci-tests/sops-secrets.md | 0.07 s |
+| quicknote CLI + Rex chord | test-quicknote.sh | see docs/ci-tests/quicknote.md | 2 s warm |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
 herdr-clean-handoff, herdr-flash-copy, herdr-annotate-install,
