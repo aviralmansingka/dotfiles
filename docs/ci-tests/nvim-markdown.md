@@ -55,6 +55,15 @@ It runs headless, offline, and with no plugin manager.
   open. `:write` keeps the fillers. A resize re-cuts them, a too-narrow
   resize, a buffer switch to an octo buffer, and a closed editing window
   drop them.
+- `markdown_markers_spec`: the glyph handler for the dash-only marker shape the
+  grammar has no node for. An indented empty bullet parses as a setext
+  underline, so the plugin would draw nothing and the raw marker would show
+  until the next keystroke. The spec stubs the resolved plugin config (no
+  bootstrap) and asserts the icon, the level cycling by indent, the concealed
+  byte range, the `conceal = false` mark, and that a parsed marker, an empty or
+  filled checkbox, a custom token, a filled nested item, and a code fence get no
+  second glyph. A raising config, a raising parser chain, and a non-markdown
+  buffer leave the plugin's own render untouched.
 - `markdown_motions_spec`: `h`/`l`/`w`/`b`/`e` in markdown buffers, against
   the two conceal layers. The treesitter highlighter supplies the inline-link
   conceal (the `conceal ""` captures from the parser bundled with nvim, so no
@@ -93,6 +102,9 @@ entry. The script fails on any spec failure or budget breach.
 - `helpers/reader.lua`: `eligible`, `column_width`, `should_auto`, `enable`,
   `close`, `toggle`, `maybe_auto`, and `setup` are exercised. The filler
   windows and the resize path run against the headless screen.
+- `helpers/markdown_markers.lua`: `parse` and `extend` are exercised against a
+  real markdown tree with a stubbed plugin config; the plugin's own resolved
+  icon list, level cycling, and checkbox positions are read back from it.
 
 ## Known gaps
 

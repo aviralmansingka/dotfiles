@@ -458,6 +458,8 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 - Autolist supports list-type cycling.
 - Autolist recalculates after indent and delete.
 - Autolist keymaps cover insert `<Tab>/<S-Tab>/<CR>`, normal `o`/`O`/`<CR>`/`<C-r>`, and list cycling on `<leader>cn` and `<leader>cp`.
+- The insert `<Tab>/<S-Tab>` pair is buffer-local to markdown (`after/ftplugin/markdown.lua`); the rest are global once autolist loads.
+- Setext headings are not rendered (`heading.setext = false`): the parser reads an empty `- ` bullet as a level-2 underline (tree-sitter-markdown#202).
 
 ### Rendered Markdown
 
@@ -472,6 +474,9 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 - Rendered Markdown customizes link and wiki-link icons.
 - Rendered Markdown includes custom web, Discord, GitHub, GitLab, Google, Neovim, Reddit, StackOverflow, Wikipedia, and YouTube link icons.
 - Rendered Markdown customizes quote rendering.
+- An empty bullet, indented or not, draws its glyph immediately (`helpers/markdown_markers`): the grammar reads a dash-only line as a setext underline, so no list node exists until the item has text. The handler also conceals the trailing space of an empty marker, so no `trail` listchar dot sits beside the icon.
+- An empty `[ ]`/`[x]`/`[X]` box draws its box icon immediately, through the plugin's custom checkbox tokens: the grammar emits no task node until the item has text, and the custom token path reaches the checkbox renderer instead of falling back to the bullet. A checkbox never shows a bullet.
+- Setext (underline) headings are not rendered (`heading.setext = false`).
 - Mermaid fences auto-render as inline Unicode ASCII art via grok-mermaid, shown as virtual lines anchored beside the fence.
 - Mermaid ASCII art maps semantic classes to `MermaidAscii*` highlight groups in Gruvbox hexes matching the Ghostty palette.
 - Mermaid source fences fold to one dim line; the fold opens on cursor entry and closes on cursor leave.

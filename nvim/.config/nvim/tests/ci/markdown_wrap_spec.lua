@@ -6,6 +6,8 @@
 --     items stay separate paragraphs;
 --   * quotes repeat their prefix on every wrapped line;
 --   * frontmatter, headings, tables, HTML, and fenced code pass through;
+--   * rules, setext underlines, and empty list items pass through, so a
+--     dash-only line never folds into the paragraph above it;
 --   * hard line breaks survive;
 --   * a second pass changes nothing.
 
@@ -99,6 +101,15 @@ H.run("markdown_wrap_spec", function()
     "</div>",
   }
   H.eq(dump(format.format(doc, 40)), dump(doc), "frontmatter, headings, code, tables, and HTML pass through")
+
+  -- rules and empty items are structure: never folded into the line above
+  H.eq(dump(format.format({ "Some prose here.", "---" }, 99)), "Some prose here.\n---",
+    "a dash rule under prose stays on its own line")
+  H.eq(dump(format.format({ "Title", "===" }, 99)), "Title\n===", "an equals underline stays put")
+  H.eq(dump(format.format({ "one", "***", "two" }, 99)), "one\n***\ntwo", "a star rule splits the paragraphs")
+  H.eq(dump(format.format({ "- parent item", "  - " }, 99)), "- parent item\n  - ",
+    "an empty nested bullet survives reflow")
+  H.eq(dump(format.format({ "- ", "- " }, 99)), "- \n- ", "empty top-level bullets survive reflow")
 
   -- hard break keeps the two trailing spaces and ends the paragraph
   out = format.format({ "one two  ", "three " .. string.rep("word ", 30) }, 40)

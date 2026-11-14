@@ -16,6 +16,29 @@ local function is_heading(line)
   return line:match("^%s*#+%s") ~= nil
 end
 
+--- A thematic break or a setext underline: nothing but dashes, stars,
+--- underscores, or equals, with any spacing between them. Reflow must keep
+--- these lines as they are; folding one into the paragraph above turns a rule
+--- (or the underline of a heading) into prose text.
+local function is_rule(line)
+  local rest = line:match("^%s*(.-)%s*$")
+  if rest == "" then
+    return false
+  end
+  for char in rest:gmatch("%S") do
+    if not char:match("^[-*=_]") then
+      return false
+    end
+  end
+  return true
+end
+
+--- A bullet or ordered marker with no content yet. autolist leaves `- ` on
+--- the line while you type, and a reflow that drops it deletes the item.
+local function is_empty_item(line)
+  return line:match("^%s*[-*+]%s*$") ~= nil or line:match("^%s*%d+[.)]%s*$") ~= nil
+end
+
 local function is_pipe(line)
   return line:match("^%s*|") ~= nil
 end
@@ -108,7 +131,7 @@ function M.format(lines, width)
 
   while i <= n do
     local line = lines[i]
-    if is_blank(line) or is_heading(line) then
+    if is_blank(line) or is_heading(line) or is_rule(line) or is_empty_item(line) then
       out[#out + 1] = line
       i = i + 1
     elseif table_start(lines, i) then
@@ -149,7 +172,15 @@ function M.format(lines, width)
 
       while i <= n and not br do
         local current = lines[i]
-        if is_blank(current) or is_heading(current) or is_pipe(current) or is_html(current) or is_fence(current) then
+        if
+          is_blank(current)
+          or is_heading(current)
+          or is_rule(current)
+          or is_empty_item(current)
+          or is_pipe(current)
+          or is_html(current)
+          or is_fence(current)
+        then
           break
         end
 

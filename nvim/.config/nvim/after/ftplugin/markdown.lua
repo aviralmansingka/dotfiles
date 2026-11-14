@@ -8,6 +8,20 @@ vim.opt_local.number = false
 vim.opt_local.relativenumber = false
 vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
 
+-- Prose leaves a trailing space on every empty list item (`- `), and the
+-- default `trail:-` glyph draws that space as a second dash, so the marker
+-- reads as `--` until you type on the line. Mark the cell with a middle dot
+-- instead: the space still shows, and no marker ever looks doubled.
+vim.opt_local.listchars = vim.tbl_extend("force", vim.opt_local.listchars:get(), { trail = "·" })
+
+-- Insert-mode Tab and Shift-Tab indent and de-indent a list through autolist.
+-- Buffer-local on purpose: the plugin config runs once, so a global mapping
+-- there would follow every filetype after the first markdown buffer loads.
+-- `<cmd>` resolves when the key is pressed, so the order of plugin loading does
+-- not matter.
+vim.keymap.set("i", "<tab>", "<cmd>AutolistTab<cr>", { buffer = true })
+vim.keymap.set("i", "<s-tab>", "<cmd>AutolistShiftTab<cr>", { buffer = true })
+
 -- h/l/w/b/e stop on a visible cell instead of a concealed one.
 require("helpers.markdown_links").setup()
 require("helpers.markdown_motions").setup()
