@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -38,13 +39,14 @@ const fleetingTag = "fleeting"
 // noteBody is the note: the type tag in frontmatter, then a callout holding the
 // thought in the words it was captured with, so the original survives any later
 // rewrite into an atomic note.
-func noteBody(slug, title, detail string) string {
+func noteBody(slug, title, detail string, captured time.Time) string {
 	var quoted strings.Builder
 	fmt.Fprintf(&quoted, "> [!FLEETING] %s", strings.TrimSpace(title))
 	for _, line := range quoteLines(detail) {
 		quoted.WriteString("\n> " + line)
 	}
-	return "---\nid: " + slug + "\naliases: []\ntags: [" + fleetingTag + "]\n---\n\n" + quoted.String() + "\n"
+	return "---\nid: " + slug + "\naliases: []\ntags: [" + fleetingTag +
+		"]\ncaptured: " + captured.Format(time.RFC3339) + "\n---\n\n" + quoted.String() + "\n"
 }
 
 // quoteLines splits detail into the lines a callout can hold.
@@ -138,7 +140,9 @@ func Append(vault string, e Entry, dry bool) (Result, error) {
 	path := noteFile(vault, e)
 	res := Result{OK: true, Path: path, Title: title, Created: true, DryRun: dry}
 
-	body := noteBody(slug(title), title, e.Body)
+	// The capture time is the note's own, so a later snooze rewrite cannot make
+	// an old thought look new.
+	body := noteBody(slug(title), title, e.Body, time.Now())
 	for i := 2; ; i++ {
 		existing, err := os.ReadFile(path)
 		if errors.Is(err, os.ErrNotExist) {

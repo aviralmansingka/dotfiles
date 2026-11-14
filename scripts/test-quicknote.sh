@@ -23,9 +23,18 @@ grep -q '^> \[!FLEETING\] Writer.s block is caused by reader.s block$' "$note"
   | grep -q '"appended":true'
 grep -q '^> added later$' "$note"
 
-# The Rex chord must stay wired to the binary it launches.
+# The capture records when the thought arrived, which is what the processing
+# queue ages and orders by.
+grep -q '^captured: ' "$note"
+
+# The processing pass draws the queue; its promote path is covered by go test.
+"$build_dir/quicknote" review --vault "$vault" --render --width 80 --height 18 | grep -q 'REVIEW'
+
+# The Rex chords must stay wired to the binary they launch.
 grep -q 'rex.bind("cmd+shift+n", "capture_note")' "$repo_root/rex/.config/rex/notes.lua"
-grep -q 'options = { command = { "quicknote", "ui" }, size = { columns = CARD_W, rows = CARD_H } }' "$repo_root/rex/.config/rex/notes.lua"
+grep -q 'rex.bind("cmd+shift+p", "process_notes")' "$repo_root/rex/.config/rex/notes.lua"
+grep -q 'open_layer(ctx, CARD_W, CARD_H, { "quicknote", "ui" })' "$repo_root/rex/.config/rex/notes.lua"
+grep -q 'open_layer(ctx, REVIEW_W, REVIEW_H, { "quicknote", "review" })' "$repo_root/rex/.config/rex/notes.lua"
 grep -q 'require("notes")' "$repo_root/rex/.config/rex/init.lua"
 
 echo "quicknote tests passed"

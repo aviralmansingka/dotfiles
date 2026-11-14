@@ -11,6 +11,30 @@ Two audiences, one binary:
 - **The human.** `quicknote ui` opens a small Charm box; `Enter` saves, `Esc`
   cancels. `quicknote` with no arguments and a terminal opens the same box.
 
+## Processing the queue
+
+Captures are not knowledge yet. `quicknote review` walks the ones that are due and
+turns them into atomic notes:
+
+```sh
+quicknote review            # the processing pass, newest thought last
+```
+
+- `j`/`k` move, `p` promote, `s` snooze 3 days, `S` snooze 14, `d` delete, `o` open
+  the capture, `q` quit.
+- **Promote** asks for the insight in your own words, writes
+  `2_knowledge/<insight>.md` (`tags: [atomic]`, empty `up:`, the capture kept in a
+  `> [!CAPTURE]` callout), opens it in `$EDITOR`, then retires the capture.
+- **Snooze** writes `review_due:` into the capture's frontmatter; the queue hides
+  it until that day.
+- **Delete** retires a capture you have already acted on.
+
+The queue is ordered by capture time, oldest first, so nothing rots at the bottom.
+`captured:` in the frontmatter is that clock — a snooze rewrite cannot make an old
+thought look new.
+
+Rex binds `Cmd+Shift+P` to the same pass in a floating layer.
+
 ## What a capture writes
 
 One note per thought, in `~/vault/0_inbox/fleeting/`. The filename is the thought,
@@ -22,6 +46,7 @@ date. The body keeps the words exactly as captured:
 id: writers-block-is-caused-by-readers-block
 aliases: []
 tags: [fleeting]
+captured: 2026-11-14T20:50:40+05:30
 ---
 
 > [!FLEETING] Writer's block is caused by reader's block
@@ -85,5 +110,5 @@ After the dotfiles change is live, `rex config reload` installs the chord.
 
 ## Next step
 
-Processing (rewrite a `#fleeting` note into `#atomic`, or do it and delete) is the
-next tool, not this one.
+Spaced repetition: a `review_due` cadence that brings snoozed captures and atomic
+notes back on schedule, instead of one fixed 3-day snooze.

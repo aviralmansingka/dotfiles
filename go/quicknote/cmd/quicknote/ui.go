@@ -124,6 +124,16 @@ func (m *model) style() {
 	}
 }
 
+// lift brightens one color, so a dimmed pane keeps its contrast.
+func lift(c color.Color) color.Color {
+	r, g, b, _ := c.RGBA()
+	up := func(v uint32) uint8 {
+		x := float64(v >> 8)
+		return uint8(x + (255-x)*0.22)
+	}
+	return lg.Color(fmt.Sprintf("#%02x%02x%02x", up(r), up(g), up(b)))
+}
+
 // light compensates for the dimming Rex applies to an unfocused block. Every
 // color the pane draws passes through here, so the whole frame dims and lifts as
 // one instead of some elements losing contrast before others.
@@ -131,12 +141,7 @@ func (m *model) light(c color.Color) color.Color {
 	if !m.blurred {
 		return c
 	}
-	r, g, b, _ := c.RGBA()
-	up := func(v uint32) uint8 {
-		x := float64(v >> 8)
-		return uint8(x + (255-x)*0.22)
-	}
-	return lg.Color(fmt.Sprintf("#%02x%02x%02x", up(r), up(g), up(b)))
+	return lift(c)
 }
 
 func (m *model) paint(c color.Color, s string) string {
