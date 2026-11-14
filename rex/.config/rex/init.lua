@@ -5,6 +5,9 @@
 -- Missions: read the ground and steer its seats (rex/missions.lua)
 require("missions")
 
+-- Notes: the quicknote capture box in a floating layer (rex/notes.lua)
+require("notes")
+
 -- Focus panes, vim-style (tmux: bind -r h/j/k/l select-pane)
 rex.bind("ctrl+a>h", "pane.focus.left")
 rex.bind("ctrl+a>j", "pane.focus.down")

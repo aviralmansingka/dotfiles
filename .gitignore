@@ -46,3 +46,6 @@ nix/adhoc/
 # are not. `*.dec.*` is the shape `sops -d x.yaml > x.dec.yaml` writes.
 keys.txt
 *.dec.*
+
+# quicknote CLI build artifact
+/go/quicknote/quicknote
