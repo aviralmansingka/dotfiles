@@ -41,6 +41,78 @@ local function active_window(view)
   return nil
 end
 
+-- Open neovim beside the focused block, in that block's directory (Cmd+Enter).
+-- The directory is the one the program in the block reports (OSC 7), else the
+-- running process's own directory, so a shell that changed directory opens the
+-- editor where the shell is. A block that cannot report one starts nvim in the
+-- home directory.
+local function reported(session_id, block_id, method)
+  local result = rex.call("block.method", {
+    session_id = session_id,
+    block_id = block_id,
+    method = method,
+  })
+  return type(result) == "table" and result or {}
+end
+
+-- OSC 7 reports a file:// URL; a plain path is used as it is.
+local function path_from_url(pwd)
+  if type(pwd) ~= "string" or pwd == "" then return nil end
+  if pwd:sub(1, 7) == "file://" then
+    pwd = pwd:gsub("^file://[^/]*", "")
+    pwd = pwd:gsub("%%(%x%x)", function(hex) return string.char(tonumber(hex, 16)) end)
+  end
+  if pwd == "" then return nil end
+  return pwd
+end
+
+local function block_cwd(session_id, block_id)
+  local cwd = path_from_url(reported(session_id, block_id, "pwd").pwd)
+  if cwd ~= nil then return cwd end
+  local info = reported(session_id, block_id, "process")
+  for _, proc in ipairs({ info.foreground, info.child }) do
+    if type(proc) == "table" and type(proc.cwd) == "string" and proc.cwd ~= "" then
+      return proc.cwd
+    end
+  end
+  return nil
+end
+
+rex.action{
+  name = "open_nvim_here",
+  title = "Open Neovim Here",
+  description = "Split beside the focused block and start nvim in that block's directory.",
+  category = "Panes",
+  run = function(ctx)
+    local session_id = ctx.session_id or rex.session_id
+    local view, err = rex.session.view{ session_id = session_id }
+    if view == nil then error(err, 0) end
+    local window = active_window(view)
+    if window == nil then error("no active window", 0) end
+    local block_id = ctx.block_id or window.focused_block_id
+    local cwd = block_cwd(session_id, block_id)
+    local options = { command = { "nvim" } }
+    if cwd ~= nil then options.cwd = cwd end
+    local created, create_err = rex.call("session.new_split", {
+      session_id = session_id,
+      anchor_id = block_id,
+      direction = "horizontal",
+      side = "after",
+      layout = {
+        block = {
+          flavor = "com.superlogical.terminal.shell",
+          label = "nvim",
+          options = options,
+        },
+      },
+      focus = true,
+    })
+    if created == nil then error(create_err, 0) end
+    return { block_id = created.block_ids and created.block_ids[1], cwd = cwd }
+  end,
+}
+rex.bind("cmd+enter", "open_nvim_here")
+
 rex.action{
   name = "layer_cycle",
   title = "Cycle Floating Layers",
