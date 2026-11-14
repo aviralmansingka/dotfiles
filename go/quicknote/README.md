@@ -1,7 +1,8 @@
 # quicknote
 
-Capture one fleeting note with no filing decision. The note lands as a timestamped
-bullet in `~/vault/0_inbox/fleeting/YYYY-MM-DD.md`; triage stays a later pass.
+Capture one fleeting note with no filing decision. Each thought becomes its own note
+in `~/vault/0_inbox/fleeting/`, named after the thought and tagged `#fleeting`;
+processing stays a later pass.
 
 Two audiences, one binary:
 
