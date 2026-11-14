@@ -28,6 +28,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from dataclasses import dataclass, field
@@ -1798,8 +1799,12 @@ class ShortcutHandler(BaseHTTPRequestHandler):
             return
         ctype = self.headers.get("Content-Type", "")
         m = re.search(r'boundary="?([^";]+)"?', ctype) if "multipart/form-data" in ctype else None
-        if not m:
-            self._respond(400, {"ok": False, "error": "expected multipart/form-data"})
+        # Shortcuts sends urlencoded when every Form field is plain text, and
+        # multipart when a field carries a file or a typed value. Accept both.
+        urlencoded = "application/x-www-form-urlencoded" in ctype and not m
+        if not m and not urlencoded:
+            log(f"Shortcut post with unsupported Content-Type {ctype!r}")
+            self._respond(400, {"ok": False, "error": "expected a form body"})
             return
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -1808,7 +1813,14 @@ class ShortcutHandler(BaseHTTPRequestHandler):
         if length <= 0 or length > MAX_AUDIO_BYTES + 1_000_000:
             self._respond(413, {"ok": False, "error": "audio too large"})
             return
-        fields = parse_multipart(self.rfile.read(length), m.group(1))
+        body = self.rfile.read(length)
+        if m:
+            fields = parse_multipart(body, m.group(1))
+        else:
+            fields = {
+                name: (None, value.encode("utf-8"))
+                for name, value in urllib.parse.parse_qsl(body.decode("utf-8", "replace"))
+            }
         token = (fields.get("token", (None, b""))[1] or b"").decode("utf-8", "replace").strip()
         if not SHORTCUT_TOKEN or not hmac.compare_digest(token.encode("utf-8"), SHORTCUT_TOKEN.encode("utf-8")):
             log(f"Shortcut endpoint rejected bad token from {self.client_address[0]}")
