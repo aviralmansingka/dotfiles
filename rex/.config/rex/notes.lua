@@ -14,7 +14,7 @@ local CARD_W, CARD_H = 64, 11
 
 -- The processing list needs more room: a dozen rows of captures plus its own
 -- chrome, and enough width for a thought to read without truncating.
-local REVIEW_W, REVIEW_H = 80, 18
+local REVIEW_W, REVIEW_H = 78, 16
 
 -- Rex rounds a layer's rect outwards to whole cells and edges it, which costs a
 -- short layer up to two columns and one row (measured at 197x53: 66x12 asked for
@@ -22,8 +22,15 @@ local REVIEW_W, REVIEW_H = 80, 18
 -- padding and never shows, while a lost one would clip the frame.
 local SLACK_W, SLACK_H = 2, 1
 
--- Shown only when the window cannot be measured, or is smaller than the card.
+-- Shown only when the window cannot be measured, or is smaller than the box.
 local FALLBACK = { 0.24, 0.28, 0.52, 0.34 }
+
+-- A block only reports the size it was last rendered at, so a window with no
+-- client attached answers with the 80x24 default. Trust a measurement only inside
+-- these bounds; outside them, assume a common laptop window instead of trusting a
+-- number that would draw a layer many times the box.
+local ASSUMED = { cols = 190, rows = 50 }
+local PLAUSIBLE = { min_cols = 90, max_cols = 400, min_rows = 18, max_rows = 120 }
 
 -- walk visits every block placement in a layout tree.
 local function walk(node, visit)
@@ -78,11 +85,22 @@ local function window_cells(session_id)
   return math.floor(c + 0.5), math.floor(r + 0.5)
 end
 
+-- sane rejects a measurement that cannot describe a real window and substitutes a
+-- common one, so a stale reading can never inflate the layer.
+local function sane(cols, rows)
+  if cols == nil or rows == nil then return ASSUMED.cols, ASSUMED.rows end
+  if cols < PLAUSIBLE.min_cols or cols > PLAUSIBLE.max_cols
+    or rows < PLAUSIBLE.min_rows or rows > PLAUSIBLE.max_rows then
+    return ASSUMED.cols, ASSUMED.rows
+  end
+  return cols, rows
+end
+
 -- bounds_for centers a box of the given cells in the window, so the layer ends
 -- where the box does instead of leaving a field of empty space around it.
 local function bounds_for(session_id, want_w, want_h)
-  local cols, rows = window_cells(session_id)
-  if cols == nil or cols < want_w or rows < want_h then return FALLBACK end
+  local cols, rows = sane(window_cells(session_id))
+  if cols < want_w or rows < want_h then return FALLBACK end
   local w = math.min(1, (want_w + SLACK_W) / cols)
   local h = math.min(1, (want_h + SLACK_H) / rows)
   return { (1 - w) / 2, (1 - h) / 2, w, h }

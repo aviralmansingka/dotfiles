@@ -33,7 +33,8 @@ The queue is ordered by capture time, oldest first, so nothing rots at the botto
 `captured:` in the frontmatter is that clock — a snooze rewrite cannot make an old
 thought look new.
 
-Rex binds `Cmd+Shift+P` to the same pass in a floating layer.
+Rex binds `Cmd+Shift+P` to the same pass in a floating layer cut to 78x16 cells;
+the list fills that box, with the footer on its last row.
 
 ## What a capture writes
 
