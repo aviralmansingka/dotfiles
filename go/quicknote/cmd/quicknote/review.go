@@ -391,33 +391,40 @@ func (m *reviewModel) screen() string {
 		return m.prompt()
 	}
 	inner := clamp(m.w-8, 40, 96)
+	// The box fills the layer the action opened: head, list, and footer sit in
+	// fixed rows, and the list takes the rest, so the frame never floats in
+	// empty space.
+	rows := max(1, m.h-8)
 	head := padRight(m.paint(green, "REVIEW"), inner-6) + m.paint(muted, fmt.Sprintf("%d", len(m.items)))
-	lines := []string{head, ""}
 
+	var list []string
 	if len(m.items) == 0 {
-		lines = append(lines, m.paint(muted, "nothing to process."), m.paint(muted, "capture a thought and press Cmd+Shift+N."))
+		list = append(list, m.paint(muted, "nothing to process."))
+		list = append(list, m.paint(muted, "capture a thought and press Cmd+Shift+N."))
 	} else {
-		rows := clamp(m.h-8, 3, len(m.items))
 		start := clamp(m.idx-rows/2, 0, max(0, len(m.items)-rows))
 		for i := start; i < start+rows && i < len(m.items); i++ {
 			c := m.items[i]
 			age := fmt.Sprintf("%dd", int(c.Age.Hours()/24))
 			title := c.Title
-			budget := inner - 8
+			budget := inner - 6
 			if len([]rune(title)) > budget {
 				title = string([]rune(title)[:budget-1]) + "…"
 			}
 			if i == m.idx {
-				lines = append(lines, m.paint(green, "▌ ")+lg.NewStyle().Foreground(m.light(ink)).Bold(true).
-					Render(padRight(title, inner-6)+age))
+				list = append(list, m.paint(green, "▌ ")+lg.NewStyle().Foreground(m.light(ink)).Bold(true).
+					Render(padRight(title, inner-4)+age))
 			} else {
-				lines = append(lines, "  "+m.paint(muted, padRight(title, inner-6)+age))
+				list = append(list, "  "+m.paint(muted, padRight(title, inner-4)+age))
 			}
 		}
 	}
+	for len(list) < rows {
+		list = append(list, "")
+	}
 
-	lines = append(lines, "")
-	lines = append(lines, m.footer(inner))
+	lines := append([]string{head, ""}, list...)
+	lines = append(lines, "", m.footer(inner))
 	box := lg.NewStyle().Border(lg.RoundedBorder()).BorderForeground(m.light(mid)).
 		Padding(0, 1).Render(strings.Join(lines, "\n"))
 	return lg.NewStyle().Padding(1, 2).Render(box)
