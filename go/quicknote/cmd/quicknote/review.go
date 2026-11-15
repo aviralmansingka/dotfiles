@@ -394,7 +394,7 @@ func (m *reviewModel) screen() string {
 	// The box fills the layer the action opened: head, list, and footer sit in
 	// fixed rows, and the list takes the rest, so the frame never floats in
 	// empty space.
-	rows := max(1, m.h-8)
+	rows := max(1, m.h-6)
 	head := padRight(m.paint(green, "REVIEW"), inner-6) + m.paint(muted, fmt.Sprintf("%d", len(m.items)))
 
 	var list []string
@@ -427,7 +427,7 @@ func (m *reviewModel) screen() string {
 	lines = append(lines, "", m.footer(inner))
 	box := lg.NewStyle().Border(lg.RoundedBorder()).BorderForeground(m.light(mid)).
 		Padding(0, 1).Render(strings.Join(lines, "\n"))
-	return lg.NewStyle().Padding(1, 2).Render(box)
+	return lg.NewStyle().Padding(0, 2).Render(box)
 }
 
 func (m *reviewModel) footer(inner int) string {

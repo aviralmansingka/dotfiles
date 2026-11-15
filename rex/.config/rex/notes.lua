@@ -26,11 +26,15 @@ local SLACK_W, SLACK_H = 2, 1
 local FALLBACK = { 0.24, 0.28, 0.52, 0.34 }
 
 -- A block only reports the size it was last rendered at, so a window with no
--- client attached answers with the 80x24 default. Trust a measurement only inside
--- these bounds; outside them, assume a common laptop window instead of trusting a
--- number that would draw a layer many times the box.
-local ASSUMED = { cols = 190, rows = 50 }
+-- client attached answers with the 80x24 default. Samples inside this band are
+-- believed; outside it, the window is assumed.
+local ASSUMED = { cols = 190, rows = 60 }
 local PLAUSIBLE = { min_cols = 90, max_cols = 400, min_rows = 18, max_rows = 120 }
+
+local function plausible(cols, rows)
+  return cols >= PLAUSIBLE.min_cols and cols <= PLAUSIBLE.max_cols
+    and rows >= PLAUSIBLE.min_rows and rows <= PLAUSIBLE.max_rows
+end
 
 -- walk visits every block placement in a layout tree.
 local function walk(node, visit)
@@ -51,55 +55,46 @@ local function median(values)
   return values[math.floor((#values + 1) / 2)]
 end
 
--- window_cells measures the active window in character cells. Layer bounds are
--- fractions of the window, so a layer that hugs the card needs the window's real
+-- window_cells measures the window in character cells. Layer bounds are
+-- fractions of the window, so a layer that hugs the box needs the window's real
 -- size: every tiled block reports its own cells, and the view reports the share
--- of the window it was given, which is enough to recover the whole from any one
--- of them.
+-- of its window that the block was given, so one rendered block is enough.
+--
+-- A block reports the size it was last rendered at, so a window nobody is looking
+-- at answers 80x24. Every window is sampled and the widest plausible pair wins,
+-- which is the window the human is actually in.
 local function window_cells(session_id)
   local view, err = rex.call("session.view", { session_id = session_id })
   if view == nil then return nil, err end
-  local win
-  for _, w in ipairs(view.windows or {}) do
-    if w.window_id == view.active_window_id then win = w end
-  end
-  if win == nil then return nil, "no active window" end
-  local cols, rows = {}, {}
-  for _, layer in ipairs(win.layers or {}) do
-    if layer.kind == "tiled" then
-      walk(layer.layout, function(node)
-        if node.rect[3] <= 0 or node.rect[4] <= 0 then return end
-        local size = rex.call("block.method", {
-          session_id = session_id,
-          block_id = node.block_id,
-          method = "size",
-        })
-        if size == nil or size.columns <= 0 or size.rows <= 0 then return end
-        table.insert(cols, size.columns / node.rect[3])
-        table.insert(rows, size.rows / node.rect[4])
-      end)
+  local best
+  for _, win in ipairs(view.windows or {}) do
+    for _, layer in ipairs(win.layers or {}) do
+      if layer.kind == "tiled" then
+        walk(layer.layout, function(node)
+          if node.rect[3] <= 0 or node.rect[4] <= 0 then return end
+          local size = rex.call("block.method", {
+            session_id = session_id,
+            block_id = node.block_id,
+            method = "size",
+          })
+          if size == nil or size.columns <= 0 or size.rows <= 0 then return end
+          local cols = size.columns / node.rect[3]
+          local rows = size.rows / node.rect[4]
+          -- The band rejects the 80x24 default and an outsized zoomed block.
+          if not plausible(cols, rows) then return end
+          if best == nil or cols > best[1] then best = { cols, rows } end
+        end)
+      end
     end
   end
-  local c, r = median(cols), median(rows)
-  if c == nil or r == nil then return nil, "no block to measure" end
-  return math.floor(c + 0.5), math.floor(r + 0.5)
-end
-
--- sane rejects a measurement that cannot describe a real window and substitutes a
--- common one, so a stale reading can never inflate the layer.
-local function sane(cols, rows)
-  if cols == nil or rows == nil then return ASSUMED.cols, ASSUMED.rows end
-  if cols < PLAUSIBLE.min_cols or cols > PLAUSIBLE.max_cols
-    or rows < PLAUSIBLE.min_rows or rows > PLAUSIBLE.max_rows then
-    return ASSUMED.cols, ASSUMED.rows
-  end
-  return cols, rows
+  if best == nil then return ASSUMED.cols, ASSUMED.rows end
+  return math.floor(best[1] + 0.5), math.floor(best[2] + 0.5)
 end
 
 -- bounds_for centers a box of the given cells in the window, so the layer ends
 -- where the box does instead of leaving a field of empty space around it.
 local function bounds_for(session_id, want_w, want_h)
-  local cols, rows = sane(window_cells(session_id))
+  local cols, rows = window_cells(session_id)
   if cols < want_w or rows < want_h then return FALLBACK end
   local w = math.min(1, (want_w + SLACK_W) / cols)
   local h = math.min(1, (want_h + SLACK_H) / rows)
