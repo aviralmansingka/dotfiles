@@ -78,6 +78,57 @@ that is already open. A plain `terminal-browser open` merges the new instance
 into a neighbour browser as a tab, so it starts a separate browser in a new block
 only with `--no-merge`.
 
+### Size the page to the block viewport
+
+Size the page to the block before you open it. Read the block's real size first:
+
+```sh
+rex block call -s "$REX_SESSION" -b "$REX_BLOCK" size
+```
+
+It returns `columns`, `rows`, `cell_width_px` and `cell_height_px`. Multiply
+`columns` by `cell_width_px` for the pixel width the page really gets: a 97
+column block at 17 px per cell is 1649 px wide.
+
+Pick the page zoom that gives the layout viewport a sane desktop width, about
+1000 to 1400 CSS px. Never leave the layout viewport below about 400 CSS px on a
+wide pane; the page renders in a mobile layout with huge text and the block
+looks broken.
+
+After the page loads, verify in one eval:
+
+```sh
+terminal-browser action -- eval "JSON.stringify({dpr: devicePixelRatio, w: innerWidth, h: innerHeight})"
+```
+
+If `innerWidth` is far below the pane pixel width, the pane size is not the
+cause. A stale per-site page zoom is. A 97 x 54 block with 17 x 37 px cells once
+reported `innerWidth` 163 and `devicePixelRatio` 10, while `about:blank` in the
+same browser reported `dpr` 2 and `innerWidth` 815.
+
+That zoom is stored per host, per browser instance, in the instance profile:
+
+```
+~/Library/Application Support/terminal-browser-<hash>/Preferences
+```
+
+at `partition.per_host_zoom_levels["<hash>"]["<host>"]`, where `zoom_level` is
+`log(zoom) / log(1.2)`. The entry `{"app.vanta.com": 8.827469119589406}` is zoom
+factor 5, about 500 percent. To fix it, stop the browser, set the host entry to
+`0` (or delete the entry), reopen the page, and verify again:
+
+```sh
+terminal-browser shutdown
+```
+
+Edit `Preferences` only while the browser is stopped: a running browser
+overwrites the file on exit. `cmd+0` and `ctrl+0` reset zoom from the page, bound
+to `shortcuts.zoom.reset`, so use them when the page is in front and reach for
+the file when the stored value keeps coming back.
+
+These zoom levels persist per host, so a single bad fit repeats on every later
+visit to that host in that browser instance.
+
 ### Close what you opened
 
 Close your block or layer when the task ends. Do not close one the human opened.
