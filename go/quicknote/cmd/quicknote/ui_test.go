@@ -15,9 +15,10 @@ func TestCardFootprint(t *testing.T) {
 	m.w, m.h = layerW, layerH
 	m.layout()
 
+	// The border reaches the layer's own rows, so no slack is left outside it.
 	collapsed := m.card()
-	if w, h := lg.Width(collapsed), lg.Height(collapsed); w != layerW || h != layerH-1 {
-		t.Errorf("card with detail hidden = %dx%d, want %dx%d", w, h, layerW, layerH-1)
+	if w, h := lg.Width(collapsed), lg.Height(collapsed); w != layerW || h != layerH {
+		t.Errorf("card with detail hidden = %dx%d, want %dx%d", w, h, layerW, layerH)
 	}
 
 	m.shown = true

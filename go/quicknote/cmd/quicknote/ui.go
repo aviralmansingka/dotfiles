@@ -297,9 +297,17 @@ func (m *model) card() string {
 	}
 
 	lines = append(lines, "", fit(chip, inner), fit(where, inner), fit(hint, inner))
+
+	// The border reaches the pane's own edges. A layer that arrives a few rows
+	// taller than the content then spends them inside the frame instead of
+	// leaving dead space around it.
+	for len(lines) < max(len(lines), m.h-2) {
+		lines = append(lines, "")
+	}
+
 	box := lg.NewStyle().Border(lg.RoundedBorder()).BorderForeground(m.light(border)).
 		Padding(0, 1).Render(strings.Join(lines, "\n"))
-	return lg.NewStyle().Padding(1, 2).Render(box)
+	return lg.NewStyle().Padding(0, 2).Render(box)
 }
 
 // runUI opens the capture box. render prints one frame instead, which is how a
