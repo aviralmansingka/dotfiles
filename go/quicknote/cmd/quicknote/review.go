@@ -390,7 +390,7 @@ func (m *reviewModel) screen() string {
 	if m.typing {
 		return m.prompt()
 	}
-	inner := clamp(m.w-8, 40, 96)
+	inner := clamp(m.w-8, 40, 400)
 	// The box fills the layer the action opened: head, list, and footer sit in
 	// fixed rows, and the list takes the rest, so the frame never floats in
 	// empty space.
@@ -445,7 +445,7 @@ func (m *reviewModel) footer(inner int) string {
 
 // prompt is the one line that turns a capture into an atomic note.
 func (m *reviewModel) prompt() string {
-	inner := clamp(m.w-8, 40, 96)
+	inner := clamp(m.w-8, 40, 400)
 	c, _ := m.current()
 	lines := []string{
 		m.paint(green, "PROMOTE"),
