@@ -148,8 +148,11 @@ func (m *model) paint(c color.Color, s string) string {
 	return lg.NewStyle().Foreground(m.light(c)).Render(s)
 }
 
-// cardWidth is the text width the card draws to.
-func cardWidth(w int) int { return clamp(w-8, 26, 56) }
+// cardWidth is the text width the card draws to. It takes the pane's width (the
+// number is the chrome: two columns of padding, a border, and a column of padding
+// inside it), so the frame reaches both edges instead of leaving a strip of empty
+// pane to its right.
+func cardWidth(w int) int { return clamp(w-8, 26, 400) }
 
 func (m *model) layout() {
 	width := cardWidth(m.w) - lg.Width(m.input.Prompt)
@@ -296,14 +299,13 @@ func (m *model) card() string {
 		hint = m.paint(amber, "a title is required")
 	}
 
-	lines = append(lines, "", fit(chip, inner), fit(where, inner), fit(hint, inner))
-
-	// The border reaches the pane's own edges. A layer that arrives a few rows
-	// taller than the content then spends them inside the frame instead of
-	// leaving dead space around it.
-	for len(lines) < max(len(lines), m.h-2) {
+	// The keys, the note type, and the destination belong against the bottom
+	// border, so a pane taller than the text grows the gap in the middle instead
+	// of pushing them up.
+	for len(lines) < max(len(lines), m.h-2-4) {
 		lines = append(lines, "")
 	}
+	lines = append(lines, "", fit(chip, inner), fit(where, inner), fit(hint, inner))
 
 	box := lg.NewStyle().Border(lg.RoundedBorder()).BorderForeground(m.light(border)).
 		Padding(0, 1).Render(strings.Join(lines, "\n"))
