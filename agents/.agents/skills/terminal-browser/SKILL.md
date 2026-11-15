@@ -90,10 +90,14 @@ It returns `columns`, `rows`, `cell_width_px` and `cell_height_px`. Multiply
 `columns` by `cell_width_px` for the pixel width the page really gets: a 97
 column block at 17 px per cell is 1649 px wide.
 
-Pick the page zoom that gives the layout viewport a sane desktop width, about
-1000 to 1400 CSS px. Never leave the layout viewport below about 400 CSS px on a
-wide pane; the page renders in a mobile layout with huge text and the block
-looks broken.
+The browser always fills the pane's physical pixels, and `devicePixelRatio`
+tracks the page zoom, 2 x zoom in every sample here. Pick zoom so the layout
+viewport in CSS px is near the pane's physical pixel width: on a 137 column,
+1644 px pane, zoom 1 gave `devicePixelRatio` 2 and `innerWidth` 815 with every
+glyph at double size, and zoom 0.5 gave `devicePixelRatio` 1 and `innerWidth`
+1630 at normal text size. A page that looks doubled needs half the zoom, not a
+wider pane. Never leave the layout viewport below about 400 CSS px on a wide
+pane; the page collapses to a mobile layout with huge text.
 
 After the page loads, verify in one eval:
 
