@@ -106,6 +106,12 @@ cause. A stale per-site page zoom is. A 97 x 54 block with 17 x 37 px cells once
 reported `innerWidth` 163 and `devicePixelRatio` 10, while `about:blank` in the
 same browser reported `dpr` 2 and `innerWidth` 815.
 
+One case is not zoom at all. If `terminal-browser ls` says `no pane`, the page is
+rendering into a fallback surface of 80 x 24 cells at 8 x 16 px, not the block
+viewport, so zoom is not what sizes it: a page there reported `innerWidth` 316 at
+`devicePixelRatio` 2 with zoom already 1. Launch from an interactive shell block
+instead, and check that `size` reports a real `owner` and non-default `columns`.
+
 That zoom is stored per host, per browser instance, in the instance profile:
 
 ```
