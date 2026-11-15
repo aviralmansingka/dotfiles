@@ -122,8 +122,8 @@ rex.action{
   end,
 }
 
--- Bindings land with the actions, so the keymap never names an action this
--- file has not defined. C-a n and C-a p belong to tab cycling, so the deploy
--- picker sits on C-a D. Inside the picker, fzf moves with C-j and C-k.
-rex.bind("ctrl+a>m", "mission_sitrep")
-rex.bind("ctrl+a>shift+d", "mission_deploy_pick")
+-- No keys are bound here, so nothing collides with the keymap in init.lua and
+-- `rex actions` still lists every mission action. Run one by name:
+-- `rex do mission_sitrep`, `rex do mission_focus`, `rex do mission_standdown`,
+-- `rex do mission_deploy_pick`. Actions stay next to their definitions, so a
+-- bind added later cannot name an action this file has not defined.

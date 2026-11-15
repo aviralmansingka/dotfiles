@@ -408,9 +408,11 @@ records it on the reserved intent when Herdr answers with one, so a later launch
 or attach adopts that session instead of starting another; the captain records
 the same file itself when it attaches.
 
-`prefix+n` (`mission_deploy_pick`) opens the deployment picker: a floating layer
+`rex do mission_deploy_pick` opens the deployment picker: a floating layer
 listing `mission ready`, previewed with `mission show`. Enter deploys the chosen
-mission; Escape exits 0 and changes neither the vault nor Rex.
+mission; Escape exits 0 and changes neither the vault nor Rex. Rex binds no key
+to it, and no other mission action, so `rex keymap` stays clear of the mission
+surface.
 
 ### Seating a captain
 
