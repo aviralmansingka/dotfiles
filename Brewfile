@@ -1,4 +1,4 @@
-# awscli, azure-cli, google-cloud-sdk and terraform are Nix profile tools:
+# awscli and terraform are Nix profile tools now:
 # nix/modules/shared/default.nix. Do not re-add them here, a second copy
 # shadows the profile one on PATH.
 

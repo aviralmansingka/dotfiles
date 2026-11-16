@@ -108,15 +108,13 @@ in
         # is unfree; both flake constructors set config.allowUnfree.
         _1password-cli
         # Cloud CLIs, declared once for every host. The split this replaces was
-        # accidental: devbox carried awscli2, google-cloud-sdk and terraform,
-        # probe carried awscli2, the Mac carried none and got aws only from the
-        # Brewfile, and azure-cli was on no host. One list here means `just
-        # deploy <target>` installs the same four CLIs everywhere, and no host
-        # module re-declares one. terraform is unfree (BUSL) like the CLI above,
-        # which is why it needs the same config.allowUnfree.
+        # accidental: devbox carried awscli2 and terraform, probe carried
+        # awscli2, and the Mac carried neither except aws via the Brewfile. One
+        # list here means `just deploy <target>` installs the same two CLIs
+        # everywhere, and no host module re-declares one. terraform is unfree
+        # (BUSL) like the CLI above, which is why it needs the same
+        # config.allowUnfree.
         awscli2
-        azure-cli
-        google-cloud-sdk
         terraform
       ]
     );
