@@ -64,6 +64,8 @@ Do not mix a second typeface. Do not use Georgia, Arial or Calibri.
 | Label | 7 pt | bold | muted | 1.0 |
 | Meta value | 8.5 pt | regular | ink | 1.0 |
 | Body | 10 pt | regular | ink | 1.25 |
+| Bullet | 10 pt | bold lead-in, regular rest | ink | 1.45 |
+| Note | 8.5 pt | regular | muted | 1.0 |
 | Deck | 12 pt | regular | muted | 1.25 |
 | Section numeral | 15 pt | bold | teal | 1.0 |
 | Section title | 15 pt | bold | ink | 1.0 |
@@ -80,15 +82,16 @@ Do not mix a second typeface. Do not use Georgia, Arial or Calibri.
 
 Build every document in this order.
 
-1. **Kicker.** 8 pt bold teal, uppercase, tracking 2 pt, 5 pt after.
-   Pattern: `MOHZI · CAPACITY PARTNER DATA ROOM · 05 NETWORK`.
+1. **Kicker.** 8 pt bold teal, uppercase, tracking 2 pt, 10 pt after.
+   Pattern: `MOHZI · CAPACITY PARTNER DATA ROOM · <section>`.
 2. **Title.** 26 pt bold ink, 1.15 leading, 3 pt before, 5 pt after.
    Sentence case. No terminal full stop.
 3. **Deck.** One sentence, 12 pt muted, 1.25 leading, 11 pt after.
    State the subject, the place and the scope.
-4. **Date band.** 1 pt ink rule above and below, 8 pt space.
+4. **Date band.** 1 pt ink rule above and below, 8 pt padding each.
    Labels are 7 pt bold muted with 1 pt tracking.
-   Values are 8.5 pt ink: `DATE` and `PREPARED BY`. Do not add a status field.
+   Values are 8.5 pt ink: `DATE`, `PREPARED BY` and, when it applies, `CONTACT`.
+   Do not add a status field.
 5. **Summary.** Section 1. One bold sentence, 10 pt.
 6. **Scope.** Section 2. What the document covers and what it leaves out.
 7. **Body sections.** Numbered 3 upward, in reading order.
@@ -104,36 +107,46 @@ Do not add a revision table, a version log or an approval block.
 - Number sections `1` to `n`, continuously.
 - Put two spaces between the numeral and the title.
 - Make the numeral teal and the title ink. Both are 15 pt bold.
-- Add a 0.75 pt rule `#D1D5DB` across the measure, 8 pt below the head and
-  4 pt above the body. Keep the gap under the rule tight.
-- Use 18 pt before the head and 4 pt after the rule.
+- Add a 0.75 pt rule `#D1D5DB` across the measure: 6 pt below the head and
+  8 pt above the body. Both are border padding, not paragraph spacing.
+- Use 21 pt before the head and 8 pt after the rule.
 - In Google Docs the border padding sits below the head and `spaceBelow` is
-  added after the rule, so the two stack. Set `spaceBelow` to 2 pt and let
-  the 8 pt padding carry the rest. A `spaceBelow` of 8 pt doubles the gap.
+  added after the rule, so the two stack. Set `spaceBelow` to 8 pt and the
+  border padding to 6 pt, which reproduces the Word file exactly.
 - Keep the head with the next paragraph.
 - Never skip a number. Never nest numbers such as `3.1`.
-- Aim for 6 to 12 sections. Split at 12; merge below 6 if the parts are thin.
+- Aim for 2 to 12 sections. A read-me carries two; a specification may carry
+  eight or more. Split at 12; merge below 2.
 
 In Markdown, an H2 is a section head. Number it: `## 3 The rack and its ports`.
 Do not add a horizontal rule under an H2. The heading is the rule.
 
 ## 5. Body copy
 
-- Set 10 pt ink, 1.25 leading, 6 pt after, left aligned.
+- Set 10 pt ink, 1.25 leading, 7 pt after, left aligned.
 - Do not indent the first line.
 - Write 2 to 6 sentences per paragraph. One idea per paragraph.
 - Use the active voice, the present tense and short sentences.
 - Put a number, a unit, an owner or a date in every factual sentence.
-- Use bold only for the summary sentence, table first columns and names.
-- Do not use bold for emphasis inside a sentence.
+- Use bold for the lead-in phrase of a bullet, the summary sentence, table
+  first columns and names. Do not bold the rest of the sentence.
 - Do not underline. Do not use italics except for document titles.
-- Do not use bullet lists for prose. Use a table for parallel facts.
-- Use a list only for a true sequence or a short set of 2 to 6 items.
+- Bullets carry the argument in a read-me. Use them for 3 to 8 parallel
+  points, each one phrase of bold lead-in then a full sentence:
+  10 pt ink, `•` at 18 pt indent with a 12 pt hanging indent, 14.5 pt
+  leading, 3.5 pt after. Do not nest bullets. Do not use a bullet for a
+  single point.
+- Use a table, not a bullet list, when the reader must compare values across
+  a row or a column.
 - Write dates as `6 November 2026`. Write ranges with an en dash.
 - Put a space between a value and its unit: `400 Gbps`, `4.5:1`, `25.6 Tbps`.
-- Spell out a term at first use, then keep one term for one concept.
+- Close a document with one 8.5 pt muted note when a caveat applies:
+  `Confidential. Prepared for prospective capacity partners at <date>.`
 
 ## 6. Tables
+
+Type A is the Read me's table and is the default. Type B is for a
+label-and-prose block: it comes from the cluster overview, not the Read me.
 
 Two types. Pick by the data, never by taste.
 
@@ -146,15 +159,15 @@ number. Round trips, throughputs, counts, dates and step tables belong here.
 | Width | 482 pt, fixed layout |
 | Caption | 11 pt bold ink, 18 pt above the band |
 | Header band | fill `#111827`, 19.5 pt tall, white 8 pt bold text |
-| Header align | match the column: left for the first, right for numbers |
+| Header align | left in every column, matching the Word file |
 | Body rows | 9 pt ink, 3.5 pt padding above and below, 5 pt at the sides |
 | Zebra | fill `#F3F4F6` on every second body row |
-| Rules | none, outside or inside |
+| Rules | 0.5 pt `#D1D5DB` above and below every body row; none outside |
 | Vertical rules | none |
 | First column | regular weight, ink |
-| Total row | bold, with a 0.75 pt `#D1D5DB` rule above it |
+| Total row | never in the house table; end the table on the last body row |
 | Row split | not allowed |
-| Header repeat | on every page |
+| Header repeat | only when the table runs past one page; the Read me sets none |
 
 **Type B — structured prose.** No band and no zebra. Use it when the cells hold
 sentences: definitions, at-a-glance sets, method steps, scope in and out,
@@ -174,12 +187,17 @@ Rules for both types:
 
 - Use 2 to 4 columns. Split a wider table into two tables.
 - Put the unit in the header, not in every cell.
-- Right-align numbers and their headers. Left-align text.
+- Left-align text and numbers, as the Read me does in every column.
 - Do not merge cells except in a callout.
 - Every table sits under a section head, not under a small-caps label.
 - If a table holds one number and one sentence, use prose instead.
+- Column widths follow the content: a folder name, a document title and a
+  purpose column sit near 95, 165 and 222 pt across the 482 pt measure.
 
 ## 7. Callouts
+
+Not in the Read me. Carried from the cluster overview, use it only when one
+caveat must not be missed.
 
 One callout to a page at most. Use it for the single caveat the reader must not
 miss, or for what the customer configures.
@@ -210,8 +228,9 @@ miss, or for what the customer configures.
 - Add a 0.5 pt rule `#D1D5DB` above the line, 6 pt space.
 - Set 7.5 pt muted text.
 - Put `Mohzi · <document title> · Confidential` on the left.
-- Put the page number on the right, at a right tab of 482 pt.
-- Use a `PAGE` field for the number. Do not type the number.
+- The Read me carries no page number, because it is one page. Add one on the
+  right, at a right tab of 482 pt, only when the document runs past one page.
+  Use a `PAGE` field, never a typed number.
 - Do not add a header or a running title.
 
 ## 10. Markdown structure
