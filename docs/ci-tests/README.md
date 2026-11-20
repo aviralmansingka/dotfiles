@@ -27,10 +27,10 @@ pi agent extensions (job `pi-tests`, gated on `pi/**` + `agents/**`):
 | Missions | missions/missions.test.mjs + scripts/test-missions.sh | see docs/ci-tests/missions.md | under 30 s warm |
 
 Neovim (job `nvim-tests`, gated on `nvim/**`): offline headless harness
-(`nvim/.config/nvim/tests/ci/`) + ten entries `scripts/test-nvim-*.sh`;
+(`nvim/.config/nvim/tests/ci/`) + eleven entries `scripts/test-nvim-*.sh`;
 33 specs green in ~0.74 s. Domains: octo, dap-eval, markdown/mermaid/links,
 plugin-configs, ui-shape, picker-actions, ask-pipeline, workspaces,
-send-orchestration, base suite. Coverage is inventory-based: every
+autoread, send-orchestration, base suite. Coverage is inventory-based: every
 behavior-relevant export is exercised or listed as a gap in its doc.
 
 Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
@@ -106,7 +106,7 @@ export JITI_PATH=/tmp/ci-jiti/node_modules/jiti/lib/jiti.cjs \
 ## Index of domain docs
 
 ci-meta · config-lint · install-smoke · journal · just-build · mermaid · nvim ·
-nvim-ask · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
+nvim-ask · nvim-autoread · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
 nvim-plugin-configs · nvim-send · nvim-ui-shape · nvim-workspaces · ops ·
 pi-dev · pi-mcp-adapter-patch · practice · python-tool · rataflow · renderer · repo-config · repo-parity ·
 run-command · sops-secrets · subagents · telegram · terminal · tuicr ·

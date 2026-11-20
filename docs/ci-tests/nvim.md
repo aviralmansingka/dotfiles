@@ -23,6 +23,8 @@ manager, opens no network socket, and runs no live tmux or herdr process.
 - workspace: tab binding, buffer membership, snapshot/restore round trip.
 - mermaid_render: the real fence walk and the real width formula.
 - config/indent: stance table, untouched filetypes, reload idempotency.
+- autoread: a clean buffer reloads after an outside write; a modified
+  buffer, a special buffer, and a nameless buffer stay as they are.
 - octo keys: no `group=` entries, all `<leader>O*` present, deletions.
 - project patterns: `.git` in, `BUILD.bazel` out.
 - python and mason pins: basedpyright in, pyright out.
