@@ -181,7 +181,7 @@ Rules for both types:
 One callout to a page at most. Use it for the single caveat the reader must not
 miss, or for what the customer configures.
 
-- Fill `#F0F9FF`. Add a 1 pt `#0369A1` bar down the left edge.
+- Fill `#F0F9FF`. Add a 3 pt `#0369A1` bar down the left edge.
 - No other border. No shadow. No rounded corners.
 - Pad 10 pt above and below, 10.5 pt from the bar, 5 pt at the right.
 - Title 8.5 pt bold `#0369A1`, 13.5 pt above the body.
@@ -312,6 +312,17 @@ Do not carry a violation forward for the sake of fidelity.
 - Set `page_break_before` on the figure section when the figure will not fit.
 - Export a PDF and inspect every page before you ship.
   Check the footer tab, the table header repeat and the figure page.
+
+- Sweep the paragraphs before you style them. A Google Doc can carry an
+  inherited `borderTop` on every paragraph. Set `borderTop` and
+  `borderBottom` width to 0 on every paragraph first, then add the three
+  real rules: the date band, the section heads, the footer.
+- The Docs API floors a border width to whole points. A 0.5 pt or 0.75 pt
+  rule exports at 1 pt. If the exact weight matters, build with `python-docx`.
+- Put the footer in a real footer with `createFooter`, not in the last body
+  paragraph. Delete the body line afterwards and clear the border it leaves.
+- A table must have a paragraph after it. Keep that paragraph at 1 pt with 0
+  space before, and give the paragraph below it 14 pt.
 
 ## 13. Checklist
 
