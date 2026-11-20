@@ -113,6 +113,12 @@ Do not add a revision table, a version log or an approval block.
 - In Google Docs the border padding sits below the head and `spaceBelow` is
   added after the rule, so the two stack. Set `spaceBelow` to 8 pt and the
   border padding to 6 pt, which reproduces the Word file exactly.
+- Set the head's own line spacing to 100 %. A head that inherits a body style
+  at 125 % or 155 % draws its rule an extra 4 to 11 pt low: 6 pt of padding
+  renders as 16 pt. Give the head an explicit line spacing, never a default.
+- Check the rendered gap, not the stored value. Export a PDF and measure: the
+  rule sits 6 pt under the head text and the body 8 pt under the rule. A style
+  that states 6 pt and draws 16 pt is a build fault, not a judgement call.
 - Keep the head with the next paragraph.
 - Never skip a number. Never nest numbers such as `3.1`.
 - Aim for 2 to 12 sections. A read-me carries two; a specification may carry
