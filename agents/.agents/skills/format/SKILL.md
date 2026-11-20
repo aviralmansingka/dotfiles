@@ -104,9 +104,12 @@ Do not add a revision table, a version log or an approval block.
 - Number sections `1` to `n`, continuously.
 - Put two spaces between the numeral and the title.
 - Make the numeral teal and the title ink. Both are 15 pt bold.
-- Add a 0.75 pt rule `#D1D5DB` across the measure below the head, 8 pt below
-  the text and 8 pt above the body.
-- Use 18 pt before the head and 8 pt after the rule.
+- Add a 0.75 pt rule `#D1D5DB` across the measure, 8 pt below the head and
+  4 pt above the body. Keep the gap under the rule tight.
+- Use 18 pt before the head and 4 pt after the rule.
+- In Google Docs the border padding sits below the head and `spaceBelow` is
+  added after the rule, so the two stack. Set `spaceBelow` to 2 pt and let
+  the 8 pt padding carry the rest. A `spaceBelow` of 8 pt doubles the gap.
 - Keep the head with the next paragraph.
 - Never skip a number. Never nest numbers such as `3.1`.
 - Aim for 6 to 12 sections. Split at 12; merge below 6 if the parts are thin.
