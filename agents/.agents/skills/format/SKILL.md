@@ -86,12 +86,17 @@ Build every document in this order.
    Pattern: `MOHZI · CAPACITY PARTNER DATA ROOM · <section>`.
 2. **Title.** 26 pt bold ink, 1.15 leading, 3 pt before, 5 pt after.
    Sentence case. No terminal full stop.
-3. **Deck.** One sentence, 12 pt muted, 1.25 leading, 11 pt after.
-   State the subject, the place and the scope.
-4. **Date band.** 1 pt ink rule above and below, 8 pt padding each.
-   Labels are 7 pt bold muted with 1 pt tracking.
+3. **Deck.** One sentence, 12 pt muted, 1.25 leading, no space above,
+   11 pt after. The Read me keeps one line; a longer deck grows the block.
+4. **Date band.** 1 pt ink rule above and below, 8 pt padding each, and no
+   space above the band. Labels are 7 pt bold muted with 1 pt tracking.
    Values are 8.5 pt ink: `DATE`, `PREPARED BY` and, when it applies, `CONTACT`.
    Do not add a status field.
+
+Check the title block in the render, not in the style list. The Read me
+measures 9.5 pt from the kicker to the title, 9.7 pt from the title to the
+deck, and 14.6 pt from the deck to the band rule. A space-above left on the
+deck or the band is the usual cause of a block that reads twice as tall.
 5. **Summary.** Section 1. One bold sentence, 10 pt.
 6. **Scope.** Section 2. What the document covers and what it leaves out.
 7. **Body sections.** Numbered 3 upward, in reading order.
