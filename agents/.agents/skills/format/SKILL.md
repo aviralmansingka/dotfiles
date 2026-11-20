@@ -47,11 +47,13 @@ Use five colours only.
 
 | Token | Value | Use |
 | --- | --- | --- |
-| Ink | `#111827` | Titles, body, table text |
-| Teal | `#0F4C5C` | Kicker, section numerals, accents |
-| Muted | `#6B7280` | Deck, labels, footer |
+| Ink | `#111827` | Titles, body, table text, numeric header fill |
+| Teal | `#0F4C5C` | Kicker and section numerals only |
+| Muted | `#6B7280` | Deck, labels, table labels, footer |
 | Rule | `#D1D5DB` | Section and table rules |
-| Card | `#F3F4F6` | Card fills only |
+| Zebra | `#F3F4F6` | Every second body row of a numeric table |
+| Callout fill | `#F0F9FF` | Callout background |
+| Callout accent | `#0369A1` | Callout bar and callout title |
 
 Use Inter for every run: ascii, hAnsi, cs and eastAsia.
 Do not mix a second typeface. Do not use Georgia, Arial or Calibri.
@@ -63,8 +65,15 @@ Do not mix a second typeface. Do not use Georgia, Arial or Calibri.
 | Meta value | 8.5 pt | regular | ink | 1.0 |
 | Body | 10 pt | regular | ink | 1.25 |
 | Deck | 12 pt | regular | muted | 1.25 |
-| Section head | 15 pt | bold | ink and teal | 1.0 |
+| Section numeral | 15 pt | bold | teal | 1.0 |
+| Section title | 15 pt | bold | ink | 1.0 |
 | Title | 26 pt | bold | ink | 1.15 |
+| Table caption | 11 pt | bold | ink | 1.0 |
+| Table header | 8 pt | bold | white on ink | 1.0 |
+| Table cell | 9 pt | regular | ink | 1.0 |
+| Table label | 9 pt | bold | muted | 1.0 |
+| Callout title | 8.5 pt | bold | callout accent | 1.0 |
+| Callout body | 9 pt | regular | ink | 1.0 |
 | Footer | 7.5 pt | regular | muted | 1.0 |
 
 ## 3. Document anatomy
@@ -95,8 +104,9 @@ Do not add a revision table, a version log or an approval block.
 - Number sections `1` to `n`, continuously.
 - Put two spaces between the numeral and the title.
 - Make the numeral teal and the title ink. Both are 15 pt bold.
-- Add a 0.75 pt rule `#D1D5DB` below the head, 6 pt space.
-- Use 18 pt before the head and 8 pt after. Use 12 pt before section 1.
+- Add a 0.75 pt rule `#D1D5DB` across the measure below the head, 8 pt below
+  the text and 8 pt above the body.
+- Use 18 pt before the head and 8 pt after the rule.
 - Keep the head with the next paragraph.
 - Never skip a number. Never nest numbers such as `3.1`.
 - Aim for 6 to 12 sections. Split at 12; merge below 6 if the parts are thin.
@@ -122,35 +132,64 @@ Do not add a horizontal rule under an H2. The heading is the rule.
 
 ## 6. Tables
 
+Two types. Pick by the data, never by taste.
+
+**Type A — numbers.** A traditional table: header band, zebra rows, no rules.
+Use it when every cell after the first column carries a value, a unit or a
+number. Round trips, throughputs, counts, dates and step tables belong here.
+
 | Property | Value |
 | --- | --- |
-| Width | 482 pt (9640 twips), fixed layout |
-| Outer border | none |
-| Row rules | 0.5 pt `#D1D5DB`, top and bottom of every cell |
+| Width | 482 pt, fixed layout |
+| Caption | 11 pt bold ink, 18 pt above the band |
+| Header band | fill `#111827`, 19.5 pt tall, white 8 pt bold text |
+| Header align | match the column: left for the first, right for numbers |
+| Body rows | 9 pt ink, 3.5 pt padding above and below, 5 pt at the sides |
+| Zebra | fill `#F3F4F6` on every second body row |
+| Rules | none, outside or inside |
 | Vertical rules | none |
-| Cell padding | 4 pt top and bottom, 6 to 8 pt at the sides |
-| Vertical align | top |
-| Header | 7 pt bold muted, uppercase, 1 pt tracking |
-| Body | 10 pt ink; first column bold |
+| First column | regular weight, ink |
+| Total row | bold, with a 0.75 pt `#D1D5DB` rule above it |
 | Row split | not allowed |
 | Header repeat | on every page |
 
-- Use 2 to 4 columns. Split wider tables into two tables.
+**Type B — structured prose.** No band and no zebra. Use it when the cells hold
+sentences: definitions, at-a-glance sets, method steps, scope in and out,
+failure behaviour, items to close.
+
+| Property | Value |
+| --- | --- |
+| Width | 482 pt, fixed layout |
+| Kicker | 7.5 pt muted, spaced caps, 12 pt above the first rule |
+| Label column | 9 pt bold muted, 100 pt wide, vertically centred |
+| Prose column | 9 pt ink, 12.5 pt leading |
+| Rules | 0.5 pt `#D1D5DB` between rows, and one closing the table |
+| Fill | none |
+| Vertical rules | none |
+
+Rules for both types:
+
+- Use 2 to 4 columns. Split a wider table into two tables.
 - Put the unit in the header, not in every cell.
-- Left-align text and numbers. Do not centre cells.
-- Do not merge cells. Do not shade cells except in a card row.
-- Use this table for failure behaviour: `Failure | Effect | Action`.
-- Use this table for the items to close: `Item | Owner | How it closes`.
+- Right-align numbers and their headers. Left-align text.
+- Do not merge cells except in a callout.
+- Every table sits under a section head, not under a small-caps label.
+- If a table holds one number and one sentence, use prose instead.
 
-## 7. Cards
+## 7. Callouts
 
-Use a card row for 3 headline facts at the top of a document.
+One callout to a page at most. Use it for the single caveat the reader must not
+miss, or for what the customer configures.
 
-- One table row, three content cells, two narrow spacer cells.
-- Fill `#F3F4F6`. Add a 2.25 pt teal left border to each content cell.
-- Pad 7 pt top and bottom, 8 pt left, 7 pt right.
-- Stack: 7 pt muted label, 12 pt bold statement, 8.5 pt body.
-- Do not use cards for more than three facts or for long text.
+- Fill `#F0F9FF`. Add a 1 pt `#0369A1` bar down the left edge.
+- No other border. No shadow. No rounded corners.
+- Pad 10 pt above and below, 10.5 pt from the bar, 5 pt at the right.
+- Title 8.5 pt bold `#0369A1`, 13.5 pt above the body.
+- Body 9 pt ink, 13.5 pt leading.
+- Place it directly after the section or table it qualifies.
+- Do not stack two callouts. Do not put a table inside one.
+- Do not use teal for a callout. Teal marks the kicker and the section
+  numerals only; the callout is the one blue element in the document.
 
 ## 8. Figures
 
@@ -214,9 +253,11 @@ Rules for Markdown:
 - Use descriptive link text. Do not paste a bare URL.
 - Use fenced code with a language tag. Use inline code for identifiers.
 - Write figures as `![Caption](path)` on their own line.
-- Do not use HTML, emoji, coloured callouts or decorative rules.
-- Do not use blockquotes for the deck. They add a vertical bar the house
-  style does not have.
+- Do not use HTML, emoji or decorative rules.
+- Do not use a blockquote for the deck.
+- Write a callout as a blockquote whose first line is a bold title:
+  `> **Configured per customer**` then the body on the next line.
+  The quote bar is the callout bar the document type carries.
 - Do not use a table of contents or anchor links.
 
 ## 11. Content order
@@ -279,7 +320,10 @@ Do not carry a violation forward for the sake of fidelity.
 - [ ] Kicker, title, deck, date band in order.
 - [ ] Sections numbered without gaps, 15 pt, hairline rule.
 - [ ] Summary is one bold sentence. Scope names what is out.
-- [ ] Tables have 0.5 pt row rules, 7 pt headers and a bold first column.
+- [ ] Each table is the right type: A for numbers, B for prose.
+- [ ] Type A has an ink header band, white 8 pt headers and a zebra row.
+- [ ] Type B has 0.5 pt hairlines and no header band.
+- [ ] Table rules and callout fill appear once each, in the right place.
 - [ ] Header row repeats across pages. No row splits.
 - [ ] Figure fits, is legible and does not strand a page.
 - [ ] Footer has the rule, the document name and a page field.
