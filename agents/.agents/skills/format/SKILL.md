@@ -69,6 +69,8 @@ Do not mix a second typeface. Do not use Georgia, Arial or Calibri.
 | Deck | 12 pt | regular | muted | 1.25 |
 | Section numeral | 15 pt | bold | teal | 1.0 |
 | Section title | 15 pt | bold | ink | 1.0 |
+| Clause head | 11 pt | bold | ink | 1.0 |
+| Topic head | 10.5 pt | bold, upright | ink | 1.0 |
 | Title | 26 pt | bold | ink | 1.15 |
 | Table caption | 11 pt | bold | ink | 1.0 |
 | Table header | 8 pt | bold | white on ink | 1.0 |
@@ -128,6 +130,28 @@ Do not add a revision table, a version log or an approval block.
 - Never skip a number. Never nest numbers such as `3.1`.
 - Aim for 2 to 12 sections. A read-me carries two; a specification may carry
   eight or more. Split at 12; merge below 2.
+
+### Sub-levels below a section
+
+A contract or a specification may need three heading levels. Size alone does not
+separate them, because 11 pt and 10.5 pt read as one weight. The rule does.
+
+| Level | Use | Type | Rule |
+| --- | --- | --- | --- |
+| Section | A numbered section | 15 pt bold, teal numeral, ink title | 0.75 pt `#D1D5DB`, 6 pt below |
+| Clause | A numbered clause, or one parent per section that has no clause | 11 pt bold ink | 0.5 pt `#D1D5DB`, 5 pt below |
+| Topic | A labelled block inside a clause | 10.5 pt bold ink, upright | none |
+
+- Give every clause head a rule, and every topic head none. This is the only
+  signal that survives when the two sizes are close.
+- Never jump from a section head to a topic head. Where a section carries topic
+  blocks and no numbered clause, add one unnumbered clause head to hold them.
+- Keep the topic head upright. The Word default sets italic on this level; set
+  `w:i` off on the run and on the style.
+- Use 16 pt before a clause head and 12 pt before a topic head, so the rules do
+  not crowd the paragraph above.
+- Do not nest below the topic level. A fourth level means the section carries
+  too much, and it should split.
 
 In Markdown, an H2 is a section head. Number it: `## 3 The rack and its ports`.
 Do not add a horizontal rule under an H2. The heading is the rule.
@@ -363,6 +387,8 @@ Do not carry a violation forward for the sake of fidelity.
 - [ ] Inter everywhere, five colours only.
 - [ ] Kicker, title, deck, date band in order.
 - [ ] Sections numbered without gaps, 15 pt, hairline rule.
+- [ ] Heading rules step down: section 0.75 pt, clause 0.5 pt, topic none.
+- [ ] No heading jump from a section to a topic head.
 - [ ] Summary is one bold sentence. Scope names what is out.
 - [ ] Each table is the right type: A for numbers, B for prose.
 - [ ] Type A has an ink header band, white 8 pt headers and a zebra row.
