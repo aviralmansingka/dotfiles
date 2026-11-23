@@ -80,9 +80,8 @@ Do not mix a second typeface. Do not use Georgia, Arial or Calibri.
 | Callout body | 9 pt | regular | ink | 1.0 |
 | Footer | 7.5 pt | regular | muted | 1.0 |
 
-Leading is a multiplier of the font size: 1.25 means 125 % of single spacing.
-The two Google surfaces spell that one number in different units, and the unit
-decides whether the document paginates or explodes. See section 12.
+The leading values in this table are multiples of single line spacing, not of
+font size. See section 12 for the units each Google interface accepts.
 
 ## 3. Document anatomy
 
@@ -124,8 +123,8 @@ Do not add a revision table, a version log or an approval block.
 - In Google Docs the border padding sits below the head and `spaceBelow` is
   added after the rule, so the two stack. Set `spaceBelow` to 8 pt and the
   border padding to 6 pt, which reproduces the Word file exactly.
-- Set the head's own line spacing to 100 %, the raw Docs API percentage and
-  not a multiplier. A head that inherits a body style at 125 % or 155 % draws
+- Set the head to single spacing: `1.0` in Workspace MCP, `100` in the raw
+  Docs API. A head that inherits a body style at 125 % or 155 % draws
   its rule an extra 4 to 11 pt low: 6 pt of padding renders as 16 pt. Give the
   head an explicit line spacing, never a default.
 - Check the rendered gap, not the stored value. Export a PDF and measure: the
@@ -374,8 +373,7 @@ Do not carry a violation forward for the sake of fidelity.
 - Set `page_break_before` on the figure section when the figure will not fit.
 - Export a PDF and inspect every page before you ship.
   Check the footer tab, the table header repeat and the figure page, then run
-  the pagination and leading check below. Page count is the cheapest proof
-  that the line spacing took the unit you meant.
+  the pagination and leading check below.
 
 - Sweep the paragraphs before you style them. A Google Doc can carry an
   inherited `borderTop` on every paragraph. Set `borderTop` and
@@ -390,52 +388,31 @@ Do not carry a violation forward for the sake of fidelity.
 
 ### Line spacing units
 
-One value, two spellings. Read the unit before you write the number.
-
-| Surface | Parameter | Unit | Body copy |
+| Interface | Parameter | Single (section heads) | 1.25× (body and deck) |
 | --- | --- | --- | --- |
-| Workspace MCP `update_paragraph_style`, or that operation inside `batch_update_doc` | `line_spacing` | Multiplier: `1.0` is single | `1.25` |
-| Raw Docs API `updateParagraphStyle` | `paragraphStyle.lineSpacing` | Percentage: `100` is single | `125` |
+| Workspace MCP: `update_paragraph_style`, including in `batch_update_doc` | `line_spacing` | `1.0` | `1.25` |
+| Raw Google Docs API | `paragraphStyle.lineSpacing` | `100` | `125` |
 
-- The Workspace tool multiplies by 100 before it calls the API, so
-  `line_spacing=1.25` lands as `lineSpacing=125`. That is the whole rule.
-  Multiplier times 100 gives the percentage; percentage divided by 100 gives
-  the multiplier.
-- Give the Workspace tool a multiplier. Never hand it `100` or `125`.
-  `line_spacing=100` asks for 100 times single spacing, so one 10 pt body line
-  stands taller than the 679.5 pt frame and every line takes its own page: a
-  one-page read-me runs to dozens. `line_spacing=125` is the same fault at 125
-  times. The call still returns success, which is why the export check below
-  matters.
-- Give the raw API the percentage. There `100` and `125` are correct, and
-  `lineSpacing: 1.25` is the fault: it reads as 1.25 % and stacks the lines.
-- `scripts/docs_api_polish.py` uses the raw API and is correct as written:
-  `110` for the title, `125` for the deck, `155` for the date band. Do not
-  convert those numbers to multipliers.
-- `python-docx` takes a multiplier too, as in
-  `paragraph_format.line_spacing = 1.25`, the same unit as the Workspace tool.
+Workspace MCP multiplies its input by 100 before calling the raw API.
+When copying a raw API percentage into the tool, divide by 100.
+Never pass `125` to the tool for body text: that requests **125× single
+spacing** and can put each line on its own page even if the call succeeds.
+
+The percentages in `scripts/docs_api_polish.py` go directly to the raw API.
+Keep them as percentages. In `python-docx`, use a float for a multiplier
+(`line_spacing = 1.25`); a length such as `Pt(12.5)` sets fixed spacing instead.
 
 ### Pagination and leading check
 
-Run this on the exported PDF before delivery, not after a reader reports it.
+Inspect the exported PDF, not just the stored style. Compare its page count
+with the last approved build if one exists. Investigate an unexplained jump,
+overlapping lines, or a page with one line and a large blank area.
 
-- Count the pages and compare with the last approved build. Read the count
-  from the PDF viewer, from `pdfinfo` where poppler is installed, or from
-  `mdls -name kMDItemNumberOfPages file.pdf` on macOS. A read-me is one page.
-  A document that gained 20 pages with no new content carries a leading fault.
-- Measure leading on one body page, not in the style list. Take the pitch
-  between two consecutive baselines and hold it against the type table: body
-  10 pt at 1.25 is about 12.5 pt, a 12 pt deck at 1.25 about 15 pt, a 15 pt
-  head at 1.0 about 15 pt. Inter's descender adds a point or so. The failure
-  shapes below are out by two orders of magnitude, so the check reads cleanly
-  either way.
-- Read the two failure shapes. A pitch near 1 pt means a multiplier reached
-  the raw API. A pitch near 1000 pt, or one paragraph to a page, means a
-  percentage reached a multiplier tool.
-- Check the breaks on the same pass: no head as the last line of a page, no
-  split row, no figure separated from its caption, no page that holds one
-  paragraph and empty space.
-- Fix the unit at the source and re-export. Padding never repairs it.
+If spacing looks wrong, check consecutive lines **in the same paragraph**.
+Compare with an approved sample using the same font, size, and renderer.
+Single spacing depends on font metrics: 10 pt text at 1.25× does not imply
+an exact 12.5 pt baseline distance. Check the input units before changing
+margins or padding. Correct the source, export again, and inspect every page.
 
 ## 13. Checklist
 
@@ -454,8 +431,7 @@ Run this on the exported PDF before delivery, not after a reader reports it.
 - [ ] Figure fits, is legible and does not strand a page.
 - [ ] Line spacing carries its tool's unit: multiplier for the Workspace MCP,
       percentage for the raw Docs API.
-- [ ] Exported PDF keeps the approved page count and roughly 12.5 pt body
-      leading.
+- [ ] Inspect the exported PDF for abnormal spacing and unexplained page-count changes.
 - [ ] Footer has the rule, the document name and a page field.
 - [ ] Markdown uses one H1 and numbered H2 sections that match the Word file.
 - [ ] No version, status, negotiation or uncleared name in the text.
