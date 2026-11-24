@@ -53,6 +53,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | justfile build recipes | test-just-build.py | see docs/ci-tests/just-build.md | 0.02 s |
 | Fleet secrets (sops) | test-sops-secrets.py | see docs/ci-tests/sops-secrets.md | 0.07 s |
 | quicknote CLI + Rex chord | test-quicknote.sh | see docs/ci-tests/quicknote.md | 2 s warm |
+| Rex review layer + chord | test-rex-review.sh | see docs/ci-tests/rex-review.md | under 0.1 s |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
 herdr-clean-handoff, herdr-flash-copy, herdr-annotate-install,
