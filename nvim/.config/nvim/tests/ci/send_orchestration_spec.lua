@@ -20,6 +20,11 @@ H.run("send_orchestration_spec", function()
   local notify_calls, restore_notify = H.capture_notify()
 
   local saved_pane_env = vim.env.HERDR_PANE_ID
+  local saved_rex_env = { vim.env.REX_SESSION, vim.env.REX_BLOCK }
+  -- A Rex shell that launches this suite exports REX_*, and the mux seam
+  -- prefers Rex over Herdr. Clear them so these cases stay Herdr-only.
+  vim.env.REX_SESSION = ""
+  vim.env.REX_BLOCK = ""
   vim.env.HERDR_PANE_ID = "w37:p2"
 
   -- ── argv recorder over the real herdr adapter ─────────────────────────
@@ -132,8 +137,9 @@ H.run("send_orchestration_spec", function()
     payload = "outside",
     fallback = function() return false end,
   }), false, "outside a Herdr pane the fallback decides the result")
-  H.eq(#argv, 1, "only the current-pane lookup runs outside a pane")
-  H.eq(argv[1].cmd, { "herdr", "pane", "current" }, "the lookup is the pane current verb")
+  -- No mux identity means no adapter: the mux seam never probes a CLI on a
+  -- guess, so the fallback alone decides the result (PR: mux-agnostic send).
+  H.eq(#argv, 0, "no mux identity runs no CLI at all")
 
   restore_system()
   if saved_pane_env == nil then
@@ -164,7 +170,7 @@ H.run("send_orchestration_spec", function()
   end
 
   -- The handlers wire to the right modules (fakes, invoked directly).
-  local saved_agent = package.loaded["plugins.herdr.agent_send"]
+  local saved_agent = package.loaded["plugins.agent.send"]
   local saved_term = package.loaded["plugins.herdr.term_send"]
 
   local term_opts
@@ -175,7 +181,7 @@ H.run("send_orchestration_spec", function()
   H.eq(term_opts, { visual = true }, "<leader>tt sends the visual selection to the float")
 
   local agent_opts, prompt_opts
-  package.loaded["plugins.herdr.agent_send"] = {
+  package.loaded["plugins.agent.send"] = {
     send = function(opts) agent_opts = opts end,
     prompt_selection = function(opts) prompt_opts = opts end,
   }
@@ -187,7 +193,7 @@ H.run("send_orchestration_spec", function()
   H.truthy(prompt_opts ~= nil and type(prompt_opts.fallback) == "function",
     "visual <leader>at opens the instruction flow with the fallback")
 
-  package.loaded["plugins.herdr.agent_send"] = saved_agent
+  package.loaded["plugins.agent.send"] = saved_agent
   package.loaded["plugins.herdr.term_send"] = saved_term
   restore_notify()
 end)

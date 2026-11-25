@@ -22,6 +22,7 @@ import threading
 import time
 import unittest
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
@@ -2648,6 +2649,47 @@ class TestShortcutEndpoint(unittest.TestCase):
              daemon.SHORTCUT_BIND_RETRY_SECONDS) = saved
         self.assertEqual(calls["served"], 3)
         self.assertEqual(calls["bound"], (daemon.SHORTCUT_HOST or "0.0.0.0", 8766))
+
+    def test_http_accepts_urlencoded_dictation(self):
+        pi = MagicMock()
+        with patch.object(daemon, "_run_shortcut_text") as run_text:
+            server = daemon.ShortcutHTTPServer(("127.0.0.1", 0), pi)
+            port = server.server_address[1]
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                base = f"http://127.0.0.1:{port}{daemon.SHORTCUT_PATH}"
+                body = urllib.parse.urlencode({"token": "test-token", "text": "hi there"}).encode()
+                req = urllib.request.Request(
+                    base, data=body, method="POST",
+                    headers={"Content-Type": "application/x-www-form-urlencoded"})
+                with urllib.request.urlopen(req, timeout=5) as r:
+                    self.assertEqual(r.status, 200)
+                deadline = time.time() + 2
+                while time.time() < deadline and not run_text.called:
+                    time.sleep(0.01)
+                run_text.assert_called_once_with(pi, "hi there")
+            finally:
+                server.shutdown()
+                server.server_close()
+
+    def test_http_rejects_a_non_form_body(self):
+        pi = MagicMock()
+        with patch.object(daemon, "_run_shortcut_text") as run_text, patch.object(daemon, "log"):
+            server = daemon.ShortcutHTTPServer(("127.0.0.1", 0), pi)
+            port = server.server_address[1]
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                base = f"http://127.0.0.1:{port}{daemon.SHORTCUT_PATH}"
+                req = urllib.request.Request(
+                    base, data=b'{"token":"test-token"}', method="POST",
+                    headers={"Content-Type": "application/json"})
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(req, timeout=5)
+                self.assertEqual(ctx.exception.code, 400)
+                self.assertFalse(run_text.called)
+            finally:
+                server.shutdown()
+                server.server_close()
 
     def test_sanitize_shortcut_text_strips_control_bytes(self):
         self.assertEqual(daemon.sanitize_shortcut_text(b"  hi\x03ther\x1b\nworld \x00"), "hither\nworld")

@@ -31,6 +31,7 @@ ops/provision/terraform/*/*.auto.tfvars
 .nvimlog
 test-results/
 /go/mission/bin/
+/go/quicknote/bin/
 /go/mission/prototype
 
 # Historical scratch feedback is archived in docs/professor-feedback.md.
@@ -55,3 +56,6 @@ nix/adhoc/
 # are not. `*.dec.*` is the shape `sops -d x.yaml > x.dec.yaml` writes.
 keys.txt
 *.dec.*
+
+# stray module-root binary from a bare `go build ./...`
+/go/quicknote/quicknote

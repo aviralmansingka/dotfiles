@@ -76,7 +76,11 @@ timers.
   `rex send-key enter`; the block comes from the pinned value or the session's
   first block. A non-zero rex exit surfaces as a Telegram error. The endpoint
   retries a failed bind, because a pinned Tailscale address can be absent when
-  the unit starts.
+  the unit starts. The endpoint takes a multipart body and an
+  `application/x-www-form-urlencoded` body, because Shortcuts sends the
+  urlencoded one when every field is plain text. Any other Content-Type, such
+  as `application/json`, is `400` and runs nothing. A post with no usable field
+  logs each field name and size, never a value.
 - Telethon listener. Settings are off without credentials, and a half pair or a
   non-numeric api_id is an operator error; an unknown relay answer mode is too.
   The listener registers exactly one `NewMessage` handler restricted to the

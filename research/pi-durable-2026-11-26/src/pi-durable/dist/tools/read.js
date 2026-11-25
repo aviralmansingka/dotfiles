@@ -1,0 +1,239 @@
+import { characterEnd } from "@earendil-works/chord/output";
+import { lit, num, obj, opt, str, union } from "@earendil-works/pi-schema";
+import { getOrThrow, rangeDecoder, startsWithBom, } from "../env/index.js";
+import { defineTool } from "../harness/define.js";
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, truncateHeadOf, utf8ByteLength, } from "../truncate.js";
+import { requireEnv } from "./env.js";
+import { detectSupportedImageMimeTypeOf, imageDimensions } from "./image.js";
+import { base64Length, INLINE_IMAGE_TYPES, imageLimits, preparedNotes, toBase64, } from "./image-processor.js";
+import { resolveReadToolPath } from "./path-utils.js";
+const readSchema = obj({
+    path: str({ description: "Path to the file to read (relative or absolute)" }),
+    offset: opt(num({ description: "Line number to start reading from (1-indexed)" })),
+    limit: opt(num({ description: "Maximum number of lines to read" })),
+}, { open: true });
+/**
+ * What programs such as code mode scripts get: the text of a text file, or the image block of an image, which code
+ * mode's `image()` shows.
+ */
+const readStructuredOutputSchema = union([
+    str(),
+    obj({ type: lit("image"), data: str(), mimeType: str() }, { open: true }),
+]);
+const READ_CHUNK = 64 * 1024;
+/** `Array.prototype.slice`'s conversion of an index: NaN is 0, other values truncate toward zero. */
+function sliceIndex(value) {
+    return Number.isNaN(value) ? 0 : Math.trunc(value);
+}
+/**
+ * The decoded start of bytes `[start, end)` of the file, decoded as part of the whole file: all of it, or enough for
+ * `truncateHeadOf` (more than `DEFAULT_MAX_BYTES + 1` bytes, or `DEFAULT_MAX_LINES` newlines).
+ */
+async function readHead(reader, start, end, skipBom, context) {
+    const decoder = rangeDecoder();
+    let text = "";
+    let newlines = 0;
+    for (let position = skipBom && start === 0 ? 3 : start; position < end;) {
+        const bytes = getOrThrow(await reader.read(position, Math.min(READ_CHUNK, end - position), context));
+        if (bytes.length === 0)
+            break;
+        position += bytes.length;
+        const decoded = decoder.decode(bytes, { stream: true });
+        text += decoded;
+        for (let index = decoded.indexOf("\n"); index !== -1; index = decoded.indexOf("\n", index + 1))
+            newlines++;
+        if (newlines >= DEFAULT_MAX_LINES || utf8ByteLength(text) > DEFAULT_MAX_BYTES + 1)
+            return text;
+    }
+    return text + decoder.decode();
+}
+/**
+ * Reads text files and images. Remarks about truncation, continuation, and image processing are diagnostics; the content
+ * is only file text, or one image. Programs get the text, or the image's `ImageContent`.
+ */
+export function createReadTool(options = {}) {
+    const formats = options.images === undefined ? "jpg, png, gif, webp" : "jpg, png, gif, webp, bmp";
+    return defineTool({
+        name: "read",
+        description: `Read the contents of a file. Supports text files and images (${formats}). Images are sent as attachments. For text files, output is truncated to ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.`,
+        parameters: readSchema,
+        structuredOutputSchema: readStructuredOutputSchema,
+        async execute(args, api, context) {
+            const { path, offset, limit } = args;
+            const env = requireEnv(api);
+            const absolutePath = await resolveReadToolPath(env, path, context);
+            const reader = getOrThrow(await env.openBinaryReader(absolutePath, undefined, context));
+            try {
+                // A concurrent writer can change the file between the scan and the reads. Appending (a growing log) leaves
+                // the scanned text as it was; an image must be whole. Otherwise the file is read again once.
+                for (let attempt = 0;; attempt++) {
+                    const before = getOrThrow(await reader.info(context));
+                    const mimeType = await detectSupportedImageMimeTypeOf({
+                        size: before.size,
+                        read: async (position, length) => getOrThrow(await reader.read(position, length, context)),
+                    });
+                    const result = mimeType === undefined
+                        ? await readText(reader, path, offset, limit, context)
+                        : await readImage(reader, before, path, mimeType, options.images, await imageModel(api, context), context);
+                    const after = getOrThrow(await reader.info(context));
+                    const unchanged = after.size === before.size && after.mtimeMs === before.mtimeMs;
+                    if (unchanged || (mimeType === undefined && after.size > before.size))
+                        return result;
+                    if (attempt === 1)
+                        throw new Error(`${path} changed while it was read`);
+                }
+            }
+            finally {
+                await reader.close(context);
+            }
+        },
+    });
+}
+/**
+ * One image block, prepared by `processor` or, without one, as it is when its format is inline and it fits the limits
+ * (its size is checked before reading it, its dimensions from its header); otherwise an error result saying why. What happened to the image is an `info` diagnostic, so programs get the
+ * bare `ImageContent`. A model without image input sees pi-ai's placeholder instead, decided per request; `details`
+ * names it for UIs.
+ */
+async function readImage(reader, info, path, mimeType, processor, { limits, imageUnsupportedByModel }, context) {
+    let image;
+    const notes = [];
+    if (processor !== undefined) {
+        const bytes = getOrThrow(await reader.read(0, info.size, context));
+        const prepared = await processor.prepare(bytes, mimeType, limits);
+        if (prepared === undefined)
+            return imageError(`${path} is an image (${mimeType}) that cannot be prepared for the model`);
+        image = prepared;
+        notes.push(...preparedNotes(prepared));
+    }
+    else {
+        if (!INLINE_IMAGE_TYPES.has(mimeType)) {
+            return imageError(`${path} is an image (${mimeType}) that needs converting, and no image processor is configured`);
+        }
+        const unshrinkable = "and no image processor is configured to shrink it";
+        if (base64Length(info.size) > limits.maxBytes) {
+            return imageError(`${path} is an image (${mimeType}) of ${formatSize(info.size)}, too large to send, ${unshrinkable}`);
+        }
+        const bytes = getOrThrow(await reader.read(0, info.size, context));
+        const size = imageDimensions(bytes, mimeType);
+        if (size === undefined)
+            return imageError(`${path} is an image (${mimeType}) whose size cannot be read`);
+        if (size.width > limits.maxWidth || size.height > limits.maxHeight) {
+            return imageError(`${path} is an image (${mimeType}) of ${size.width}x${size.height}, larger than ${limits.maxWidth}x${limits.maxHeight}, ${unshrinkable}`);
+        }
+        image = { data: toBase64(bytes), mimeType };
+    }
+    const diagnostics = [
+        { severity: "info", code: "image", message: [`Read image file [${image.mimeType}].`, ...notes].join(" ") },
+    ];
+    const block = { type: "image", data: image.data, mimeType: image.mimeType };
+    return {
+        output: [block],
+        structuredOutput: block,
+        ...(imageUnsupportedByModel === undefined ? {} : { details: { imageUnsupportedByModel } }),
+        diagnostics,
+    };
+}
+/**
+ * The conversation model's image limits (`imageLimits`), and its id if it has no image input. Without a resolvable
+ * model, the defaults and no id.
+ */
+async function imageModel(api, context) {
+    const ref = (await api.agent(context)).model;
+    const model = ref === undefined ? undefined : api.models.getModel(ref.provider, ref.modelId);
+    return {
+        ...(model === undefined || model.input.includes("image") ? {} : { imageUnsupportedByModel: model.id }),
+        limits: imageLimits(model),
+    };
+}
+function imageError(message) {
+    return { output: [], isError: true, diagnostics: [{ severity: "error", code: "unsupported_image", message }] };
+}
+/**
+ * The read result for the opened file. It equals decoding the whole file with `TextDecoder`, splitting it on `\n`,
+ * and bounding the selected lines with `truncateHead`, while reading only one scan's worth of the file plus the head.
+ */
+async function readText(reader, path, offset, limit, context) {
+    const startLine = offset ? Math.max(0, offset - 1) : 0;
+    const startLineDisplay = startLine + 1;
+    // Lines are selected like `allLines.slice(startLine, endLine)`, which truncates fractional indices.
+    const sliceStart = sliceIndex(startLine);
+    // One pass finds the line count and the selection; a selection past the last line ends with it, as `slice` does,
+    // and an empty one (a zero or negative limit) is scanned as one line and then ignored.
+    // A start beyond any file is scanned from 0 only to count lines; the offset check below then fails as before.
+    const scanStart = Number.isSafeInteger(sliceStart) ? sliceStart : 0;
+    const requestedEnd = limit === undefined ? undefined : Math.max(scanStart + 1, sliceIndex(startLine + limit));
+    const scanEnd = requestedEnd !== undefined && Number.isSafeInteger(requestedEnd) ? requestedEnd : undefined;
+    const scanOf = async (endLine) => getOrThrow(await reader.scanLines({ startLine: scanStart, ...(endLine === undefined ? {} : { endLine }) }, context));
+    let scan = await scanOf(scanEnd);
+    const totalFileLines = scan.newlines + 1;
+    if (startLine >= totalFileLines) {
+        throw new Error(`Offset ${offset} is beyond end of file (${totalFileLines} lines total)`);
+    }
+    let userLimitedLines;
+    let selectedLineCount = totalFileLines - sliceStart;
+    if (limit !== undefined) {
+        const endLine = Math.min(startLine + limit, totalFileLines);
+        userLimitedLines = endLine - startLine;
+        // `slice` counts a negative end from the end of the lines, which only the line count tells; scan again for it.
+        const relativeEnd = sliceIndex(endLine);
+        const sliceEnd = relativeEnd < 0 ? Math.max(totalFileLines + relativeEnd, 0) : relativeEnd;
+        selectedLineCount = Math.max(0, sliceEnd - sliceStart);
+        if (selectedLineCount > 0 && relativeEnd < 0)
+            scan = await scanOf(sliceEnd);
+    }
+    const empty = selectedLineCount === 0;
+    // Counted like `truncateHead`: a trailing newline adds no line, and empty text has none.
+    const endsWithNewline = !empty && scan.lastLineStart === scan.end && scan.lastLineStart > scan.start;
+    const totals = {
+        lines: empty || scan.selectedBytes === 0 ? 0 : selectedLineCount - (endsWithNewline ? 1 : 0),
+        bytes: empty ? 0 : scan.selectedBytes,
+    };
+    const firstBytes = getOrThrow(await reader.read(0, 3, context));
+    const head = empty ? "" : await readHead(reader, scan.start, scan.end, startsWithBom(firstBytes), context);
+    const { content: headText, ...truncation } = truncateHeadOf(head, totals);
+    const diagnostics = [];
+    let outputText = headText;
+    let details;
+    if (truncation.firstLineExceedsLimit) {
+        // Show the start of the line, cut at the byte limit on a character boundary. Like `allLines[startLine]`, a
+        // fractional start line names no line.
+        const integral = Number.isInteger(startLine);
+        const lineBytes = new TextEncoder().encode(integral ? (head.split("\n")[0] ?? "") : "");
+        const lineSize = integral ? scan.firstLineBytes : 0;
+        const end = characterEnd(lineBytes, DEFAULT_MAX_BYTES);
+        outputText = new TextDecoder().decode(lineBytes.subarray(0, end));
+        diagnostics.push({
+            severity: "warn",
+            code: "truncated",
+            message: `Line ${startLineDisplay} is ${formatSize(lineSize)}, exceeds the ${formatSize(DEFAULT_MAX_BYTES)} limit; showing its first ${formatSize(end)}. Use bash: sed -n '${startLineDisplay}p' ${path} | tail -c +${end + 1}`,
+        });
+        details = { truncation: { ...truncation, outputBytes: end, outputLines: 1 } };
+    }
+    else if (truncation.truncated) {
+        const endLineDisplay = startLineDisplay + truncation.outputLines - 1;
+        const nextOffset = endLineDisplay + 1;
+        const limitText = truncation.truncatedBy === "lines" ? "" : ` (${formatSize(DEFAULT_MAX_BYTES)} limit)`;
+        diagnostics.push({
+            severity: "info",
+            code: "truncated",
+            message: `Showing lines ${startLineDisplay}-${endLineDisplay} of ${totalFileLines}${limitText}. Use offset=${nextOffset} to continue.`,
+        });
+        details = { truncation };
+    }
+    else if (userLimitedLines !== undefined && startLine + userLimitedLines < totalFileLines) {
+        const remaining = totalFileLines - (startLine + userLimitedLines);
+        const nextOffset = startLine + userLimitedLines + 1;
+        diagnostics.push({
+            severity: "info",
+            message: `${remaining} more lines in file. Use offset=${nextOffset} to continue.`,
+        });
+    }
+    return {
+        output: outputText === "" ? [] : [{ type: "text", text: outputText }],
+        structuredOutput: outputText,
+        ...(details === undefined ? {} : { details }),
+        diagnostics,
+    };
+}
+//# sourceMappingURL=read.js.map

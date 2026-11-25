@@ -32,5 +32,7 @@ func cmdShow(a platform.Args, s *App) (any, error) {
 	if e != nil {
 		return nil, e
 	}
-	return contextOf(r), nil
+	out := contextOf(r)
+	out.PendingAsks = s.askCount(r)
+	return out, nil
 }

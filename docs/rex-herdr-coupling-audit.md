@@ -74,7 +74,7 @@ Fresh Rex-only install would miss: the nvim sidebar and annotate-review workflow
 | `scripts/test-install-smoke.sh` | CI | Guards for integration install | partial | Drop Herdr guards, add Rex guards; keep the dynamic PATH-fake pattern. |
 | `scripts/verify-nvim.lua` | CI | Asserts backend == `herdr` and its methods | partial | Assert a rex-backed backend; needs the backend module first. |
 | `scripts/verify-nvim` | runner | `sidekick-herdr-live` needs a running Herdr server | partial | Add `sidekick-rex-live` using `rex events`/`rex block ls`. |
-| `scripts/test-nvim-headless.sh` | CI | Runs `herdr_agent_send_spec.lua` | partial | Add a Rex adapter spec. |
+| `scripts/test-nvim-headless.sh` | CI | Runs `herdr_agent_send_spec.lua` and `rex_agent_send_spec.lua` | done | — |
 | `scripts/test-nvim-picker.sh` | CI | Stubs herdr workspace resolution | partial | Stub rex session/block resolution. |
 | `scripts/test-nvim-send.sh` | CI | Tests Herdr adapter verbs | partial | Port to `rex send`/`send-key` payloads. |
 | `scripts/test-nvim-workspaces.sh` | CI | Stubs `herdr.call`, workspace snapshot/reconcile | partial | Workspace-per-repo is Herdr-specific; test Rex tab bookkeeping instead. |
@@ -113,7 +113,7 @@ Fresh Rex-only install would miss: the nvim sidebar and annotate-review workflow
 | `plugins/sidekick/herdr_backend.lua` | Agent/workspace/pane/tab verbs | partial | Rewrite over the rex adapter plus a local agent registry. |
 | `plugins/herdr/workspaces.lua` | `workspace list/focus/create/rename/close`, `pane list`, `agent list` | partial | Remap workspaces to Rex sessions; create/rename/close become nvim-side management. |
 | `plugins/sidekick/cwd_picker.lua` | `agent list/read/rename`, workspace list | partial | Enumerate from the new registry; previews via `rex capture`. |
-| `plugins/herdr/agent_send.lua` | `$HERDR_PANE_ID`, `pane current/list/send-text`, `agent_status` | partial | Use `$REX_BLOCK` + `rex send`; replace the agent-status filter with a heuristic. |
+| `plugins/agent/{mux,send,herdr,rex}.lua` | `$REX_BLOCK` + `rex send`, Herdr pane discovery, mux seam | done | — |
 | `helpers/herdr_scrollback.lua` | `$HERDR_ENV`, `$HERDR_ACTIVE_PANE_ID`, `pane read`, captures dir | partial | Gate on Rex env, capture with `rex capture --unwrap`; identity comes from agent session files. |
 | `plugins/sidekick/internal.lua` | `herdr:` session ids, `agent_for_worktree`, tab vars | partial | Switch ids to `rex:<block-id>`; resolve via the registry. |
 | `plugins/sidekick/registry.lua` | `herdr.list_agents` rehydration | partial | Feed from the nvim-side registry. |

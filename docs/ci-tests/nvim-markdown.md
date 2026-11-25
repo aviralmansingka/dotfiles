@@ -10,10 +10,11 @@ It runs headless, offline, and with no plugin manager.
 
 - **#99 ANSI fences.** `helpers/markdown_ansi.lua` renders ANSI colors
   inside fenced blocks. The suite keeps the reload and byte contracts.
-- **#159 PencilSoft wrap.** PencilSoft re-enabled wrap in markdown buffers.
-  The suite asserts the final window state: wrap stays off. The ftplugin
-  agrees: markdown keeps `wrap=false`, because the save hook hard-wraps prose
-  at a visible width and the reader column shows only those lines.
+- **#159 soft wrap.** vim-pencil is removed. Markdown keeps `wrap=false`,
+  `textwidth=99`, and `colorcolumn=100` from `after/ftplugin/markdown.lua`,
+  because the save hook hard-wraps prose at a visible width. LazyVim's
+  `lazyvim_wrap_spell` autocmd sets markdown wrap on, so
+  `lua/config/autocmds.lua` registers a later FileType autocmd that wins.
 - **#181/#182/#272 mermaid render.** Mermaid fences render as ASCII art.
   The suite guards the render paths and the auto-render state machine.
 
@@ -38,10 +39,9 @@ It runs headless, offline, and with no plugin manager.
 - `markdown_plugin_spec`: the suite loads the plugin file as a plain table
   and pins `vim.fn.expand` to a mktemp tree, never `~/vault`. It tests the
   pure path helpers, the prefix filters, the habit-section skip, and the
-  section labels in the picker items. The FileType callback runs PencilSoft
-  and still leaves wrap, number, and relativenumber off, and it maps the five
-  conceal-aware motions. The octo callback
-  keeps its own width and format state. Every `<leader>` key is present,
+  section labels in the picker items. It also asserts that no vim-pencil
+  entry exists, since the markdown ftplugin owns wrap, width, and the guide.
+  Every `<leader>` key is present,
   and `<leader>mm` reaches the mermaid guard. The wiring sets the parser,
   the conceal options, and the fence-detection autocmds; markdownlint
   skips herdr scrollback buffers.
@@ -55,6 +55,15 @@ It runs headless, offline, and with no plugin manager.
   open. `:write` keeps the fillers. A resize re-cuts them, a too-narrow
   resize, a buffer switch to an octo buffer, and a closed editing window
   drop them.
+- `markdown_markers_spec`: the glyph handler for the dash-only marker shape the
+  grammar has no node for. An indented empty bullet parses as a setext
+  underline, so the plugin would draw nothing and the raw marker would show
+  until the next keystroke. The spec stubs the resolved plugin config (no
+  bootstrap) and asserts the icon, the level cycling by indent, the concealed
+  byte range, the `conceal = false` mark, and that a parsed marker, an empty or
+  filled checkbox, a custom token, a filled nested item, and a code fence get no
+  second glyph. A raising config, a raising parser chain, and a non-markdown
+  buffer leave the plugin's own render untouched.
 - `markdown_motions_spec`: `h`/`l`/`w`/`b`/`e` in markdown buffers, against
   the two conceal layers. The treesitter highlighter supplies the inline-link
   conceal (the `conceal ""` captures from the parser bundled with nvim, so no
@@ -87,13 +96,15 @@ entry. The script fails on any spec failure or budget breach.
   exercised here. `foldexpr` belongs to `mermaid_render_spec.lua`.
 - `markdown_ansi.lua`: `setup` and `parse` are exercised here; `decode`
   and `encode` belong to `markdown_ansi_spec.lua`.
-- `plugins/markdown.lua`: the pencil config, the lint opts, the wiring, and
-  the `ft`, `fT`, and `mm` handlers are exercised. The `vf`, `vt`, `ot`,
-  `ob`, and `ol` handlers belong to other clusters. The suite found no
-  source bug; no source file changed.
+- `plugins/markdown.lua`: the lint opts, the wiring, and the `ft`, `fT`,
+  and `mm` handlers are exercised. The `vf`, `vt`, `ot`, `ob`, and `ol`
+  handlers belong to other clusters.
 - `helpers/reader.lua`: `eligible`, `column_width`, `should_auto`, `enable`,
   `close`, `toggle`, `maybe_auto`, and `setup` are exercised. The filler
   windows and the resize path run against the headless screen.
+- `helpers/markdown_markers.lua`: `parse` and `extend` are exercised against a
+  real markdown tree with a stubbed plugin config; the plugin's own resolved
+  icon list, level cycling, and checkbox positions are read back from it.
 
 ## Known gaps
 

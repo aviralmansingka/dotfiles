@@ -1712,6 +1712,15 @@ test("the panel shows a running attempt with its run time", () => {
   assert.match(model.keys.find(key => key.action === "retry").reason, /attempt is running/);
 });
 
+// A question that waits for a human is the owner's work, so the panel says how
+// many wait even while the commander is busy elsewhere.
+test("the panel shows how many questions wait for a human", () => {
+  const model = buildPanelModel({ record: panelRecord("dotfiles/mission-panel", { pending_asks: 2 }), now: Date.parse("2026-01-01T10:03:00Z") });
+  assert.deepEqual(rowsOf(model).find(row => row[0] === "Asks"), ["Asks", "2 waiting for a human", ""]);
+  const quiet = buildPanelModel({ record: panelRecord("dotfiles/mission-panel", { pending_asks: 0 }), now: Date.parse("2026-01-01T10:03:00Z") });
+  assert.equal(rowsOf(quiet).some(row => row[0] === "Asks"), false);
+});
+
 test("the panel shows a finished mission without empty rows", () => {
   const model = buildPanelModel({ record: doneRecord(), now: Date.parse("2026-01-01T10:03:00Z") });
   assert.equal(model.statusLine, "done · rev 9");

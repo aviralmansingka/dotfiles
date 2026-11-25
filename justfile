@@ -126,11 +126,12 @@ secrets-probe-verify:
 
 # ---- from main: the build recipes ----
 
-# Build the repo's two CLI binaries straight from this checkout.
+# Build the repo's three CLI binaries straight from this checkout.
 # Nothing is installed or fetched beyond what the Go and Rust toolchains need:
 # no `go install`, no `cargo install`, no `curl | sh`.
 #
-#   just build     -> ~/.local/bin/mission and rataflow/target/release/rataflow-view
+#   just build     -> ~/.local/bin/mission, ~/.local/bin/quicknote and
+#                     rataflow/target/release/rataflow-view
 #
 # `mission` is compiled into the repo's gitignored build dir and moved into
 # place; `rataflow-view` stays in the crate's target dir, because the installed
@@ -141,8 +142,8 @@ bin_dir := env("BIN_DIR", home_directory() / ".local/bin")
 
 # Dependencies run in order and stop on the first failure, so a Go error
 # never hides behind a Rust build.
-# Build mission into BIN_DIR and rataflow-view into its target dir.
-build: build-mission build-rataflow-view
+# Build mission and quicknote into BIN_DIR, rataflow-view into its target dir.
+build: build-mission build-quicknote build-rataflow-view
 
 # Compile the mission CLI from go/mission.
 build-mission:
@@ -150,6 +151,13 @@ build-mission:
     cd go/mission && GOTOOLCHAIN=local go build -trimpath -o bin/mission ./cmd/mission
     mv -f go/mission/bin/mission {{bin_dir}}/mission
     @echo "built {{bin_dir}}/mission"
+
+# Compile the quicknote CLI from go/quicknote.
+build-quicknote:
+    mkdir -p {{bin_dir}}
+    cd go/quicknote && GOTOOLCHAIN=local go build -trimpath -o bin/quicknote ./cmd/quicknote
+    mv -f go/quicknote/bin/quicknote {{bin_dir}}/quicknote
+    @echo "built {{bin_dir}}/quicknote"
 
 # The installed rataflow-view is a profile package (nix/pkgs/rataflow-view.nix),
 # so this recipe only compiles the checkout: the release binary lands in

@@ -1,4 +1,7 @@
-brew "awscli"
+# awscli and terraform are Nix profile tools now:
+# nix/modules/shared/default.nix. Do not re-add them here, a second copy
+# shadows the profile one on PATH.
+
 brew "bun"
 brew "direnv"
 brew "gcc"
@@ -9,7 +12,6 @@ brew "luarocks"
 brew "make"
 brew "python3"
 brew "rust"
-brew "terraform"
 brew "tig"
 brew "tree"
 brew "tuicr"

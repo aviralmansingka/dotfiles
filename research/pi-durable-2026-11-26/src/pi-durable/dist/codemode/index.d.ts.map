@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../src/codemode/index.ts"],"names":[],"mappings":"AAAA,OAAO,EACN,uBAAuB,EACvB,kBAAkB,EAClB,KAAK,cAAc,EACnB,KAAK,kBAAkB,EACvB,gBAAgB,EAChB,KAAK,mBAAmB,EACxB,KAAK,iBAAiB,EACtB,KAAK,mBAAmB,EACxB,uBAAuB,EACvB,kBAAkB,GAClB,MAAM,eAAe,CAAC;AACvB,OAAO,EAAE,8BAA8B,EAAE,YAAY,EAAE,MAAM,eAAe,CAAC"}

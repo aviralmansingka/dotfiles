@@ -118,11 +118,19 @@ H.run("herdr_agent_send_spec", function()
     "visual prompts put the instruction first and quote every selected line"
   )
 
-  local saved_resolve_target = agent_send.resolve_target
+  local herdr_backend = require("plugins.agent.herdr")
+  local saved_resolve = herdr_backend.resolve
+  -- A Rex shell that launches this suite exports REX_*, and the mux seam prefers
+  -- Rex over Herdr. Clear them so these cases stay Herdr-only.
+  local saved_rex = { vim.env.REX_SESSION, vim.env.REX_BLOCK, vim.env.HERDR_PANE_ID }
+  vim.env.REX_SESSION = ""
+  vim.env.REX_BLOCK = ""
+  -- The mux seam reads HERDR_PANE_ID, so a Herdr case needs one.
+  vim.env.HERDR_PANE_ID = "w37:p2"
   local saved_call2 = herdr.call
   local saved_send_key = herdr.send_key
   local delivered = {}
-  agent_send.resolve_target = function()
+  herdr_backend.resolve = function()
     return { pane_id = "w37:p3", agent = "pi" }
   end
   herdr.call = function(args)
@@ -146,7 +154,7 @@ H.run("herdr_agent_send_spec", function()
   local no_pane = function()
     return nil, "No agent pane found in this tab"
   end
-  agent_send.resolve_target = no_pane
+  herdr_backend.resolve = no_pane
   local fallback_payload
   assert_eq(
     agent_send.send({
@@ -171,8 +179,8 @@ H.run("herdr_agent_send_spec", function()
   assert_eq(warned, "No agent pane found in this tab", "the resolution error is surfaced to the user")
   vim.notify = saved_notify
   -- back to the w37:p3 target for the prompt_selection flow below; the
-  -- original cleanup at the end restores the real resolve_target.
-  agent_send.resolve_target = function()
+  -- original cleanup at the end restores the real resolve.
+  herdr_backend.resolve = function()
     return { pane_id = "w37:p3", agent = "pi" }
   end
 
@@ -207,7 +215,10 @@ H.run("herdr_agent_send_spec", function()
 
   vim.ui.input = saved_input
   agent_send.exit_visual_mode = saved_exit_visual_mode
-  agent_send.resolve_target = saved_resolve_target
+  herdr_backend.resolve = saved_resolve
+  vim.env.REX_SESSION = saved_rex[1]
+  vim.env.REX_BLOCK = saved_rex[2]
+  vim.env.HERDR_PANE_ID = saved_rex[3]
   herdr.call = saved_call2
   herdr.send_key = saved_send_key
 end)

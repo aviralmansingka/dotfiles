@@ -49,8 +49,15 @@ interface OtherAnswer {
 	value: string;
 }
 
-type AskAnswer = TextAnswer | OptionAnswer | OtherAnswer;
-type AskUserQuestionStatus = "answered" | "cancelled" | "unavailable";
+/** Ctrl+P: the user does not understand the question and wants the concepts first. */
+interface ExplainAnswer {
+	type: "explain";
+	label: string;
+	value: string;
+}
+
+type AskAnswer = TextAnswer | OptionAnswer | OtherAnswer | ExplainAnswer;
+type AskUserQuestionStatus = "answered" | "cancelled" | "unavailable" | "explain";
 type AskUserQuestionMode = "text" | "single-select" | "multi-select";
 
 interface AskUserQuestionResultDetails {
@@ -137,6 +144,8 @@ function formatAnswerForModel(answer: AskAnswer): string {
 			return answer.label;
 		case "other":
 			return `Other: ${answer.label}`;
+		case "explain":
+			return "Explain the question first";
 		case "option":
 			return `${answer.index}. ${answer.label}`;
 	}
@@ -148,9 +157,38 @@ function answerSortRank(answer: AskAnswer): number {
 			return answer.index;
 		case "other":
 			return Number.MAX_SAFE_INTEGER - 1;
+		case "explain":
 		case "text":
 			return Number.MAX_SAFE_INTEGER;
 	}
+}
+
+/** Ctrl+P result: the marker every prompt returns, and the brief the agent reads. */
+const EXPLAIN_ANSWER: ExplainAnswer = {
+	type: "explain",
+	label: "Explain the question first",
+	value: "__explain__",
+};
+
+function isExplain(answer: AskAnswer | null | undefined): boolean {
+	return answer?.type === "explain";
+}
+
+const EXPLAIN_ANSWER_TEXT =
+	"User asked to explain this question before answering. Do not answer it. Do not guess.\n\n" +
+	"1. Explain the concepts in the question and in each option. Use the `simple` skill: Simplified " +
+	"Technical English at full compliance. Short sentences, active voice, approved verbs, one term per concept.\n" +
+	"2. Put one short block per concept. For each option, say what the choice commits the user to.\n" +
+	"3. Do not call a tool for this. Reply in the chat, then stop and wait.\n" +
+	"4. Wait for the user to confirm that they understand. Only then call ask_user_question again with the " +
+	"same question and the same options.\n\n" +
+	"If the user asks their own question, answer it in the same simple style, then repeat step 4.";
+
+function explainResult(question: string, mode: AskUserQuestionMode, context?: string) {
+	return {
+		content: [{ type: "text" as const, text: EXPLAIN_ANSWER_TEXT }],
+		details: buildStructuredResult("explain", question, mode, [{ ...EXPLAIN_ANSWER }], context, EXPLAIN_ANSWER.label),
+	};
 }
 
 function sortAnswers(answers: AskAnswer[]): AskAnswer[] {
@@ -264,6 +302,13 @@ async function askSingleChoice(
 				return;
 			}
 
+			// The escape hatch: ask for the concepts instead of an answer. Checked
+			// before the number shortcuts so Ctrl+P is never read as a selection.
+			if (matchesKey(data, Key.ctrl("p"))) {
+				done({ ...EXPLAIN_ANSWER });
+				return;
+			}
+
 			if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
 				optionIndex = Math.max(0, optionIndex - 1);
 				refresh();
@@ -336,7 +381,7 @@ async function askSingleChoice(
 				}
 			} else {
 				top.push("");
-				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(options.length, "select"), "Enter select", "Esc cancel")}`));
+				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(options.length, "select"), "Enter select", "Ctrl+P explain", "Esc cancel")}`));
 				bottom.push(theme.fg("accent", "› answer"));
 			}
 
@@ -436,6 +481,13 @@ async function askMultiChoice(
 			if (shortcutIndex !== undefined) {
 				optionIndex = shortcutIndex;
 				toggleOption(choiceItems[shortcutIndex]);
+				return;
+			}
+
+			// The escape hatch works in multi-select too, so a long question can be
+			// unpacked before any box is ticked.
+			if (matchesKey(data, Key.ctrl("p"))) {
+				done([{ ...EXPLAIN_ANSWER }]);
 				return;
 			}
 
@@ -560,7 +612,7 @@ async function askMultiChoice(
 				if (selected.size === 0) {
 					add(theme.fg("warning", " Select at least one answer before submitting."));
 				}
-				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter edit/submit", "Esc cancel")}`));
+				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter edit/submit", "Ctrl+P explain", "Esc cancel")}`));
 				bottom.push(theme.fg("accent", "› answer"));
 			}
 
@@ -661,9 +713,13 @@ function withUILock<T>(fn: () => Promise<T>): Promise<T> {
 // Free-text mode: same merged UI — question bubble on top, the answer typed in
 // the prompt-styled box below. Replaces pi's built-in ctx.ui.editor dialog so
 // every user-input surface shares one look.
-async function askFreeText(ctx: any, question: string, context: string | undefined): Promise<string | null> {
-	return ctx.ui.custom<string | null>(
-		(tui: any, theme: any, _kb: any, done: (result: string | null) => void) => {
+async function askFreeText(
+	ctx: any,
+	question: string,
+	context: string | undefined,
+): Promise<string | null | ExplainAnswer> {
+	return ctx.ui.custom<string | null | ExplainAnswer>(
+		(tui: any, theme: any, _kb: any, done: (result: string | null | ExplainAnswer) => void) => {
 			const editor = new Editor(tui, createEditorTheme(theme));
 			editor.focused = true;
 			editor.disableSubmit = true;
@@ -682,7 +738,7 @@ async function askFreeText(ctx: any, question: string, context: string | undefin
 						addWrapped(top, theme.fg("muted", ` ${context}`), tw);
 					}
 					top.push("");
-					top.push(truncateToWidth(theme.fg("dim", " Enter submit • Ctrl+J newline • Esc cancel"), tw));
+					top.push(truncateToWidth(theme.fg("dim", " Enter submit • Ctrl+J newline • Ctrl+P explain • Esc cancel"), tw));
 					for (const [index, line] of editorInnerLines(editor, Math.max(1, bw - 2)).entries()) {
 						bottom.push(`${index === 0 ? "› " : "  "}${line}`);
 					}
@@ -690,6 +746,10 @@ async function askFreeText(ctx: any, question: string, context: string | undefin
 				},
 				invalidate: () => editor.invalidate(),
 				handleInput(data: string) {
+					if (matchesKey(data, Key.ctrl("p"))) {
+						done({ ...EXPLAIN_ANSWER });
+						return;
+					}
 					if (matchesKey(data, Key.enter)) {
 						done(editor.getText().trim());
 						return;
@@ -719,6 +779,7 @@ export default function askUserQuestion(pi: ExtensionAPI) {
 			"If you need answers to multiple questions, make multiple separate ask_user_question tool calls instead of combining them into one prompt.",
 			'Users will always be able to select "Other" to provide custom text input when options are provided.',
 			"Use multiSelect: true only when you need multiple answers to the same question.",
+			"The user can press Ctrl+P to ask for the concepts instead of an answer. That result says explain. Then explain the question and each option in Simplified Technical English with the `simple` skill, stop, and wait for the user to confirm. Only then ask the same question again. Do not skip the confirmation and do not re-ask with different options.",
 			'If you recommend a specific option, make it the first option in the list and add "(Recommended)" at the end of the label.',
 			"Prefer this tool over guessing when requirements, preferences, or implementation choices are unclear.",
 			"Use this tool when multiple valid implementation paths exist and the preferred path depends on user choice.",
@@ -744,6 +805,9 @@ export default function askUserQuestion(pi: ExtensionAPI) {
 					if (answer === null) {
 						return cancelledResult(params.question, mode, context);
 					}
+					if (typeof answer !== "string") {
+						return explainResult(params.question, mode, context);
+					}
 					return buildResult(params.question, context, mode, [
 						{ type: "text", label: answer.trim(), value: answer.trim() },
 					]);
@@ -754,12 +818,18 @@ export default function askUserQuestion(pi: ExtensionAPI) {
 					if (!answer) {
 						return cancelledResult(params.question, mode, context);
 					}
+					if (isExplain(answer)) {
+						return explainResult(params.question, mode, context);
+					}
 					return buildResult(params.question, context, mode, [answer]);
 				}
 
 				const answers = await askMultiChoice(ctx, params.question, context, options);
 				if (!answers) {
 					return cancelledResult(params.question, mode, context);
+				}
+				if (answers.some(isExplain)) {
+					return explainResult(params.question, mode, context);
 				}
 				return buildResult(params.question, context, mode, answers);
 			});
@@ -793,12 +863,18 @@ export default function askUserQuestion(pi: ExtensionAPI) {
 				return new Text(theme.fg("warning", details.message || "ask_user_question unavailable"), 0, 0);
 			}
 
+			if (details.status === "explain") {
+				return new Text(theme.fg("warning", "explain: " + (details.message || "user asked for the concepts")), 0, 0);
+			}
+
 			const lines = details.answers.map((answer) => {
 				switch (answer.type) {
 					case "text":
 						return `${theme.fg("success", "✓ ")}${theme.fg("accent", answer.label || "(empty response)")}`;
 					case "other":
 						return `${theme.fg("success", "✓ ")}${theme.fg("muted", "Other: ")}${theme.fg("accent", answer.label)}`;
+					case "explain":
+						return `${theme.fg("warning", "? ")}${theme.fg("accent", answer.label)}`;
 					case "option":
 						return `${theme.fg("success", "✓ ")}${theme.fg("accent", `${answer.index}. ${answer.label}`)}`;
 				}

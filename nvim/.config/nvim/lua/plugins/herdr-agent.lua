@@ -1,6 +1,7 @@
--- `<leader>at`: send this buffer to the agent pane, or prompt for an instruction
--- in visual mode and send the selection as a Markdown quote. When no agent pane
--- shares the tab, fall back to the active Sidekick session.
+-- `<leader>at`: send this buffer (or a prompted visual selection) to the agent
+-- that runs beside this Neovim, whichever multiplexer carries it — Rex or
+-- Herdr, resolved by `plugins.agent.mux`. When no agent sits beside this pane,
+-- fall back to the active Sidekick session.
 --
 -- `<leader>tt`: paste only a visual selection into the floating Snacks terminal
 -- (the same singleton float toggled by `<leader>ft`), creating it if needed.
@@ -16,7 +17,7 @@ local function sidekick_fallback(payload)
 end
 
 local function send_to_agent(visual)
-  local agent_send = require("plugins.herdr.agent_send")
+  local agent_send = require("plugins.agent.send")
   if visual then
     agent_send.prompt_selection({ fallback = sidekick_fallback })
   else
@@ -32,7 +33,7 @@ return {
       function()
         send_to_agent(false)
       end,
-      desc = "Send buffer to Herdr agent (fallback: Sidekick)",
+      desc = "Send buffer to agent (Rex/Herdr; fallback: Sidekick)",
     },
     {
       "<leader>at",
@@ -40,7 +41,7 @@ return {
         send_to_agent(true)
       end,
       mode = "x",
-      desc = "Send selection to Herdr agent (fallback: Sidekick)",
+      desc = "Send selection to agent (Rex/Herdr; fallback: Sidekick)",
     },
     {
       "<leader>tt",

@@ -352,6 +352,11 @@ run("markdown ftplugin settings", function()
   H.eq(vim.bo[buf].textwidth, 99, "markdown hard-wraps prose at column 99 (buffer-local)")
   H.eq(vim.wo.colorcolumn, "100", "markdown shows the guide at column 100 (window-local)")
   H.eq(vim.wo.wrap, false, "markdown never soft-wraps: the saved prose fits the column")
+  H.eq(vim.opt_local.listchars:get().trail, "·",
+    "a trailing space never draws the dash glyph: an empty bullet stays one marker")
+  local tab_map = vim.fn.maparg("<tab>", "i", false, true)
+  H.eq((tab_map.rhs or ""):lower(), "<cmd>autolisttab<cr>", "insert Tab indents a list through autolist")
+  H.eq(tab_map.buffer, 1, "insert Tab stays buffer-local: it never leaks to other filetypes")
 
   -- the save hook still hard-wraps prose, and gq still uses the same width
   local path = vim.fn.tempname() .. ".md"

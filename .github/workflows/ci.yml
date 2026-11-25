@@ -455,6 +455,10 @@ jobs:
         working-directory: go/mission
         run: go mod download
 
+      - name: Prepare quicknote CLI dependencies
+        working-directory: go/quicknote
+        run: go mod download
+
       # ruby is preinstalled on ubuntu runners (test-gh-dash-open-pr.sh).
       - name: Scripts tests (glob-discovered, dispatch by suffix)
         env:

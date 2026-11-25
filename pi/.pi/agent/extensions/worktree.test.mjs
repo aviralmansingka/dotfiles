@@ -150,14 +150,14 @@ esac
 		`#!/bin/sh
 printf '%s\\n' "$@" >> "$WT_REX_CAPTURE"
 printf '%s\\n' --call-- >> "$WT_REX_CAPTURE"
-case "$1" in
-	ls)
+case "$1:$2" in
+	window:ls)
 		printf '%s\\n' "$WT_REX_LIST"
 		;;
-	session)
+	window:inspect)
 		printf '%s\\n' "$WT_REX_INSPECT"
 		;;
-	new)
+	window:new)
 		printf '%s\\n' "$WT_REX_NEW"
 		;;
 	*) printf '%s\\n' '{}' ;;
@@ -266,9 +266,9 @@ esac
 		process.env.WT_TEST_OPEN_PANE = "wT:p2";
 		process.env.WT_TEST_OPEN_PATH = join(root, "open-worktree");
 		process.env.WT_REX_CAPTURE = rexCapture;
-		process.env.WT_REX_LIST = '{"sessions":[]}';
+		process.env.WT_REX_LIST = '{"windows":[]}';
 		process.env.WT_REX_NEW =
-			'{"session_id":"session:wt","initial_windows":[{"block_ids":["block:wt"]}]}';
+			'{"window_id":"window:wt","block_ids":["block:wt"]}';
 
 		// Fresh create: exact herdr argv, ownership marker, pi started in the
 		// pane, and nothing spawned.
@@ -468,7 +468,7 @@ esac
 			process.env.REX_SESSION = "session:test";
 			process.env.REX_BLOCK = "block:test";
 			process.env.HOME = homeRoot;
-			process.env.WT_REX_LIST = '{"sessions":[]}';
+			process.env.WT_REX_LIST = '{"windows":[]}';
 			try {
 				const { isError, text, details } = await finish(run({ branch: "dark-mode" }, repo));
 				assert.equal(isError, false, text);
@@ -484,15 +484,19 @@ esac
 				assert.equal(existsSync(join(expectedPath, ".git")), true, "the checkout exists on disk");
 				assert.deepEqual(
 					rexCalls()[0],
-					["ls", "--json"],
-					"the tool looks for an existing session by label first",
+					["window", "ls", "-s", "session:test", "--json"],
+					"the tool looks for the worktree's tab in this repository's session first",
 				);
 				assert.deepEqual(
 					rexCalls()[1],
-					["new", "dark-mode", "-c", expectedPath, "--window", "dark-mode", "--json", "--", "pi"],
-					"one session per worktree, labeled by the branch slug, running an ordinary pi",
+					[
+						"window", "new", "-s", "session:test", "π dark-mode",
+						"--focus=false", "-c", expectedPath, "--json", "--", "pi",
+					],
+					"one tab per worktree, in the caller's session, unfocused, running an ordinary pi",
 				);
-				assert.equal(details.session, "session:wt");
+				assert.equal(details.session, "session:test", "the tab joins the repository's session");
+				assert.equal(details.tab, "π dark-mode");
 				assert.equal(details.pane, "block:wt");
 				assert.equal(details.label, "dark-mode");
 				assert.equal(details.startedPi, true);
@@ -504,23 +508,25 @@ esac
 					"the Rex path keeps the same ownership marker",
 				);
 
-				// Idempotent reuse: the second call finds the session by label,
+				// Idempotent reuse: the second call finds the worktree's tab by label,
 				// opens the same checkout, and starts no second pi.
-				process.env.WT_REX_LIST = '{"sessions":[{"label":"dark-mode","session_id":"session:wt"}]}';
-				process.env.WT_REX_INSPECT = '{"windows":[{"layers":[{"blocks":[{"block_id":"block:wt"}]}]}]}';
+				process.env.WT_REX_LIST =
+					'{"windows":[{"label":"π dark-mode","window_id":"window:wt"}]}';
+				process.env.WT_REX_INSPECT = '{"focused_block_id":"block:wt"}';
 				clearRexCalls();
 				const again = await finish(run({ branch: "dark-mode" }, repo));
 				assert.equal(again.isError, false, again.text);
 				assert.equal(again.details.mode, "reused");
 				assert.equal(again.details.path, expectedPath);
-				assert.equal(again.details.session, "session:wt");
-				assert.equal(again.details.startedPi, false, "a reused session is never relaunched");
+				assert.equal(again.details.session, "session:test");
+				assert.equal(again.details.pane, "block:wt");
+				assert.equal(again.details.startedPi, false, "a reused tab is never relaunched");
 				assert.equal(
-					rexCalls().some((call) => call[0] === "new"),
+					rexCalls().some((call) => call[0] === "window" && call[1] === "new"),
 					false,
-					"reuse never creates a second session",
+					"reuse never creates a second tab",
 				);
-				process.env.WT_REX_LIST = '{"sessions":[]}';
+				process.env.WT_REX_LIST = '{"windows":[]}';
 			} finally {
 				if (savedHome === undefined) delete process.env.HOME;
 				else process.env.HOME = savedHome;
@@ -547,8 +553,8 @@ esac
 			try {
 				const { isError, text, details } = await finish(run({ branch: "rex-fail" }, repo));
 				assert.equal(isError, true);
-				assert.match(text, /its Rex session could not be opened/);
-				assert.match(text, /rex new rex-fail -c /);
+				assert.match(text, /its tab could not be opened/);
+				assert.match(text, /rex window new π rex-fail -c /);
 				assert.equal(existsSync(details.path), true, "the checkout survives a failed tab");
 			} finally {
 				process.env.WT_REX_NEW = savedNew;

@@ -1,0 +1,44 @@
+import { type Context } from "@earendil-works/chord/context";
+import { type TelemetryContext, type TelemetrySpan } from "@earendil-works/pi-telemetry";
+import type { SessionImpl } from "../session/session.ts";
+import type { ConversationId, SubmissionId, SubmissionRecord, Tx } from "../types.ts";
+import { type QueueModes } from "./inbox.ts";
+import type { SettledSubmissionRecord, Submission, SubmissionDraft } from "./types.ts";
+type AbortResult = "aborted" | "already_placed" | "settled";
+type Admission = {
+    readonly id: SubmissionId;
+    readonly status: "queued" | "placed" | "done";
+};
+/** Admission, waits, and withdrawal of the durable submissions of one Harness. */
+export declare class Submissions {
+    #private;
+    constructor(session: SessionImpl, now: () => number, queueModes: () => QueueModes, resume: () => void, telemetry?: TelemetryContext);
+    /** Admit a submission in one commit; see `admitSubmission()`. */
+    submit(conversationId: ConversationId, draft: SubmissionDraft, context: Context): Promise<Submission>;
+    /**
+     * Admit a submission inside the caller's commit `tx`, with the rules of `submit()`. The admission is stored or lost
+     * with that commit. It must come before the commit's first table write, another admission's included.
+     */
+    admit(tx: Tx, conversationId: ConversationId, draft: SubmissionDraft): Promise<SubmissionId>;
+    /** Handle for an existing submission, or `undefined`. */
+    get(id: SubmissionId, context: Context): Promise<Submission | undefined>;
+    status(id: SubmissionId, context: Context): Promise<SubmissionRecord>;
+    wait(id: SubmissionId, context: Context): Promise<SettledSubmissionRecord>;
+    /** Withdraw a queued submission and remove its inbox item; placed inputs and settled submissions are reported. */
+    abort(id: SubmissionId, context: Context, conversationId?: ConversationId): Promise<AbortResult | "not_found">;
+}
+/**
+ * Admit a submission inside a commit (spec §6); both `Conversation.submit()` forms and conversation-owned compactions
+ * share it. A known request ID returns its existing submission without writing. A display-only write (only `kind` and
+ * `data`) is appended and settled `done` at once, busy or not, as it changes nothing the model sees; only behind a
+ * queued reset it queues, so it lands after the reset instead of before it in the context the reset ends. A busy
+ * conversation queues anything else in `pi.inbox`, or rejects `whenBusy: "reject"` input and any continue with
+ * `ConversationBusy`; an idle one rejects `whenIdle: "reject"` input with `ConversationIdle`. An idle continue places
+ * queued items and starts a run with them and itself, placing no entry of its own. An idle conversation with queued
+ * items queues it behind them and runs a final boundary. Otherwise idle input places its entry (`pi.user`, or the
+ * input's own) and starts a run, and an idle write appends its entry and settles `done`, or `stale` when its head
+ * reaches before the active range.
+ */
+export declare function admitSubmission(tx: Tx, conversationId: ConversationId, draft: SubmissionDraft, now: number, queueModes: QueueModes, span?: TelemetrySpan): Promise<Admission>;
+export {};
+//# sourceMappingURL=submissions.d.ts.map

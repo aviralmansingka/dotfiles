@@ -193,14 +193,26 @@ progress and needs an explicit human decision.
 
 ## Ask the commander
 
-A captain pane has no watcher, so a blocked captain writes a durable question
-instead of painting an `ask_user_question` menu:
+A captain has two ways to ask, and it uses both. The durable one is
+`mission ask`, which writes the question into the mission record:
 
 ```sh
 mission ask dotfiles/x --text "Which branch name should the migration use?" \
   --step S02 --attempt attempt-1 --kind decision
 mission ask --list dotfiles/x            # pending and delivered asks
 ```
+
+The fast one is `ask_user_question`, which paints a menu for a human who is
+answering in the captain's own pane. The order is always the same: write the ask
+first, then paint the menu. A menu with no watcher stalls the turn, and the
+record is what survives it, so a captain that gets no answer still has its
+question on file. A captain never treats an unanswered menu as sent.
+
+Every mission row carries `pending_asks`, and the desk draws it as an `Asks` row
+while it is above zero. That is the answer to a busy commander: a waiting
+question is visible on the mission list without opening the mission and without
+waiting for the commander's drain to reach it. `mission show` carries the same
+count.
 
 The CLI writes `6_missions/dotfiles/x/asks/<UTC-stamp>-<ask-id>.json` with
 `{id, handle, step, attempt, kind, text, at}` and prints the id and the path. It
@@ -229,8 +241,34 @@ commander restart cannot deliver it twice. With no commander session — extensi
 unloaded, not the commander, or the commander away — nothing drains and nothing
 is lost: the asks stay on disk until that session returns.
 
-`ask_user_question` is not in the captain loadout, so a captain cannot paint a
-menu nobody watches. The commander keeps it.
+A captain holds both `mission ask` and `ask_user_question`. The two channels do
+different jobs: the record outlives the pane, and the menu gets a present human
+an answer in one keypress. The commander keeps `ask_user_question` too, for its
+own questions.
+
+## Captain autonomy and edit authority
+
+A captain is autonomous inside its mandate. It picks the order of work and the
+troopers for it, and asks no permission for a move the duties already allow.
+
+Only a block that needs the human stops the work. The captain then sends one ask
+and puts its whole briefing in the text:
+
+- the block, stated plainly;
+- what it already tried, and what that showed;
+- the options, with their trade-offs;
+- the one decision it needs.
+
+The commander answers with a few bullets. A bullet says the move to take, not
+the history behind it. The commander may also change the mission itself, from
+its own session, without another ask.
+
+| Actor | May write in the mission record |
+| --- | --- |
+| Captain | One step definition and its checks, through `mission step edit` |
+| Commander | The brief, any step, any checks, checkpoint decisions, and the close |
+
+A captain never resets a step to weaken a check. It sends the block instead.
 
 ## The launch description
 
@@ -370,9 +408,11 @@ records it on the reserved intent when Herdr answers with one, so a later launch
 or attach adopts that session instead of starting another; the captain records
 the same file itself when it attaches.
 
-`prefix+n` (`mission_deploy_pick`) opens the deployment picker: a floating layer
+`rex do mission_deploy_pick` opens the deployment picker: a floating layer
 listing `mission ready`, previewed with `mission show`. Enter deploys the chosen
-mission; Escape exits 0 and changes neither the vault nor Rex.
+mission; Escape exits 0 and changes neither the vault nor Rex. Rex binds no key
+to it, and no other mission action, so `rex keymap` stays clear of the mission
+surface.
 
 ### Seating a captain
 

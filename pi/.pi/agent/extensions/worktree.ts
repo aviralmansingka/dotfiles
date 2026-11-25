@@ -33,14 +33,15 @@
  *
  * Lifecycle: the session is durable. Its pi exits when the human quits it, the
  * checkout and branch stay on disk, `herdr worktree open --cwd <repo>
- * --branch <b>` restores a folded Herdr row, a repeat call reuses the Rex
- * session by label, and `/cleanup` (from a session in that worktree) tears it
- * down after ship.
+ * --branch <b>` restores a folded Herdr row, a repeat call finds the worktree's
+ * tab again, and `/cleanup` (from a session in that worktree) tears it down
+ * after ship.
  *
  * Two surfaces: Herdr carries a worktree API, so `herdr worktree create/open`
- * does the checkout AND yields the pane pi starts in. Rex has no worktree
- * command, so this file creates the checkout with `git worktree add` itself
- * and opens one durable session per worktree. Both surfaces share one
+ * does the checkout AND yields the pane pi starts in — already inside the
+ * repository's shared workspace. Rex has no worktree command, so this file
+ * creates the checkout with `git worktree add` itself and adds one tab to the
+ * repository's own session, its analogue of that workspace. Both surfaces share one
  * worktree root (`~/.herdr/worktrees/<repo>/<type>-<slug>`) so a checkout
  * stays usable when the human switches multiplexers. The base is the repo's
  * LOCAL `main` by convention (the picker diffs against it); pass `base`
@@ -312,50 +313,60 @@ function rexJson(args: string[]): Record<string, any> | null {
 	}
 }
 
-/** Session id whose label matches exactly, or null. */
-function rexSessionByLabel(label: string): string | null {
-	const listed = rexJson(["ls", "--json"]);
-	const hit = (listed?.sessions ?? []).find(
-		(entry: any) => entry?.label === label && typeof entry?.session_id === "string" && entry.session_id,
-	);
-	return typeof hit?.session_id === "string" ? hit.session_id : null;
+/** Tab label for a worktree: the π glyph plus the branch slug. */
+export function rexTabLabel(branch: string): string {
+	return `π ${labelFor(branch)}`;
 }
 
-/** First block of a Rex session, or null when it has no windows left. */
-function rexRootBlock(sessionId: string): string | null {
-	const view = rexJson(["session", "inspect", sessionId, "--json"]);
-	const block = view?.windows?.[0]?.layers?.[0]?.blocks?.[0]?.block_id;
+/** Window id whose label matches exactly in `session`, or null. */
+function rexWindowByLabel(session: string, label: string): string | null {
+	const listed = rexJson(["window", "ls", "-s", session, "--json"]);
+	const hit = (listed?.windows ?? []).find(
+		(entry: any) => entry?.label === label && typeof entry?.window_id === "string" && entry.window_id,
+	);
+	return typeof hit?.window_id === "string" ? hit.window_id : null;
+}
+
+/** A window's first block id, for the ack. */
+function rexWindowBlock(session: string, windowId: string): string | null {
+	const info = rexJson(["window", "inspect", "-s", session, windowId, "--json"]);
+	const block = info?.focused_block_id ?? info?.layers?.[0]?.blocks?.[0]?.block_id;
 	return typeof block === "string" && block !== "" ? block : null;
 }
 
 /**
- * Open — or reuse — the one durable Rex session a worktree owns, with an
- * ordinary `pi` in its first tab. `rex new` does not switch the app's visible
- * session, so this never steals the human's focus, and a repeat call finds the
- * session by label instead of piling up empty sessions.
+ * Open — or reuse — the worktree's tab in the calling repository's session, with
+ * an ordinary `pi` in it. A Rex session is the analogue of a Herdr workspace, so
+ * a worktree is one more tab in the repo's session rather than a session of its
+ * own. `--focus=false` keeps the human where they are, and the tab is keyed by
+ * label so a repeat call reuses it instead of stacking a second one.
  */
-export function openRexSession(
-	label: string,
+export function openRexTab(
+	session: string,
+	branch: string,
 	cwd: string,
-): { session: string; pane: string; created: boolean } {
-	const existing = rexSessionByLabel(label);
+): { window: string; pane: string; created: boolean } {
+	const label = rexTabLabel(branch);
+	const existing = rexWindowByLabel(session, label);
 	if (existing) {
-		const pane = rexRootBlock(existing);
-		if (pane) return { session: existing, pane, created: false };
+		return { window: existing, pane: rexWindowBlock(session, existing) ?? "", created: false };
 	}
-	const out = mux("rex", ["new", label, "-c", cwd, "--window", label, "--json", "--", "pi"]);
+	const out = mux("rex", [
+		"window", "new", "-s", session, label,
+		"--focus=false", "-c", cwd, "--json", "--", "pi",
+	]);
 	let parsed: any;
 	try {
 		parsed = JSON.parse(out);
 	} catch {
-		throw new Error(`rex new ${label} returned non-JSON output: ${out.slice(0, 200)}`);
+		throw new Error(`rex window new ${label} returned non-JSON output: ${out.slice(0, 200)}`);
 	}
-	const session = parsed?.session_id;
-	const pane = parsed?.initial_windows?.[0]?.block_ids?.[0];
-	if (typeof session !== "string" || !session || typeof pane !== "string" || !pane) {
-		throw new Error(`rex new ${label} returned no session or block id`);
+	const windowId = parsed?.window_id;
+	const pane = parsed?.block_ids?.[0] ?? parsed?.initial_windows?.[0]?.block_ids?.[0];
+	if (typeof windowId !== "string" || !windowId || typeof pane !== "string" || !pane) {
+		throw new Error(`rex window new ${label} returned no window or block id`);
 	}
-	return { session, pane, created: true };
+	return { window: windowId, pane, created: true };
 }
 
 // --- tool ------------------------------------------------------------------
@@ -499,19 +510,28 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 					return fail(error?.message ?? String(error), { branch, base, surface });
 				}
 
-				// One durable Rex session per worktree, with an ordinary `pi` in its first
-				// tab. The creator is keyed by label, so a repeat call reuses the same
-				// session rather than piling up new ones.
+				// One tab per worktree, inside the repository's own session — the Rex
+				// analogue of the Herdr workspace the worktree joins. Keyed by label, so a
+				// repeat call reuses the tab instead of stacking a second one.
+				const rexSessionId = process.env.REX_SESSION?.trim();
+				if (!rexSessionId) {
+					return fail(
+						`The worktree is ready at ${worktreePath} (branch ${branch}), but this session has no ` +
+							`REX_SESSION, so no tab could be opened. Start one with ` +
+							`\`rex window new ${rexTabLabel(branch)} -c ${worktreePath} -- pi\`.`,
+						{ branch, path: worktreePath, surface },
+					);
+				}
 				try {
-					const opened = openRexSession(labelFor(branch), worktreePath);
+					const opened = openRexTab(rexSessionId, branch, worktreePath);
 					rootPane = opened.pane;
-					surfaceSession = opened.session;
+					surfaceSession = rexSessionId;
 					startedPi = opened.created;
 				} catch (error: any) {
 					return fail(
-						`The worktree is ready at ${worktreePath} (branch ${branch}), but its Rex session could not be ` +
+						`The worktree is ready at ${worktreePath} (branch ${branch}), but its tab could not be ` +
 							`opened: ${error?.message ?? String(error)}. Start one with ` +
-							`\`rex new ${labelFor(branch)} -c ${worktreePath} -- pi\`.`,
+							`\`rex window new ${rexTabLabel(branch)} -c ${worktreePath} -- pi\`.`,
 						{ branch, path: worktreePath, surface },
 					);
 				}
@@ -581,11 +601,11 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			const where =
 				surface === "herdr"
 					? `in the worktree pane (${rootPane}), unfocused`
-					: `in the Rex session "${label}" (${surfaceSession}), unfocused`;
+					: `in the repository session as tab "${rexTabLabel(branch)}" (${rootPane}), unfocused`;
 			const reopenHint =
 				surface === "herdr"
 					? `\`herdr worktree open --cwd ${primary} --branch ${branch}\``
-					: `the session picker in Rex (label "${label}")`;
+					: `its tab \`${rexTabLabel(branch)}\` in this session`;
 			const startHint = startedPi
 				? ""
 				: `\n- pi: not started (the surface was reused; run \`pi\` there if it is idle)`;
@@ -610,6 +630,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 					workspace: workspaceId ?? null,
 					session: surfaceSession,
 					label,
+					tab: surface === "rex" ? rexTabLabel(branch) : null,
 					surface,
 					mode,
 					startedPi,

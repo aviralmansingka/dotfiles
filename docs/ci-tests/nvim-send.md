@@ -19,7 +19,9 @@ the WORKTREE copy of the config, never a stowed `~/.config/nvim` copy.
 ## What the suite covers
 
 - `agent_send` send order: the resolved pane gets `pane send-text <id>
-  <text>`, then `pane send-keys <id> Enter`. An argv recorder checks both
+  <text>`, then `pane send-keys <id> Enter`.
+- The mux seam picks the adapter from the environment, and the Rex adapter
+  types the payload plus Enter into the pi block, never into a bare shell. An argv recorder checks both
   commands through the real herdr adapter.
 - `agent_send` abort paths: a failed `send-text` sends no Enter. A failed
   Enter reports failure. Both errors surface through `vim.notify`.
@@ -66,7 +68,10 @@ Lua has no c8, so this table is the inventory.
 
 | Module | Covered | Not covered |
 |---|---|---|
-| herdr/agent_send | `current_pane_id`, `resolve_target`, `send` order, abort, fallback | prompt flow, payload build (owned by `herdr_agent_send_spec`) |
+| agent/send | `send` order, abort, fallback, mux dispatch | prompt flow, payload build (owned by `herdr_agent_send_spec`) |
+| agent/mux | Rex wins over Herdr, Herdr from `HERDR_PANE_ID`, none without a mux | a mux that sets neither variable |
+| agent/herdr | `current_pane_id`, `resolve`, send order, abort | live pane discovery |
+| agent/rex | `resolve` same-window then session, `deliver` order, abort, bracketed paste | live `rex` calls (`rex.run` is stubbed) |
 | herdr/term_send | `build_payload`, `resolve_target`, `send`, cwd choice | a real pty write |
 | sidekick/view_focus | patches, routing, release, resume, queue replay, wiring | real focus events, TermClose fire, toggle conversion |
 | herdr-agent.lua | all mappings, handler wiring | live sidekick fallback body |
@@ -78,3 +83,5 @@ Lua has no c8, so this table is the inventory.
   restore guard and the float/split toggle conversion stay there too.
 - `prompt_selection` and the payload header belong to
   `nvim/tests/herdr_agent_send_spec.lua`, which another spec owns.
+- The Rex adapter's live behavior needs a real Rex session. The spec stubs
+  `rex.run`, so only the argv it would build is pinned.

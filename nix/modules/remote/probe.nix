@@ -17,8 +17,7 @@
   # prove-decryption step); until then only the admin key can read it.
   sops.defaultSopsFile = ../../../secrets/probe.yaml;
 
-  # Cloud work only: this host exists to prove the profile reproduces off the
-  # lab, not to mirror the devbox's tooling. `aws` (awscli2), pinned in
-  # nix/modules/shared/default.nix, arrives with every profile, so this module
-  # adds nothing of its own.
+  # aws and terraform arrive from ../shared. This host still keeps no package
+  # list of its own: it exists to prove the profile reproduces off the lab, not
+  # to mirror the devbox's tooling.
 }

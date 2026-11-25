@@ -65,6 +65,10 @@ IN_REPO_BINARIES = {
         "source": "go/mission",
         "markers": ["go/mission", "./cmd/mission"],
     },
+    "quicknote": {
+        "source": "go/quicknote",
+        "markers": ["go/quicknote", "./cmd/quicknote"],
+    },
     "rataflow-view": {
         "source": "rataflow",
         "markers": ["rataflow/Cargo.toml"],
