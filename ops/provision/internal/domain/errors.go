@@ -54,6 +54,20 @@ func (e *NotImplementedError) Error() string {
 	return fmt.Sprintf("%s is not implemented in S01: %s", e.Component, e.Step)
 }
 
+// AmbiguousOwnershipError reports a teardown that cannot prove which resource it
+// owns. It is never retried automatically and never treated as "nothing to do":
+// a destroy with no recorded provider identity could remove a resource another
+// job owns, or leave an orphan nobody can find. The operator reconciles it by
+// hand.
+type AmbiguousOwnershipError struct {
+	HostID string
+	Reason string
+}
+
+func (e *AmbiguousOwnershipError) Error() string {
+	return fmt.Sprintf("refusing to destroy host %s: ownership is ambiguous (%s); reconcile the provider record by hand", e.HostID, e.Reason)
+}
+
 // AgentNotRegisteredError reports that a host's SSM agent never registered with
 // the control plane inside the allowed window.
 //

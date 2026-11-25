@@ -21,7 +21,11 @@ const (
 	JobInProgress JobState = "in_progress"
 	JobReady      JobState = "ready"
 	JobFailed     JobState = "failed"
-	JobDeleted    JobState = "deleted"
+	// JobCanceled is a cancellation, not a failure and not a deletion. A canceled
+	// job keeps whatever it allocated: ownership is never dropped silently, so a
+	// later reconcile or an explicit teardown can still see the resource.
+	JobCanceled JobState = "canceled"
+	JobDeleted  JobState = "deleted"
 )
 
 // Stage is the fine-grained milestone reported by the job API and by the

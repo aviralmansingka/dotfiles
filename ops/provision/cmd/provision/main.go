@@ -103,7 +103,7 @@ func newLogger(cfg config.Logging) application.Logger {
 	} else {
 		handler = slog.NewJSONHandler(os.Stderr, options)
 	}
-	return slogLogger{logger: slog.New(handler)}
+	return application.NewRedactingLogger(slogLogger{logger: slog.New(handler)})
 }
 
 // loaded is the composition shared by the api and worker subcommands.

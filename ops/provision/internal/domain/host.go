@@ -28,24 +28,33 @@ const (
 // Host is an owned provisioned machine. It carries no credential values: only
 // references to approved secret bundles.
 type Host struct {
-	ID             string            `json:"id"`
-	Name           string            `json:"name"`
-	Provider       Provider          `json:"provider"`
-	Profile        string            `json:"profile"`
-	Region         string            `json:"region"`
-	Size           string            `json:"size"`
-	InstanceType   string            `json:"instance_type"`
-	DiskGB         int               `json:"disk_gb"`
-	Tags           map[string]string `json:"tags"`
-	SecretBundles  []string          `json:"secret_bundles"`
-	OwnerClientID  string            `json:"owner_client_id"`
-	JobID          string            `json:"job_id"`
-	State          HostState         `json:"state"`
-	FlakeRevision  string            `json:"flake_revision,omitempty"`
-	PrivateAddress string            `json:"private_address,omitempty"`
-	RexURL         string            `json:"rex_url,omitempty"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Provider      Provider          `json:"provider"`
+	Profile       string            `json:"profile"`
+	Region        string            `json:"region"`
+	Size          string            `json:"size"`
+	InstanceType  string            `json:"instance_type"`
+	DiskGB        int               `json:"disk_gb"`
+	Tags          map[string]string `json:"tags"`
+	SecretBundles []string          `json:"secret_bundles"`
+	OwnerClientID string            `json:"owner_client_id"`
+	JobID         string            `json:"job_id"`
+	State         HostState         `json:"state"`
+	// ResourceID is the provider's public identity for the allocated compute
+	// resource. It is written the moment the provider reports it, before any
+	// later step runs, so a worker that dies between allocation and its own
+	// milestone still leaves a durable owner for the instance.
+	ResourceID string `json:"resource_id,omitempty"`
+	// DeviceID is the enrolled tailnet identity. It is written the moment
+	// enrollment reports it for the same reason: a resume must be able to tell
+	// an already-joined device from a missing one instead of joining twice.
+	DeviceID       string    `json:"device_id,omitempty"`
+	FlakeRevision  string    `json:"flake_revision,omitempty"`
+	PrivateAddress string    `json:"private_address,omitempty"`
+	RexURL         string    `json:"rex_url,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Clone returns a deep copy so callers cannot mutate stored state by aliasing
@@ -74,6 +83,28 @@ func (h *Host) MarkFailed(now time.Time) {
 	}
 	h.State = HostStateFailed
 	h.UpdatedAt = now
+}
+
+// MarkResource records the provider resource identity immediately after
+// allocation. It is separate from MarkReady on purpose: a record that names a
+// resource but is not ready tells the next run to adopt the instance rather than
+// create a second one.
+func (h *Host) MarkResource(resourceID, privateAddress string, now time.Time) {
+	if resourceID != "" {
+		h.ResourceID = resourceID
+	}
+	if privateAddress != "" {
+		h.PrivateAddress = privateAddress
+	}
+	h.UpdatedAt = now.UTC()
+}
+
+// MarkDevice records the enrolled tailnet identity immediately after enrollment.
+func (h *Host) MarkDevice(deviceID string, now time.Time) {
+	if deviceID != "" {
+		h.DeviceID = deviceID
+	}
+	h.UpdatedAt = now.UTC()
 }
 
 // MarkDeleting records that a teardown job owns the host.

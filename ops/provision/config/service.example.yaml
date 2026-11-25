@@ -5,6 +5,11 @@
 # tokens are stored as SHA-256 digests in the tokens file (mode 0600); the
 # plaintext token lives in the operator's mode-0600 curl config.
 #
+# The homelab units built by nix/services/fleet-provision.nix run as the fleet user
+# and read `~/.config/fleet-provision/service.yaml`, so a deployment there rewrites
+# the /etc paths below to that directory and points storage.state_file at
+# `~/.local/state/fleet-provision/store.json` (docs/provisioning.md §7.5).
+#
 # Publication model: the backend binds to loopback and is published only through
 # Tailscale Serve on the tailnet hostname (https://provision.<tailnet>.ts.net).
 # Tailscale Serve terminates TLS, so the loopback hop needs no certificate. Set
@@ -23,8 +28,12 @@ temporal:
   task_queue: fleet-provision
 
 storage:
-  # Durable host inventory and idempotency reservations. Job execution lives in
-  # Temporal; S06 moves this document to PostgreSQL.
+  # Durable host inventory and idempotency reservations. Job execution itself lives
+  # in Temporal. This document stays a JSON file: the PostgreSQL store adapter is
+  # not part of this delivery, so the stack creates no `fleet_provision` database
+  # (docs/provisioning.md §8). The homelab user units read it from
+  # `~/.local/state/fleet-provision/store.json`; a system install can keep
+  # /var/lib/fleet-provision.
   state_file: /var/lib/fleet-provision/store.json
 
 tokens:

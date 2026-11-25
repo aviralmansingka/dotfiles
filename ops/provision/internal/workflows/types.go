@@ -89,10 +89,13 @@ type CreateHostResourceInput struct {
 	Tags         map[string]string `json:"tags"`
 }
 
-// CreateHostResourceOutput reports the public resource identity.
+// CreateHostResourceOutput reports the public resource identity. Resumed is true
+// when the activity adopted a resource an earlier attempt had already allocated
+// instead of asking the provider for a new one.
 type CreateHostResourceOutput struct {
 	ResourceID     string `json:"resource_id"`
 	PrivateAddress string `json:"private_address"`
+	Resumed        bool   `json:"resumed"`
 }
 
 // EnrollHostInput asks for a tailnet enrollment. It carries the provider resource

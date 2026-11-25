@@ -11,6 +11,9 @@ const (
 	CodeInvalidRequest     = "invalid_request"
 	CodeNotImplemented     = "not_implemented"
 	CodeProvisioningFailed = "provisioning_failed"
+	// CodeCanceled reports a job an operator cancelled. A cancelled job is not a
+	// failure: it keeps whatever it allocated.
+	CodeCanceled = "canceled"
 	// CodeAgentUnavailable reports a host whose SSM agent never registered. It is
 	// non-retryable: enrollment fails closed rather than trying another transport.
 	CodeAgentUnavailable = "host_agent_unavailable"
@@ -55,6 +58,17 @@ func SanitizeError(err error) domain.JobError {
 		return domain.JobError{
 			Code:      CodeProvisioningFailed,
 			Message:   domain.SanitizeMessage(identityErr.Error()),
+			Retryable: false,
+		}
+	}
+	// Ambiguous ownership is a permanent refusal: an operator has to reconcile the
+	// provider record by hand, and retrying the same destroy cannot make the
+	// mapping less ambiguous.
+	var ambiguous *domain.AmbiguousOwnershipError
+	if errors.As(err, &ambiguous) {
+		return domain.JobError{
+			Code:      CodeProvisioningFailed,
+			Message:   domain.SanitizeMessage(ambiguous.Error()),
 			Retryable: false,
 		}
 	}

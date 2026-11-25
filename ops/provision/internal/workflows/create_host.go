@@ -213,7 +213,8 @@ func DeleteHostWorkflow(ctx workflow.Context, in DeleteHostInput) (Status, error
 
 // record persists a milestone. Its failure does not fail the workflow: the
 // Temporal history remains the execution record, and the next milestone
-// supersedes this one.
+// supersedes this one. It accepts a detached context so the cancellation path can
+// still write the ownership record.
 func record(ctx workflow.Context, state Status) {
 	actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		ScheduleToStartTimeout: milestoneTimeout,
@@ -248,7 +249,28 @@ func failDelete(ctx workflow.Context, state Status, cause error) (Status, error)
 	return terminate(ctx, state, cause)
 }
 
+// terminate records a terminal state and returns the workflow error.
+//
+// Cancellation is its own outcome, not a failure. A cancelled execution destroys
+// nothing: the resource it may have allocated stays owned by the inventory record,
+// the record stays "provisioning", and the milestone is written through a
+// disconnected context because the cancelled one can no longer schedule an
+// activity. An operator reconciles or tears the host down deliberately.
 func terminate(ctx workflow.Context, state Status, cause error) (Status, error) {
+	var canceled *temporal.CanceledError
+	if errors.As(cause, &canceled) || ctx.Err() != nil {
+		detached, _ := workflow.NewDisconnectedContext(ctx)
+		state.State = domain.JobCanceled
+		state.Error = &domain.JobError{
+			Code:      application.CodeCanceled,
+			Message:   "job canceled; anything already allocated stays owned and is not destroyed automatically",
+			Retryable: false,
+		}
+		state.UpdatedAt = workflow.Now(detached)
+		record(detached, state)
+		return state.Snapshot(), temporal.NewCanceledError(state.Error.Message)
+	}
+
 	jobErr := application.SanitizeError(cause)
 	// An activity that refused permanently carries that refusal in its own error
 	// type. The workflow cannot see the domain error through the SDK boundary, so

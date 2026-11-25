@@ -156,8 +156,15 @@ func (o *Orchestrator) DescribeJob(ctx context.Context, handle application.JobHa
 		o.applyRunningStatus(ctx, handle.JobID, runID, &view)
 	case enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED:
 		o.applyCompletedResult(ctx, handle.JobID, runID, &view)
+	case enumspb.WORKFLOW_EXECUTION_STATUS_CANCELED:
+		// A cancellation is not a provider failure. The job reports the canceled
+		// state, keeps the stage it reached, and carries no error from a step that
+		// never ran; whatever it allocated is still owned by the inventory record.
+		view.State = domain.JobCanceled
+		if view.Stage == "" {
+			view.Stage = domain.StageQueued
+		}
 	case enumspb.WORKFLOW_EXECUTION_STATUS_FAILED,
-		enumspb.WORKFLOW_EXECUTION_STATUS_CANCELED,
 		enumspb.WORKFLOW_EXECUTION_STATUS_TERMINATED,
 		enumspb.WORKFLOW_EXECUTION_STATUS_TIMED_OUT:
 		o.applyFailure(ctx, handle.JobID, runID, &view)
