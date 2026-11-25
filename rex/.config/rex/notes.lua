@@ -55,40 +55,60 @@ local function median(values)
   return values[math.floor((#values + 1) / 2)]
 end
 
--- window_cells measures the window in character cells. Layer bounds are
--- fractions of the window, so a layer that hugs the box needs the window's real
--- size: every tiled block reports its own cells, and the view reports the share
--- of its window that the block was given, so one rendered block is enough.
---
--- A block reports the size it was last rendered at, so a window nobody is looking
--- at answers 80x24. Every window is sampled and the widest plausible pair wins,
+-- implied_window reads the window size that one rendered block implies: its own
+-- cells over the share of the window it was given.
+local function implied_window(session_id, node)
+  if node.rect[3] <= 0 or node.rect[4] <= 0 then return nil end
+  local size = rex.call("block.method", {
+    session_id = session_id,
+    block_id = node.block_id,
+    method = "size",
+  })
+  if size == nil or size.columns <= 0 or size.rows <= 0 then return nil end
+  local cols, rows = size.columns / node.rect[3], size.rows / node.rect[4]
+  -- The band rejects the 80x24 default and an outsized zoomed block.
+  if not plausible(cols, rows) then return nil end
+  return cols, rows
+end
+
+-- widest_window samples every tiled block and keeps the widest plausible pair,
 -- which is the window the human is actually in.
-local function window_cells(session_id)
-  local view, err = rex.call("session.view", { session_id = session_id })
-  if view == nil then return nil, err end
+local function widest_window(session_id, windows)
   local best
-  for _, win in ipairs(view.windows or {}) do
+  for _, win in ipairs(windows) do
     for _, layer in ipairs(win.layers or {}) do
       if layer.kind == "tiled" then
         walk(layer.layout, function(node)
-          if node.rect[3] <= 0 or node.rect[4] <= 0 then return end
-          local size = rex.call("block.method", {
-            session_id = session_id,
-            block_id = node.block_id,
-            method = "size",
-          })
-          if size == nil or size.columns <= 0 or size.rows <= 0 then return end
-          local cols = size.columns / node.rect[3]
-          local rows = size.rows / node.rect[4]
-          -- The band rejects the 80x24 default and an outsized zoomed block.
-          if not plausible(cols, rows) then return end
-          if best == nil or cols > best[1] then best = { cols, rows } end
+          local cols, rows = implied_window(session_id, node)
+          if cols ~= nil and (best == nil or cols > best[1]) then
+            best = { cols, rows }
+          end
         end)
       end
     end
   end
-  if best == nil then return ASSUMED.cols, ASSUMED.rows end
-  return math.floor(best[1] + 0.5), math.floor(best[2] + 0.5)
+  return best
+end
+
+-- window_cells measures the window in character cells: layer bounds are
+-- fractions of it, so a layer that hugs the box needs the real size.
+local function window_cells(session_id)
+  local view, err = rex.call("session.view", { session_id = session_id })
+  if view == nil then return nil, err end
+  local widest = widest_window(session_id, view.windows or {})
+  if widest == nil then return ASSUMED.cols, ASSUMED.rows end
+  return math.floor(widest[1] + 0.5), math.floor(widest[2] + 0.5)
+end
+
+-- share is one dimension's footprint as a fraction of the window, never more
+-- than the whole window.
+local function share(cells, total)
+  return math.min(1, cells / total)
+end
+
+-- centered places a box of these fractions in the middle of the window.
+local function centered(w, h)
+  return { (1 - w) / 2, (1 - h) / 2, w, h }
 end
 
 -- bounds_for centers a box of the given cells in the window, so the layer ends
@@ -96,9 +116,7 @@ end
 local function bounds_for(session_id, want_w, want_h)
   local cols, rows = window_cells(session_id)
   if cols < want_w or rows < want_h then return FALLBACK end
-  local w = math.min(1, (want_w + SLACK_W) / cols)
-  local h = math.min(1, (want_h + SLACK_H) / rows)
-  return { (1 - w) / 2, (1 - h) / 2, w, h }
+  return centered(share(want_w + SLACK_W, cols), share(want_h + SLACK_H, rows))
 end
 
 -- open_layer puts one command in a floating layer cut to its own size.
