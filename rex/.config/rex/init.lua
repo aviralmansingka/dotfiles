@@ -66,9 +66,14 @@ local function path_from_url(pwd)
   return pwd
 end
 
-local function block_cwd(session_id, block_id)
-  local cwd = path_from_url(reported(session_id, block_id, "pwd").pwd)
-  if cwd ~= nil then return cwd end
+-- reported_cwd is the directory the program in the block reports over OSC 7.
+local function reported_cwd(session_id, block_id)
+  return path_from_url(reported(session_id, block_id, "pwd").pwd)
+end
+
+-- process_cwd is the directory of the process running in the block, the
+-- foreground one first.
+local function process_cwd(session_id, block_id)
   local info = reported(session_id, block_id, "process")
   for _, proc in ipairs({ info.foreground, info.child }) do
     if type(proc) == "table" and type(proc.cwd) == "string" and proc.cwd ~= "" then
@@ -78,10 +83,18 @@ local function block_cwd(session_id, block_id)
   return nil
 end
 
+local function block_cwd(session_id, block_id)
+  return reported_cwd(session_id, block_id) or process_cwd(session_id, block_id)
+end
+
 -- Review: the tuicr floating layer (rex/review.lua). It reads the block's
 -- directory through the reader above, so a block that changes directory brings
 -- its review with it.
 require("review"){ block_cwd = block_cwd }
+
+-- Tools: lazygit and gh-dash in floating layers that toggle (rex/tools.lua).
+-- They read the same block directory, so they take it the same way.
+require("tools"){ block_cwd = block_cwd }
 
 rex.action{
   name = "open_nvim_here",
