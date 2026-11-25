@@ -8,6 +8,9 @@ require("missions")
 -- Notes: the quicknote capture box in a floating layer (rex/notes.lua)
 require("notes")
 
+-- Tools: lazygit and gh-dash in floating layers that toggle (rex/tools.lua)
+require("tools")
+
 -- Focus panes, vim-style (tmux: bind -r h/j/k/l select-pane)
 rex.bind("ctrl+a>h", "pane.focus.left")
 rex.bind("ctrl+a>j", "pane.focus.down")
@@ -435,3 +438,13 @@ rex.bind("ctrl+a>shift+4", "session.rename")
 for tab = 1, 9 do
   rex.bind("ctrl+a>" .. tab, "client.tab.goto", { index = tab })
 end
+
+-- Other configuration files read state through this table. The server loads
+-- init.lua as a script rather than through require, so the table is also put in
+-- the module cache; a require("init") then reads it instead of running this
+-- file a second time, which would bind every key again.
+local shared = { block_cwd = block_cwd }
+if package ~= nil and package.loaded ~= nil then
+  package.loaded["init"] = shared
+end
+return shared

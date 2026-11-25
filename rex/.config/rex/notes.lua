@@ -146,6 +146,11 @@ rex.bind("cmd+shift+n", "capture_note")
 rex.bind("cmd+shift+p", "process_notes")
 
 -- The card helpers are the one copy of where a small layer sits and how big it
--- is, so another file can cut its own layer the same way. review.lua reads
--- them; nothing here changes behaviour.
-return { CARD_W = CARD_W, CARD_H = CARD_H, bounds_for = bounds_for }
+-- is, so another file can cut its own layer the same way. review.lua and
+-- tools.lua read them; nothing here changes behaviour.
+return {
+  CARD_W = CARD_W,
+  CARD_H = CARD_H,
+  window_cells = window_cells,
+  bounds_for = bounds_for,
+}
