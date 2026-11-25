@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 
@@ -26,6 +27,7 @@ type Service struct {
 	Limits       Limits              `yaml:"limits"`
 	Providers    map[string]Provider `yaml:"providers"`
 	Enrollment   Enrollment          `yaml:"enrollment"`
+	OpenBao      OpenBaoIdentity     `yaml:"openbao"`
 	Logging      Logging             `yaml:"logging"`
 }
 
@@ -145,6 +147,107 @@ func (e Enrollment) Validate() error {
 	}
 	if e.SSM.PollIntervalSeconds < 0 || e.SSM.PollIntervalSeconds > 300 {
 		return errors.New("enrollment.ssm.poll_interval_seconds must be between 0 and 300")
+	}
+	return nil
+}
+
+// OpenBaoIdentity locates the per-host identity adapter: the management API, the
+// token file it reads once, and the directory bootstrap material is written to.
+// Every field is a path, a URL, or a lifetime; no credential value has a field
+// here.
+type OpenBaoIdentity struct {
+	// Address is the management API base URL.
+	Address string `yaml:"address"`
+	// TokenFile is a mode-0600 file holding the management token. It is read once
+	// at construction and never appears in an argument or a log line.
+	TokenFile string `yaml:"token_file"`
+	// Namespace is optional (OpenBao Enterprise namespaces).
+	Namespace string `yaml:"namespace"`
+	// BootstrapDir is where the one-use wrapping token is delivered, one 0600 file
+	// per host. It must be a real directory path: never the Nix store, a Git
+	// worktree, or Terraform state.
+	BootstrapDir string `yaml:"bootstrap_dir"`
+	// TokenTTLSeconds is the requested host token lifetime (default 600). The
+	// maximum is the step's bound: above zero and at most 900.
+	TokenTTLSeconds int `yaml:"token_ttl_seconds"`
+	// MaxTokenTTLSeconds is the hard maximum lifetime (default 900, never more).
+	MaxTokenTTLSeconds int `yaml:"max_token_ttl_seconds"`
+}
+
+// Configured reports whether the identity adapter is configured at all. When it is
+// not, the worker keeps the refusing stub, so a job cannot reach "ready" through a
+// half-configured identity.
+func (o OpenBaoIdentity) Configured() bool {
+	return o.Address != "" || o.TokenFile != "" || o.BootstrapDir != ""
+}
+
+// TokenTTL returns the configured token lifetime, defaulted and bounded.
+func (o OpenBaoIdentity) TokenTTL() time.Duration {
+	seconds := o.TokenTTLSeconds
+	if seconds == 0 {
+		seconds = int(domain.AuthorizationTokenTTL / time.Second)
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+// MaxTokenTTL returns the configured hard maximum, defaulted and bounded.
+func (o OpenBaoIdentity) MaxTokenTTL() time.Duration {
+	seconds := o.MaxTokenTTLSeconds
+	if seconds == 0 {
+		seconds = int(domain.MaxAuthorizationTokenTTL / time.Second)
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+// Validate fails closed on a half-configured identity block, and refuses a
+// bootstrap directory that is inside a build output, a Git checkout, or Terraform
+// state: bootstrap material is a credential and none of those is a place for one.
+func (o OpenBaoIdentity) Validate() error {
+	if !o.Configured() {
+		return nil
+	}
+	if o.Address == "" {
+		return errors.New("openbao.address is required")
+	}
+	if o.TokenFile == "" {
+		return errors.New("openbao.token_file is required")
+	}
+	if strings.ContainsAny(o.TokenFile, " \t") {
+		return errors.New("openbao.token_file must not contain whitespace")
+	}
+	if o.BootstrapDir == "" {
+		return errors.New("openbao.bootstrap_dir is required: the wrapping token is delivered as a 0600 file, never a payload")
+	}
+	if !filepath.IsAbs(o.BootstrapDir) {
+		return errors.New("openbao.bootstrap_dir must be an absolute path")
+	}
+	if strings.ContainsAny(o.BootstrapDir, "\t") {
+		return errors.New("openbao.bootstrap_dir must not contain whitespace")
+	}
+	clean := filepath.ToSlash(filepath.Clean(o.BootstrapDir))
+	if clean == "/nix/store" || strings.HasPrefix(clean, "/nix/store/") {
+		return errors.New("openbao.bootstrap_dir must not be in the Nix store: bootstrap material is written at runtime, mode 0600")
+	}
+	for _, segment := range strings.Split(clean, "/") {
+		switch segment {
+		case ".git", ".terraform":
+			return errors.New("openbao.bootstrap_dir must not be a Git or Terraform directory: bootstrap material is never a tracked or state file")
+		}
+	}
+	if strings.HasSuffix(clean, ".tfstate") || strings.HasSuffix(clean, ".tfstate.d") {
+		return errors.New("openbao.bootstrap_dir must not be Terraform state")
+	}
+	if o.TokenTTLSeconds < 0 || o.MaxTokenTTLSeconds < 0 {
+		return errors.New("openbao token lifetimes must not be negative")
+	}
+	policy := domain.TokenPolicy{
+		TTL:            o.TokenTTL(),
+		MaxTTL:         o.MaxTokenTTL(),
+		RenewIncrement: domain.TokenRenewIncrement,
+		Renewable:      true,
+	}
+	if err := policy.Validate(); err != nil {
+		return fmt.Errorf("openbao: %w", err)
 	}
 	return nil
 }
@@ -359,6 +462,9 @@ func (s *Service) Validate() error {
 	if err := s.Enrollment.Validate(); err != nil {
 		return fmt.Errorf("enrollment: %w", err)
 	}
+	if err := s.OpenBao.Validate(); err != nil {
+		return fmt.Errorf("openbao: %w", err)
+	}
 	switch s.Logging.Format {
 	case "", "json", "text":
 	default:
@@ -430,14 +536,17 @@ type profileDocument struct {
 }
 
 type profileSpec struct {
-	Name          string              `yaml:"name"`
-	DisplayName   string              `yaml:"display_name"`
-	Provider      string              `yaml:"provider"`
-	Regions       []string            `yaml:"regions"`
-	Sizes         map[string]sizeSpec `yaml:"sizes"`
-	Tags          map[string]string   `yaml:"tags"`
-	SecretBundles []string            `yaml:"secret_bundles"`
-	FlakeRef      string              `yaml:"flake_ref"`
+	Name        string              `yaml:"name"`
+	DisplayName string              `yaml:"display_name"`
+	Provider    string              `yaml:"provider"`
+	Regions     []string            `yaml:"regions"`
+	Sizes       map[string]sizeSpec `yaml:"sizes"`
+	Tags        map[string]string   `yaml:"tags"`
+	// SecretBundles maps a bundle name to a per-host path template. A shared
+	// literal path is refused: the template must contain exactly one {host}
+	// placeholder in the host segment.
+	SecretBundles map[string]string `yaml:"secret_bundles"`
+	FlakeRef      string            `yaml:"flake_ref"`
 	// TailnetTag is the approved tag hosts of this profile join with. It is the
 	// only source of a tag in the service.
 	TailnetTag string `yaml:"tailnet_tag"`

@@ -1,6 +1,7 @@
 package workflows
 
 import (
+	"errors"
 	"time"
 
 	"go.temporal.io/sdk/temporal"
@@ -249,6 +250,13 @@ func failDelete(ctx workflow.Context, state Status, cause error) (Status, error)
 
 func terminate(ctx workflow.Context, state Status, cause error) (Status, error) {
 	jobErr := application.SanitizeError(cause)
+	// An activity that refused permanently carries that refusal in its own error
+	// type. The workflow cannot see the domain error through the SDK boundary, so
+	// it reads the permanence the activity recorded.
+	var activityErr *temporal.ApplicationError
+	if errors.As(cause, &activityErr) && activityErr.NonRetryable() {
+		jobErr.Retryable = false
+	}
 	state.State = domain.JobFailed
 	state.Error = &jobErr
 	state.Attempt++

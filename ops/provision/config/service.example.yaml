@@ -133,6 +133,22 @@ enrollment:
     command_timeout_seconds: 180
     poll_interval_seconds: 5
 
+openbao:
+  # Per-host identity (S05). When this block is absent the worker keeps a refusing
+  # stub, so no job can reach "ready" through an unconfigured identity.
+  address: http://127.0.0.1:8200
+  # Mode 0600, read once at start-up. The management token is never an argument and
+  # never a log field.
+  token_file: /etc/fleet-provision/openbao-admin-token
+  namespace: ""
+  # One 0600 file per host holding a one-use wrapping token, written outside the
+  # Nix store, Git, Terraform state, and every job record.
+  bootstrap_dir: /var/lib/fleet-provision/bootstrap
+  # Short-lived and renewable, with a hard maximum the service refuses to exceed:
+  # a host token is never valid for more than 900 seconds.
+  token_ttl_seconds: 600
+  max_token_ttl_seconds: 900
+
 logging:
   level: info
   format: json

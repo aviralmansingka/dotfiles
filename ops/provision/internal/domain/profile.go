@@ -19,13 +19,16 @@ type SizeSpec struct {
 // logical profile name to a provider, allowed regions, allowed sizes, tags, and
 // approved secret-bundle references. It holds references only, never values.
 type Profile struct {
-	Name          string              `json:"name"`
-	DisplayName   string              `json:"display_name"`
-	Provider      Provider            `json:"provider"`
-	Regions       []string            `json:"regions"`
-	Sizes         map[string]SizeSpec `json:"sizes"`
-	Tags          map[string]string   `json:"tags"`
-	SecretBundles []string            `json:"secret_bundles"`
+	Name        string              `json:"name"`
+	DisplayName string              `json:"display_name"`
+	Provider    Provider            `json:"provider"`
+	Regions     []string            `json:"regions"`
+	Sizes       map[string]SizeSpec `json:"sizes"`
+	Tags        map[string]string   `json:"tags"`
+	// SecretBundles maps an approved bundle name to a per-host path template.
+	// The template contains exactly one {host} placeholder, and the rendered path
+	// is derived from the host identity, so two hosts never share a path.
+	SecretBundles SecretBundles `json:"secret_bundles"`
 	// FlakeRef is the approved flake target for this profile. It is resolved
 	// server-side; clients cannot supply or override it.
 	FlakeRef string `json:"flake_ref"`
@@ -89,9 +92,9 @@ func ValidateProfile(p Profile) error {
 			return fmt.Errorf("profile %q: unsafe tag key %q", p.Name, k)
 		}
 	}
-	for _, bundle := range p.SecretBundles {
-		if strings.TrimSpace(bundle) == "" {
-			return fmt.Errorf("profile %q: empty secret bundle reference", p.Name)
+	for name, template := range p.SecretBundles {
+		if err := validateSecretBundleTemplate(name, template); err != nil {
+			return fmt.Errorf("profile %q: %w", p.Name, err)
 		}
 	}
 	if err := validateFlakeRef(p.FlakeRef); err != nil {
@@ -172,16 +175,39 @@ func (c Catalog) Profiles() []Profile {
 // ResolvedHostSpec is the fully server-side-resolved request. It is the only
 // thing the application layer hands to Temporal, and it contains no secrets.
 type ResolvedHostSpec struct {
-	Name          string
-	Provider      Provider
-	Profile       string
-	Region        string
-	Size          string
-	InstanceType  string
-	DiskGB        int
-	Tags          map[string]string
-	SecretBundles []string
+	Name         string
+	Provider     Provider
+	Profile      string
+	Region       string
+	Size         string
+	InstanceType string
+	DiskGB       int
+	Tags         map[string]string
+	// SecretBundles maps approved bundle names to per-host path templates. Call
+	// Bundles with the generated host identity to render the concrete references.
+	SecretBundles SecretBundles
 	FlakeRef      string
+}
+
+// Bundles renders the profile's approved bundle templates for one host. The
+// host identity is server-generated, so the caller cannot choose which KV paths
+// the host is granted; the result is what travels in host, workflow, and job
+// records (references only).
+func (s ResolvedHostSpec) Bundles(hostID string) ([]string, error) {
+	bundles, err := s.SecretBundles.Render(hostID)
+	if err != nil {
+		return nil, err
+	}
+	host, err := NewHostIdentity(hostID, s.Name)
+	if err != nil {
+		return nil, err
+	}
+	for _, ref := range bundles {
+		if err := host.ValidateHostBundle(ref); err != nil {
+			return nil, err
+		}
+	}
+	return bundles, nil
 }
 
 // Resolve validates a client request against the approved catalog and applies
@@ -232,7 +258,7 @@ func (c Catalog) Resolve(req CreateHostRequest) (ResolvedHostSpec, error) {
 		InstanceType:  size.InstanceType,
 		DiskGB:        size.DiskGB,
 		Tags:          tags,
-		SecretBundles: append([]string(nil), profile.SecretBundles...),
+		SecretBundles: profile.SecretBundles.clone(),
 		FlakeRef:      profile.FlakeRef,
 	}, nil
 }
@@ -240,6 +266,9 @@ func (c Catalog) Resolve(req CreateHostRequest) (ResolvedHostSpec, error) {
 func normalizeProfile(p Profile) Profile {
 	if p.Tags == nil {
 		p.Tags = map[string]string{}
+	}
+	if p.SecretBundles == nil {
+		p.SecretBundles = SecretBundles{}
 	}
 	sizes := make(map[string]SizeSpec, len(p.Sizes))
 	for name, size := range p.Sizes {

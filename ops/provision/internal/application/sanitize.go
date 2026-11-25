@@ -47,6 +47,33 @@ func SanitizeError(err error) domain.JobError {
 			Retryable: false,
 		}
 	}
+	// Identity refusals are permanent: a role already claimed by another host, a
+	// consumed wrapping token, or a policy refusal cannot be fixed by retrying.
+	// The message is already sanitized by the identity use case.
+	var identityErr *domain.IdentityError
+	if errors.As(err, &identityErr) {
+		return domain.JobError{
+			Code:      CodeProvisioningFailed,
+			Message:   domain.SanitizeMessage(identityErr.Error()),
+			Retryable: false,
+		}
+	}
+	var claim *domain.RoleClaimError
+	if errors.As(err, &claim) {
+		return domain.JobError{
+			Code:      CodeProvisioningFailed,
+			Message:   domain.SanitizeMessage(claim.Error()),
+			Retryable: false,
+		}
+	}
+	var consumed *domain.WrapTokenConsumedError
+	if errors.As(err, &consumed) {
+		return domain.JobError{
+			Code:      CodeProvisioningFailed,
+			Message:   domain.SanitizeMessage(consumed.Error()),
+			Retryable: false,
+		}
+	}
 	return domain.JobError{
 		Code:      CodeProvisioningFailed,
 		Message:   domain.SanitizeMessage(err.Error()),

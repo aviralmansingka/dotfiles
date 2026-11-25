@@ -107,7 +107,7 @@ func TestProfilesFileRejectsHostileFlakeRef(t *testing.T) {
     tags:
       owner: homelab
     secret_bundles:
-      - bao:secret/data/hosts/rex/canary
+      canary: bao:secret/data/hosts/{host}/canary
     flake_ref: "` + ref + `"
 `
 			if err := os.WriteFile(path, []byte(document), 0o600); err != nil {
@@ -222,6 +222,81 @@ func TestEnrollmentHasNoKeySetting(t *testing.T) {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "kms_") && strings.Contains(trimmed, ":") {
 			t.Fatalf("the shipped example still names an enrollment key: %q", trimmed)
+		}
+	}
+}
+
+// TestShippedProfilesMapAPerHostBundlePath is the configuration half of the
+// per-host identity: the shipped profile names one bundle mapping whose template
+// renders a different KV path for every host, so two hosts can never share a
+// secret path and a literal shared path is refused at load time.
+func TestShippedProfilesMapAPerHostBundlePath(t *testing.T) {
+	t.Parallel()
+	catalog, err := config.LoadProfiles(shippedProfiles)
+	if err != nil {
+		t.Fatalf("LoadProfiles(%s): %v", shippedProfiles, err)
+	}
+	for _, profile := range catalog.Profiles() {
+		if len(profile.SecretBundles) == 0 {
+			t.Fatalf("profile %q declares no secret bundles", profile.Name)
+		}
+		first, err := profile.SecretBundles.Render("host-0001")
+		if err != nil {
+			t.Fatalf("profile %q render(host-0001): %v", profile.Name, err)
+		}
+		second, err := profile.SecretBundles.Render("host-0002")
+		if err != nil {
+			t.Fatalf("profile %q render(host-0002): %v", profile.Name, err)
+		}
+		if len(first) != len(second) || len(first) == 0 {
+			t.Fatalf("profile %q rendered %d and %d bundles", profile.Name, len(first), len(second))
+		}
+		for i := range first {
+			if first[i] == second[i] {
+				t.Fatalf("profile %q rendered one path %q for two hosts", profile.Name, first[i])
+			}
+			if !strings.Contains(first[i], "host-0001") {
+				t.Fatalf("profile %q rendered %q, which is not scoped to the host identity", profile.Name, first[i])
+			}
+			if strings.Contains(first[i], "{host}") {
+				t.Fatalf("profile %q left the placeholder unrendered in %q", profile.Name, first[i])
+			}
+		}
+	}
+}
+
+// TestProfilesFileRejectsASharedBundlePath keeps a literal, host-independent path
+// from loading: the per-host placeholder is what stops two hosts sharing one
+// secret tree.
+func TestProfilesFileRejectsASharedBundlePath(t *testing.T) {
+	t.Parallel()
+	shared := []string{
+		"bao:secret/data/hosts/rex/canary",
+		"bao:secret/data/fleet/tailscale-oauth",
+		"bao:secret/data/hosts/{host}/../rex/canary",
+	}
+	for _, bundle := range shared {
+		path := filepath.Join(t.TempDir(), "profiles.yaml")
+		document := `profiles:
+  - name: rex
+    provider: aws
+    regions:
+      - ap-south-1
+    sizes:
+      standard:
+        instance_type: t3.medium
+        disk_gb: 40
+    tags:
+      owner: homelab
+    secret_bundles:
+      canary: "` + bundle + `"
+    flake_ref: .#homeConfigurations.remote-mumbai.activationPackage
+`
+		if err := os.WriteFile(path, []byte(document), 0o600); err != nil {
+			t.Fatalf("write profiles: %v", err)
+		}
+		if _, err := config.LoadProfiles(path); err == nil {
+			t.Fatalf("LoadProfiles accepted the shared bundle path %q", bundle)
 		}
 	}
 }

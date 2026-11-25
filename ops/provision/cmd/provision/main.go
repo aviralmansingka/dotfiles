@@ -245,17 +245,24 @@ func runWorker(args []string) error {
 		return err
 	}
 
+	authorizer, err := newAuthorizer(state)
+	if err != nil {
+		return err
+	}
+
 	// Enrollment runs over SSM only: the agent check gates it, the key travels as
 	// an encrypted parameter, and the command carries a parameter path. Profile
-	// deployment (S04), OpenBao host identity (S05), and device removal (S07)
-	// remain refusing stubs, so no job can reach "ready" before those land.
+	// deployment (S04) and device removal (S07) remain refusing stubs, so no job
+	// can reach "ready" before those land. The authorizing stage is the real
+	// OpenBao adapter: per-host AppRole, own-path policy, and a one-use wrapped
+	// SecretID delivered as a 0600 file.
 	activities := &temporaladapter.Activities{
 		Inventory:  state.store,
 		Providers:  provider,
 		Agent:      agent,
 		Enroller:   enrollee,
 		Deployer:   ssh.NewStub(),
-		Authorizer: openbao.NewStub(),
+		Authorizer: authorizer,
 		Tailnet:    tailscale.NewStub(),
 		Clock:      application.WallClock{},
 		Logger:     state.log,
@@ -367,6 +374,47 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 		return nil, nil, err
 	}
 	return service, agent, nil
+}
+
+// newAuthorizer builds the per-host OpenBao identity adapter.
+//
+// It fails rather than falling back to the refusing stub: a worker that cannot
+// authorize a host would create the AWS resource and then fail the job at the last
+// stage, leaving a real instance with no identity. The management token is read
+// once from a 0600 file, and bootstrap material is written as 0600 files outside
+// the Nix store, Git, Terraform state, and every job record.
+func newAuthorizer(state *loaded) (application.HostAuthorizer, error) {
+	cfg := state.service.OpenBao
+	if !cfg.Configured() {
+		return nil, errors.New("openbao identity is not configured: set openbao.address, openbao.token_file, and openbao.bootstrap_dir")
+	}
+	admin, err := openbao.NewIdentityAdmin(openbao.IdentityConfig{
+		Address:   cfg.Address,
+		TokenFile: cfg.TokenFile,
+		Namespace: cfg.Namespace,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("openbao identity adapter: %w", err)
+	}
+	delivery, err := openbao.NewBootstrapWriter(openbao.BootstrapConfig{Dir: cfg.BootstrapDir})
+	if err != nil {
+		return nil, fmt.Errorf("openbao bootstrap delivery: %w", err)
+	}
+	authorizer, err := application.NewIdentityService(application.IdentityDeps{
+		Backend:  admin,
+		Delivery: delivery,
+		Logger:   state.log,
+		TokenPolicy: domain.TokenPolicy{
+			TTL:            cfg.TokenTTL(),
+			MaxTTL:         cfg.MaxTokenTTL(),
+			RenewIncrement: domain.TokenRenewIncrement,
+			Renewable:      true,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("openbao identity service: %w", err)
+	}
+	return authorizer, nil
 }
 
 // newHostProvider builds the AWS compute provider from the approved

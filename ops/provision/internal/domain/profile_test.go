@@ -19,7 +19,7 @@ func approvedProfile() domain.Profile {
 			"standard": {Name: "standard", InstanceType: "t3.medium", DiskGB: 40},
 		},
 		Tags:          map[string]string{"owner": "homelab"},
-		SecretBundles: []string{"bao:secret/data/hosts/rex/canary"},
+		SecretBundles: domain.SecretBundles{"canary": "bao:secret/data/hosts/{host}/canary"},
 		FlakeRef:      ".#homeConfigurations.remote-mumbai.activationPackage",
 	}
 }

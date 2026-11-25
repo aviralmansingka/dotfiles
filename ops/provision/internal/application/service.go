@@ -121,6 +121,13 @@ func (s *Service) CreateHost(ctx context.Context, principal Principal, idempoten
 	}
 	hostID := s.ids.NewID("host")
 	jobID := "create-" + hostID
+	// The approved bundle templates are rendered against the generated host
+	// identity here, so every host gets its own KV paths and no shared literal
+	// reference can reach a host record, a workflow payload, or the OpenBao policy.
+	bundles, err := spec.Bundles(hostID)
+	if err != nil {
+		return AcceptedIDs{}, err
+	}
 	now := s.clock.Now()
 
 	record, created, err := s.ledger.Reserve(ctx, IdempotencyRecord{
@@ -156,7 +163,7 @@ func (s *Service) CreateHost(ctx context.Context, principal Principal, idempoten
 		InstanceType:  spec.InstanceType,
 		DiskGB:        spec.DiskGB,
 		Tags:          spec.Tags,
-		SecretBundles: spec.SecretBundles,
+		SecretBundles: bundles,
 		OwnerClientID: principal.ClientID,
 		JobID:         jobID,
 		State:         domain.HostStateProvisioning,
@@ -179,7 +186,7 @@ func (s *Service) CreateHost(ctx context.Context, principal Principal, idempoten
 		InstanceType:   spec.InstanceType,
 		DiskGB:         spec.DiskGB,
 		Tags:           spec.Tags,
-		SecretBundles:  spec.SecretBundles,
+		SecretBundles:  bundles,
 		FlakeRef:       spec.FlakeRef,
 		IdempotencyKey: idempotencyKey,
 		OwnerClientID:  principal.ClientID,

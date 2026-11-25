@@ -5,8 +5,12 @@
 # target) is resolved from this file, so a client cannot choose an executable, a
 # flake URL, an OpenBao path, a Terraform state path, or an IAM role.
 #
-# secret_bundles holds approved OpenBao *references* only. No secret value ever
-# appears in this file, in a job record, or in a workflow payload.
+# secret_bundles is a per-host bundle mapping: a bundle name to a KV path
+# template. The single {host} placeholder is replaced with the host's generated
+# identity, so every host derives its own path under secret/data/hosts/<host>/ and
+# two hosts can never share one. A literal shared path is refused at load time.
+# No secret value ever appears in this file, in a job record, or in a workflow
+# payload.
 profiles:
   - name: rex
     display_name: Managed Rex host
@@ -24,7 +28,10 @@ profiles:
       fleet-tier: managed
       fleet-provider: aws
     secret_bundles:
-      - bao:secret/data/hosts/rex/canary
+      # Bundle name -> per-host path template. The host gets read access to
+      # exactly this tree and nothing else; the canary is the approved
+      # non-sensitive sentinel the acceptance check reads.
+      canary: bao:secret/data/hosts/{host}/canary
     # Approved flake target for this logical profile. This is the one definition
     # of the mapping: the API's `rex` profile is built by
     # `homeConfigurations.remote-mumbai`, whose shared Rex configuration is

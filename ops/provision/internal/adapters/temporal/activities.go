@@ -246,8 +246,12 @@ func (a *Activities) activityError(operation, hostID string, err error) error {
 	var notImplemented *domain.NotImplementedError
 	var invalid *domain.ValidationError
 	var agent *domain.AgentNotRegisteredError
+	var claim *domain.RoleClaimError
+	var consumed *domain.WrapTokenConsumedError
+	var identityErr *domain.IdentityError
 	switch {
-	case errors.As(err, &notImplemented), errors.As(err, &invalid), errors.As(err, &agent):
+	case errors.As(err, &notImplemented), errors.As(err, &invalid), errors.As(err, &agent),
+		errors.As(err, &claim), errors.As(err, &consumed), errors.As(err, &identityErr):
 		return temporal.NewNonRetryableApplicationError(jobErr.Message, jobErr.Code, nil)
 	default:
 		return fmt.Errorf("%s: %s", operation, jobErr.Message)
