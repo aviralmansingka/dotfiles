@@ -87,7 +87,7 @@ func TestSnoozeWritesFrontmatterOnce(t *testing.T) {
 func TestPromoteWritesAtomicNote(t *testing.T) {
 	vault := t.TempDir()
 	c := seedCapture(t, vault, "Writer's block is caused by reader's block", "Ahrens says reading widely comes first")
-	path, err := promote(vault, c, "Reading widely comes before writing well", time.Now())
+	path, err := promote(vault, c, "Reading widely comes before writing well", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,14 +111,14 @@ func TestPromoteWritesAtomicNote(t *testing.T) {
 func TestPromoteNeedsATitleAndAvoidsCollisions(t *testing.T) {
 	vault := t.TempDir()
 	c := seedCapture(t, vault, "Buy oat milk", "")
-	if _, err := promote(vault, c, "  ", time.Now()); err == nil {
+	if _, err := promote(vault, c, "  ", nil, time.Now()); err == nil {
 		t.Error("empty title accepted")
 	}
-	first, err := promote(vault, c, "Buy oat milk", time.Now())
+	first, err := promote(vault, c, "Buy oat milk", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := promote(vault, c, "Buy oat milk", time.Now())
+	second, err := promote(vault, c, "Buy oat milk", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

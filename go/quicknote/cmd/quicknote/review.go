@@ -133,9 +133,10 @@ func snooze(path string, until time.Time) error {
 	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644)
 }
 
-// atomicBody is the note a capture becomes: the insight in its own words, with
-// the thought it came from kept as a callout so the trail stays whole.
-func atomicBody(slug, title string, c capture, now time.Time) string {
+// atomicBody is the note a capture becomes: the insight in its own words, the
+// notes it points at, and the thought it came from kept as a callout so the
+// trail stays whole.
+func atomicBody(slug, title string, c capture, links []Link, now time.Time) string {
 	var quoted strings.Builder
 	fmt.Fprintf(&quoted, "> [!CAPTURE] %s", c.Title)
 	for _, line := range c.Detail {
@@ -143,12 +144,12 @@ func atomicBody(slug, title string, c capture, now time.Time) string {
 	}
 	return "---\nid: " + slug + "\naliases: []\ntags: [atomic]\ncreated: " +
 		now.Format("2006-01-02") + "\nup:\n---\n\n# " + strings.TrimSpace(title) +
-		"\n\n" + quoted.String() + "\n"
+		"\n" + linksBlock(links) + "\n" + quoted.String() + "\n"
 }
 
 // promote writes the atomic note beside your other knowledge notes and reports
 // its path. The capture itself is retired by the caller once the editor closes.
-func promote(vault string, c capture, title string, now time.Time) (string, error) {
+func promote(vault string, c capture, title string, links []Link, now time.Time) (string, error) {
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return "", errors.New("an atomic note needs a title")
@@ -172,7 +173,7 @@ func promote(vault string, c capture, title string, now time.Time) (string, erro
 		return "", err
 	}
 	defer f.Close()
-	if _, err := f.WriteString(atomicBody(slug(title), title, c, now)); err != nil {
+	if _, err := f.WriteString(atomicBody(slug(title), title, c, links, now)); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -196,13 +197,31 @@ type editorDoneMsg struct {
 	err     error
 }
 
+// promoteStage says which row of a promotion holds the keys: the queue, the
+// insight, or the notes that insight points at.
+type promoteStage int
+
+const (
+	stageList promoteStage = iota
+	stageTitle
+	stageLinks
+)
+
 type reviewModel struct {
 	vault   string
 	items   []capture
 	idx     int
 	w, h    int
-	typing  bool
+	stage   promoteStage
 	input   textinput.Model
+	claim   string // why the typed title does not read as a claim yet
+	claimOK bool   // a second Enter accepted that title
+	pending string // the insight waiting for its links
+	targets []linkTarget
+	cands   []linkTarget
+	pick    int
+	picked  []Link
+	query   textinput.Model
 	confirm bool
 	status  string
 	problem string
@@ -213,6 +232,7 @@ type reviewModel struct {
 func newReview(vault string) *reviewModel {
 	m := &reviewModel{vault: vault, w: 80, h: 24}
 	m.input = newInput("the insight, in your own words", "")
+	m.query = newInput("filter notes", "")
 	return m
 }
 
@@ -250,6 +270,11 @@ func (m *reviewModel) current() (capture, bool) {
 
 func (m *reviewModel) Init() tea.Cmd {
 	m.refresh()
+	if targets, err := loadTargets(m.vault); err != nil {
+		m.problem = err.Error()
+	} else {
+		m.targets = targets
+	}
 	return textinput.Blink
 }
 
@@ -283,31 +308,94 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *reviewModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	if m.typing {
-		switch msg.String() {
-		case "esc":
-			m.typing = false
+// titleKey types the insight, and warns once when the words read as a topic
+// instead of a claim. A second Enter keeps what was typed.
+func (m *reviewModel) titleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.stage = stageList
+		m.claim, m.claimOK = "", false
+		return m, nil
+	case "enter":
+		if _, ok := m.current(); !ok {
+			m.stage = stageList
 			return m, nil
-		case "enter":
-			c, ok := m.current()
-			if !ok {
-				m.typing = false
-				return m, nil
-			}
-			path, err := promote(m.vault, c, m.input.Value(), time.Now())
-			if err != nil {
-				m.problem = err.Error()
-				return m, nil
-			}
-			m.typing = false
-			return m, tea.ExecProcess(editorCommand(path), func(err error) tea.Msg {
-				return editorDoneMsg{capture: c, path: path, err: err}
-			})
 		}
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		return m, cmd
+		if warning := claimWarning(m.input.Value()); warning != "" && !m.claimOK {
+			m.claim, m.claimOK = warning, true
+			return m, nil
+		}
+		m.pending = strings.TrimSpace(m.input.Value())
+		m.stage = stageLinks
+		m.pick, m.picked = 0, nil
+		m.claim, m.claimOK = "", false
+		m.query.SetValue("")
+		m.query.Focus()
+		m.cands = rankTargets(m.targets, "")
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	m.claim, m.claimOK = "", false
+	return m, cmd
+}
+
+// linksKey picks the notes the insight points at. Tab takes and untakes, the
+// arrows move, Enter creates the note, and Esc goes back to the words.
+func (m *reviewModel) linksKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.stage = stageTitle
+		m.query.Blur()
+		m.input.Focus()
+		return m, nil
+	case "enter":
+		c, ok := m.current()
+		if !ok {
+			m.stage = stageList
+			return m, nil
+		}
+		path, err := promote(m.vault, c, m.pending, m.picked, time.Now())
+		if err != nil {
+			m.problem = err.Error()
+			return m, nil
+		}
+		m.stage = stageList
+		m.query.Blur()
+		return m, tea.ExecProcess(editorCommand(path), func(err error) tea.Msg {
+			return editorDoneMsg{capture: c, path: path, err: err}
+		})
+	case "tab":
+		if m.pick < len(m.cands) {
+			m.picked = toggleLink(m.picked, m.cands[m.pick].Slug)
+		}
+		return m, nil
+	case "up", "ctrl+k":
+		if m.pick > 0 {
+			m.pick--
+		}
+		return m, nil
+	case "down", "ctrl+j":
+		if m.pick < len(m.cands)-1 {
+			m.pick++
+		}
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.query, cmd = m.query.Update(msg)
+	m.cands = rankTargets(m.targets, m.query.Value())
+	if m.pick >= len(m.cands) {
+		m.pick = max(0, len(m.cands)-1)
+	}
+	return m, cmd
+}
+
+func (m *reviewModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch m.stage {
+	case stageTitle:
+		return m.titleKey(msg)
+	case stageLinks:
+		return m.linksKey(msg)
 	}
 	if m.confirm {
 		switch msg.String() {
@@ -346,7 +434,8 @@ func (m *reviewModel) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.idx = max(0, len(m.items)-1)
 	case "p":
 		if c, ok := m.current(); ok {
-			m.typing = true
+			m.stage = stageTitle
+			m.claim, m.claimOK = "", false
 			m.input.SetValue("")
 			m.input.Placeholder = c.Title
 			m.input.Focus()
@@ -387,8 +476,11 @@ func (m *reviewModel) frame() string {
 }
 
 func (m *reviewModel) screen() string {
-	if m.typing {
+	switch m.stage {
+	case stageTitle:
 		return m.prompt()
+	case stageLinks:
+		return m.linkFrame()
 	}
 	inner := clamp(m.w-8, 40, 400)
 	// The box fills the layer the action opened: head, list, and footer sit in
@@ -447,6 +539,10 @@ func (m *reviewModel) footer(inner int) string {
 func (m *reviewModel) prompt() string {
 	inner := clamp(m.w-8, 40, 400)
 	c, _ := m.current()
+	hint := "enter pick links · esc back"
+	if m.claim != "" {
+		hint = m.claim
+	}
 	lines := []string{
 		m.paint(green, "PROMOTE"),
 		"",
@@ -454,19 +550,76 @@ func (m *reviewModel) prompt() string {
 		"",
 		fit(m.input.View(), inner),
 		"",
-		m.paint(muted, "enter create in 2_knowledge/ · esc back"),
+		m.paint(muted, fit(hint, inner)),
 	}
 	box := lg.NewStyle().Border(lg.RoundedBorder()).BorderForeground(m.light(green)).
 		Padding(0, 1).Render(strings.Join(lines, "\n"))
 	return lg.NewStyle().Padding(1, 2).Render(box)
 }
 
+// linkFrame is the second half of a promotion: the notes this insight can point
+// at. Tab takes a note, Enter creates the note with what was taken, and Esc goes
+// back to the words.
+func (m *reviewModel) linkFrame() string {
+	inner := clamp(m.w-8, 40, 400)
+	// Row budget: the box holds the head, a blank, the list, a blank, the filter,
+	// and the hints, then its top and bottom border.
+	rows := max(1, m.h-7)
+	taken := make(map[string]bool, len(m.picked))
+	for _, l := range m.picked {
+		taken[l.Slug] = true
+	}
+	head := padRight(m.paint(green, "LINKS"), inner-6) + m.paint(muted, fmt.Sprintf("%d", len(m.picked)))
+	var list []string
+	if len(m.cands) == 0 {
+		list = append(list, m.paint(muted, "no note matches."))
+	}
+	start := clamp(m.pick-rows/2, 0, max(0, len(m.cands)-rows))
+	for i := start; i < start+rows && i < len(m.cands); i++ {
+		t := m.cands[i]
+		mark := "  "
+		if taken[t.Slug] {
+			mark = "▪ "
+		}
+		title := t.Title
+		if budget := inner - 8; len([]rune(title)) > budget {
+			title = string([]rune(title)[:budget-1]) + "…"
+		}
+		if i == m.pick {
+			list = append(list, m.paint(green, "▌"+mark)+lg.NewStyle().Foreground(m.light(ink)).Bold(true).Render(title))
+		} else {
+			list = append(list, " "+mark+m.paint(muted, title))
+		}
+	}
+	for len(list) < rows {
+		list = append(list, "")
+	}
+	lines := append([]string{head, ""}, list...)
+	lines = append(lines, "", fit(m.query.View(), inner),
+		m.paint(muted, fit("tab pick · enter create · esc back", inner)))
+	box := lg.NewStyle().Border(lg.RoundedBorder()).BorderForeground(m.light(mid)).
+		Padding(0, 1).Render(strings.Join(lines, "\n"))
+	return lg.NewStyle().Padding(0, 2).Render(box)
+}
+
 // runReview opens the processing pass. render prints one frame instead, which is
-// how the layout is judged without a terminal.
-func runReview(vault string, render bool, width, height int) (*reviewModel, error) {
+// how the layout is judged without a terminal. A promoteTitle opens the frame at
+// the link picker, which is the stage the frame tests need to see.
+func runReview(vault string, render bool, width, height int, promoteTitle string) (*reviewModel, error) {
 	m := newReview(vault)
 	m.w, m.h = width, height
 	m.refresh()
+	if targets, err := loadTargets(vault); err != nil {
+		m.problem = err.Error()
+	} else {
+		m.targets = targets
+	}
+	if promoteTitle != "" {
+		m.pending = promoteTitle
+		m.stage = stageLinks
+		m.cands = rankTargets(m.targets, "")
+		m.query.Focus()
+	}
 	if render {
 		fmt.Println(m.frame())
 		return m, nil

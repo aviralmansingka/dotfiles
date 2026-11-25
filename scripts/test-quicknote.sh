@@ -30,6 +30,15 @@ grep -q '^captured: ' "$note"
 # The processing pass draws the queue; its promote path is covered by go test.
 "$build_dir/quicknote" review --vault "$vault" --render --width 80 --height 18 | grep -q 'REVIEW'
 
+# The link picker is the second half of a promotion: it draws the notes the new
+# insight can point at, in the layer Rex cuts for the pass.
+mkdir -p "$vault/2_knowledge"
+printf '%s\n' "# Amdahl's law bounds the speedup" > "$vault/2_knowledge/amdahls-law.md"
+"$build_dir/quicknote" review --vault "$vault" --render --promote "Reading widely comes first" \
+  --width 78 --height 16 | grep -q 'LINKS'
+"$build_dir/quicknote" review --vault "$vault" --render --promote "Reading widely comes first" \
+  --width 78 --height 16 | grep -q "Amdahl's law bounds the speedup"
+
 # The Rex chords must stay wired to the binary they launch.
 grep -q 'rex.bind("cmd+shift+n", "capture_note")' "$repo_root/rex/.config/rex/notes.lua"
 grep -q 'rex.bind("cmd+shift+p", "process_notes")' "$repo_root/rex/.config/rex/notes.lua"

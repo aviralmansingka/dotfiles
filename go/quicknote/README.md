@@ -22,9 +22,10 @@ quicknote review            # the processing pass, newest thought last
 
 - `j`/`k` move, `p` promote, `s` snooze 3 days, `S` snooze 14, `d` delete, `o` open
   the capture, `q` quit.
-- **Promote** asks for the insight in your own words, writes
-  `2_knowledge/<insight>.md` (`tags: [atomic]`, empty `up:`, the capture kept in a
-  `> [!CAPTURE]` callout), opens it in `$EDITOR`, then retires the capture.
+- **Promote** asks for the insight in your own words, then for the notes that
+  insight points at, writes `2_knowledge/<insight>.md` (`tags: [atomic]`, empty
+  `up:`, a `## Links` section, the capture kept in a `> [!CAPTURE]` callout),
+  opens it in `$EDITOR`, then retires the capture.
 - **Snooze** writes `review_due:` into the capture's frontmatter; the queue hides
   it until that day.
 - **Delete** retires a capture you have already acted on.
@@ -35,6 +36,39 @@ thought look new.
 
 Rex binds `Cmd+Shift+P` to the same pass in a floating layer cut to 78x16 cells;
 the list fills that box, with the footer on its last row.
+
+## Linking while you promote
+
+A note that points at nothing is a note you will never find again. Promote asks
+two things, in order:
+
+1. **The insight, as a claim.** A title without a verb, or a question, is a topic
+   wearing a heading. The box warns once: press `Enter` again to keep what you
+   typed, or rewrite it. The rule is Matuschak's — a title is an API, so name what
+   the note asserts.
+2. **The notes it points at.** The `LINKS` list offers every note in
+   `2_knowledge`, matched on heading, aliases, and filename. Type to filter,
+   `↑`/`↓` (or `Ctrl+K`/`Ctrl+J`) to move, `Tab` to take and untake, `Enter` to
+   create the note, `Esc` back to the words.
+
+Links land in their own section, above the capture, so the capture stays
+provenance:
+
+```md
+# Reading widely comes before writing well
+
+## Links
+
+- [[amdahls-law]] — this bounds what the rewrite can win
+- [[gustafsons-law]]
+```
+
+Each bullet can carry a reason after an em dash. It is optional: the editor opens
+on the new note, so a bare bullet can gain its reason there. Picking nothing omits
+the whole section.
+
+Frame the picker without a terminal with `review --render --promote "<insight>"`,
+which draws that stage at `--width`/`--height`.
 
 ## What a capture writes
 
@@ -89,6 +123,8 @@ nothing sits at a different value than the pane around it.
 | `cmd/quicknote/note.go` | slug, note body, write, duplicate check, JSON result |
 | `cmd/quicknote/main.go` | argument parsing, capture path, UI dispatch |
 | `cmd/quicknote/ui.go` | bubbletea model, card, tag chips, focus lift |
+| `cmd/quicknote/review.go` | the processing pass: queue, snooze, promote |
+| `cmd/quicknote/links.go` | link targets, picker ranking, claim check, `Links` block |
 
 Build and install with `./scripts/install-quicknote`.
 
@@ -112,4 +148,6 @@ After the dotfiles change is live, `rex config reload` installs the chord.
 ## Next step
 
 Spaced repetition: a `review_due` cadence that brings snoozed captures and atomic
-notes back on schedule, instead of one fixed 3-day snooze.
+notes back on schedule, instead of one fixed 3-day snooze. The atomic notes that
+still point at nothing are the other queue: 101 of the 158 notes in this vault had
+no outgoing link when the picker was written.

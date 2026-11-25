@@ -48,6 +48,7 @@ Capture flags:
 Review flags:
   --vault DIR       vault root
   --render          print one frame and exit (--width, --height)
+  --promote TEXT    open at the link picker with this title (for --render)
 
 UI flags:
   --dry-run         show what would be saved, then exit
@@ -127,6 +128,7 @@ func cmdReview(args []string) int {
 	fs.SetOutput(os.Stderr)
 	vault := fs.String("vault", "", "vault root")
 	render := fs.Bool("render", false, "print one frame and exit")
+	promoteTitle := fs.String("promote", "", "open at the link picker with this title (for --render)")
 	width := fs.Int("width", 80, "frame width for --render")
 	height := fs.Int("height", 24, "frame height for --render")
 	if err := fs.Parse(args); err != nil {
@@ -135,7 +137,7 @@ func cmdReview(args []string) int {
 	if !*render && !terminal(os.Stdin) {
 		return check(fmt.Errorf("review needs a terminal; add --render for one frame"))
 	}
-	final, err := runReview(vaultDir(*vault), *render, *width, *height)
+	final, err := runReview(vaultDir(*vault), *render, *width, *height, *promoteTitle)
 	if err != nil {
 		return check(err)
 	}
