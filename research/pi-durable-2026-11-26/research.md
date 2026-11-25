@@ -50,9 +50,25 @@ N07 --> N08
 | N03 | Which storage and runtime adapters ship, and which are absent? | N01 | Adapter matrix with conformance evidence, plus named missing adapters and runtimes | n03-adapters-durable | done |
 | N04 | What channels carry runtime progress to a host, in what shape, and what replaced the removed event stream? | N01, N02 | Channel inventory with signatures and payload shapes, the "render state, not events" decision, and its consequences for a renderer | n04-event-flow-durable | done |
 | N05 | Does pi-durable ship a wire protocol, server, or RPC for a remote UI? | N04 | Explicit yes/no with evidence, and a list of what a remote UI must build itself | n05-transport-durable | done |
-| N06 | Which UI surfaces exist today, on which versions, and are any wired to pi-durable 1.6.x? | N04, N05 | Table of surfaces with repo link, package version, consumed shape, and last activity | n06-ui-surfaces-durable | planned |
-| N07 | What is actually absent or immature, beyond rendering? | N02, N03, N04, N05, N06 | Evidence-backed gap list with severity and a source for each gap | n07-gaps-durable | planned |
-| N08 | Does the evidence support H1? | N07 | Explicit verdict (supported, partly, refuted) with the reasoning that follows from the briefs | n08-verdict-durable | planned |
+| N06 | Which UI surfaces exist today, on which versions, and are any wired to pi-durable 1.6.x? | N04, N05 | Table of surfaces with repo link, package version, consumed shape, and last activity | n06-ui-surfaces-durable | done |
+| N07 | What is actually absent or immature, beyond rendering? | N02, N03, N04, N05, N06 | Evidence-backed gap list with severity and a source for each gap | n07-gaps-durable | done |
+| N08 | Does the evidence support H1? | N07 | Explicit verdict (supported, partly, refuted) with the reasoning that follows from the briefs | n08-verdict-durable | done |
+
+## Artifacts
+
+- `nodes/N01.md` to `nodes/N08.md` hold the full evidence briefs.
+- `nodes/CONTEXT.md` holds the shared facts and the rules given to the researchers.
+- `src/pi-durable/` holds the extracted npm tarball used for every package claim.
+
+## Headline
+
+The claim is **partly** true. pi-durable 1.6.1 gives a host a complete, typed, JSON-safe
+conversation state, and no first-party renderer for 1.6.x exists as a package. But the state is
+**not** an event stream: version 1.5.0 removed the event API and made the committed view the
+only channel. And a renderer is not the last gap. Transport, user identity, a 1.6.1-clean SQL
+backend, and backup with deletion all remain after a UI. Nine gaps rank above the renderer.
+For a local single-user host, the missing renderer is the main gap. For a hosted or serverless
+host, it is not.
 
 ## Lessons
 
@@ -65,8 +81,9 @@ It gives a host a durable agent harness. It renders nothing.
 package that the host installs next to this one. A *monorepo* holds many packages in one Git
 repository.
 
-**Result.** The package publishes 20 export entries: the root, `./env`, `./codemode`,
-`./tool-search`, `./tools`, four `./images` entries, eight storage entries, and `./testing`.
+**Result.** The package publishes 20 export entries. They are the root, `./env` and
+`./env/node`, `./codemode`, `./tool-search`, `./tools`, four `./images` entries, eight storage
+entries, `./testing`, and `./package.json`.
 The root exports `Harness`, `createRegistry`, `defineTask`, `defineExtension`, `defineTool`,
 `createSession`, and `ConversationTranscript`. Ten types carry the model: Harness, Session,
 Conversation, Entry, Document, Task, Submission, Extension, Registry, and Agent.
@@ -145,7 +162,7 @@ host" is already done.
 
 **Result.** Seven storage entry points ship: memory, IndexedDB, portable JSONL, JSONL for
 Node, portable SQLite, SQLite for Node, and SQLite for Durable Objects. `StoreStorage` adds
-one bridge into a Chord store. All of them pass the same contract.
+one bridge into a Chord store. The same conformance suite covers each of them.
 
 **Mechanism.** `Storage` has 18 members, 17 of them required. The central one is
 `commit(batches, receive, context)`: one call, one backend transaction, one `seq` per batch.
@@ -251,3 +268,141 @@ its own JSONL session format, which carries no view and no documents.
 
 Next, N06 shows which UI surfaces exist today.
 Evidence: [`nodes/N05.md`](nodes/N05.md), `README.md:590`, chord 1.6.1 `README.md`.
+
+## N06: Which UI surfaces exist today
+
+**Question.** Which renderers exist for a pi-durable session, on which versions, and does a
+first-party one exist as a package?
+
+**Result.** No first-party renderer exists as a package. One exists as private source:
+`apps/p2`, pinned to `pi-durable@1.6.1`, with a React web client, a pi-tui terminal client,
+and a Discord host. Its manifest says `"private": true` and its README says: "**p2 is a
+prototype. It will be gone soon.** … Do not build on it". `npm view @earendil-works/p2`
+returns 404.
+
+**Size.** `apps/p2` holds 1,263 files. `src/web/` has 88 files and 35 `.tsx`, including
+`Chat.tsx` at 30 KB and `activity/model.ts` at 34 KB. `src/tui/` has 35 files.
+
+**It draws the durable state itself.** `src/web/history.ts:1` says: "Durable's
+`ConversationTranscript` over the window the conversation's `Chat.view` holds." It imports
+`ConversationView`, `TranscriptItem`, and `TranscriptView` from the package.
+`src/web/transcript.ts:1` says: "Pure display model of a Durable view: tool calls are joined
+with their live slot and result entry."
+
+**The successor has no page.** `apps/p3/README.md`: "The successor of p2 … built in slices; so
+far it is headless (no page yet)." The only vendor text about a UI is an archived sketch,
+`apps/p3/docs/archive/apps/web-ui-direction.html`, marked "An idea sketch, not a spec".
+
+**The published surfaces.** One library renders durable views:
+`@usecontextlayer/pi-durable-assistant-ui@2.2.0`. It is an adapter to `@assistant-ui/react`
+that consumes `watch`, `ConversationTranscript`, and chord operations over SSE. Its own
+documentation pins "the verified 1.5.0 release". Nine further dependents draw state with their own code, in three patterns: a raw view plus
+chord operations (`pi-durable-cloudflare`, `HazAT/ultimate`), a server-side projection
+(`pi-pocket`, `disler/durable-pi`), or a read of the stored state (`durable-lens`, vercel
+`pi-view`). None of them ships a component.
+
+**Why the old UI cannot be reused.** `@earendil-works/pi-web-ui` stays on major version 0:
+0.75.3, published 2026-05-18, with no code change since. It speaks `AgentEvent` from
+pi-agent-core, and version 1.5.0 removed that event API from pi-durable. It also compiles
+against `pi-ai@0.75.3`, so its `Message` type differs from 1.6. `@earendil-works/pi-tui`
+1.6.1 ships widgets only: no message type and no transcript renderer.
+
+**Limits.** p2 is not a dependency, and its maintainers forbid building on it. The assistant-ui
+adapter was verified against 1.5.0, not 1.6.1. `durable-lens` supports stores up to 1.4.0.
+
+Next, N07 collects what is missing beyond the renderer.
+Evidence: [`nodes/N06.md`](nodes/N06.md), `apps/p2/README.md`, npm `pi-web-ui` metadata.
+
+## N07: What else is missing
+
+**Question.** Apart from a renderer, what is absent or immature? This node tests the word
+"only" in the claim.
+
+**Method.** The node reads the six briefs and makes six new checks. It counts README headings
+against the table of contents. It greps the package for `backup`, `restore`, `vacuum`,
+`principal`, `tenant`, `audit`, `quota`, `deleteConversation`, and `maxCost`. It reads the 1.0
+launch post and the vendor's post list. It reads one dependent's manifest.
+
+**Result.** Nine gaps block a serious host. They fall in four groups.
+
+*Transport and access.* There is no wire contract (N05). There is no identity, permission,
+tenancy, or audit: `principal`, `tenant`, and `audit` get zero hits, and `signal()` checks no
+sender. One process writes a storage at a time, with no cross-process lock.
+
+*Storage and environment.* No SQL backend satisfies the 1.6.1 contract: one still declares
+`commit(writes, context)`, and the other returns the untagged result. Only `NodeExecutionEnv`
+exists, and it has 27 required members.
+
+*Operations.* Nothing backs up, restores, exports, or compacts a store. Nothing deletes or
+archives a conversation, though the third-party adapter names that gap. `pi.usage` records
+spend, and nothing caps it.
+
+*Stability and documentation.* The package published 22 versions in 67 days with 67 breaking
+bullets. No public app runs on 1.6.1; the flagship example is on 1.5.2. The 1.0 launch post
+still teaches `viewState()`, `documentState()`, and `watchEvents()`, which 1.5.0 removed. The
+README table of contents still links an "Agent Events (Experimental)" section that no longer
+exists. The 48 examples live in the repository, not in the npm artifact.
+
+**If a complete UI appeared tomorrow.** A local single-user app ships today: SQLite plus the
+Node environment is enough. Its problems are friction, not blockers. A hosted multi-user web
+app still has four blockers that a UI cannot fix: transport, user identity, a compliant SQL
+backend, and backup plus deletion. A serverless host hits the environment wall first: in a
+Worker the tools return error results until someone writes an `ExecutionEnv`, and a missing
+alarm strands every sleeping task.
+
+**Design or neglect?** Some absences are design. The package states no event journal, no CRDT,
+no exactly-once side effects, and one writer per storage. Transport absence fits the layering,
+because chord ships HTTP and pi-durable imports none of it, but no vendor statement calls it a
+non-goal. So treat that as an inference. Backup, deletion, a cost cap, an IndexedDB upgrade
+branch, and the stale documentation have no design excuse.
+
+**Limits.** Severity is judged for a serious host; a hobby app downgrades most of the table.
+Serverless conclusions rest on absent adapters, not on a failed run.
+
+Next, N08 tests the claim itself.
+Evidence: [`nodes/N07.md`](nodes/N07.md).
+
+## N08: The verdict on the claim
+
+**Question.** Does the evidence support the claim: "the only thing pi-durable is missing is a
+UI for the harness to display the events"?
+
+**Verdict: PARTLY SUPPORTED.** The defensible sentence is shorter. For a local single-user
+host, the package already gives a host a complete, typed, JSON-safe committed state, and no
+first-party renderer exists for 1.6.x. That part of the claim holds. But two words fail.
+
+**"Events" fails.** Version 1.5.0 removed `watchEvents()`, `AgentEvent`, `AgentEventStream`,
+and the rest. The spec states the replacement at §9.3: "A renderer renders the newest value; it
+never assembles state from a stream of events." A host displays a `ConversationView` plus chord
+operations. The word "events" most likely comes from the 1.0 launch post, which still teaches
+`viewState()`, `documentState()`, and `watchEvents()` — three APIs that 1.5.0 deleted.
+
+**"Only" fails.** A renderer ranks tenth of sixteen gaps. Nine rank above it: transport, user
+identity, a compliant SQL backend, one writer with no lock, no backup or export, breaking
+changes, no non-Node environment, a launch post that does not compile, and no conversation
+deletion. A complete UI leaves every one of those in place.
+
+**The fair reading.** Sit in the runtime author's chair. `pi.live` carries the run, the streamed
+partial, the retry state, one slot per tool call, the nested calls, and ten `runFailure`
+reasons. `ConversationTranscript` gives merge, gap fill, and resume. The value is plain JSON.
+`apps/p2` draws only that, at exactly 1.6.1. So "just draw it" is a fair summary of the state
+work.
+
+**What the fair reading misses.** "Just draw it" was about 4,700 lines in first-party hands:
+802 lines of activity model, 581 of transcript display model, 2,104 of web renderers, and 1,220
+of TUI. The vendor that wrote it says "Do not build on it", and its successor is headless. Four
+public hosts each invented their own wire framing. No storage adapter passes the current
+contract. No user identity exists at all. And six facts a renderer wants are outside the view,
+so drawing them needs `getTask`, `submission()`, and `onReport`.
+
+**What would change the verdict.** A published first-party renderer on 1.6.x. One documented
+wire contract with two independent consumers. A SQL backend that passes the conformance suite at
+1.6.1, plus deletion, export, and any `principal` concept. Each of those would remove a blocker
+that a UI cannot.
+
+**Confidence: high.** The two refutations rest on absence checks in shipped code, CHANGELOG
+lines, npm metadata, and nine public repositories. The one soft edge is whether transport
+absence is deliberate layering. No vendor statement says so, so the report marks it an
+inference.
+
+Evidence: [`nodes/N08.md`](nodes/N08.md), and briefs N01 to N07.
