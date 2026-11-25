@@ -269,6 +269,49 @@ func (a *AWS) CreateHost(ctx context.Context, req application.ProviderCreateRequ
 	return created, nil
 }
 
+// StatusHost reports whether this host's state object still holds an instance. It
+// reads the same per-host state the create and destroy use, and it writes nothing:
+// it runs an init and an output, both read-only.
+//
+// A state object with no instance is reported as not existing rather than as an
+// error, because that is the normal answer for a host that was never applied or
+// has already been destroyed.
+func (a *AWS) StatusHost(ctx context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+	plan, err := a.resolve(req.Name, req.Provider, req.Profile, req.Region, req.Size, "", 0, nil)
+	if err != nil {
+		return application.ProviderResourceStatus{}, err
+	}
+
+	unlock := a.locker.Lock(hostLockKey(plan.name), stateLockKey(plan.stateKey))
+	defer unlock()
+
+	if err := a.prepare(plan); err != nil {
+		return application.ProviderResourceStatus{}, err
+	}
+	if _, err := a.invoke(ctx, plan, a.initArgs(plan)...); err != nil {
+		return application.ProviderResourceStatus{}, err
+	}
+	existing, recorded, err := a.recorded(ctx, plan)
+	if err != nil {
+		return application.ProviderResourceStatus{}, err
+	}
+	if !recorded {
+		return application.ProviderResourceStatus{Exists: false}, nil
+	}
+	// The state names a different instance than the record does. Reporting it as
+	// this host's resource would let a teardown destroy somebody else's machine.
+	if req.ResourceID != "" && existing.ResourceID != req.ResourceID {
+		return application.ProviderResourceStatus{}, fmt.Errorf(
+			"terraform: host %q state holds instance %q, not the recorded %q; refusing to report it as this host's resource",
+			plan.name, existing.ResourceID, req.ResourceID)
+	}
+	return application.ProviderResourceStatus{
+		Exists:         true,
+		ResourceID:     existing.ResourceID,
+		PrivateAddress: existing.PrivateAddress,
+	}, nil
+}
+
 // DestroyHost destroys only this host's resources.
 //
 // The destroy opens the state object keyed by this host's name and nothing

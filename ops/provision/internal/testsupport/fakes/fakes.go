@@ -87,11 +87,12 @@ func (l *Logger) Lines() []string {
 // Orchestrator is an in-memory job orchestrator. Starts are counted per job ID,
 // so a test can prove duplicate requests created exactly one durable operation.
 type Orchestrator struct {
-	mu       sync.Mutex
-	starts   map[string]int
-	views    map[string]application.JobView
-	order    []string
-	startErr error
+	mu          sync.Mutex
+	starts      map[string]int
+	views       map[string]application.JobView
+	order       []string
+	deleteSpecs []application.DeleteHostSpec
+	startErr    error
 }
 
 // NewOrchestrator builds an empty fake orchestrator.
@@ -118,7 +119,18 @@ func (o *Orchestrator) StartCreateHost(_ context.Context, spec application.Creat
 
 // StartDeleteHost implements application.JobOrchestrator.
 func (o *Orchestrator) StartDeleteHost(_ context.Context, spec application.DeleteHostSpec) (application.JobRef, error) {
+	o.mu.Lock()
+	o.deleteSpecs = append(o.deleteSpecs, spec)
+	o.mu.Unlock()
 	return o.start("delete", spec.JobID, spec.HostID, domain.JobKindDelete, domain.StageQueued, domain.JobQueued)
+}
+
+// DeleteSpecs returns every teardown spec that reached the orchestrator, so a test
+// can assert what a delete job was actually handed.
+func (o *Orchestrator) DeleteSpecs() []application.DeleteHostSpec {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return append([]application.DeleteHostSpec(nil), o.deleteSpecs...)
 }
 
 func (o *Orchestrator) start(_ string, jobID, hostID string, kind domain.JobKind, stage domain.Stage, state domain.JobState) (application.JobRef, error) {

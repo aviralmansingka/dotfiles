@@ -11,6 +11,7 @@ import (
 
 	httpapi "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/http"
 	application "github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -396,5 +397,96 @@ func TestOwnershipIsEnforced(t *testing.T) {
 	otherJob := api.do(http.MethodGet, "/v1/jobs/"+jobID, "Bearer "+fakes.OtherToken, "", "")
 	if otherJob.Code != http.StatusNotFound {
 		t.Fatalf("cross-client job read: status = %d, want 404", otherJob.Code)
+	}
+}
+
+// TestTombstonedHostIsVisibleWithItsIdentifiersAndCleanupOutcomes is the operator
+// surface a teardown check depends on: after a delete, GET /v1/hosts/{id} names the
+// provider instance, the tailnet device, the tombstone, and the steps that did not
+// finish. Without those fields an operator has nothing to check against AWS,
+// Tailscale, or Bao.
+func TestTombstonedHostIsVisibleWithItsIdentifiersAndCleanupOutcomes(t *testing.T) {
+	t.Parallel()
+	api := newAPI(t)
+	ctx := context.Background()
+
+	created := api.authorized(http.MethodPost, "/v1/hosts", idemKey, validCreateBody)
+	if created.Code != http.StatusAccepted {
+		t.Fatalf("create status = %d, want 202", created.Code)
+	}
+	hostID, _ := decodeObject(t, created)["host_id"].(string)
+	if hostID == "" {
+		t.Fatalf("create response carried no host id: %s", created.Body.String())
+	}
+
+	// The device step fails: the record must say so, and the rest must still have run.
+	if _, err := api.fakes.Store.UpdateHost(ctx, hostID, func(h *domain.Host) error {
+		h.MarkResource("i-0123456789abcdef0", "10.99.1.10", api.fakes.Clock.Now())
+		h.MarkDevice("n1234CNTRL", api.fakes.Clock.Now())
+		h.MarkCleanupIncomplete([]domain.CleanupStep{domain.CleanupRemoveDevice}, api.fakes.Clock.Now())
+		return nil
+	}); err != nil {
+		t.Fatalf("record a partial teardown: %v", err)
+	}
+
+	partial := api.authorized(http.MethodGet, "/v1/hosts/"+hostID, "", "")
+	if partial.Code != http.StatusOK {
+		t.Fatalf("get status = %d, want 200", partial.Code)
+	}
+	payload := decodeObject(t, partial)
+	if payload["resource_id"] != "i-0123456789abcdef0" {
+		t.Fatalf("resource_id = %v, want the instance id", payload["resource_id"])
+	}
+	if payload["device_id"] != "n1234CNTRL" {
+		t.Fatalf("device_id = %v, want the device id", payload["device_id"])
+	}
+	if payload["tombstone"] != nil {
+		t.Fatalf("a partially torn-down host reported a tombstone: %v", payload["tombstone"])
+	}
+	pending, _ := payload["pending_cleanup"].([]any)
+	if len(pending) != 1 || pending[0] != string(domain.CleanupRemoveDevice) {
+		t.Fatalf("pending_cleanup = %v, want the device step", payload["pending_cleanup"])
+	}
+
+	// A completed teardown replaces that with a tombstone and drops the address.
+	if _, err := api.fakes.Store.UpdateHost(ctx, hostID, func(h *domain.Host) error {
+		return h.CompleteTeardown(domain.NewTombstone(
+			api.fakes.Clock.Now(), domain.CleanupSteps, nil, 2))
+	}); err != nil {
+		t.Fatalf("tombstone the host: %v", err)
+	}
+	done := decodeObject(t, api.authorized(http.MethodGet, "/v1/hosts/"+hostID, "", ""))
+	if done["state"] != string(domain.HostStateDeleted) {
+		t.Fatalf("state = %v, want deleted", done["state"])
+	}
+	if done["pending_cleanup"] != nil {
+		t.Fatalf("pending_cleanup = %v on a completed teardown, want absent", done["pending_cleanup"])
+	}
+	if done["private_address"] != "" {
+		t.Fatalf("private_address = %v on a tombstoned host, want it cleared", done["private_address"])
+	}
+	tombstone, ok := done["tombstone"].(map[string]any)
+	if !ok {
+		t.Fatalf("a completed teardown reported no tombstone: %s", partial.Body.String())
+	}
+	if tombstone["policy"] != domain.TombstonePolicy {
+		t.Fatalf("tombstone policy = %v, want the sanitization rule", tombstone["policy"])
+	}
+	if revoked, _ := tombstone["token_accessors_revoked"].(float64); revoked != 2 {
+		t.Fatalf("token_accessors_revoked = %v, want 2", tombstone["token_accessors_revoked"])
+	}
+	released, _ := tombstone["released"].([]any)
+	if len(released) != len(domain.CleanupSteps) {
+		t.Fatalf("released = %v, want every step", tombstone["released"])
+	}
+
+	// A repeat delete is a read: 202 with the same job, no new operation.
+	before := api.fakes.Orchestrator.TotalStarts()
+	repeat := api.authorized(http.MethodDelete, "/v1/hosts/"+hostID, "", "")
+	if repeat.Code != http.StatusAccepted {
+		t.Fatalf("repeat delete status = %d, want 202: %s", repeat.Code, repeat.Body.String())
+	}
+	if after := api.fakes.Orchestrator.TotalStarts(); after != before {
+		t.Fatalf("a repeat delete against a tombstoned host started %d operation(s), want none", after-before)
 	}
 }

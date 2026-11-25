@@ -31,6 +31,14 @@ func (*Stub) CreateHost(_ context.Context, _ application.ProviderCreateRequest) 
 	}
 }
 
+// StatusHost implements application.HostProvider by refusing.
+func (*Stub) StatusHost(_ context.Context, _ application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+	return application.ProviderResourceStatus{}, &domain.NotImplementedError{
+		Component: "terraform aws provider stub",
+		Step:      "compose the real AWS provider (terraform.NewAWS) instead",
+	}
+}
+
 // DestroyHost implements application.HostProvider by refusing.
 func (*Stub) DestroyHost(_ context.Context, _ application.ProviderDestroyRequest) error {
 	return &domain.NotImplementedError{

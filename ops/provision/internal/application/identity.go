@@ -65,18 +65,74 @@ type WrappedSecretID struct {
 	TTL time.Duration
 }
 
+// TokenAccessorInfo is what OpenBao reports about one issued token, without the
+// token value. Policies is the only field this service decides on.
+type TokenAccessorInfo struct {
+	Accessor string
+	Policies []string
+}
+
+// RevocationReport is the outcome of one full host revocation. Every field
+// describes something this call actually did, so a caller can tell "revoked" from
+// "there was nothing to revoke" without reading a log.
+type RevocationReport struct {
+	// TokensRevoked is how many already-issued token accessors this call
+	// invalidated. It is a count: no accessor or token value is ever returned.
+	TokensRevoked int
+	// TokensRemaining is how many accessors still carry this host's policy when
+	// the call finished. A non-zero value is a partial revocation and the caller
+	// must report it as incomplete.
+	TokensRemaining int
+	// CredentialsDeleted records that the AppRole (and with it every SecretID)
+	// is gone, so no future login can succeed.
+	CredentialsDeleted bool
+	// PolicyDeleted records that the host's ACL policy is gone.
+	PolicyDeleted bool
+}
+
+// TokenRevocation is one token-revocation pass.
+type TokenRevocation struct {
+	Revoked   int
+	Remaining int
+}
+
+// CredentialRevocation is one login-credential revocation pass.
+type CredentialRevocation struct {
+	// RoleDeleted records that the AppRole is gone, which also deletes every
+	// SecretID belonging to it.
+	RoleDeleted bool
+	// PolicyDeleted records that the host's ACL policy is gone.
+	PolicyDeleted bool
+}
+
 // IdentityBackend is the OpenBao mechanics port: policies, AppRoles,
-// response-wrapped SecretIDs. It is implemented by the openbao adapter and by an
-// in-process fake in tests.
+// response-wrapped SecretIDs, and token revocation. It is implemented by the
+// openbao adapter and by an in-process fake in tests.
 //
 // EnsureAppRole must refuse a role whose claim belongs to another host
 // (domain.RoleClaimError) and must be idempotent for the same host.
+//
+// The token methods exist because deleting an AppRole does not invalidate a token
+// that was already issued. OpenBao has no "revoke every token of this role"
+// endpoint, so revocation lists accessors, looks each one up, and revokes the
+// ones carrying this host's policy. ListTokenAccessors therefore needs the
+// management token to hold `sudo` on auth/token/accessors.
 type IdentityBackend interface {
 	EnsurePolicy(ctx context.Context, policy IdentityPolicy) error
 	EnsureAppRole(ctx context.Context, role IdentityRole) (IdentityRoleState, error)
 	MintWrappedSecretID(ctx context.Context, roleName string, spec IdentityWrapSpec) (WrappedSecretID, error)
 	DeleteAppRole(ctx context.Context, roleName string) error
 	DeletePolicy(ctx context.Context, name string) error
+	// ListTokenAccessors returns the accessor of every issued token. An accessor
+	// identifies a token for revocation without revealing it.
+	ListTokenAccessors(ctx context.Context) ([]string, error)
+	// LookupTokenAccessor reports the policies one accessor carries. A token that
+	// expired between listing and lookup is reported as not found, not as an
+	// error.
+	LookupTokenAccessor(ctx context.Context, accessor string) (TokenAccessorInfo, bool, error)
+	// RevokeTokenAccessor invalidates one issued token. Revoking an accessor that
+	// is already gone is success, so revocation is idempotent.
+	RevokeTokenAccessor(ctx context.Context, accessor string) error
 }
 
 // BootstrapMaterial is the out-of-band delivery of one wrapping token. It is the
@@ -253,21 +309,91 @@ func (s *IdentityService) AuthorizeHost(ctx context.Context, req AuthorizeReques
 	return nil
 }
 
-// RevokeHost removes the role and the policy. The SecretID claim goes with the
-// role: OpenBao deletes every SecretID when the AppRole is deleted.
-func (s *IdentityService) RevokeHost(ctx context.Context, req AuthorizeRequest) error {
+// RevokeTokens invalidates every already-issued token that carries this host's
+// policy and reports how many it revoked and how many remain.
+//
+// This is the step that deleting an AppRole cannot do. OpenBao keeps an issued
+// token alive until it expires; deleting the role it came from removes the ability
+// to log in again and leaves the existing session working. Revocation therefore
+// enumerates accessors, attributes each one by policy, and revokes the matches.
+//
+// The call is idempotent: a second pass finds nothing carrying the policy and
+// reports zero revoked, zero remaining.
+func (s *IdentityService) RevokeTokens(ctx context.Context, req AuthorizeRequest) (TokenRevocation, error) {
 	identity, err := domain.NewHostIdentity(req.HostID, req.Name)
 	if err != nil {
-		return err
+		return TokenRevocation{}, err
 	}
+	revoked, remaining, err := s.revokeIssuedTokens(ctx, identity)
+	if err != nil {
+		return TokenRevocation{Revoked: revoked, Remaining: remaining}, identityFailure("revoke_tokens", identity.HostID, err)
+	}
+	s.log.Info("host.identity.tokens_revoked",
+		"host_id", identity.HostID,
+		"policy", identity.PolicyName,
+		"accessors_revoked", revoked,
+		"accessors_remaining", remaining,
+	)
+	return TokenRevocation{Revoked: revoked, Remaining: remaining}, nil
+}
+
+// RevokeCredentials deletes the AppRole and the ACL policy, which is what stops
+// every future login. It deliberately does not claim to invalidate anything that
+// was already issued: the returned struct reports only what it deleted, and the
+// docs state the distinction plainly.
+//
+// The AppRole goes first: OpenBao deletes every SecretID and the ownership claim
+// with it, so an interrupted run leaves no way to log in even if the policy is
+// still present.
+func (s *IdentityService) RevokeCredentials(ctx context.Context, req AuthorizeRequest) (CredentialRevocation, error) {
+	identity, err := domain.NewHostIdentity(req.HostID, req.Name)
+	if err != nil {
+		return CredentialRevocation{}, err
+	}
+	report := CredentialRevocation{}
 	if err := s.backend.DeleteAppRole(ctx, identity.RoleName); err != nil {
-		return identityFailure("revoke_role", identity.HostID, err)
+		return report, identityFailure("revoke_role", identity.HostID, err)
 	}
+	report.RoleDeleted = true
 	if err := s.backend.DeletePolicy(ctx, identity.PolicyName); err != nil {
-		return identityFailure("revoke_policy", identity.HostID, err)
+		return report, identityFailure("revoke_policy", identity.HostID, err)
 	}
-	s.log.Info("host.identity.revoked", "host_id", identity.HostID, "role", identity.RoleName, "policy", identity.PolicyName)
-	return nil
+	report.PolicyDeleted = true
+	s.log.Info("host.identity.credentials_revoked",
+		"host_id", identity.HostID,
+		"role", identity.RoleName,
+		"policy", identity.PolicyName,
+	)
+	return report, nil
+}
+
+// revokeIssuedTokens invalidates every accessor carrying this host's policy. It
+// returns the number revoked and the number that still carry the policy
+// afterwards, so a partial revocation is reportable rather than silent.
+//
+// A token that disappears between listing and lookup is skipped: it expired, which
+// is the outcome revocation wanted. A host with no tokens is the normal case for a
+// host that never logged in, and it is not an error.
+func (s *IdentityService) revokeIssuedTokens(ctx context.Context, identity domain.HostIdentity) (revoked, remaining int, err error) {
+	accessors, err := s.backend.ListTokenAccessors(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, accessor := range accessors {
+		info, found, lookupErr := s.backend.LookupTokenAccessor(ctx, accessor)
+		if lookupErr != nil {
+			return revoked, remaining, lookupErr
+		}
+		if !found || !containsString(info.Policies, identity.PolicyName) {
+			continue
+		}
+		if revokeErr := s.backend.RevokeTokenAccessor(ctx, accessor); revokeErr != nil {
+			remaining++
+			continue
+		}
+		revoked++
+	}
+	return revoked, remaining, nil
 }
 
 // identityFailure converts a backend failure into a bounded, credential-free
@@ -298,3 +424,14 @@ func identityFailure(operation, hostID string, err error) error {
 // LoginCredentialPolicy reports the rotation policy in force, so an operator
 // command and a test read the same values the service uses.
 func (s *IdentityService) LoginCredentialPolicy() domain.LoginCredentialPolicy { return s.loginPolicy }
+
+// containsString reports whether values holds want. It is the one comparison
+// revocation needs: does this token carry the host's policy?
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}

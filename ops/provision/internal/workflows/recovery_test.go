@@ -22,6 +22,7 @@ package workflows_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -184,6 +185,25 @@ func (p *recordingProvider) DestroyHost(_ context.Context, req application.Provi
 	return nil
 }
 
+// StatusHost implements application.HostProvider: it reads what the provider
+// already holds and creates nothing.
+func (p *recordingProvider) StatusHost(_ context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	existing, ok := p.instances[req.Name]
+	if !ok {
+		return application.ProviderResourceStatus{Exists: false}, nil
+	}
+	if req.ResourceID != "" && existing.ResourceID != req.ResourceID {
+		return application.ProviderResourceStatus{}, fmt.Errorf("test provider: host %q state holds %q, not the recorded %q", req.Name, existing.ResourceID, req.ResourceID)
+	}
+	return application.ProviderResourceStatus{
+		Exists:         true,
+		ResourceID:     existing.ResourceID,
+		PrivateAddress: existing.PrivateAddress,
+	}, nil
+}
+
 func (p *recordingProvider) Allocations() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -200,9 +220,10 @@ func (p *recordingProvider) Destroys() int {
 // case, so a test can prove readiness was written by a run in which authorization
 // actually ran.
 type countingAuthorizer struct {
-	inner application.HostAuthorizer
-	mu    sync.Mutex
-	calls int
+	inner       application.HostAuthorizer
+	mu          sync.Mutex
+	calls       int
+	revocations int
 }
 
 var _ application.HostAuthorizer = (*countingAuthorizer)(nil)
@@ -214,8 +235,25 @@ func (c *countingAuthorizer) AuthorizeHost(ctx context.Context, req application.
 	return c.inner.AuthorizeHost(ctx, req)
 }
 
-func (c *countingAuthorizer) RevokeHost(ctx context.Context, req application.AuthorizeRequest) error {
-	return c.inner.RevokeHost(ctx, req)
+func (c *countingAuthorizer) RevokeTokens(ctx context.Context, req application.AuthorizeRequest) (application.TokenRevocation, error) {
+	c.mu.Lock()
+	c.revocations++
+	c.mu.Unlock()
+	return c.inner.RevokeTokens(ctx, req)
+}
+
+func (c *countingAuthorizer) RevokeCredentials(ctx context.Context, req application.AuthorizeRequest) (application.CredentialRevocation, error) {
+	c.mu.Lock()
+	c.revocations++
+	c.mu.Unlock()
+	return c.inner.RevokeCredentials(ctx, req)
+}
+
+// Revocations reports how many revocation calls crossed the port.
+func (c *countingAuthorizer) Revocations() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.revocations
 }
 
 func (c *countingAuthorizer) Calls() int {
@@ -522,9 +560,13 @@ func TestRecoveryAfterCrashBetweenAuthorizationAndReady(t *testing.T) {
 }
 
 // TestTeardownRefusesAmbiguousOwnership is the negative half of reconciliation: a
-// teardown whose record names no provider resource is refused permanently, and no
-// destroy is attempted. Ambiguity is an operator decision, not an automatic
-// deletion.
+// teardown whose record names no provider resource destroys nothing. Ambiguity is an
+// operator decision, not an automatic deletion.
+//
+// It also pins the reporting rule: the other cleanup steps still run (a token that
+// can be revoked should be revoked whatever the provider record says), the
+// terraform step is reported incomplete with the reason, and the record is not
+// tombstoned.
 func TestTeardownRefusesAmbiguousOwnership(t *testing.T) {
 	t.Parallel()
 	fixture := newRecoveryFixture(t, faultSpec{})
@@ -534,7 +576,8 @@ func TestTeardownRefusesAmbiguousOwnership(t *testing.T) {
 	env := suite.NewTestWorkflowEnvironment()
 	env.SetTestTimeout(testEnvTimeout)
 	env.RegisterWorkflow(workflows.DeleteHostWorkflow)
-	env.RegisterActivity(fixture.activities.RevokeHostAccess)
+	env.RegisterActivity(fixture.activities.RevokeHostTokens)
+	env.RegisterActivity(fixture.activities.RevokeHostCredentials)
 	env.RegisterActivity(fixture.activities.RemoveDevice)
 	env.RegisterActivity(fixture.activities.DestroyHostResource)
 	env.RegisterActivity(fixture.activities.RecordHostMilestone)
@@ -548,7 +591,7 @@ func TestTeardownRefusesAmbiguousOwnership(t *testing.T) {
 			Size:     "standard",
 		},
 		JobID: "delete-host-0001",
-		// No resource id: the record cannot prove which instance it owns.
+		// No resource id and no device id: the record cannot prove what it owns.
 	})
 	if !env.IsWorkflowCompleted() {
 		t.Fatal("the teardown did not complete inside the bounded test environment")
@@ -557,23 +600,35 @@ func TestTeardownRefusesAmbiguousOwnership(t *testing.T) {
 
 	workflowErr := env.GetWorkflowError()
 	if workflowErr == nil {
-		t.Fatal("a teardown with ambiguous ownership must fail")
+		t.Fatal("a teardown that could not finish every step must fail")
 	}
 	var appErr *temporal.ApplicationError
 	if !errors.As(workflowErr, &appErr) {
 		t.Fatalf("workflow error = %T (%v), want a Temporal application error", workflowErr, workflowErr)
 	}
-	if appErr.Type() != workflows.FailureTypePermanent {
-		t.Fatalf("failure type = %q, want the permanent type", appErr.Type())
+	if appErr.Type() != workflows.FailureTypeRetryable {
+		t.Fatalf("failure type = %q, want the retryable type: cleanup steps are idempotent", appErr.Type())
 	}
-	if !strings.Contains(appErr.Message(), "ownership is ambiguous") {
-		t.Fatalf("the failure does not explain the refusal: %s", appErr.Message())
+	for _, want := range []string{string(domain.CleanupRemoveDevice), string(domain.CleanupDestroyResources), "ownership is ambiguous"} {
+		if !strings.Contains(appErr.Message(), want) {
+			t.Fatalf("the failure does not report %q: %s", want, appErr.Message())
+		}
 	}
 	if destroys := fixture.provider.Destroys(); destroys != 0 {
 		t.Fatalf("destroys = %d, want none for an ambiguously owned host", destroys)
 	}
-	if host := fixture.host(); host.State == domain.HostStateDeleted {
-		t.Fatal("the record was tombstoned although nothing was destroyed")
+	if joins := fixture.tailnet.Removals(); joins != 0 {
+		t.Fatalf("device removals = %d, want none without a recorded device id", joins)
+	}
+	host := fixture.host()
+	if host.State == domain.HostStateDeleted || host.Tombstone != nil {
+		t.Fatal("the record was tombstoned although the teardown did not finish")
+	}
+	if !host.NeedsCleanup() {
+		t.Fatal("the record does not say which cleanup is left")
+	}
+	if got := domain.IncompleteCleanup(host.PendingCleanup); !strings.Contains(got, string(domain.CleanupDestroyResources)) {
+		t.Fatalf("pending cleanup = %q, want the destroy step named", got)
 	}
 }
 

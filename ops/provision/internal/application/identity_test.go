@@ -232,8 +232,12 @@ func TestAuthorizeHostErrorCarriesNoCredential(t *testing.T) {
 	}
 }
 
-// TestRevokeHostRemovesTheRoleAndPolicy is the teardown side: revocation deletes
-// both halves of the identity and is idempotent.
+// TestRevokeHostRemovesTheRoleAndPolicy is the teardown side: revoking the login
+// credential deletes both halves of the identity and is idempotent.
+//
+// It also pins the asymmetry the docs state: deleting the AppRole removes the
+// ability to log in, and leaves a token that was already issued untouched. That is
+// why teardown revokes tokens in its own step.
 func TestRevokeHostRemovesTheRoleAndPolicy(t *testing.T) {
 	t.Parallel()
 	h := newIdentityHarness(t)
@@ -242,8 +246,16 @@ func TestRevokeHostRemovesTheRoleAndPolicy(t *testing.T) {
 	if err := h.Service.AuthorizeHost(ctx, req); err != nil {
 		t.Fatalf("AuthorizeHost: %v", err)
 	}
-	if err := h.Service.RevokeHost(ctx, req); err != nil {
-		t.Fatalf("RevokeHost: %v", err)
+	// A token that was already issued before the teardown: it carries the host's
+	// policy, exactly as an AppRole login would.
+	issued := h.Backend.IssueAppRoleToken("fleet-host-host-0001", "default")
+
+	report, err := h.Service.RevokeCredentials(ctx, req)
+	if err != nil {
+		t.Fatalf("RevokeCredentials: %v", err)
+	}
+	if !report.RoleDeleted || !report.PolicyDeleted {
+		t.Fatalf("revocation report = %+v, want both halves deleted", report)
 	}
 	if names := h.Backend.RoleNames(); len(names) != 0 {
 		t.Fatalf("roles survived revocation: %v", names)
@@ -251,8 +263,16 @@ func TestRevokeHostRemovesTheRoleAndPolicy(t *testing.T) {
 	if names := h.Backend.PolicyNames(); len(names) != 0 {
 		t.Fatalf("policies survived revocation: %v", names)
 	}
-	if err := h.Service.RevokeHost(ctx, req); err != nil {
-		t.Fatalf("RevokeHost must be idempotent: %v", err)
+	if tokens := h.Backend.Tokens(); len(tokens) != 1 || tokens[0] != issued {
+		t.Fatalf("issued tokens after deleting the role = %v, want the one already-issued token still present; deleting an AppRole does not invalidate it", tokens)
+	}
+
+	second, err := h.Service.RevokeCredentials(ctx, req)
+	if err != nil {
+		t.Fatalf("RevokeCredentials must be idempotent: %v", err)
+	}
+	if !second.RoleDeleted || !second.PolicyDeleted {
+		t.Fatalf("second revocation report = %+v, want both halves reported deleted", second)
 	}
 }
 

@@ -204,6 +204,108 @@ func (a *IdentityAdmin) DeletePolicy(ctx context.Context, name string) error {
 	return nil
 }
 
+// ListTokenAccessors lists the accessor of every issued token.
+//
+// OpenBao has no endpoint that revokes "every token of this role", so revocation
+// has to enumerate. `LIST auth/token/accessors` needs `sudo` on
+// auth/token/accessors; the management token this adapter reads must carry it, and
+// the README states that. Accessors are identifiers, not credentials: an accessor
+// cannot be used to authenticate.
+func (a *IdentityAdmin) ListTokenAccessors(ctx context.Context) ([]string, error) {
+	var reply struct {
+		Data struct {
+			Keys []string `json:"keys"`
+		} `json:"data"`
+	}
+	found, err := a.client.read(ctx, domain.TokenAccessorsPath+"?list=true", &reply)
+	if err != nil {
+		return nil, fmt.Errorf("openbao: list token accessors: %w", err)
+	}
+	if !found {
+		return nil, nil
+	}
+	return append([]string(nil), reply.Data.Keys...), nil
+}
+
+// LookupTokenAccessor reports the policies one accessor carries. A token that
+// expired between the listing and this call is reported as not found with no
+// error: it is already gone, which is the outcome revocation wanted.
+func (a *IdentityAdmin) LookupTokenAccessor(ctx context.Context, accessor string) (application.TokenAccessorInfo, bool, error) {
+	if strings.TrimSpace(accessor) == "" {
+		return application.TokenAccessorInfo{}, false, errors.New("openbao: token accessor is required")
+	}
+	var reply struct {
+		Data struct {
+			Accessor string   `json:"accessor"`
+			Policies []string `json:"policies"`
+		} `json:"data"`
+	}
+	found, err := a.client.writeIntoStatus(ctx, domain.TokenLookupAccessorPath, map[string]any{"accessor": accessor}, &reply)
+	if err != nil {
+		return application.TokenAccessorInfo{}, false, fmt.Errorf("openbao: look up token accessor: %w", err)
+	}
+	if !found {
+		return application.TokenAccessorInfo{}, false, nil
+	}
+	return application.TokenAccessorInfo{
+		Accessor: firstNonEmptyString(reply.Data.Accessor, accessor),
+		Policies: append([]string(nil), reply.Data.Policies...),
+	}, true, nil
+}
+
+// RevokeTokenAccessor invalidates one issued token. Revoking an accessor that is
+// already gone is success, so a retried teardown is idempotent.
+func (a *IdentityAdmin) RevokeTokenAccessor(ctx context.Context, accessor string) error {
+	if strings.TrimSpace(accessor) == "" {
+		return errors.New("openbao: token accessor is required")
+	}
+	if err := a.client.write(ctx, http.MethodPost, domain.TokenRevokeAccessorPath, map[string]any{"accessor": accessor}); err != nil {
+		return fmt.Errorf("openbao: revoke token accessor: %w", err)
+	}
+	return nil
+}
+
+// firstNonEmptyString returns the first non-empty value.
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+// writeIntoStatus is writeInto but reports a 404 as "not found" instead of a
+// failure. It exists for the token lookup, where a token that expired between
+// listing and lookup is a normal answer rather than an error.
+func (c *baoClient) writeIntoStatus(ctx context.Context, path string, body, out any) (bool, error) {
+	request, err := c.request(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return false, err
+	}
+	response, err := c.http.Do(request)
+	if err != nil {
+		return false, fmt.Errorf("request failed: %w", err)
+	}
+	defer func() { _ = response.Body.Close() }()
+	payload, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+	if err != nil {
+		return false, fmt.Errorf("read body: %w", err)
+	}
+	if response.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	if response.StatusCode < 200 || response.StatusCode > 299 {
+		return false, fmt.Errorf("status %d: %s", response.StatusCode, domain.SanitizeMessage(string(payload)))
+	}
+	if out != nil && len(bytes.TrimSpace(payload)) > 0 {
+		if err := json.Unmarshal(payload, out); err != nil {
+			return false, fmt.Errorf("response is not JSON: %s", domain.SanitizeMessage(string(payload)))
+		}
+	}
+	return true, nil
+}
+
 // readClaim reads the ownership record. A missing record is not an error.
 func (a *IdentityAdmin) readClaim(ctx context.Context, claimPath string) (string, bool, error) {
 	var reply struct {

@@ -35,6 +35,16 @@ const (
 	WrappingUnwrapPath = "sys/wrapping/unwrap"
 	// TokenRenewPath renews the token already in hand.
 	TokenRenewPath = "auth/token/renew-self"
+	// TokenAccessorsPath lists every issued token accessor (LIST, with `?list=true`
+	// appended by the adapter). It is the only way to find an already-issued token:
+	// neither an AppRole nor a policy holds a reference to the tokens it produced.
+	TokenAccessorsPath = "auth/token/accessors"
+	// TokenLookupAccessorPath reports the policies one accessor carries, so a
+	// teardown can attribute a token to this host without ever reading its value.
+	TokenLookupAccessorPath = "auth/token/lookup-accessor"
+	// TokenRevokeAccessorPath invalidates one issued token by accessor. This is the
+	// call that actually cuts off a session handed out before the teardown began.
+	TokenRevokeAccessorPath = "auth/token/revoke-accessor"
 )
 
 // Token lifetimes. The hard maximum is the step's own bound: a host token is

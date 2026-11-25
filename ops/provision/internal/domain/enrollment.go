@@ -15,6 +15,23 @@ const ApprovedTailnetTag = "tag:aws-host"
 // lower-case label. Tailscale tags are labels, never free text.
 var tailnetTagPattern = regexp.MustCompile(`^tag:[a-z0-9][a-z0-9-]{0,62}$`)
 
+// deviceIDPattern is the shape of a Tailscale device id. It is an allow-list
+// because the id is interpolated into a request path: a value carrying a slash,
+// a dot, or a percent sign could address a different resource or escape the
+// path entirely.
+var deviceIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
+
+// ValidateDeviceID enforces the device-id shape before it reaches a URL path.
+func ValidateDeviceID(id string) error {
+	if strings.TrimSpace(id) == "" {
+		return Invalid("device_id", "is required")
+	}
+	if !deviceIDPattern.MatchString(id) {
+		return Invalid("device_id", "must be a bare alphanumeric identifier")
+	}
+	return nil
+}
+
 // ValidateTailnetTag enforces the tag shape.
 func ValidateTailnetTag(tag string) error {
 	if !tailnetTagPattern.MatchString(tag) {

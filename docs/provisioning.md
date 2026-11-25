@@ -59,8 +59,10 @@ refused with `domain.RoleClaimError` instead of silently sharing the role; nothi
 is minted for it. The claim is deleted when the role is revoked, so a host id can be
 provisioned again after a clean teardown.
 
-Revocation (`DeleteAppRole`, `DeletePolicy`) deletes the claim and the role (which
-deletes every SecretID of the role) and then the policy. It is idempotent.
+Credential revocation (`RevokeCredentials` → `DeleteAppRole`, `DeletePolicy`) deletes
+the role (which deletes every SecretID of the role and the claim) and then the
+policy. It is idempotent. It does **not** invalidate a token that was already
+issued: `RevokeTokens` does that, by accessor, and runs first in a teardown (§16).
 
 ## 2. One-use wrapped SecretID delivery
 
@@ -224,10 +226,15 @@ Recovery, in order of least privilege:
    mint a new one. The role and policy are idempotent, so a re-run changes nothing
    else.
 4. **Role claimed by the wrong host**: do not delete the claim by hand. Revoke the
-   host (`RevokeHost`), which removes role, claim, and policy, then authorize again.
+   host (`RevokeCredentials`), which removes role, claim, and policy, then authorize
+   again.
    A claim conflict is a permanent refusal and never a retryable failure.
-5. **Full teardown**: `RevokeHost` removes the role (with every SecretID), the claim,
-   and the policy. The host's files must be deleted on the host.
+5. **Full teardown**: `DELETE /v1/hosts/<id>` runs the four cleanup steps in order —
+   revoke the issued tokens, revoke the role (with every SecretID) and the policy,
+   remove the tailnet device, destroy this host's Terraform state — and writes a
+   sanitized tombstone (§13). A stolen credential is not repaired by a teardown:
+   §16.1. The host's own files must be deleted on the host, which nothing here can
+   do remotely once the instance is gone.
 
 ## 7. Deployment: the homelab stack
 
@@ -591,3 +598,363 @@ each for an owner decision:
     of racing.
 11. **The Rex client proof after reboot**: one approved API call from a Rex session on
     a live host — gate 3 repeated after a reboot.
+
+### 12.1 Teardown gates
+
+Deleting a host is proven offline and unproven live, exactly like creation. The
+offline suite runs the real `DeleteHostWorkflow` against in-process adapters and
+proves the order, the retry, the reporting, and the isolation; it revokes no real
+token, removes no real device, and destroys no real instance. These gates stay
+**BLOCKED**, each for an owner-approved live run:
+
+12. **The live host is gone from AWS**: `aws ec2 describe-instances` for the
+    instance id the tombstone keeps returns an empty `Reservations` list, and
+    `aws ec2 describe-instances --filters Name=instance-state-name,Values=pending,running,stopping,stopped`
+    in the region lists no fleet instance with the retired host's tags.
+13. **Its Tailscale device is absent**: `tailscale status` on the operator machine
+    and the admin console's device list both show no node with that hostname, and
+    `GET /api/v2/tailnet/-/devices` returns no device carrying the retired id.
+14. **Its Bao accessors are revoked and old credentials fail**: the accessor list
+    from §14.3 contains nothing carrying the retired host's policy, a session token
+    captured before the teardown answers 403 to `bao token lookup`, and an AppRole
+    login with a SecretID minted before the teardown fails. A token that still works
+    is a failed gate, not a warning.
+15. **Two consecutive delete runs leave no leftover**: run the teardown, then run it
+    again for the same host. The second run starts no new operation, reports
+    `deleted`, and §14's three checks pass after both runs. A second run that starts
+    a job, or a leftover in any of the three systems, fails the gate.
+
+## 13. The full create-to-delete exercise
+
+This is the whole lifecycle on one host, in the order an operator runs it. Every
+step is a command a human types; none of them prints a credential. The steps that
+need a live cloud, tailnet, or Bao server are the gates in §12; the exercise is
+written so the same commands are used for the offline rehearsal and the live run,
+and the offline run stops before each gate.
+
+Choose a name and keep it for the whole exercise: `canary-07` here.
+
+```bash
+# 0. The API listens on loopback and needs a bearer token. The token is read from
+#    stdin, so it never becomes an argv word or a shell history entry.
+export FLEET_API=https://127.0.0.1:8443
+read -rs FLEET_TOKEN; export FLEET_TOKEN
+```
+
+```bash
+# 1. Create. The Idempotency-Key makes a retried POST return the same host and job
+#    instead of creating a second one.
+curl -sS -X POST "$FLEET_API/v1/hosts" \
+  -H "Authorization: Bearer $FLEET_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: exercise-2026-11-25-canary-07" \
+  -d '{"name":"canary-07","profile":"rex","region":"ap-south-1","size":"standard",
+       "secret_bundles":["canary"]}'
+# → 202 {"host_id":"host-7f3c1d9a4b2e6f8c0d1a3b5e","job_id":"create-host-7f3c1d9a4b2e6f8c0d1a3b5e"}
+
+export HOST_ID=host-7f3c1d9a4b2e6f8c0d1a3b5e
+export CREATE_JOB=create-host-7f3c1d9a4b2e6f8c0d1a3b5e
+```
+
+```bash
+# 2. Follow the job. The stage walks queued → creating → enrolling → deploying →
+#    authorizing → ready. A failed stage is a terminal `failed` with a sanitized
+#    message: nothing in it is a credential.
+while sleep 10; do
+  body=$(curl -sS "$FLEET_API/v1/jobs/$CREATE_JOB" -H "Authorization: Bearer $FLEET_TOKEN")
+  echo "$body" | jq -r '.state + " " + .stage'
+  echo "$body" | jq -e '.state == "ready" or .state == "failed"' >/dev/null && break
+done
+```
+
+```bash
+# 3. Confirm the identity the host actually got. The record names the resource and
+#    the device; neither is a credential. §14 has the live checks.
+curl -sS "$FLEET_API/v1/hosts/$HOST_ID" -H "Authorization: Bearer $FLEET_TOKEN" |
+  jq '{host_id, state, resource_id, device_id, profile, region, size, ready}'
+```
+
+```bash
+# 4. Delete. This starts one durable teardown. The same call twice answers with the
+#    same job; it never starts a second teardown.
+curl -sS -X DELETE "$FLEET_API/v1/hosts/$HOST_ID" \
+  -H "Authorization: Bearer $FLEET_TOKEN"
+# → 202 {"host_id":"host-7f3c1d9a4b2e6f8c0d1a3b5e","job_id":"delete-host-7f3c1d9a4b2e6f8c0d1a3b5e"}
+
+export DELETE_JOB=delete-host-7f3c1d9a4b2e6f8c0d1a3b5e
+```
+
+```bash
+# 5. Follow the teardown. The stage walks revoking_access → removing_device →
+#    destroying → deleted. A failed teardown names its unfinished steps in
+#    `incomplete_cleanup`.
+while sleep 10; do
+  body=$(curl -sS "$FLEET_API/v1/jobs/$DELETE_JOB" -H "Authorization: Bearer $FLEET_TOKEN")
+  echo "$body" | jq -c '{state, stage, incomplete_cleanup}'
+  echo "$body" | jq -e '.state == "deleted" or .state == "failed"' >/dev/null && break
+done
+```
+
+A `failed` teardown is not a silent one. `error.message` names the steps that did
+not finish, and the host record keeps the same list in `pending_cleanup`, so an
+operator who never retries still has the answer:
+
+```bash
+curl -sS "$FLEET_API/v1/jobs/$DELETE_JOB" -H "Authorization: Bearer $FLEET_TOKEN" |
+  jq '.error'
+# → {"code":"teardown_incomplete","retryable":true,
+#    "message":"teardown did not finish; incomplete cleanup: tailscale_device (...)"}
+```
+
+```bash
+# 6. Retry the unfinished steps. Every cleanup step is idempotent, so the retry
+#    finishes what is left and changes nothing that already succeeded. The retry
+#    gets a job id of its own, because Temporal refuses to re-run a closed
+#    execution under the same id.
+curl -sS -X DELETE "$FLEET_API/v1/hosts/$HOST_ID" \
+  -H "Authorization: Bearer $FLEET_TOKEN"
+# → 202 {"host_id":"host-7f3c1d9a4b2e6f8c0d1a3b5e","job_id":"delete-host-7f3c1d9a4b2e6f8c0d1a3b5e-r2"}
+```
+
+```bash
+# 7. The tombstone. The record keeps its identifiers and its approved shape, and
+#    drops every field that described a machine which no longer exists: no private
+#    address, no Rex URL, no flake revision, no tags.
+curl -sS "$FLEET_API/v1/hosts/$HOST_ID" -H "Authorization: Bearer $FLEET_TOKEN" |
+  jq '{state, tombstone, resource_id, device_id, private_address, rex_url, flake_revision, tags}'
+# → {"state":"deleted",
+#    "tombstone":{"deleted_at":"2026-11-25T15:04:05Z",
+#                 "released":["openbao_tokens","openbao_credentials",
+#                             "tailscale_device","terraform_resources"],
+#                 "token_accessors_revoked":2,
+#                 "policy":"identifiers, cleanup outcomes, and cost-relevant shape only; ..."},
+#    "resource_id":"i-0123456789abcdef0","device_id":"n1234CNTRL",
+#    "private_address":"","rex_url":"","flake_revision":""}
+#    `tags` is absent, not empty: the map was cleared, so the field is omitted.
+```
+
+```bash
+# 8. A repeat delete is a read. It answers with the job that did the work, starts
+#    no operation, and changes no record.
+curl -sS -X DELETE "$FLEET_API/v1/hosts/$HOST_ID" -H "Authorization: Bearer $FLEET_TOKEN"
+# → 202 {"host_id":"host-7f3c1d9a4b2e6f8c0d1a3b5e","job_id":"delete-host-7f3c1d9a4b2e6f8c0d1a3b5e"}
+```
+
+Step 8 is also the leave-no-leftover sweep: after it, the three checks in §14 must
+all pass. Running §14 twice, once after step 5 or 6 and once after step 8, is gate
+15.
+
+## 14. Operator verification after a teardown
+
+The record is the service's claim. The three systems are the evidence. Each check
+below is read-only and prints identifiers, never credentials.
+
+### 14.1 The AWS instance is gone
+
+```bash
+# The instance id is kept on the record after the teardown, so this needs no other
+# lookup.
+INSTANCE=$(curl -sS "$FLEET_API/v1/hosts/$HOST_ID" -H "Authorization: Bearer $FLEET_TOKEN" |
+  jq -r '.resource_id')
+
+aws ec2 describe-instances --region ap-south-1 --instance-ids "$INSTANCE" \
+  --query 'Reservations[].Instances[].[InstanceId,State.Name]' --output table
+# A destroyed instance answers: An error occurred (InvalidInstanceID.NotFound).
+# That error is the pass condition; an instance in any state is a failed teardown.
+
+# The sweep that catches an orphan created by a retry: no fleet machine should carry
+# the retired name.
+aws ec2 describe-instances --region ap-south-1 \
+  --filters 'Name=tag:Name,Values=fleet-canary-07' \
+  --query 'Reservations[].Instances[].InstanceId' --output text
+# → empty
+```
+
+```bash
+# This host's own state object must be empty or absent. It is one object per host,
+# keyed by name (fleet-hosts/<name>/terraform.tfstate), and a destroy cannot reach a
+# sibling's.
+aws s3api head-object --bucket "$FLEET_STATE_BUCKET" \
+  --key fleet-hosts/canary-07/terraform.tfstate 2>&1 | head -3
+# → 404 Not Found, or: {"ContentLength": <small>, ...} with no instance_id output.
+```
+
+### 14.2 The Tailscale device is absent
+
+```bash
+DEVICE=$(curl -sS "$FLEET_API/v1/hosts/$HOST_ID" -H "Authorization: Bearer $FLEET_TOKEN" |
+  jq -r '.device_id')
+
+# Device ids are not secret. This call is the same one the adapter makes.
+curl -sS -H "Authorization: Bearer $TS_API_TOKEN" \
+  "https://api.tailscale.com/api/v2/device/$DEVICE" | jq '.'
+# → 404 Not Found
+
+# The operator's own view of the tailnet.
+tailscale status | grep -i canary-07 || echo "no such node"
+
+# And the sweep, which also catches a node that rejoined under a new id.
+curl -sS -H "Authorization: Bearer $TS_API_TOKEN" \
+  "https://api.tailscale.com/api/v2/tailnet/-/devices" |
+  jq --arg name canary-07 '[.devices[] | select((.name|startswith($name)) or .hostname == $name)]'
+# → []
+```
+
+A device that is still present is an incomplete teardown. The job reports it as
+the `tailscale_device` cleanup step, and the two usual causes are an OAuth client
+without device-write scope (403, not 404) and a host record with no recorded device
+id (the `ambiguous ownership` refusal, which needs the admin console).
+
+### 14.3 The Bao accessors are revoked
+
+OpenBao has no endpoint that lists "the tokens of a role". Revocation enumerates
+accessors and attributes each one by policy, so the check is the same enumeration:
+
+```bash
+# Requires `sudo` on auth/token/accessors: the management token the service reads
+# already carries it, because revocation itself calls this endpoint.
+bao list -format=json auth/token/accessors | jq -r '.[]' >/tmp/fleet-accessors
+
+# Which of them carry the retired host's policy? Both names are derived from the
+# host id, by the same rule: fleet-host-<hostID> and fleet-policy-<hostID>.
+POLICY="fleet-policy-$HOST_ID"
+while read -r accessor; do
+  policies=$(bao write -format=json auth/token/lookup-accessor accessor="$accessor" |
+    jq -r '.data.policies | join(" ")')
+  case "$policies" in
+    *"$POLICY"*) echo "STILL LIVE: $accessor carries $POLICY" ;;
+  esac
+done </tmp/fleet-accessors
+rm -f /tmp/fleet-accessors
+# → no output. Any "STILL LIVE" line is a failed teardown, and the accessor must be
+#   revoked by hand: bao write auth/token/revoke-accessor accessor=<id>
+```
+
+The role and the policy must be gone as well:
+
+```bash
+bao read "auth/approle/role/fleet-host-$HOST_ID" 2>&1 | head -2
+# → No value found at auth/approle/role/fleet-host-host-7f3c1d9a4b2e6f8c0d1a3b5e
+bao policy read "fleet-policy-$HOST_ID" 2>&1 | head -2
+# → No policy named fleet-policy-host-7f3c1d9a4b2e6f8c0d1a3b5e
+```
+
+And the two things a compromised host would try:
+
+```bash
+# An old session token must be dead. A captured token is a secret: read it from a
+# file with mode 0600 and never put it on a command line.
+bao token lookup -address="$BAO_ADDR" "$(cat ~/.fleet-old-token)"
+# → Code: 403. Errors: permission denied
+
+# An old SecretID must not log in.
+bao write -format=json auth/approle/login \
+  role_id="$OLD_ROLE_ID" secret_id="$(cat ~/.fleet-old-secret-id)" 2>&1 | jq -r '.errors[0]'
+# → invalid role or secret id
+```
+
+## 15. Costs
+
+The only recurring cost a host adds is the EC2 instance and its EBS volume. Both
+come from the approved catalog, so the price of a profile is a property of the
+catalog, not of a request: `config/profiles.yaml` pins `instance_type` and `disk_gb`
+per size, and `internal/config` refuses a profiles file that disagrees with the
+flake.
+
+Order of magnitude for the one approved shape, `standard` = `t3.medium` with 40 GiB
+gp3, in `ap-south-1` at the time of writing, on-demand and before tax:
+
+| Item | Rate | Monthly (730 h) |
+| --- | --- | --- |
+| `t3.medium` on-demand compute | about $0.0456/hour | about $33 |
+| 40 GiB gp3 storage | about $0.0912/GB-month | about $3.65 |
+| Public IPv4 (default VPC assignment) | about $0.005/hour | about $3.65 |
+| Data transfer out | first 100 GB/month free, then about $0.12/GB | variable |
+
+Treat these as planning numbers, not a quote: the rates are regional, they change,
+and a Savings Plan or a spot price would change them again. The point of writing them
+down is the multiplier the service controls — an idle fleet of ten `standard` hosts
+is roughly $400/month, and a teardown that half-finishes is money that keeps being
+spent. That is why the destroy step runs even when an earlier cleanup step failed
+(§13 step 5) and why gate 12 exists.
+
+Costs the service does not add: Terraform state in S3 (kilobytes, in an existing
+bucket), SSM `SendCommand` (free tier for the fleet's call volume), the Tailscale
+plan already in use, and OpenBao on the homelab. The token table is small: every host
+holds one session token and one rotating SecretID at a time.
+
+```bash
+# The only reliable cost check is the bill. Group by the tag the provider writes.
+aws ce get-cost-and-usage --time-period Start=2026-11-01,End=2026-12-01 \
+  --granularity MONTHLY --metrics UnblendedCost \
+  --group-by Type=TAG,Key=owner Type=DIMENSION,Key=INSTANCE_TYPE
+```
+
+A host whose tombstone says `released` includes `terraform_resources` should not
+appear in a bill for the following month. If it does, the destroy ran against a
+different account or region than the one the bill covers.
+
+## 16. Credential rotation, and what revocation cannot do
+
+Rotation is the routine case and teardown is the terminal one; they use different
+calls and they answer different questions.
+
+| Operation | Invalidates | Does not invalidate |
+| --- | --- | --- |
+| `RotateSecretID` (§6) | the previous SecretID, by accessor | the session token already issued, until it expires |
+| `RevokeCredentials` | the AppRole, every SecretID, the ownership claim, and the policy | **every token already issued to that role** |
+| `RevokeTokens` | every issued token whose policy is this host's | nothing else — the role can still log in until `RevokeCredentials` runs |
+| Teardown (§13) | all of the above, in that order | a key that has already left the host |
+
+**Revoking an AppRole does not invalidate a token it already issued.** OpenBao keeps
+an issued token alive until its TTL expires; deleting the role it came from removes
+the ability to log in again and leaves the existing session working. This is why the
+teardown has two credential steps and why `RevokeTokens` runs first: it is the only
+step that cuts off a session that already exists. The offline suite pins both halves
+— `TestRevokeTokensInvalidatesAlreadyIssuedTokens` and
+`TestRevokeCredentialsDoesNotInvalidateIssuedTokens`.
+
+The routine rotation schedule is in §6: rotate every 6 hours, keep the previous
+credential usable for a 30-minute grace window, and always rotate before the 12-hour
+expiry.
+
+Client tokens (`config` → token digests, mode 0600) are separate and are rotated by
+hand: issue a new token, put its SHA-256 digest in the token file, restart the API,
+then remove the old digest. `provision token-digest` reads a token from stdin and
+prints the digest, so the plaintext token never becomes an argument.
+
+### 16.1 What revocation cannot do
+
+Revocation invalidates a credential **inside the systems that issued it**. It cannot
+erase a copy of that credential that has already left the host.
+
+If a host was compromised, assume every secret it could read was copied: the session
+token, the SecretID it held, the flap bundle values behind its policy, the tailscale
+node key, and anything else that passed through its memory or disk. Deleting the
+AppRole and revoking the accessors makes the **copy** useless — a token that is
+revoked cannot be renewed and a SecretID for a deleted role cannot log in — and it
+does not retroactively protect a value the attacker has already used or will use for
+a different system.
+
+So the rule is: **revocation cannot erase a key that was already stolen from a
+compromised host, and every key that host held must be rotated upstream.** "Upstream"
+means the system that owns the value, not this service:
+
+1. Rotate, do not just revoke: mint a new value at the source, install it, and only
+   then invalidate the old one.
+2. Rotate every credential the host could reach, not only the ones with the host's
+   own policy name. A canary bundle shared with a profile is shared with every host
+   in that profile.
+3. Rotate outside the fleet too: a personal SSH key, a GitHub token, a cloud
+   credential, a password manager entry. Anything the host could read is in scope.
+4. Check the audit trail before trusting the rotation window: `bao audit list`, the
+   SSM command history for that instance id, and the provider's CloudTrail events for
+   the instance's role. A read of another host's canary is a policy bug worth finding.
+5. Then run the teardown. Deleting the host is containment, not cleanup: it stops the
+   bleeding and it does not undo a read.
+
+The backup and restore procedure in §9 is the other half of this section: an
+encrypted dump holds the inventory, the job records, and the token digests, so a
+restore must land on a host whose own credentials were rotated first. A restored
+token file that predates a rotation re-enables digests the operator thought were
+retired.

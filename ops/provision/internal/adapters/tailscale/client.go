@@ -150,6 +150,22 @@ func (c *apiClient) token(ctx context.Context) (application.Secret, error) {
 
 // call performs an authenticated JSON request. token is destroyed by the caller.
 func (c *apiClient) call(ctx context.Context, token application.Secret, method, path string, body, out any) error {
+	return c.callAllowing(ctx, token, method, path, body, out, nil)
+}
+
+// delete performs an authenticated DELETE and treats 404 as success.
+//
+// A device that is already gone is the outcome the caller wanted, so a retried
+// teardown that reaches this call a second time must not fail. No other status is
+// tolerated: a 403 means the OAuth client cannot manage devices, and silently
+// reporting success would leave the node in the tailnet.
+func (c *apiClient) delete(ctx context.Context, token application.Secret, path string) error {
+	return c.callAllowing(ctx, token, http.MethodDelete, path, nil, nil, []int{http.StatusNotFound})
+}
+
+// callAllowing is call with an explicit set of non-2xx statuses that count as
+// success for this endpoint.
+func (c *apiClient) callAllowing(ctx context.Context, token application.Secret, method, path string, body, out any, accept []int) error {
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -167,8 +183,38 @@ func (c *apiClient) call(ctx context.Context, token application.Secret, method, 
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+string(token.Bytes()))
-	if err := c.do(ctx, req, out); err != nil {
+	if err := c.doAllowing(ctx, req, out, accept); err != nil {
 		return err
+	}
+	return nil
+}
+
+// doAllowing is do with an explicit accept list for non-2xx statuses.
+func (c *apiClient) doAllowing(ctx context.Context, req *http.Request, out any, accept []int) error {
+	response, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("%s %s: %w", req.Method, req.URL.Path, err)
+	}
+	defer func() { _ = response.Body.Close() }()
+	payload, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+	if err != nil {
+		return fmt.Errorf("%s %s: read response: %w", req.Method, req.URL.Path, err)
+	}
+	ok := response.StatusCode >= 200 && response.StatusCode < 300
+	for _, status := range accept {
+		if response.StatusCode == status {
+			ok = true
+		}
+	}
+	if !ok {
+		return fmt.Errorf("%s %s: status %d: %s",
+			req.Method, req.URL.Path, response.StatusCode, domain.SanitizeMessage(string(payload)))
+	}
+	if out == nil || len(bytes.TrimSpace(payload)) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(payload, out); err != nil {
+		return fmt.Errorf("%s %s: decode response: %w", req.Method, req.URL.Path, err)
 	}
 	return nil
 }

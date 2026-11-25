@@ -55,6 +55,23 @@ type Host struct {
 	RexURL         string    `json:"rex_url,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+	// Tombstone is written once, when a teardown has finished every cleanup
+	// step. It is the record's own proof that the host is gone, and it is
+	// sanitized: see TombstonePolicy.
+	Tombstone *Tombstone `json:"tombstone,omitempty"`
+	// PendingCleanup lists the teardown steps a failed delete has not finished.
+	// It is the durable half of "report which cleanup is incomplete": a retry
+	// reads it, and an operator who never retries still sees what is left.
+	PendingCleanup []CleanupStep `json:"pending_cleanup,omitempty"`
+	// DeleteAttempts counts how many teardown jobs have been started. A retry
+	// after a partial teardown gets a fresh job id, and this counter is what
+	// makes that id unique.
+	DeleteAttempts int `json:"delete_attempts,omitempty"`
+	// DeleteJobID is the teardown job that owns this record. A repeat DELETE
+	// reads it and returns it instead of starting a second teardown, and a
+	// tombstoned record answers with it so a caller can look up the run that did
+	// the work.
+	DeleteJobID string `json:"delete_job_id,omitempty"`
 }
 
 // Clone returns a deep copy so callers cannot mutate stored state by aliasing
@@ -63,6 +80,13 @@ func (h Host) Clone() Host {
 	out := h
 	out.Tags = cloneStringMap(h.Tags)
 	out.SecretBundles = append([]string(nil), h.SecretBundles...)
+	out.PendingCleanup = append([]CleanupStep(nil), h.PendingCleanup...)
+	if h.Tombstone != nil {
+		tombstone := *h.Tombstone
+		tombstone.Released = append([]CleanupStep(nil), h.Tombstone.Released...)
+		tombstone.Incomplete = append([]CleanupStep(nil), h.Tombstone.Incomplete...)
+		out.Tombstone = &tombstone
+	}
 	return out
 }
 
@@ -107,19 +131,76 @@ func (h *Host) MarkDevice(deviceID string, now time.Time) {
 	h.UpdatedAt = now.UTC()
 }
 
-// MarkDeleting records that a teardown job owns the host.
+// MarkDeleting records that a teardown owns the host. It is the milestone-level
+// transition, so it counts nothing: the teardown job id and the attempt number are
+// set once, by BeginTeardown, when the use case accepts the request.
 func (h *Host) MarkDeleting(now time.Time) {
 	if h.State == HostStateDeleted {
 		return
 	}
 	h.State = HostStateDeleting
-	h.UpdatedAt = now
+	h.UpdatedAt = now.UTC()
+}
+
+// BeginTeardown starts teardown attempt number attempt, owned by jobID. It is the
+// only place the attempt counter moves, so a milestone written by the running
+// workflow can never inflate the number the next retry derives its job id from.
+func (h *Host) BeginTeardown(jobID string, attempt int, now time.Time) {
+	if h.State == HostStateDeleted {
+		return
+	}
+	h.State = HostStateDeleting
+	h.DeleteAttempts = attempt
+	h.DeleteJobID = jobID
+	h.UpdatedAt = now.UTC()
 }
 
 // MarkDeleted leaves a tombstone with the ownership record intact.
 func (h *Host) MarkDeleted(now time.Time) {
 	h.State = HostStateDeleted
 	h.UpdatedAt = now
+}
+
+// CompleteTeardown writes the tombstone and drops every field that described
+// infrastructure which no longer exists. The identifiers of what was destroyed
+// (the provider resource id, the tailnet device id) and the approved shape that
+// drove the cost stay, because "which instance did we delete, and what did it
+// cost to run" is the question a tombstone has to answer.
+func (h *Host) CompleteTeardown(t Tombstone) error {
+	if reason := t.Sanitized(); reason != "" {
+		return fmt.Errorf("domain: refusing to tombstone host %s: %s", h.ID, reason)
+	}
+	if !t.Complete() {
+		return fmt.Errorf("domain: refusing to tombstone host %s: cleanup is incomplete (%s)", h.ID, IncompleteCleanup(t.Incomplete))
+	}
+	h.State = HostStateDeleted
+	h.Tombstone = &t
+	h.PendingCleanup = nil
+	// Everything below described a machine that no longer exists, or a place
+	// credentials were written. None of it belongs on a tombstone.
+	h.PrivateAddress = ""
+	h.RexURL = ""
+	h.FlakeRevision = ""
+	h.Tags = nil
+	h.UpdatedAt = t.DeletedAt.UTC()
+	return nil
+}
+
+// MarkCleanupIncomplete records a partial teardown. The host stays out of
+// "deleted" on purpose: a record that claims to be deleted while a billable
+// instance or a live token survives is worse than one that visibly needs work.
+func (h *Host) MarkCleanupIncomplete(steps []CleanupStep, now time.Time) {
+	if h.State == HostStateDeleted {
+		return
+	}
+	h.State = HostStateFailed
+	h.PendingCleanup = dedupeSteps(steps)
+	h.UpdatedAt = now.UTC()
+}
+
+// NeedsCleanup reports whether a teardown has steps left to finish.
+func (h Host) NeedsCleanup() bool {
+	return len(h.PendingCleanup) > 0
 }
 
 // hostNamePattern is an allow-list, not a deny-list: lowercase alphanumerics

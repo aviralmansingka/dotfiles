@@ -144,73 +144,6 @@ func CreateHostWorkflow(ctx workflow.Context, in CreateHostInput) (Status, error
 	return state.Snapshot(), nil
 }
 
-// DeleteHostWorkflow runs teardown: queued → revoking_access →
-// removing_device → destroying → deleted.
-func DeleteHostWorkflow(ctx workflow.Context, in DeleteHostInput) (Status, error) {
-	state := Status{
-		HostID:        in.Spec.HostID,
-		JobID:         in.JobID,
-		Kind:          domain.JobKindDelete,
-		State:         domain.JobQueued,
-		Stage:         domain.StageQueued,
-		ResourceID:    in.ResourceID,
-		DeviceID:      in.DeviceID,
-		FlakeRevision: in.FlakeRevision,
-		UpdatedAt:     workflow.Now(ctx),
-	}
-	if err := workflow.SetQueryHandler(ctx, StatusQueryName, func() (Status, error) {
-		return state.Snapshot(), nil
-	}); err != nil {
-		return state.Snapshot(), err
-	}
-	ctx = workflow.WithActivityOptions(ctx, activityOptions())
-
-	advance := func(stage domain.Stage) {
-		state.Stage = stage
-		state.State = domain.JobInProgress
-		state.Attempt++
-		state.UpdatedAt = workflow.Now(ctx)
-	}
-
-	advance(domain.StageRevokingAccess)
-	if err := workflow.ExecuteActivity(ctx, ActivityRevokeHostAccess, RevokeHostAccessInput{
-		HostID:        in.Spec.HostID,
-		Name:          in.Spec.Name,
-		Profile:       in.Spec.Profile,
-		SecretBundles: in.Spec.SecretBundles,
-	}).Get(ctx, nil); err != nil {
-		return failDelete(ctx, state, err)
-	}
-	record(ctx, state)
-
-	advance(domain.StageRemovingDevice)
-	if err := workflow.ExecuteActivity(ctx, ActivityRemoveDevice, RemoveDeviceInput{
-		HostID:   in.Spec.HostID,
-		DeviceID: in.DeviceID,
-	}).Get(ctx, nil); err != nil {
-		return failDelete(ctx, state, err)
-	}
-	record(ctx, state)
-
-	advance(domain.StageDestroying)
-	if err := workflow.ExecuteActivity(ctx, ActivityDestroyHostResource, DestroyHostResourceInput{
-		HostID:     in.Spec.HostID,
-		Name:       in.Spec.Name,
-		Provider:   in.Spec.Provider,
-		Profile:    in.Spec.Profile,
-		Region:     in.Spec.Region,
-		Size:       in.Spec.Size,
-		ResourceID: in.ResourceID,
-	}).Get(ctx, nil); err != nil {
-		return failDelete(ctx, state, err)
-	}
-
-	advance(domain.StageDeleted)
-	state.State = domain.JobDeleted
-	record(ctx, state)
-	return state.Snapshot(), nil
-}
-
 // record persists a milestone. Its failure does not fail the workflow: the
 // Temporal history remains the execution record, and the next milestone
 // supersedes this one. It accepts a detached context so the cancellation path can
@@ -228,6 +161,7 @@ func milestoneInput(state Status) RecordHostMilestoneInput {
 	return RecordHostMilestoneInput{
 		HostID:         state.HostID,
 		JobID:          state.JobID,
+		Kind:           string(state.Kind),
 		Stage:          string(state.Stage),
 		State:          string(state.State),
 		ResourceID:     state.ResourceID,
@@ -235,6 +169,9 @@ func milestoneInput(state Status) RecordHostMilestoneInput {
 		PrivateAddress: state.PrivateAddress,
 		FlakeRevision:  state.FlakeRevision,
 		RexURL:         state.RexURL,
+		TokensRevoked:  state.TokensRevoked,
+		Released:       state.ReleasedSteps(),
+		Incomplete:     state.IncompleteSteps(),
 		Error:          state.Error,
 	}
 }
@@ -242,10 +179,6 @@ func milestoneInput(state Status) RecordHostMilestoneInput {
 // fail records a sanitized terminal failure and returns an application error
 // whose message is already safe to persist in Temporal history.
 func fail(ctx workflow.Context, state Status, cause error) (Status, error) {
-	return terminate(ctx, state, cause)
-}
-
-func failDelete(ctx workflow.Context, state Status, cause error) (Status, error) {
 	return terminate(ctx, state, cause)
 }
 

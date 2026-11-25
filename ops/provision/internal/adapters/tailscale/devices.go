@@ -13,12 +13,16 @@ import (
 // is not connected to the control plane.
 const deviceStateRegistered = "registered"
 
-// Devices implements the tailnet device lookup used by the enrollment retry rule.
+// Devices implements the tailnet device lookup used by the enrollment retry rule,
+// and the device removal a teardown needs.
 type Devices struct {
 	api *apiClient
 }
 
-var _ application.DeviceLookup = (*Devices)(nil)
+var (
+	_ application.DeviceLookup         = (*Devices)(nil)
+	_ application.TailnetDeviceManager = (*Devices)(nil)
+)
 
 // NewDevices builds the device lookup adapter.
 func NewDevices(cfg ClientConfig) (*Devices, error) {
@@ -98,6 +102,46 @@ func deviceMatches(candidate, hostName string) bool {
 	}
 	base, _, found := strings.Cut(candidate, ".")
 	return found && base == hostName
+}
+
+// RemoveDevice implements application.TailnetDeviceManager: DELETE
+// /api/v2/device/<id>.
+//
+// It removes exactly the recorded device and nothing else. The id comes from the
+// inventory record, and it is validated before it reaches a URL path, so a value
+// carrying a separator or an escape cannot address a different device.
+//
+// A 404 is success: the device is gone, which is what the caller asked for, and a
+// retried teardown must not fail because the first attempt already did the work. A
+// record with no device id is refused rather than guessed at — a name lookup could
+// match a node this host does not own.
+func (d *Devices) RemoveDevice(ctx context.Context, req application.RemoveDeviceRequest) error {
+	if strings.TrimSpace(req.DeviceID) == "" {
+		return &domain.AmbiguousOwnershipError{
+			HostID: req.HostID,
+			Reason: "the inventory record names no tailnet device id",
+		}
+	}
+	if err := domain.ValidateDeviceID(req.DeviceID); err != nil {
+		return err
+	}
+
+	token, err := d.api.token(ctx)
+	if err != nil {
+		return err
+	}
+	defer token.Destroy()
+
+	if err := d.api.delete(ctx, token, "/api/v2/device/"+req.DeviceID); err != nil {
+		return err
+	}
+	if d.api.cfg.Logger != nil {
+		d.api.cfg.Logger.Info("tailnet.device.removed",
+			"host_id", req.HostID,
+			"device_id", req.DeviceID,
+		)
+	}
+	return nil
 }
 
 func firstNonEmpty(values ...string) string {

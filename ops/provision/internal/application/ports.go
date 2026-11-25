@@ -56,6 +56,10 @@ type JobView struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	RunID     string
+	// IncompleteCleanup names the teardown steps that did not finish. It is empty
+	// for a complete teardown and for every creation job. It exists so an operator
+	// reading the job is told what is left instead of only that something failed.
+	IncompleteCleanup []string
 }
 
 // CreateHostSpec is the non-secret, fully resolved description of a host
@@ -81,14 +85,28 @@ type CreateHostSpec struct {
 }
 
 // DeleteHostSpec is the non-secret description of a teardown.
+//
+// Every field here is load-bearing. Name, Profile, Region, and Size are what
+// re-derive the Terraform variable set for the per-host state object; ResourceID
+// is the ownership proof that lets the destroy refuse a state holding a different
+// instance; DeviceID is the tailnet identity to remove. A spec missing them is a
+// teardown that cannot do its job, so the use case fills all of them from the
+// inventory record rather than from client input.
 type DeleteHostSpec struct {
 	JobID         string
 	HostID        string
 	Name          string
 	Provider      domain.Provider
+	Profile       string
 	Region        string
+	Size          string
 	ResourceID    string
+	DeviceID      string
 	SecretBundles []string
+	// Attempt counts the teardown job. A retry after a partial teardown sets it
+	// above one, and the orchestrator derives the job id from it so a retry does
+	// not collide with the failed execution it is retrying.
+	Attempt int
 }
 
 // JobOrchestrator starts and inspects durable jobs. Temporal implements it; the
@@ -180,10 +198,39 @@ type ProviderDestroyRequest struct {
 	ResourceID string
 }
 
+// ProviderStatusRequest identifies the per-host state object to read. It carries
+// exactly the values that address it, so a status call can never be widened into
+// another host's state.
+type ProviderStatusRequest struct {
+	HostID     string
+	Name       string
+	Provider   domain.Provider
+	Profile    string
+	Region     string
+	Size       string
+	ResourceID string
+}
+
+// ProviderResourceStatus is the provider's report about one host's resource.
+type ProviderResourceStatus struct {
+	// Exists reports whether the provider currently holds a resource for the host.
+	Exists bool
+	// ResourceID is the provider's public identity, empty when Exists is false.
+	ResourceID string
+	// PrivateAddress is metadata, not a transport.
+	PrivateAddress string
+}
+
 // HostProvider is the compute-provider port (implemented for AWS by Terraform
 // in S02; a stub that refuses to run ships in S01).
+//
+// StatusHost is part of the port rather than an adapter extra because the
+// lifecycle needs it in two places: adopting an allocation after a crash, and
+// answering "does this host still exist" without asking the API to create
+// anything. See internal/provider for the five-operation contract built on it.
 type HostProvider interface {
 	CreateHost(ctx context.Context, req ProviderCreateRequest) (ProviderResource, error)
+	StatusHost(ctx context.Context, req ProviderStatusRequest) (ProviderResourceStatus, error)
 	DestroyHost(ctx context.Context, req ProviderDestroyRequest) error
 }
 
@@ -266,17 +313,32 @@ type AuthorizeRequest struct {
 // HostAuthorizer is the OpenBao host-identity port.
 type HostAuthorizer interface {
 	AuthorizeHost(ctx context.Context, req AuthorizeRequest) error
-	RevokeHost(ctx context.Context, req AuthorizeRequest) error
+	// RevokeTokens invalidates every already-issued token whose policy belongs to
+	// this host. It is the only operation that cuts off a session handed out
+	// before the teardown started.
+	RevokeTokens(ctx context.Context, req AuthorizeRequest) (TokenRevocation, error)
+	// RevokeCredentials deletes the AppRole (and with it every SecretID) and the
+	// ACL policy, so no future login can succeed. It does not touch an already
+	// issued token: that is RevokeTokens' job, and the distinction is the reason
+	// teardown calls both.
+	RevokeCredentials(ctx context.Context, req AuthorizeRequest) (CredentialRevocation, error)
 }
 
-// RemoveDeviceRequest identifies a tailnet device to remove.
+// RemoveDeviceRequest identifies a tailnet device to remove. DeviceID is the
+// recorded identity from the inventory. HostName travels with it so a device that
+// was enrolled but never recorded can still be attributed by name in a refusal
+// message, and so a retry reports which host it failed for.
 type RemoveDeviceRequest struct {
 	HostID   string
+	HostName string
 	DeviceID string
 }
 
 // TailnetDeviceManager is the Tailscale device port.
 type TailnetDeviceManager interface {
+	// RemoveDevice deletes the host's device. Removing a device that is already
+	// gone is success, so a retried teardown is idempotent; a device the request
+	// cannot identify is a refusal, not a silent no-op.
 	RemoveDevice(ctx context.Context, req RemoveDeviceRequest) error
 }
 

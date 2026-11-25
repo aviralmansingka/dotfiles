@@ -7,17 +7,20 @@ import (
 	"sync"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 )
 
 // Tailnet is an in-memory tailnet that behaves like the real thing in the two
 // ways enrollment depends on: a device registers once per key, and a key is
 // single-use.
 type Tailnet struct {
-	mu        sync.Mutex
-	devices   []application.TailnetDevice
-	usedKeys  map[string]string
-	joins     int
-	lookupErr error
+	mu             sync.Mutex
+	devices        []application.TailnetDevice
+	usedKeys       map[string]string
+	joins          int
+	removals       int
+	absentRemovals int
+	lookupErr      error
 }
 
 // NewTailnet builds an empty tailnet.
@@ -25,7 +28,10 @@ func NewTailnet() *Tailnet {
 	return &Tailnet{usedKeys: map[string]string{}}
 }
 
-var _ application.DeviceLookup = (*Tailnet)(nil)
+var (
+	_ application.DeviceLookup         = (*Tailnet)(nil)
+	_ application.TailnetDeviceManager = (*Tailnet)(nil)
+)
 
 // ErrAuthKeyReused is returned when a key is presented a second time.
 var ErrAuthKeyReused = fmt.Errorf("tailnet: auth key was already used")
@@ -99,6 +105,57 @@ func (t *Tailnet) SetState(name, state string) {
 			t.devices[i].State = state
 		}
 	}
+}
+
+// RemoveDevice implements application.TailnetDeviceManager. Removing a device that
+// is already gone is success, which is what makes a retried teardown idempotent.
+// A request with no device id is refused: the port does not guess by name.
+func (t *Tailnet) RemoveDevice(_ context.Context, req application.RemoveDeviceRequest) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if strings.TrimSpace(req.DeviceID) == "" {
+		return &domain.AmbiguousOwnershipError{
+			HostID: req.HostID,
+			Reason: "the inventory record names no tailnet device id",
+		}
+	}
+	for i := range t.devices {
+		if t.devices[i].ID != req.DeviceID {
+			continue
+		}
+		t.devices = append(t.devices[:i], t.devices[i+1:]...)
+		t.removals++
+		return nil
+	}
+	t.absentRemovals++
+	return nil
+}
+
+// Removals reports how many devices were actually deleted.
+func (t *Tailnet) Removals() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.removals
+}
+
+// AbsentRemovals reports how many removals found the device already gone, which is
+// how a test proves the second teardown of a host is harmless.
+func (t *Tailnet) AbsentRemovals() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.absentRemovals
+}
+
+// DeviceByID returns the device with the given id, if it is still registered.
+func (t *Tailnet) DeviceByID(id string) (application.TailnetDevice, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, device := range t.devices {
+		if device.ID == id {
+			return device, true
+		}
+	}
+	return application.TailnetDevice{}, false
 }
 
 // Secrets is a SecretSource over an in-memory map of references to values. It

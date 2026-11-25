@@ -240,7 +240,7 @@ func runWorker(args []string) error {
 		return err
 	}
 
-	enrollee, agent, err := newEnrollment(state)
+	enrollee, agent, deviceManager, err := newEnrollment(state)
 	if err != nil {
 		return err
 	}
@@ -252,10 +252,13 @@ func runWorker(args []string) error {
 
 	// Enrollment runs over SSM only: the agent check gates it, the key travels as
 	// an encrypted parameter, and the command carries a parameter path. Profile
-	// deployment (S04) and device removal (S07) remain refusing stubs, so no job
-	// can reach "ready" before those land. The authorizing stage is the real
-	// OpenBao adapter: per-host AppRole, own-path policy, and a one-use wrapped
-	// SecretID delivered as a 0600 file.
+	// deployment (S04) remains a refusing stub, so no job can reach "ready" before
+	// it lands. The authorizing and revoking stages are the real OpenBao adapter:
+	// per-host AppRole, own-path policy, one-use wrapped SecretID delivered as a
+	// 0600 file, and token revocation by accessor. Device removal is the real
+	// Tailscale adapter when enrollment is configured, and the refusing stub
+	// otherwise, so a teardown can never report a device removed that it never
+	// touched.
 	activities := &temporaladapter.Activities{
 		Inventory:  state.store,
 		Providers:  provider,
@@ -263,7 +266,7 @@ func runWorker(args []string) error {
 		Enroller:   enrollee,
 		Deployer:   ssh.NewStub(),
 		Authorizer: authorizer,
-		Tailnet:    tailscale.NewStub(),
+		Tailnet:    deviceManager,
 		Clock:      application.WallClock{},
 		Logger:     state.log,
 	}
@@ -284,20 +287,21 @@ func runWorker(args []string) error {
 
 // newEnrollment builds the SSM-only enrollment chain from the approved
 // configuration: the OpenBao secret source, the Tailscale key minter and device
-// lookup, the encrypted-parameter handoff, the run-command transport, and the
+// manager, the encrypted-parameter handoff, the run-command transport, and the
 // agent check that gates all of them.
 //
-// It returns the enroller and the agent probe separately because the probe is its
-// own workflow activity. A half-configured block is refused at load time. When
-// enrollment is not configured at all the refusing stubs are kept, so a job cannot
-// reach "ready" without a real enrollment step.
-func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgentProbe, error) {
+// It returns the enroller, the agent probe, and the tailnet device manager
+// separately because each is its own activity. A half-configured block is refused
+// at load time. When enrollment is not configured at all the refusing stubs are
+// kept, so no job can reach "ready" without a real enrollment step and no teardown
+// can claim a device was removed by a component that is not wired.
+func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgentProbe, application.TailnetDeviceManager, error) {
 	cfg := state.service.Enrollment
 	if !cfg.Configured() {
 		state.log.Warn("enrollment.not_configured",
-			"reason", "enrollment.tailscale.oauth_secret_ref, enrollment.openbao.token_file, and enrollment.ssm.parameter_prefix are not all set; enrollment stays a refusing stub")
+			"reason", "enrollment.tailscale.oauth_secret_ref, enrollment.openbao.token_file, and enrollment.ssm.parameter_prefix are not all set; enrollment and device removal stay refusing stubs")
 		stub := ssm.NewStub()
-		return stub, stub, nil
+		return stub, stub, tailscale.NewStub(), nil
 	}
 	secrets, err := openbao.NewSecretSource(openbao.SecretSourceConfig{
 		Address:   cfg.OpenBao.Address,
@@ -305,7 +309,7 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 		Namespace: cfg.OpenBao.Namespace,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("enrollment secret source: %w", err)
+		return nil, nil, nil, fmt.Errorf("enrollment secret source: %w", err)
 	}
 	clientConfig := tailscale.ClientConfig{
 		HTTP:           &http.Client{Timeout: 30 * time.Second},
@@ -319,11 +323,11 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 	}
 	minter, err := tailscale.NewMinter(clientConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("enrollment key minter: %w", err)
+		return nil, nil, nil, fmt.Errorf("enrollment key minter: %w", err)
 	}
 	devices, err := tailscale.NewDevices(clientConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("enrollment device lookup: %w", err)
+		return nil, nil, nil, fmt.Errorf("enrollment device lookup: %w", err)
 	}
 
 	// One SSM configuration for every call: the same region and the same pinned CLI
@@ -333,7 +337,7 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 	ssmClient := ssm.ClientConfig{Binary: cfg.SSM.Binary, Region: cfg.SSM.Region, Executor: ssm.CLIExecutor{}}
 	parameters, err := ssm.NewParameterStore(ssm.ParameterStoreConfig{Client: ssmClient})
 	if err != nil {
-		return nil, nil, fmt.Errorf("enrollment parameter store: %w", err)
+		return nil, nil, nil, fmt.Errorf("enrollment parameter store: %w", err)
 	}
 	runner, err := ssm.NewRunner(ssm.RunnerConfig{
 		Client:                ssmClient,
@@ -341,7 +345,7 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 		PollInterval:          pollInterval,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("enrollment run-command transport: %w", err)
+		return nil, nil, nil, fmt.Errorf("enrollment run-command transport: %w", err)
 	}
 	agent, err := ssm.NewAgentProbe(ssm.AgentProbeConfig{
 		Client:       ssmClient,
@@ -349,7 +353,7 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 		PollInterval: pollInterval,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("enrollment agent probe: %w", err)
+		return nil, nil, nil, fmt.Errorf("enrollment agent probe: %w", err)
 	}
 	enroller, err := ssm.NewEnroller(ssm.EnrollConfig{
 		Runner:          runner,
@@ -362,7 +366,7 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 		Logger:          state.log,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("enrollment enroller: %w", err)
+		return nil, nil, nil, fmt.Errorf("enrollment enroller: %w", err)
 	}
 	service, err := application.NewEnrollmentService(application.EnrollmentDeps{
 		Profiles: state.catalog,
@@ -371,9 +375,11 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 		Logger:   state.log,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return service, agent, nil
+	// The same adapter answers device removal: it is the only component that holds
+	// the tailnet credential and knows a device id from a name.
+	return service, agent, devices, nil
 }
 
 // newAuthorizer builds the per-host OpenBao identity adapter.

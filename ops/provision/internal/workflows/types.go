@@ -22,15 +22,16 @@ const StatusQueryName = "status"
 // Registered activity names. The registry adapter uses these exact names, so a
 // rename cannot silently desynchronize a workflow from its activity.
 const (
-	ActivityCreateHostResource  = "CreateHostResource"
-	ActivityCheckSSMAgent       = "CheckSSMAgent"
-	ActivityEnrollHost          = "EnrollHost"
-	ActivityDeployProfile       = "DeployProfile"
-	ActivityAuthorizeHost       = "AuthorizeHost"
-	ActivityRevokeHostAccess    = "RevokeHostAccess"
-	ActivityRemoveDevice        = "RemoveDevice"
-	ActivityDestroyHostResource = "DestroyHostResource"
-	ActivityRecordHostMilestone = "RecordHostMilestone"
+	ActivityCreateHostResource    = "CreateHostResource"
+	ActivityCheckSSMAgent         = "CheckSSMAgent"
+	ActivityEnrollHost            = "EnrollHost"
+	ActivityDeployProfile         = "DeployProfile"
+	ActivityAuthorizeHost         = "AuthorizeHost"
+	ActivityRevokeHostTokens      = "RevokeHostTokens"
+	ActivityRevokeHostCredentials = "RevokeHostCredentials"
+	ActivityRemoveDevice          = "RemoveDevice"
+	ActivityDestroyHostResource   = "DestroyHostResource"
+	ActivityRecordHostMilestone   = "RecordHostMilestone"
 )
 
 // Activity failure types used to carry retryability without leaking error
@@ -67,13 +68,18 @@ type CreateHostInput struct {
 	OwnerClientID  string   `json:"owner_client_id"`
 }
 
-// DeleteHostInput starts a host teardown.
+// DeleteHostInput starts a host teardown. Profile and Size travel because
+// Terraform needs every declared variable to plan a destroy, and the adapter
+// re-resolves the shape from the catalog instead of trusting a remembered value.
 type DeleteHostInput struct {
 	Spec          HostSpec `json:"spec"`
 	JobID         string   `json:"job_id"`
 	ResourceID    string   `json:"resource_id"`
 	DeviceID      string   `json:"device_id"`
 	FlakeRevision string   `json:"flake_revision"`
+	// Attempt counts the teardown job so workflow history and the inventory record
+	// agree on which run did the work.
+	Attempt int `json:"attempt"`
 }
 
 // CreateHostResourceInput allocates the compute resource.
@@ -162,17 +168,38 @@ type AuthorizeHostInput struct {
 	SecretBundles []string `json:"secret_bundles"`
 }
 
-// RevokeHostAccessInput revokes a host's OpenBao identity.
-type RevokeHostAccessInput struct {
+// RevokeHostTokensInput asks for every already-issued token carrying the host's
+// policy to be invalidated. It is its own activity, not a step inside the
+// credential revocation, because it is the only step that cuts off a session that
+// already exists — and because a failure here has to be reportable on its own.
+type RevokeHostTokensInput struct {
+	HostID string `json:"host_id"`
+	Name   string `json:"name"`
+}
+
+// RevokeHostTokensOutput reports how many issued tokens were invalidated and how
+// many still carry the host's policy afterwards. A non-zero Remaining is a partial
+// revocation, and the workflow reports the step as incomplete.
+type RevokeHostTokensOutput struct {
+	Revoked   int `json:"revoked"`
+	Remaining int `json:"remaining"`
+}
+
+// RevokeHostCredentialsInput asks for the AppRole and the ACL policy to be
+// deleted, so no SecretID can produce a new login. Deleting the AppRole does not
+// touch an issued token; that is what RevokeHostTokensInput is for.
+type RevokeHostCredentialsInput struct {
 	HostID        string   `json:"host_id"`
 	Name          string   `json:"name"`
 	Profile       string   `json:"profile"`
 	SecretBundles []string `json:"secret_bundles"`
 }
 
-// RemoveDeviceInput removes a tailnet device.
+// RemoveDeviceInput removes a tailnet device. HostName travels with the recorded
+// device id so a refusal names the host it is about.
 type RemoveDeviceInput struct {
 	HostID   string `json:"host_id"`
+	HostName string `json:"host_name"`
 	DeviceID string `json:"device_id"`
 }
 
@@ -194,6 +221,7 @@ type DestroyHostResourceInput struct {
 type RecordHostMilestoneInput struct {
 	HostID         string           `json:"host_id"`
 	JobID          string           `json:"job_id"`
+	Kind           string           `json:"kind"`
 	Stage          string           `json:"stage"`
 	State          string           `json:"state"`
 	ResourceID     string           `json:"resource_id"`
@@ -201,25 +229,41 @@ type RecordHostMilestoneInput struct {
 	PrivateAddress string           `json:"private_address"`
 	FlakeRevision  string           `json:"flake_revision"`
 	RexURL         string           `json:"rex_url"`
+	TokensRevoked  int              `json:"tokens_revoked,omitempty"`
+	Released       []string         `json:"released,omitempty"`
+	Incomplete     []string         `json:"incomplete,omitempty"`
 	Error          *domain.JobError `json:"error,omitempty"`
+}
+
+// CleanupOutcome records one teardown step's result. The reason is sanitized: no
+// credential, address, or provider payload reaches it.
+type CleanupOutcome struct {
+	Step      string `json:"step"`
+	Completed bool   `json:"completed"`
+	Reason    string `json:"reason,omitempty"`
 }
 
 // Status is the deterministic snapshot returned by the status query and by a
 // completed workflow.
 type Status struct {
-	HostID         string           `json:"host_id"`
-	JobID          string           `json:"job_id"`
-	Kind           domain.JobKind   `json:"kind"`
-	State          domain.JobState  `json:"state"`
-	Stage          domain.Stage     `json:"stage"`
-	ResourceID     string           `json:"resource_id"`
-	DeviceID       string           `json:"device_id"`
-	PrivateAddress string           `json:"private_address"`
-	FlakeRevision  string           `json:"flake_revision"`
-	RexURL         string           `json:"rex_url"`
-	Error          *domain.JobError `json:"error,omitempty"`
-	UpdatedAt      time.Time        `json:"updated_at"`
-	Attempt        int              `json:"attempt"`
+	HostID         string          `json:"host_id"`
+	JobID          string          `json:"job_id"`
+	Kind           domain.JobKind  `json:"kind"`
+	State          domain.JobState `json:"state"`
+	Stage          domain.Stage    `json:"stage"`
+	ResourceID     string          `json:"resource_id"`
+	DeviceID       string          `json:"device_id"`
+	PrivateAddress string          `json:"private_address"`
+	FlakeRevision  string          `json:"flake_revision"`
+	RexURL         string          `json:"rex_url"`
+	// Cleanup is the outcome of every teardown step, in ladder order. A teardown
+	// that failed part-way reports exactly which steps did not finish.
+	Cleanup []CleanupOutcome `json:"cleanup,omitempty"`
+	// TokensRevoked counts already-issued credentials this teardown invalidated.
+	TokensRevoked int              `json:"tokens_revoked,omitempty"`
+	Error         *domain.JobError `json:"error,omitempty"`
+	UpdatedAt     time.Time        `json:"updated_at"`
+	Attempt       int              `json:"attempt"`
 }
 
 // Snapshot returns a copy that a query caller cannot use to mutate workflow
@@ -230,5 +274,28 @@ func (s Status) Snapshot() Status {
 		errCopy := *s.Error
 		out.Error = &errCopy
 	}
+	out.Cleanup = append([]CleanupOutcome(nil), s.Cleanup...)
 	return out
+}
+
+// IncompleteSteps returns the cleanup steps that did not finish, in order.
+func (s Status) IncompleteSteps() []string {
+	steps := make([]string, 0, len(s.Cleanup))
+	for _, outcome := range s.Cleanup {
+		if !outcome.Completed {
+			steps = append(steps, outcome.Step)
+		}
+	}
+	return steps
+}
+
+// ReleasedSteps returns the cleanup steps that completed, in order.
+func (s Status) ReleasedSteps() []string {
+	steps := make([]string, 0, len(s.Cleanup))
+	for _, outcome := range s.Cleanup {
+		if outcome.Completed {
+			steps = append(steps, outcome.Step)
+		}
+	}
+	return steps
 }

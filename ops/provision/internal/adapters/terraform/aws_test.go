@@ -912,3 +912,93 @@ func containsArg(args []string, want string) bool {
 	}
 	return false
 }
+
+// statusRequest builds the read-only status request for one host.
+func statusRequest(name, resourceID string) application.ProviderStatusRequest {
+	return application.ProviderStatusRequest{
+		HostID:     "host-0001",
+		Name:       name,
+		Provider:   domain.ProviderAWS,
+		Profile:    "rex",
+		Region:     "ap-south-1",
+		Size:       "standard",
+		ResourceID: resourceID,
+	}
+}
+
+// TestStatusHostReadsOnlyThisHostsState proves the status operation is a read: it
+// opens this host's state object, runs no apply and no destroy, and answers with the
+// recorded identity.
+func TestStatusHostReadsOnlyThisHostsState(t *testing.T) {
+	t.Parallel()
+	provider, runner, _ := offlineProvider(t)
+	ctx := context.Background()
+
+	// A host that was never applied has no resource, and that is an answer, not an
+	// error.
+	absent, err := provider.StatusHost(ctx, statusRequest("rex-11", ""))
+	if err != nil {
+		t.Fatalf("StatusHost before create: %v", err)
+	}
+	if absent.Exists {
+		t.Fatalf("StatusHost reported a resource before anything was created: %+v", absent)
+	}
+
+	created, err := provider.CreateHost(ctx, createRequest("rex-11"))
+	if err != nil {
+		t.Fatalf("CreateHost: %v", err)
+	}
+	// Everything after this index belongs to the status calls.
+	before := len(runner.recorded())
+
+	status, err := provider.StatusHost(ctx, statusRequest("rex-11", created.ResourceID))
+	if err != nil {
+		t.Fatalf("StatusHost: %v", err)
+	}
+	if !status.Exists {
+		t.Fatal("StatusHost reported the created resource as absent")
+	}
+	if status.ResourceID != created.ResourceID {
+		t.Fatalf("status resource id = %q, want %q", status.ResourceID, created.ResourceID)
+	}
+
+	after := runner.recorded()[before:]
+	if len(after) == 0 {
+		t.Fatal("the status call ran no terraform command, so it cannot have read the state")
+	}
+	for _, call := range after {
+		switch call.Args[0] {
+		case "apply", "destroy":
+			t.Fatalf("a status call ran %s, which is not read-only", call.Args[0])
+		}
+	}
+	// It opens exactly this host's state object and no other.
+	for _, call := range after {
+		if call.Args[0] != "init" {
+			continue
+		}
+		if key := backendConfig(call.Args, "key"); key != terraform.StateKey("rex-11") {
+			t.Fatalf("init opened state key %q, want %q", key, terraform.StateKey("rex-11"))
+		}
+	}
+}
+
+// TestStatusHostRefusesAStateThatNamesAnotherInstance keeps the status operation from
+// reporting somebody else's machine as this host's resource: a teardown built on that
+// answer would destroy the wrong instance.
+func TestStatusHostRefusesAStateThatNamesAnotherInstance(t *testing.T) {
+	t.Parallel()
+	provider, _, _ := offlineProvider(t)
+	ctx := context.Background()
+	if _, err := provider.CreateHost(ctx, createRequest("rex-12")); err != nil {
+		t.Fatalf("CreateHost: %v", err)
+	}
+
+	_, err := provider.StatusHost(ctx, statusRequest("rex-12", "i-someone-else"))
+	if err == nil {
+		t.Fatal("StatusHost reported a state object holding a different instance")
+	}
+	if !strings.Contains(err.Error(), "refusing to report") {
+		t.Fatalf("error = %v, want an ownership refusal", err)
+	}
+}

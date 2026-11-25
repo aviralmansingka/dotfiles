@@ -51,18 +51,22 @@ type jobResponse struct {
 	RunID     string            `json:"run_id,omitempty"`
 	CreatedAt string            `json:"created_at,omitempty"`
 	UpdatedAt string            `json:"updated_at,omitempty"`
+	// IncompleteCleanup names the teardown steps that did not finish, so a failed
+	// teardown says what is left rather than only that it failed.
+	IncompleteCleanup []string `json:"incomplete_cleanup,omitempty"`
 }
 
 func toJobResponse(job application.JobView) jobResponse {
 	response := jobResponse{
-		JobID:     job.JobID,
-		HostID:    job.HostID,
-		Kind:      string(job.Kind),
-		State:     string(job.State),
-		Stage:     string(job.Stage),
-		RunID:     job.RunID,
-		CreatedAt: formatTime(job.CreatedAt),
-		UpdatedAt: formatTime(job.UpdatedAt),
+		JobID:             job.JobID,
+		HostID:            job.HostID,
+		Kind:              string(job.Kind),
+		State:             string(job.State),
+		Stage:             string(job.Stage),
+		RunID:             job.RunID,
+		CreatedAt:         formatTime(job.CreatedAt),
+		UpdatedAt:         formatTime(job.UpdatedAt),
+		IncompleteCleanup: job.IncompleteCleanup,
 	}
 	if job.Error != nil {
 		response.Error = &jobErrorResponse{
@@ -91,10 +95,33 @@ type hostResponse struct {
 	Tags           map[string]string `json:"tags,omitempty"`
 	CreatedAt      string            `json:"created_at,omitempty"`
 	UpdatedAt      string            `json:"updated_at,omitempty"`
+	// ResourceID and DeviceID are the provider instance id and the tailnet device
+	// id. They are identifiers, not credentials, and an operator needs them to
+	// check the three systems after a teardown.
+	ResourceID string `json:"resource_id,omitempty"`
+	DeviceID   string `json:"device_id,omitempty"`
+	// DeleteJobID is the teardown job that owns this record, so a repeat DELETE and
+	// a tombstoned record both answer with the job that did the work.
+	DeleteJobID string `json:"delete_job_id,omitempty"`
+	// PendingCleanup lists the teardown steps a failed delete has not finished.
+	PendingCleanup []string `json:"pending_cleanup,omitempty"`
+	// Tombstone is present only once a teardown finished every step.
+	Tombstone *tombstoneResponse `json:"tombstone,omitempty"`
+}
+
+// tombstoneResponse is the sanitized record a completed teardown leaves. It carries
+// identifiers, cleanup outcomes, and cost-relevant shape; it carries no address, no
+// URL, and no credential reference, because the record itself drops those.
+type tombstoneResponse struct {
+	DeletedAt             string   `json:"deleted_at"`
+	Released              []string `json:"released"`
+	Incomplete            []string `json:"incomplete,omitempty"`
+	TokenAccessorsRevoked int      `json:"token_accessors_revoked"`
+	Policy                string   `json:"policy"`
 }
 
 func toHostResponse(host domain.Host) hostResponse {
-	return hostResponse{
+	response := hostResponse{
 		HostID:         host.ID,
 		Name:           host.Name,
 		Provider:       string(host.Provider),
@@ -110,7 +137,28 @@ func toHostResponse(host domain.Host) hostResponse {
 		Tags:           host.Tags,
 		CreatedAt:      formatTime(host.CreatedAt),
 		UpdatedAt:      formatTime(host.UpdatedAt),
+		ResourceID:     host.ResourceID,
+		DeviceID:       host.DeviceID,
+		DeleteJobID:    host.DeleteJobID,
 	}
+	for _, step := range host.PendingCleanup {
+		response.PendingCleanup = append(response.PendingCleanup, string(step))
+	}
+	if host.Tombstone != nil {
+		tombstone := &tombstoneResponse{
+			DeletedAt:             formatTime(host.Tombstone.DeletedAt),
+			TokenAccessorsRevoked: host.Tombstone.TokenAccessorsRevoked,
+			Policy:                host.Tombstone.Policy,
+		}
+		for _, step := range host.Tombstone.Released {
+			tombstone.Released = append(tombstone.Released, string(step))
+		}
+		for _, step := range host.Tombstone.Incomplete {
+			tombstone.Incomplete = append(tombstone.Incomplete, string(step))
+		}
+		response.Tombstone = tombstone
+	}
+	return response
 }
 
 func formatTime(t time.Time) string {

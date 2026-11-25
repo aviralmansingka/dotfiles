@@ -252,29 +252,65 @@ func (a *Activities) AuthorizeHost(ctx context.Context, in workflows.AuthorizeHo
 	return nil
 }
 
-// RevokeHostAccess revokes the host's OpenBao identity.
-func (a *Activities) RevokeHostAccess(ctx context.Context, in workflows.RevokeHostAccessInput) error {
-	if err := a.Authorizer.RevokeHost(ctx, application.AuthorizeRequest{
+// RevokeHostTokens invalidates every already-issued OpenBao token carrying this
+// host's policy, and reports how many it revoked.
+//
+// It is a separate activity from the credential revocation on purpose. Deleting an
+// AppRole stops future logins and leaves an existing session working, so a teardown
+// that only deletes the role has not actually cut the host off. Splitting the two
+// also means a failure names the exact step that is incomplete.
+func (a *Activities) RevokeHostTokens(ctx context.Context, in workflows.RevokeHostTokensInput) (workflows.RevokeHostTokensOutput, error) {
+	report, err := a.Authorizer.RevokeTokens(ctx, application.AuthorizeRequest{
+		HostID: in.HostID,
+		Name:   in.Name,
+	})
+	if err != nil {
+		return workflows.RevokeHostTokensOutput{}, a.activityError("revoke_host_tokens", in.HostID, err)
+	}
+	a.log("host.tokens_revoked",
+		"host_id", in.HostID,
+		"accessors_revoked", report.Revoked,
+		"accessors_remaining", report.Remaining,
+	)
+	return workflows.RevokeHostTokensOutput{Revoked: report.Revoked, Remaining: report.Remaining}, nil
+}
+
+// RevokeHostCredentials deletes the AppRole and the ACL policy, so no SecretID can
+// produce a new login. Issued tokens are not affected; RevokeHostTokens ran first.
+func (a *Activities) RevokeHostCredentials(ctx context.Context, in workflows.RevokeHostCredentialsInput) error {
+	if _, err := a.Authorizer.RevokeCredentials(ctx, application.AuthorizeRequest{
 		HostID:        in.HostID,
 		Name:          in.Name,
 		Profile:       in.Profile,
 		SecretBundles: in.SecretBundles,
 	}); err != nil {
-		return a.activityError("revoke_host_access", in.HostID, err)
+		return a.activityError("revoke_host_credentials", in.HostID, err)
 	}
-	a.log("host.access_revoked", "host_id", in.HostID)
+	a.log("host.credentials_revoked", "host_id", in.HostID)
 	return nil
 }
 
 // RemoveDevice removes the tailnet device.
+//
+// A device the record cannot identify is refused, permanently, rather than guessed
+// at: another device with a similar name belongs to somebody else, and the operator
+// reconciles by hand. That refusal is reported as an incomplete cleanup step, so a
+// teardown that cannot remove a device still says so instead of claiming success.
 func (a *Activities) RemoveDevice(ctx context.Context, in workflows.RemoveDeviceInput) error {
+	if strings.TrimSpace(in.DeviceID) == "" {
+		return a.activityError("remove_device", in.HostID, &domain.AmbiguousOwnershipError{
+			HostID: in.HostID,
+			Reason: "the inventory record names no tailnet device id; remove the device by name in the Tailscale admin console",
+		})
+	}
 	if err := a.Tailnet.RemoveDevice(ctx, application.RemoveDeviceRequest{
 		HostID:   in.HostID,
+		HostName: in.HostName,
 		DeviceID: in.DeviceID,
 	}); err != nil {
 		return a.activityError("remove_device", in.HostID, err)
 	}
-	a.log("host.device_removed", "host_id", in.HostID)
+	a.log("host.device_removed", "host_id", in.HostID, "device_id", in.DeviceID)
 	return nil
 }
 
@@ -311,24 +347,44 @@ func (a *Activities) DestroyHostResource(ctx context.Context, in workflows.Destr
 // workflow history expiry. The resource and device ids travel with every
 // milestone: a milestone that supersedes an earlier one cannot lose the
 // allocation it already records.
+//
+// A milestone is also where a teardown becomes durable. A completed teardown
+// writes the sanitized tombstone; a partial one records which cleanup is left, so
+// an operator who never retries still has the answer on the record.
 func (a *Activities) RecordHostMilestone(ctx context.Context, in workflows.RecordHostMilestoneInput) error {
 	now := a.Clock.Now()
+	kind := domain.JobKind(in.Kind)
+	released := cleanupSteps(in.Released)
+	incomplete := cleanupSteps(in.Incomplete)
 	_, err := a.Inventory.UpdateHost(ctx, in.HostID, func(h *domain.Host) error {
 		if domain.JobState(in.State) == domain.JobCanceled {
-			// A canceled job is not a failure and not a teardown: the record stays
-			// provisioning so whatever it allocated is still owned and reconcilable.
-			h.State = domain.HostStateProvisioning
-			h.UpdatedAt = now.UTC()
+			// A canceled job is not a failure and not a teardown: a canceled create
+			// keeps its allocation so it is still owned and reconcilable, and a
+			// canceled teardown leaves the record visibly unfinished.
+			if kind == domain.JobKindDelete {
+				h.MarkCleanupIncomplete(incomplete, now)
+			} else {
+				h.State = domain.HostStateProvisioning
+				h.UpdatedAt = now.UTC()
+			}
 		} else {
-			switch domain.HostState(in.State) {
-			case domain.HostStateReady:
+			// The job state and the record state are different vocabularies. An
+			// in-progress delete is "deleting", not "provisioning", and that is
+			// exactly what the job kind is here for.
+			switch {
+			case domain.HostState(in.State) == domain.HostStateReady:
 				h.MarkReady(in.FlakeRevision, in.PrivateAddress, in.RexURL, now)
-			case domain.HostStateFailed:
-				h.MarkFailed(now)
-			case domain.HostStateDeleting:
+			case domain.JobState(in.State) == domain.JobInProgress && kind == domain.JobKindDelete:
 				h.MarkDeleting(now)
-			case domain.HostStateDeleted:
-				h.MarkDeleted(now)
+			case domain.HostState(in.State) == domain.HostStateFailed && kind == domain.JobKindDelete:
+				// A failed teardown is not a failed create: the record keeps what is
+				// left to clean up.
+				h.MarkCleanupIncomplete(incomplete, now)
+			case domain.HostState(in.State) == domain.HostStateFailed:
+				h.MarkFailed(now)
+			case domain.HostState(in.State) == domain.HostStateDeleted:
+				tombstone := domain.NewTombstone(now, released, incomplete, in.TokensRevoked)
+				return h.CompleteTeardown(tombstone)
 			default:
 				h.State = domain.HostStateProvisioning
 				h.UpdatedAt = now.UTC()
@@ -354,8 +410,31 @@ func (a *Activities) RecordHostMilestone(ctx context.Context, in workflows.Recor
 	if err != nil {
 		return err
 	}
-	a.log("host.milestone", "host_id", in.HostID, "stage", in.Stage, "state", in.State)
+	a.log("host.milestone",
+		"host_id", in.HostID,
+		"stage", in.Stage,
+		"state", in.State,
+		"incomplete", strings.Join(in.Incomplete, ","),
+	)
 	return nil
+}
+
+// cleanupSteps converts the payload's step names back into typed steps. An unknown
+// name is dropped: the payload is written by this tree, and a stale name must not
+// make a milestone fail after the destructive work is already done.
+func cleanupSteps(names []string) []domain.CleanupStep {
+	if len(names) == 0 {
+		return nil
+	}
+	steps := make([]domain.CleanupStep, 0, len(names))
+	for _, name := range names {
+		step := domain.CleanupStep(name)
+		if step.Validate() != nil {
+			continue
+		}
+		steps = append(steps, step)
+	}
+	return steps
 }
 
 // activityError converts a domain failure into a Temporal application error.

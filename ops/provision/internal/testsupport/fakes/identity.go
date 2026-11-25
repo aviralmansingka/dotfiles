@@ -11,19 +11,25 @@ import (
 )
 
 // IdentityBackend is an in-process fake of the OpenBao identity mechanics. It
-// reproduces the two properties the use case depends on: a role name is claimed
-// by exactly one host, and a SecretID is only ever handed out response-wrapped.
-// It never touches a network or a server.
+// reproduces the three properties the use case depends on: a role name is claimed
+// by exactly one host, a SecretID is only ever handed out response-wrapped, and a
+// token that was already issued survives the deletion of its AppRole until it is
+// revoked by accessor. That last one is the whole reason revocation enumerates
+// accessors rather than trusting the role deletion.
 type IdentityBackend struct {
-	mu       sync.Mutex
-	policies map[string]application.IdentityPolicy
-	roles    map[string]application.IdentityRole
-	claims   map[string]string
-	accessor int
-	mints    []string
-	err      error
-	mintErr  error
-	wrapTok  string
+	mu        sync.Mutex
+	policies  map[string]application.IdentityPolicy
+	roles     map[string]application.IdentityRole
+	claims    map[string]string
+	tokens    map[string]application.TokenAccessorInfo
+	accessor  int
+	mints     []string
+	revoked   []string
+	err       error
+	mintErr   error
+	lookupErr error
+	revokeErr error
+	wrapTok   string
 }
 
 // NewIdentityBackend builds an empty backend.
@@ -32,6 +38,7 @@ func NewIdentityBackend() *IdentityBackend {
 		policies: map[string]application.IdentityPolicy{},
 		roles:    map[string]application.IdentityRole{},
 		claims:   map[string]string{},
+		tokens:   map[string]application.TokenAccessorInfo{},
 	}
 }
 
@@ -156,6 +163,128 @@ func (b *IdentityBackend) DeletePolicy(_ context.Context, name string) error {
 	}
 	delete(b.policies, name)
 	return nil
+}
+
+// ListTokenAccessors implements application.IdentityBackend.
+func (b *IdentityBackend) ListTokenAccessors(_ context.Context) ([]string, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.err != nil {
+		return nil, b.err
+	}
+	if b.lookupErr != nil {
+		return nil, b.lookupErr
+	}
+	accessors := make([]string, 0, len(b.tokens))
+	for accessor := range b.tokens {
+		accessors = append(accessors, accessor)
+	}
+	// Deterministic order: a test asserts the exact revocation sequence.
+	for i := 1; i < len(accessors); i++ {
+		for j := i; j > 0 && accessors[j] < accessors[j-1]; j-- {
+			accessors[j], accessors[j-1] = accessors[j-1], accessors[j]
+		}
+	}
+	return accessors, nil
+}
+
+// LookupTokenAccessor implements application.IdentityBackend. A token that is
+// gone is reported as not found rather than as an error, exactly as the real
+// server reports an expired token.
+func (b *IdentityBackend) LookupTokenAccessor(_ context.Context, accessor string) (application.TokenAccessorInfo, bool, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.err != nil {
+		return application.TokenAccessorInfo{}, false, b.err
+	}
+	if b.lookupErr != nil {
+		return application.TokenAccessorInfo{}, false, b.lookupErr
+	}
+	info, ok := b.tokens[accessor]
+	return info, ok, nil
+}
+
+// RevokeTokenAccessor implements application.IdentityBackend.
+func (b *IdentityBackend) RevokeTokenAccessor(_ context.Context, accessor string) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.revokeErr != nil {
+		return b.revokeErr
+	}
+	if b.err != nil {
+		return b.err
+	}
+	delete(b.tokens, accessor)
+	b.revoked = append(b.revoked, accessor)
+	return nil
+}
+
+// IssueToken records an already-issued token carrying policies, which is what a
+// host that logged in before a teardown holds. It returns the accessor so a test
+// can assert on the exact value.
+func (b *IdentityBackend) IssueToken(policies ...string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.accessor++
+	accessor := fmt.Sprintf("accessor-%04d", b.accessor)
+	b.tokens[accessor] = application.TokenAccessorInfo{
+		Accessor: accessor,
+		Policies: append([]string(nil), policies...),
+	}
+	return accessor
+}
+
+// IssueAppRoleToken records an issued token carrying the AppRole's own policy set
+// plus the default policy, which is what a real AppRole login produces.
+func (b *IdentityBackend) IssueAppRoleToken(roleName string, defaults ...string) string {
+	policies := append([]string(nil), defaults...)
+	if role, ok := b.roles[roleName]; ok {
+		policies = append(policies, role.PolicyName)
+	}
+	return b.IssueToken(policies...)
+}
+
+// Tokens returns the accessor of every token that is still valid.
+func (b *IdentityBackend) Tokens() []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	accessors := make([]string, 0, len(b.tokens))
+	for accessor := range b.tokens {
+		accessors = append(accessors, accessor)
+	}
+	return accessors
+}
+
+// Revoked returns the accessors this backend invalidated, in the order they were
+// revoked.
+func (b *IdentityBackend) Revoked() []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return append([]string(nil), b.revoked...)
+}
+
+// FailRevokes makes every accessor revocation fail, which models a management
+// token without `sudo` on auth/token/revoke-accessor.
+func (b *IdentityBackend) FailRevokes(err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.revokeErr = err
+}
+
+// FailLookups makes listing and looking up token accessors fail.
+func (b *IdentityBackend) FailLookups(err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.lookupErr = err
+}
+
+// FailListTokenAccessors makes listing token accessors fail while leaving lookup
+// and revocation alone, which is the shape of a management token that lacks
+// `sudo` on auth/token/accessors.
+func (b *IdentityBackend) FailListTokenAccessors(err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.lookupErr = err
 }
 
 // Policy returns the stored policy for a name.

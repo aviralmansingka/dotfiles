@@ -214,21 +214,61 @@ func (s *Service) CreateHost(ctx context.Context, principal Principal, idempoten
 	return AcceptedIDs{HostID: hostID, JobID: jobID}, nil
 }
 
-// DeleteHost starts an asynchronous teardown. Repeated requests reuse the same
-// deletion job: the ledger holds exactly one reservation per host.
+// DeleteHost starts an asynchronous teardown, or reports the one that already
+// exists.
+//
+// Three rules govern it, and they are the rules that make teardown safe to call
+// twice and possible to retry:
+//
+//   - an already-tombstoned host is answered with its tombstone job. Nothing is
+//     reserved, nothing is started, and no cleanup step runs again;
+//   - a host whose teardown is still running is answered with that job. The
+//     ledger reservation is keyed by the attempt number, so two concurrent
+//     DELETEs compute the same key and exactly one durable operation starts;
+//   - a host whose teardown failed part-way gets a new attempt. The previous job
+//     id is not reused, because Temporal refuses to re-run a closed execution
+//     under the same id, and reusing it would make a partial teardown
+//     unrecoverable.
+//
+// The spec carries every field the workflow needs to finish the job: the
+// resolved shape (so Terraform runs with the identical variable set the create
+// used), the recorded provider resource id (the ownership proof the destroy
+// checks), and the recorded device id. A teardown that had to guess any of them
+// would either destroy nothing or destroy the wrong thing.
 func (s *Service) DeleteHost(ctx context.Context, principal Principal, hostID string) (AcceptedIDs, error) {
 	host, err := s.getOwnedHost(ctx, principal, hostID)
 	if err != nil {
 		return AcceptedIDs{}, err
 	}
-	key := "delete:" + hostID
-	fingerprint := "delete:" + hostID
+	if host.State == domain.HostStateDeleted {
+		// Repeat deletion is a read. Nothing is reserved and no operation starts.
+		s.log.Info("host.delete.replayed",
+			"client_id", principal.ClientID,
+			"host_id", hostID,
+			"job_id", host.DeleteJobID,
+			"reason", "the host is already tombstoned",
+		)
+		return AcceptedIDs{HostID: hostID, JobID: host.DeleteJobID}, nil
+	}
+	if running, ok := s.teardownInFlight(ctx, host); ok {
+		s.log.Info("host.delete.in_flight",
+			"client_id", principal.ClientID,
+			"host_id", hostID,
+			"job_id", running,
+		)
+		return AcceptedIDs{HostID: hostID, JobID: running}, nil
+	}
+
+	attempt := host.DeleteAttempts + 1
+	jobID := deleteJobID(host.ID, attempt)
+	key := fmt.Sprintf("delete:%s:%d", host.ID, attempt)
+	fingerprint := "delete:" + host.ID
 	now := s.clock.Now()
 	record, created, err := s.ledger.Reserve(ctx, IdempotencyRecord{
 		Key:         key,
 		Fingerprint: fingerprint,
 		ResourceID:  hostID,
-		JobID:       s.ids.NewID("delete"),
+		JobID:       jobID,
 		Kind:        domain.JobKindDelete,
 		CreatedAt:   now,
 	})
@@ -241,27 +281,40 @@ func (s *Service) DeleteHost(ctx context.Context, principal Principal, hostID st
 		}
 		return AcceptedIDs{HostID: record.ResourceID, JobID: record.JobID}, nil
 	}
-	if host.State == domain.HostStateDeleted {
-		// Already tombstoned; nothing destructive to do.
-		_ = s.ledger.Release(ctx, key)
-		return AcceptedIDs{}, domain.ErrNotFound
-	}
 
-	if _, err := s.hosts.UpdateHost(ctx, hostID, func(h *domain.Host) error {
-		h.MarkDeleting(now)
+	marked, err := s.hosts.UpdateHost(ctx, hostID, func(h *domain.Host) error {
+		if h.State == domain.HostStateDeleted {
+			return domain.ErrHostDeleted
+		}
+		h.BeginTeardown(jobID, attempt, now)
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		_ = s.ledger.Release(ctx, key)
+		if errors.Is(err, domain.ErrHostDeleted) {
+			// Another caller tombstoned the host between the read and this write.
+			// Answer with the record that now exists rather than with the stale
+			// copy, so the response names the job that did the work.
+			if current, readErr := s.hosts.GetHost(ctx, hostID); readErr == nil {
+				return AcceptedIDs{HostID: hostID, JobID: current.DeleteJobID}, nil
+			}
+			return AcceptedIDs{HostID: hostID, JobID: jobID}, nil
+		}
 		return AcceptedIDs{}, fmt.Errorf("mark host deleting: %w", err)
 	}
 
 	spec := DeleteHostSpec{
-		JobID:         record.JobID,
-		HostID:        host.ID,
-		Name:          host.Name,
-		Provider:      host.Provider,
-		Region:        host.Region,
-		SecretBundles: host.SecretBundles,
+		JobID:         jobID,
+		HostID:        marked.ID,
+		Name:          marked.Name,
+		Provider:      marked.Provider,
+		Profile:       marked.Profile,
+		Region:        marked.Region,
+		Size:          marked.Size,
+		ResourceID:    marked.ResourceID,
+		DeviceID:      marked.DeviceID,
+		SecretBundles: marked.SecretBundles,
+		Attempt:       attempt,
 	}
 	if _, err := s.jobs.StartDeleteHost(ctx, spec); err != nil {
 		_ = s.ledger.Release(ctx, key)
@@ -270,9 +323,49 @@ func (s *Service) DeleteHost(ctx context.Context, principal Principal, hostID st
 	s.log.Info("host.delete.accepted",
 		"client_id", principal.ClientID,
 		"host_id", hostID,
-		"job_id", record.JobID,
+		"job_id", jobID,
+		"attempt", attempt,
+		"pending_cleanup", domain.IncompleteCleanup(marked.PendingCleanup),
 	)
-	return AcceptedIDs{HostID: hostID, JobID: record.JobID}, nil
+	return AcceptedIDs{HostID: hostID, JobID: jobID}, nil
+}
+
+// teardownInFlight reports the job id of a teardown that has not finished, so a
+// repeated request answers with it rather than starting a second teardown of the
+// same host. A job that is finished — deleted, failed, or cancelled — does not
+// count: that is exactly the case a retry is for.
+func (s *Service) teardownInFlight(ctx context.Context, host domain.Host) (string, bool) {
+	if host.State != domain.HostStateDeleting || host.DeleteJobID == "" {
+		return "", false
+	}
+	view, err := s.jobs.DescribeJob(ctx, JobHandle{JobID: host.DeleteJobID})
+	if err != nil {
+		// No execution to describe: it expired or never started. A retry is the
+		// right answer, so this is not "in flight".
+		s.log.Warn("host.delete.describe_failed",
+			"host_id", host.ID,
+			"job_id", host.DeleteJobID,
+			"error", domain.SanitizeMessage(err.Error()),
+		)
+		return "", false
+	}
+	switch view.State {
+	case domain.JobDeleted, domain.JobFailed, domain.JobCanceled, domain.JobReady:
+		return "", false
+	default:
+		return host.DeleteJobID, true
+	}
+}
+
+// deleteJobID derives the teardown job id from the host and the attempt. The
+// first attempt keeps the historical `delete-<host>` shape; a retry appends the
+// attempt, because Temporal rejects a duplicate id and a retry must be a new
+// execution.
+func deleteJobID(hostID string, attempt int) string {
+	if attempt <= 1 {
+		return "delete-" + hostID
+	}
+	return fmt.Sprintf("delete-%s-r%d", hostID, attempt)
 }
 
 // GetJob reports one job after checking that the caller owns its host.

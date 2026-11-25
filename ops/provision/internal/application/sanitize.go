@@ -17,6 +17,10 @@ const (
 	// CodeAgentUnavailable reports a host whose SSM agent never registered. It is
 	// non-retryable: enrollment fails closed rather than trying another transport.
 	CodeAgentUnavailable = "host_agent_unavailable"
+	// CodeTeardownIncomplete reports a teardown that finished some steps and not
+	// others. It is retryable: every cleanup step is idempotent, so a retry
+	// finishes what is left, and the message names the steps that did not finish.
+	CodeTeardownIncomplete = "teardown_incomplete"
 )
 
 // SanitizeError converts any error into a client-safe JobError. Unknown errors

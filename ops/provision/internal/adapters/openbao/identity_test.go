@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -35,6 +36,13 @@ type fakeBao struct {
 	wraps    map[string]*fakeWrap
 	secretID map[string]*fakeSecretID
 	tokens   map[string]*fakeToken
+	// accessors is the issued-token table the revocation endpoints read:
+	// accessor -> the policies that token carries. It is separate from tokens
+	// (which models the value-addressed renew path) because an accessor is what
+	// revocation addresses.
+	accessors        map[string][]string
+	revokedAccessors []string
+	listedAccessors  int
 
 	unwraps            int
 	roleWrites         int
@@ -81,12 +89,13 @@ type fakeToken struct {
 func newFakeBao(t *testing.T) *fakeBao {
 	t.Helper()
 	f := &fakeBao{
-		policies: map[string]string{},
-		roles:    map[string]*fakeRole{},
-		claims:   map[string]string{},
-		wraps:    map[string]*fakeWrap{},
-		secretID: map[string]*fakeSecretID{},
-		tokens:   map[string]*fakeToken{},
+		policies:  map[string]string{},
+		roles:     map[string]*fakeRole{},
+		claims:    map[string]string{},
+		wraps:     map[string]*fakeWrap{},
+		secretID:  map[string]*fakeSecretID{},
+		tokens:    map[string]*fakeToken{},
+		accessors: map[string][]string{},
 	}
 	f.server = httptest.NewServer(http.HandlerFunc(f.handle))
 	t.Cleanup(f.server.Close)
@@ -197,6 +206,52 @@ func (f *fakeBao) handle(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(path, "secret/metadata/fleet/identity/roles/"):
 		role := strings.TrimPrefix(path, "secret/metadata/fleet/identity/roles/")
 		delete(f.claims, role)
+		w.WriteHeader(http.StatusNoContent)
+
+	case path == "auth/token/accessors":
+		// LIST is a GET with `?list=true`, which is how the adapter spells it.
+		if r.Method != http.MethodGet || !strings.Contains(r.URL.RawQuery, "list=true") {
+			writeError(w, http.StatusMethodNotAllowed, "accessor listing must be a LIST")
+			return
+		}
+		f.listedAccessors++
+		keys := make([]string, 0, len(f.accessors))
+		for accessor := range f.accessors {
+			keys = append(keys, accessor)
+		}
+		sort.Strings(keys)
+		writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{"keys": keys}})
+
+	case path == "auth/token/lookup-accessor":
+		var body struct {
+			Accessor string `json:"accessor"`
+		}
+		if !decodeRequest(w, r, &body) {
+			return
+		}
+		policies, ok := f.accessors[body.Accessor]
+		if !ok {
+			writeError(w, http.StatusNotFound, "bad token accessor")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{
+			"accessor": body.Accessor,
+			"policies": policies,
+		}})
+
+	case path == "auth/token/revoke-accessor":
+		var body struct {
+			Accessor string `json:"accessor"`
+		}
+		if !decodeRequest(w, r, &body) {
+			return
+		}
+		if _, ok := f.accessors[body.Accessor]; !ok {
+			writeError(w, http.StatusBadRequest, "token not found")
+			return
+		}
+		delete(f.accessors, body.Accessor)
+		f.revokedAccessors = append(f.revokedAccessors, body.Accessor)
 		w.WriteHeader(http.StatusNoContent)
 
 	case path == "auth/approle/login":

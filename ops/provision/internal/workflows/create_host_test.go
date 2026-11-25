@@ -32,6 +32,10 @@ func (fakeProvider) DestroyHost(_ context.Context, _ application.ProviderDestroy
 	return nil
 }
 
+func (fakeProvider) StatusHost(_ context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+	return application.ProviderResourceStatus{Exists: true, ResourceID: "i-0123456789abcdef0", PrivateAddress: "10.99.1.10"}, nil
+}
+
 type fakeProbe struct{}
 
 func (fakeProbe) AwaitRegistration(_ context.Context, instanceID string) (application.SSMAgentStatus, error) {

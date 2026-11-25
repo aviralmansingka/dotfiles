@@ -227,6 +227,7 @@ func applyStatus(status workflows.Status, view *application.JobView) {
 	view.State = status.State
 	view.Stage = status.Stage
 	view.Error = status.Error
+	view.IncompleteCleanup = status.IncompleteSteps()
 	if !status.UpdatedAt.IsZero() {
 		view.UpdatedAt = status.UpdatedAt.UTC()
 	}
