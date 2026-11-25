@@ -78,6 +78,11 @@ local function block_cwd(session_id, block_id)
   return nil
 end
 
+-- Review: the tuicr floating layer (rex/review.lua). It reads the block's
+-- directory through the reader above, so a block that changes directory brings
+-- its review with it.
+require("review"){ block_cwd = block_cwd }
+
 rex.action{
   name = "open_nvim_here",
   title = "Open Neovim Here",
