@@ -1,0 +1,59 @@
+{
+  "component": "@earendil-works/pi-durable@1.6.1",
+  "repo_root": "/Users/aviral/dotfiles/research/pi-durable-2026-11-26/src/pi-durable",
+  "anchor": "package.json:1-12 (one manifest, 20 export subpaths, files: [dist, README, CHANGELOG])",
+  "source_kind": "published npm tarball, not a git checkout; src/, test/, docs/spec.md absent",
+  "date": "2026-11-26",
+  "scouts": {
+    "scope": { "status": "returned", "elements": 26, "externals": 12, "actors": 7, "entry_points": 11 },
+    "relationships": { "status": "returned after one retry", "first_run": "provider connect timeout, no output", "rows": 71 },
+    "boundary": { "status": "returned", "inside": 21, "outside": 15 },
+    "levels": { "status": "returned", "proposed": "L0 L1 L1b L2 (no L2b)" }
+  },
+  "triage": {
+    "component": "the durable runtime library",
+    "reader": "an engineer deciding what to build or fix in pi-durable",
+    "shape": "one canvas, five described sections, lr"
+  },
+  "ladder": [
+    { "id": "l0", "title": "System context", "nodes": 8, "edges": 8, "extent": "83x25" },
+    { "id": "l1", "title": "Package: demand end", "nodes": 11, "edges": 5, "extent": "95x22" },
+    { "id": "l1b", "title": "Package: machine end", "nodes": 12, "edges": 4, "extent": "57x33" },
+    { "id": "l2", "title": "Inside: demand path", "nodes": 8, "edges": 7, "extent": "106x18" },
+    { "id": "l2b", "title": "Inside: machine path", "nodes": 8, "edges": 4, "extent": "77x22" }
+  ],
+  "deviations": [
+    {
+      "choice": "L1 split into L1/L1b",
+      "reason": "the single L1 drew 16 nodes and 13 edges, above the 12/16 readable budget; --check warned. Both slices keep the same eight members and ids.",
+      "measured": "warning: diagram l1 has 16 nodes / 13 edges, above the readable budget"
+    },
+    {
+      "choice": "L2 split into L2/L2b by edge set",
+      "reason": "one section drew 11 routes and --check reported 8 bridges and 43 near-misses. Splitting the edge set (not the members) took both to 0.",
+      "measured": "crossings: 8 bridges, 43 near-misses before; 0 and 0 after"
+    },
+    {
+      "choice": "kept the L2b split although the level scout measured no rank collision",
+      "reason": "the scout measured band spans; the refusal came from route density, a different measurement. Recorded so the split is auditable."
+    },
+    {
+      "choice": "stores drawn outside the container",
+      "reason": "the boundary scout claims them as members (schema and migrations are owned here). C4 placement puts a data store outside the code box; the membership claim survives in the ledger."
+    },
+    {
+      "choice": "client node only at L0",
+      "reason": "the package never reaches a client. Drawing it at L1/L1b would invent an edge; the L1 description carries the fact instead."
+    }
+  ],
+  "known_residuals": [
+    "L2b reports 1 label needing a leader tick (tl -> en 'files · shell'). Four layer arrangements were tried; all report it. The label renders legibly with the tick.",
+    "L1 (95 wide) and L2 (106 wide) pan past a 77-column pane. The viewer caps zoom-out at 100%, so they pan rather than shrink. Labels and containers are exact at natural fit.",
+    "Render verification came from text and ANSI captures only: no Herdr server was running (server_not_running), so no pane capture exists.",
+    "All facts are read from the tarball and public repos. Nothing was executed against a live storage backend."
+  ],
+  "binary": {
+    "path": "/Users/aviral/.nix-profile/bin/rataflow-view",
+    "sha256": "2ada71c4c6704da1e83808f6d341447492d32ab986ebb4ef00d6189fc1aa3b68"
+  }
+}

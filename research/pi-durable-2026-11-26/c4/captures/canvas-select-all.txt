@@ -1,0 +1,173 @@
+viewport: 120x170 zoom: 1.00 natural
+frame 0 at 0ms
+ rataflow-view · 120x170 @100% · spec.json · 47 nodes · 28 edges · q quit
+
+
+
+
+
+
+
+
+             ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+             L0 · System context
+             pi-durable is one library box. A host app embeds it, supplies storage, models and env, and
+             writes every transport itself. Providers, the OS and Chord stay outside.
+
+                                                                                      ╭─────╮
+                                                                               ╭─────▶│Chord│
+                                                                               │      │     │
+                                                       ╭──────╮                │      ╰─────╯
+                                                  ╭╌╌╌▶│Client│                │
+                                                  ╎    │      │                │    ╭─────────╮
+                                                  ╎    ╰──────╯                │ ╭─▶│libraries│
+                                                  ╎           schema · sandbox │ │  │         │
+                                                  ╎  ╭──────────╮   Watch · ops│ │  ╰─────────╯
+             ╭────────╮view + ops (host transport)╎  │          │  ╭───────────╯ │
+             │        │╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯  │          │──╯             │  ╭─────────╮
+             │        │                              │          │  ╭─────────────╯╭▶│Providers│
+             │Host app│────────────────────────────╮ │          │──╯ ╭────────────╯ │         │
+             │        │        open · submit       ╰▶│          │   ╭╯stream        ╰─────────╯
+             │        │◀╮         callbacks          │pi-durable│───╯
+             ╰────────╯ ╰────────────────────────────│          │     files · shell     ╭──╮
+                                                     │          │──────────────────────▶│OS│
+                                                     │          │                       │  │
+                                                     │          │──╮                    ╰──╯
+                                                     │          │  │
+                                                     ╰──────────╯  │     commit       ╭─────╮
+                                                                   ╰─────────────────▶│Store│
+                                                                                      │     │
+                                                                                      ╰─────╯
+
+
+             ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+             L1 · The package: demand end
+             Eight runtime units, all loaded in the host process: nothing here is deployable. This slice
+             shows the host callbacks and the view seam. No wire ships.
+
+                                        ╔══════════pi-durable (in-process)═══════════╗
+                                        ║                                     ╭───╮  ║
+                                        ║                                     │Env│  ║
+                                        ║                                     │   │  ║
+                           open · submit║                                     ╰───╯  ║
+               ╭────────╮  ╭────────────║ ╭───────╮                                  ║
+               │        │──╯            ║▶│       │             ╭───────╮   ╭───────╮║
+               │Host app│    callbacks  ║ │       │             │Session│   │Storage│║
+               │        │◀────────────────│Harness│             │       │   │       │║
+               ╰────────╯               ║ │       │             ╰───────╯   ╰───────╯║             ╭─────╮
+                           ╭──────────────│       │                                  ║           ╭▶│Chord│
+              ╭─────────╮  │   stream   ║ ╰───────╯              ╭─────╮    ╭───────╮║           │ │     │
+              │         │◀─╯            ║                        │Tools│    │Testing│║           │ ╰─────╯
+              │Providers│               ║╭────────╮              │     │    │       │║           │
+              │         │◀───────────────│Codemode│              ╰─────╯    ╰───────╯║           │
+              ╰─────────╯   classifier  ║│        │                                  ║           │
+                                        ║╰────────╯                           ╭────╮ ║atch · ops │
+                                        ║                                     │View│─────────────╯
+                                        ║                                     │    │ ║
+                                        ║                                     ╰────╯ ║
+                                        ╚════════════════════════════════════════════╝
+
+
+             ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+             L1b · The package: machine end
+             The same eight units and the same box. This slice shows the adapters: the storage medium, the
+             OS, and the sandbox. Chord enters again, now through Storage.
+
+             ╔══════════════════════╗
+             ║               ╭───╮  ║
+             ║               │Env│──────────────────────╮
+             ║               │   │  ║  files · shell    │
+             ║               ╰───╯  ║                   │
+             ║                      ║                   │
+             ║             ╭───────╮║                   │
+             ║             │Session│║                   │ ╭──╮
+             ║             │       │║                   ╰▶│OS│
+             ║             ╰───────╯║                     │  │
+             ║                      ║                     ╰──╯
+             ║             ╭───────╮║  store bridge
+             ║╭────────╮   │       │───────────────────╮ ╭─────╮
+             ║│Codemode│   │Storage│║                  ╰▶│Chord│
+             ║│        │   │       │──────────────────╮  │     │
+             ║╰────────╯   ╰───────╯║     commit      │  ╰─────╯
+             ║                      ║                 │
+             ║ ╭───────╮    ╭─────╮ ║  photon         │  ╭─────╮
+             ║ │Harness│    │Tools│───────────────╮   ╰─▶│Store│
+             ║ │       │    │     │ ║             │      │     │
+             ║ ╰───────╯    ╰─────╯ ║             │      ╰─────╯
+             ║                      ║             │
+             ║             ╭───────╮║             │ ╭──────────────╮
+             ║             │Testing│║             ╰▶│QuickJS/Photon│
+             ║             │       │║               │              │
+             ║             ╰───────╯║               ╰──────────────╯
+             ║                      ║
+             ║               ╭────╮ ║
+             ║               │View│ ║
+             ║               │    │ ║
+             ║               ╰────╯ ║
+             ╚══════════════════════╝
+
+
+             ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+             L2 · Inside: the demand path
+             The same eight units. This slice follows one work item: the harness commits, the session
+             publishes, the view reaches the host. Members and ids match L2b.
+
+
+                          ╭──────────────────────────────╮
+             ╔════════════│══════════════════════════════│════════pi-durable (internal relations)═════════╗
+             ║╭────────╮  │                              │ journal                   ╭───────╮     ╭───╮  ║
+             ║│        │──╯  ╭───────╮                   │ ╭───────╮    commit     ╭▶│Storage│     │Env│  ║
+             ║│Codemode│     │       │                   ╰▶│       │───────────────╯ │       │     │   │  ║
+             ║│        │◀╮   │       │       commit        │Session│                 ╰───────╯     ╰───╯  ║
+             ║╰────────╯ ╰───│       │────────────────────▶│       │──────────────╮                       ║
+             ║               │Harness│                     ╰───────╯publish; mount│    ╭────╮    ╭───────╮║
+             ║  ╭─────╮   ╭──│       │──────────────────╮                         ╰───▶│    │    │Testing│║
+             ║  │Tools│◀──╯  │       │                  │           window             │View│    │       │║
+             ║  │     │      │       │                  ╰─────────────────────────────▶│    │    ╰───────╯║
+             ║  ╰─────╯      ╰───────╯                                                 ╰────╯             ║
+             ╚════════════════════════════════════════════════════════════════════════════════════════════╝
+                tool task / nested
+
+
+
+
+             ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+             L2b · Inside: the machine path
+             The same eight units and the same box. This slice follows the adapters: storage commits, the env
+             runs tools, and the conformance kit drives both.
+
+             ╔════════════════pi-durable (internal relations)════════════════╗
+             ║                                                     ╭────────╮║
+             ║                                                     │Codemode│║
+             ║                                                     │        │║
+             ║                                                     ╰────────╯║
+             ║                                                               ║
+             ║╭───────╮                                             ╭───────╮║
+             ║│Session│                                   ╭───╮     │Harness│║
+             ║│       │                ╭───────╮  JSONL   │   │     │       │║
+             ║╰───────╯              ╭▶│Storage│─────────▶│   │     ╰───────╯║
+             ║                       │ │       │          │Env│◀╮            ║
+             ║╭───────╮  conformance │ ╰───────╯        ╭▶│   │ │    ╭─────╮ ║
+             ║│       │──────────────╯                  │ │   │ ╰────│Tools│ ║
+             ║│Testing│                                 │ ╰───╯     ·│     │ ║
+             ║│       │─────────────────────────────────╯           ·╰─────╯ ║
+             ║╰───────╯           conformance               files · shell    ║
+             ║                                                       ╭────╮  ║
+             ║                                                       │View│  ║
+             ║                                                       │    │  ║
+             ║                                                       ╰────╯  ║
+             ╚═══════════════════════════════════════════════════════════════╝
+
+
+
+
+
+
+ ┌───────┐
+ │ + [+] │
+ │ − [-] │
+ │ ⊡ [f] │
+ │ □ [i] │
+ └───────┘
+
+selected: 47 nodes
