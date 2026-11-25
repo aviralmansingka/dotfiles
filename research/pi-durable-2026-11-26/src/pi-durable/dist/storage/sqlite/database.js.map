@@ -1,0 +1,1 @@
+{"version":3,"file":"database.js","sourceRoot":"","sources":["../../../src/storage/sqlite/database.ts"],"names":[],"mappings":"","sourcesContent":["export type { SqliteDatabase, SqliteExecutor, SqliteValue } from \"@earendil-works/chord/sqlite\";\n"]}
