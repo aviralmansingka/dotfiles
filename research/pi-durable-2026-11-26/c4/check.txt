@@ -1,0 +1,31 @@
+viewport: unknown zoom: 1.00 natural
+ok: nodes=41 edges=34 flows=0 direction=lr theme=gruvbox
+canvas: 4 diagrams on one canvas, drawn whole at 100%
+diagram l0 "L0 · System context" at 0,6: extent=75x38 nodes=9 edges=12 routes=12
+  description: pi-durable is one library box. A host app embeds it, supplies storage, models and env, and writes every transport itself. Providers, the OS and Chord stay outside.
+diagram l1 "L1 · The package: demand end" at 0,50: extent=113x22 nodes=12 edges=6 routes=6
+  description: Eight runtime units, all in the host process. This slice shows the host callbacks and the view seam. Nothing here is deployable and no wire ships.
+diagram l1b "L1b · The package: machine end" at 0,78: extent=70x30 nodes=12 edges=5 routes=5
+  description: The same eight units and the same box. This slice shows the adapters instead: the storage medium, the OS, and the sandbox. Chord enters again, now through Storage.
+diagram l2 "L2 · Inside the box" at 0,114: extent=121x22 nodes=8 edges=11 routes=11
+  description: The same eight units, now calling each other. One write path runs through the Session: every durable fact is a commit, and only a commit is observable.
+pins: 41 pinned, 0 conflict(s)
+extent=121x136 cells (whole canvas)
+crossings: 8 bridges, 3 touching bends
+near-misses: 43 cell(s) inside the 2-cell margin of a node the route does not serve (0 on trunk buses)
+passes-near-unrelated-node: 43
+near-miss: route l0:e3 passes 9 cell(s) at ring 2 of node 'p0' (nearest cell 25,18)
+near-miss: route l0:e6 passes 8 cell(s) at ring 2 of node 'sch' (nearest cell 54,15)
+near-miss: route l1b:e4 passes 3 cell(s) at ring 2 of node 'st' (nearest cell 24,13)
+near-miss: route l2:e7 passes 13 cell(s) at ring 2 of node 'st' (nearest cell 94,7)
+near-miss: route l2:e7 passes 10 cell(s) at ring 2 of node 'v' (nearest cell 96,7)
+warning: 43 route cell(s) hug a node their relation does not serve; move the affected relations or let them route around
+labels: 34/34 placed, 0 leader-ticked, 0 on route, 0 skipped, 1 ambiguous owners
+unowned label: l2:e2 "install / nested"
+warning: 1 label(s) have an ambiguous owner: another route is as close to the text as its own edge
+groups: extern(16) runtime(13) machine(12)
+trunks:
+dots: 0 single-dot routes, 0 periodic routes, 0 violations, 0 constant at 0.5c/step, 0 same-arrival at 2000ms
+dot hues: 0 by source, 0 by destination, 0 shared-hue pair(s) (source-only 0, destination-only 0)
+origins: 0/0 routes start at their arrow origin
+arrivals: 0/0 same-arrival routes show their dot at the arrowhead on the final step

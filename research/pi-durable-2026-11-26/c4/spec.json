@@ -1,0 +1,151 @@
+{
+  "direction": "lr",
+  "theme": "gruvbox",
+  "diagrams": [
+    {
+      "id": "l0",
+      "title": "L0 · System context",
+      "description": "pi-durable is one library box. A host app embeds it, supplies storage, models and env, and writes every transport itself. Providers, the OS and Chord stay outside.",
+      "nodes": [
+        { "id": "host", "label": "Host app", "group": "extern" },
+        { "id": "client", "label": "Client", "group": "extern" },
+        { "id": "p0", "label": "pi-durable", "group": "runtime" },
+        { "id": "models", "label": "Providers", "group": "extern" },
+        { "id": "store", "label": "Store", "group": "extern" },
+        { "id": "os", "label": "OS", "group": "extern" },
+        { "id": "chord", "label": "Chord", "group": "extern" },
+        { "id": "sch", "label": "schema/telemetry", "group": "extern" },
+        { "id": "qjs", "label": "QuickJS/Photon", "group": "extern" }
+      ],
+      "layers": [
+        ["host"],
+        ["p0"],
+        ["client", "models", "store", "os", "chord", "sch", "qjs"]
+      ],
+      "edges": [
+        { "from": "host", "to": "p0", "label": "open · submit" },
+        { "from": "p0", "to": "host", "label": "callbacks" },
+        { "from": "p0", "to": "client", "label": "view + ops" },
+        { "from": "host", "to": "client", "label": "transport", "style": "dashed" },
+        { "from": "p0", "to": "models", "label": "stream" },
+        { "from": "host", "to": "models", "label": "supplies", "style": "dashed" },
+        { "from": "p0", "to": "store", "label": "commit" },
+        { "from": "p0", "to": "os", "label": "files · shell" },
+        { "from": "host", "to": "os", "label": "supplies env", "style": "dashed" },
+        { "from": "p0", "to": "chord", "label": "Watch · ops" },
+        { "from": "p0", "to": "sch", "label": "schema" },
+        { "from": "p0", "to": "qjs", "label": "sandbox" }
+      ]
+    },
+    {
+      "id": "l1",
+      "title": "L1 · The package: demand end",
+      "description": "Eight runtime units, all in the host process. This slice shows the host callbacks and the view seam. Nothing here is deployable and no wire ships.",
+      "containers": [
+        { "label": "pi-durable (in-process)", "members": ["h", "cm", "s", "tl", "v", "st", "en", "ts"] }
+      ],
+      "nodes": [
+        { "id": "host", "label": "Host app", "group": "extern" },
+        { "id": "models", "label": "Providers", "group": "extern" },
+        { "id": "sch", "label": "schema/telemetry", "group": "extern" },
+        { "id": "h", "label": "Harness", "group": "runtime" },
+        { "id": "cm", "label": "Codemode", "group": "runtime" },
+        { "id": "s", "label": "Session", "group": "runtime" },
+        { "id": "tl", "label": "Tools", "group": "machine" },
+        { "id": "v", "label": "View", "group": "runtime" },
+        { "id": "st", "label": "Storage", "group": "machine" },
+        { "id": "en", "label": "Env", "group": "machine" },
+        { "id": "ts", "label": "Testing", "group": "machine" },
+        { "id": "chord", "label": "Chord", "group": "extern" }
+      ],
+      "layers": [
+        ["host", "models", "sch"],
+        ["h", "cm"],
+        ["s", "tl"],
+        ["v", "st", "en", "ts"],
+        ["chord"]
+      ],
+      "edges": [
+        { "from": "host", "to": "h", "label": "open · submit" },
+        { "from": "h", "to": "host", "label": "callbacks" },
+        { "from": "h", "to": "models", "label": "stream" },
+        { "from": "cm", "to": "models", "label": "classifier" },
+        { "from": "h", "to": "sch", "label": "schema" },
+        { "from": "v", "to": "chord", "label": "Watch · ops" }
+      ]
+    },
+    {
+      "id": "l1b",
+      "title": "L1b · The package: machine end",
+      "description": "The same eight units and the same box. This slice shows the adapters instead: the storage medium, the OS, and the sandbox. Chord enters again, now through Storage.",
+      "containers": [
+        { "label": "pi-durable (in-process)", "members": ["h", "cm", "s", "tl", "v", "st", "en", "ts"] }
+      ],
+      "nodes": [
+        { "id": "h", "label": "Harness", "group": "runtime" },
+        { "id": "cm", "label": "Codemode", "group": "runtime" },
+        { "id": "s", "label": "Session", "group": "runtime" },
+        { "id": "tl", "label": "Tools", "group": "machine" },
+        { "id": "v", "label": "View", "group": "runtime" },
+        { "id": "st", "label": "Storage", "group": "machine" },
+        { "id": "en", "label": "Env", "group": "machine" },
+        { "id": "ts", "label": "Testing", "group": "machine" },
+        { "id": "chord", "label": "Chord", "group": "extern" },
+        { "id": "store", "label": "Store", "group": "extern" },
+        { "id": "os", "label": "OS", "group": "extern" },
+        { "id": "qjs", "label": "QuickJS/Photon", "group": "extern" }
+      ],
+      "layers": [
+        ["cm", "h"],
+        ["s", "tl"],
+        ["v", "st", "en", "ts"],
+        ["chord", "store", "os", "qjs"]
+      ],
+      "edges": [
+        { "from": "st", "to": "store", "label": "commit" },
+        { "from": "st", "to": "chord", "label": "store bridge" },
+        { "from": "en", "to": "os", "label": "files · shell" },
+        { "from": "tl", "to": "os", "label": "wasm" },
+        { "from": "tl", "to": "qjs", "label": "photon" }
+      ]
+    },
+    {
+      "id": "l2",
+      "title": "L2 · Inside the box",
+      "description": "The same eight units, now calling each other. One write path runs through the Session: every durable fact is a commit, and only a commit is observable.",
+      "containers": [
+        { "label": "pi-durable (internal relations)", "members": ["h", "cm", "s", "tl", "v", "st", "en", "ts"] }
+      ],
+      "nodes": [
+        { "id": "h", "label": "Harness", "group": "runtime" },
+        { "id": "cm", "label": "Codemode", "group": "runtime" },
+        { "id": "s", "label": "Session", "group": "runtime" },
+        { "id": "tl", "label": "Tools", "group": "machine" },
+        { "id": "v", "label": "View", "group": "runtime" },
+        { "id": "st", "label": "Storage", "group": "machine" },
+        { "id": "en", "label": "Env", "group": "machine" },
+        { "id": "ts", "label": "Testing", "group": "machine" }
+      ],
+      "layers": [
+        ["ts", "h"],
+        ["cm", "tl"],
+        ["s"],
+        ["st", "v"],
+        ["en"]
+      ],
+      "edges": [
+        { "from": "h", "to": "s", "label": "commit" },
+        { "from": "h", "to": "v", "label": "window" },
+        { "from": "h", "to": "cm", "label": "install / nested" },
+        { "from": "h", "to": "tl", "label": "tool task / nested" },
+        { "from": "s", "to": "v", "label": "publish; mount" },
+        { "from": "s", "to": "st", "label": "commit" },
+        { "from": "cm", "to": "s", "label": "journal" },
+        { "from": "tl", "to": "en", "label": "files · shell" },
+        { "from": "st", "to": "en", "label": "JSONL" },
+        { "from": "ts", "to": "st", "label": "conformance" },
+        { "from": "ts", "to": "en", "label": "conformance" }
+      ]
+    }
+  ]
+}
