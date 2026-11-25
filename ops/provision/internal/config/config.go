@@ -431,6 +431,13 @@ func (s *Service) Validate() error {
 	if s.Limits.MaxConcurrentJobs <= 0 || s.Limits.MaxConcurrentJobs > 64 {
 		return errors.New("limits.max_concurrent_jobs must be between 1 and 64")
 	}
+	// The activity limit gets the same treatment as the workflow limit. Zero would
+	// hand the worker no activity slots at all, and an unbounded value would let a
+	// burst of jobs fan out Terraform, SSM, and provider calls without a ceiling,
+	// which is exactly what the limit exists to stop.
+	if s.Limits.MaxConcurrentProvision <= 0 || s.Limits.MaxConcurrentProvision > 64 {
+		return errors.New("limits.max_concurrent_provisioning must be between 1 and 64")
+	}
 	if s.Limits.TerraformStateLocks <= 0 {
 		return errors.New("limits.terraform_state_locks must be at least 1")
 	}
