@@ -13,13 +13,35 @@ import (
 )
 
 const (
-	// activityStartToClose bounds a single provider/enrollment/deploy attempt.
+	// activityStartToClose bounds a single provider or enrollment attempt.
 	activityStartToClose = 5 * time.Minute
 	// activityScheduleToStart bounds queueing before the worker picks it up.
 	activityScheduleToStart = 2 * time.Minute
 	// milestoneTimeout is short: a persisted-progress write must never stall a
 	// workflow for long.
 	milestoneTimeout = 30 * time.Second
+)
+
+// The profile deploy and its readback carry their own bounds, and the numbers are
+// measurements rather than preferences.
+//
+// Deploy is 45 minutes. A real profile deploy took 22 minutes on 2026-11-09: a
+// cold x86_64-linux build of the Rex profile on the host itself, which is where a
+// provisioned host builds it. The generic 5-minute step bound would have killed
+// that deploy every time, and did not cover it on paper either. 45 minutes is
+// about twice the measured time, which leaves room for a cold Nix cache or a
+// slower instance while still bounding a stuck host to one worker slot for less
+// than an hour.
+//
+// Readback is 10 minutes. It is a handful of control-plane queries against a host
+// that has just finished building, so it is not a build and must not be allowed to
+// look like one: a readback that cannot answer in ten minutes is a deploy problem
+// reported late, not a slow build.
+const (
+	deployStartToClose      = 45 * time.Minute
+	deployScheduleToStart   = 5 * time.Minute
+	readbackStartToClose    = 10 * time.Minute
+	readbackScheduleToStart = 5 * time.Minute
 )
 
 // activityOptions are the retry and timeout policy for provisioning steps. The
@@ -31,6 +53,43 @@ func activityOptions() workflow.ActivityOptions {
 		StartToCloseTimeout:    activityStartToClose,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval:        time.Second,
+			BackoffCoefficient:     2,
+			MaximumAttempts:        3,
+			NonRetryableErrorTypes: []string{ports.CodeNotImplemented, FailureTypePermanent},
+		},
+	}
+}
+
+// deployActivityOptions bound the one step that builds and activates the profile.
+//
+// Two attempts, not three. A deploy is idempotent — it adopts the deployment
+// record an earlier attempt wrote instead of building the profile again — but one
+// attempt can legitimately take most of an hour, and a third attempt buys time an
+// operator would rather spend deciding by hand. The backoff is longer than a
+// provider apply's because the retry re-enters a Nix build, not an API call.
+func deployActivityOptions() workflow.ActivityOptions {
+	return workflow.ActivityOptions{
+		ScheduleToStartTimeout: deployScheduleToStart,
+		StartToCloseTimeout:    deployStartToClose,
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:        30 * time.Second,
+			BackoffCoefficient:     2,
+			MaximumAttempts:        2,
+			NonRetryableErrorTypes: []string{ports.CodeNotImplemented, FailureTypePermanent},
+		},
+	}
+}
+
+// readbackActivityOptions bound the step that proves what landed. It retries like
+// any other cheap step — a control-plane query that timed out is worth re-asking —
+// and a host whose facts are wrong fails the same way every time, because the fact
+// failures are reported permanently.
+func readbackActivityOptions() workflow.ActivityOptions {
+	return workflow.ActivityOptions{
+		ScheduleToStartTimeout: readbackScheduleToStart,
+		StartToCloseTimeout:    readbackStartToClose,
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:        10 * time.Second,
 			BackoffCoefficient:     2,
 			MaximumAttempts:        3,
 			NonRetryableErrorTypes: []string{ports.CodeNotImplemented, FailureTypePermanent},
@@ -115,8 +174,12 @@ func CreateHostWorkflow(ctx workflow.Context, in CreateHostInput) (Status, error
 	record(ctx, state)
 
 	advance(domain.StageDeploying)
+	// The deploy builds and activates the profile. It carries its own start-to-close
+	// bound because a real one takes tens of minutes; the generic step bound would
+	// kill it.
+	deployCtx := workflow.WithActivityOptions(ctx, deployActivityOptions())
 	var deployed DeployProfileOutput
-	if err := workflow.ExecuteActivity(ctx, ActivityDeployProfile, DeployProfileInput{
+	if err := workflow.ExecuteActivity(deployCtx, ActivityDeployProfile, DeployProfileInput{
 		HostID:     in.Spec.HostID,
 		Name:       in.Spec.Name,
 		Profile:    in.Spec.Profile,
@@ -125,8 +188,22 @@ func CreateHostWorkflow(ctx workflow.Context, in CreateHostInput) (Status, error
 	}).Get(ctx, &deployed); err != nil {
 		return fail(ctx, state, err)
 	}
-	state.FlakeRevision = deployed.FlakeRevision
-	state.RexURL = deployed.RexURL
+
+	// The readback is its own step and the only source of a recorded revision and
+	// Rex address: what the deploy reported travels in as the claim to check, never
+	// into the record. A host that cannot prove what landed does not reach "ready".
+	readbackCtx := workflow.WithActivityOptions(ctx, readbackActivityOptions())
+	var verified ReadBackProfileOutput
+	if err := workflow.ExecuteActivity(readbackCtx, ActivityReadBackProfile, ReadBackProfileInput{
+		HostID:        in.Spec.HostID,
+		Name:          in.Spec.Name,
+		ResourceID:    created.ResourceID,
+		FlakeRevision: deployed.FlakeRevision,
+	}).Get(ctx, &verified); err != nil {
+		return fail(ctx, state, err)
+	}
+	state.FlakeRevision = verified.FlakeRevision
+	state.RexURL = verified.RexURL
 	record(ctx, state)
 
 	advance(domain.StageAuthorizing)

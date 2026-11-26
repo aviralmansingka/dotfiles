@@ -352,6 +352,7 @@ func newRecoveryFixture(t *testing.T, spec faultSpec) *recoveryFixture {
 			Agent:      fakeProbe{},
 			Enroller:   enrollment,
 			Deployer:   fakeDeployer{},
+			Readback:   fakeReadback{},
 			Authorizer: authorizer,
 			Tailnet:    fakeTailnet{},
 			Clock:      fakes.NewClock(),
@@ -384,6 +385,7 @@ func (f *recoveryFixture) runCreate() (workflows.Status, error) {
 	testEnv.RegisterActivity(f.activities.CheckSSMAgent)
 	testEnv.RegisterActivity(f.activities.EnrollHost)
 	testEnv.RegisterActivity(f.activities.DeployProfile)
+	testEnv.RegisterActivity(f.activities.ReadBackProfile)
 	testEnv.RegisterActivity(f.activities.AuthorizeHost)
 	testEnv.RegisterActivity(f.activities.RecordHostMilestone)
 
@@ -667,6 +669,7 @@ func TestCancellationKeepsOwnershipAndDropsNoResource(t *testing.T) {
 	env.RegisterActivity(fixture.activities.CheckSSMAgent)
 	env.RegisterActivity(fixture.activities.EnrollHost)
 	env.RegisterActivity(fixture.activities.DeployProfile)
+	env.RegisterActivity(fixture.activities.ReadBackProfile)
 	env.RegisterActivity(fixture.activities.AuthorizeHost)
 	env.RegisterActivity(fixture.activities.RecordHostMilestone)
 	go func() {

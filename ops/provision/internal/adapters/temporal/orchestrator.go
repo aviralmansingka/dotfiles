@@ -65,7 +65,11 @@ func (o *Orchestrator) startOptions(jobID string) client.StartWorkflowOptions {
 		// operation exists per job ID even if two API processes race.
 		WorkflowIDReusePolicy:                    enumspb.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
-		WorkflowExecutionTimeout:                 45 * time.Minute,
+		// The whole creation ladder, including the deploy that can take 45 minutes
+		// twice (its own start-to-close bound, with two attempts). 45 minutes was
+		// enough when every step was a five-minute provider call; it would now kill
+		// a workflow that is doing exactly what it was told to do.
+		WorkflowExecutionTimeout: 3 * time.Hour,
 	}
 }
 

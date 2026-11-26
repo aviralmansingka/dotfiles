@@ -296,6 +296,13 @@ type DeployRequest struct {
 	Name     string
 	Profile  string
 	FlakeRef string // resolved server-side from configuration, never client input
+	// InstanceID is the provider resource every control-plane call is addressed
+	// to. It is not a display value: the deploy has no address to dial, so
+	// without it there is no transport and the step refuses before it runs
+	// anything. It was added here because the request previously carried no
+	// addressable identity at all: a deploy addressed by name would have to guess
+	// at a network path, and this service has none.
+	InstanceID string
 }
 
 // DeployResult reports the immutable revision that was deployed.
@@ -307,6 +314,48 @@ type DeployResult struct {
 // ProfileDeployer is the Nix flake deployment port.
 type ProfileDeployer interface {
 	DeployProfile(ctx context.Context, req DeployRequest) (DeployResult, error)
+}
+
+// ReadbackRequest asks a host what actually landed on it. The revision is the
+// claim the readback checks; it is never the answer the readback reports.
+type ReadbackRequest struct {
+	HostID string
+	Name   string
+	// InstanceID addresses the host over the control plane, exactly as
+	// DeployRequest does.
+	InstanceID string
+	// FlakeRevision is the revision the deploy step resolved and activated. The
+	// readback proves the host records that same revision and runs the binary it
+	// installed; a host that reports nothing, or reports something else, fails.
+	FlakeRevision string
+}
+
+// ReadbackResult is what the host itself reports, not what it was asked to
+// confirm. FlakeRevision is read out of the host's own deployment record, so a
+// workflow that persists it persists a fact about the host.
+//
+// It carries no credential: a store path, a tailnet address, and a revision are
+// all public. The facts are named so a failure can say which one was wrong
+// instead of only that the host was not ready.
+type ReadbackResult struct {
+	FlakeRevision string
+	RexURL        string
+	// RexPath is the resolved path of the rex binary the host runs. It must live
+	// in the Nix store: a binary from anywhere else is not the deployed profile.
+	RexPath string
+	// Facts names every fact the readback proved, in order. The workflow reports a
+	// ready host only when all of them hold.
+	Facts []string
+}
+
+// ProfileReadback is the port that asks a host what landed.
+//
+// It is a separate port from ProfileDeployer because the two answer different
+// questions and fail for different reasons: the deploy activates, the readback
+// proves. It is also a separate activity, so a workflow cannot report ready on
+// the strength of the deploy's own word.
+type ProfileReadback interface {
+	ReadBackProfile(ctx context.Context, req ReadbackRequest) (ReadbackResult, error)
 }
 
 // AuthorizeRequest grants a host access to its approved secret bundles.

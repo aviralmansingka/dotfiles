@@ -130,6 +130,32 @@ func validateFlakeRef(ref string) error {
 	return nil
 }
 
+// remoteFlakeSchemePattern matches a fully qualified flake reference: a scheme
+// Nix can fetch or locate without a working directory, then a location.
+var remoteFlakeSchemePattern = regexp.MustCompile(`^(github|gitlab|sourcehut|git\+https|git\+ssh|git\+file|tarball\+https|tarball\+file|path|flake):`)
+
+// ValidateRemoteFlakeRef enforces the shape of a flake reference that can be
+// deployed to a host that is not this machine.
+//
+// The catalog's `flake_ref` is written for a deploy run inside a checkout
+// (`. #homeConfigurations...`), which is how `just deploy` works. A host created
+// by the provisioner has no checkout, so a relative reference resolves against a
+// directory that does not exist there. Rather than fail on the host with a
+// confusing Nix error, a deploy over the control plane refuses a relative
+// reference here and names the fix: a fully qualified reference such as
+// `github:owner/repo/<rev>#homeConfigurations.<host>.activationPackage`.
+func ValidateRemoteFlakeRef(ref string) error {
+	if err := validateFlakeRef(ref); err != nil {
+		return Invalid("flake_ref", err.Error())
+	}
+	if !remoteFlakeSchemePattern.MatchString(ref) {
+		return Invalid("flake_ref", fmt.Sprintf(
+			"%q is a local reference; a host has no checkout to resolve it against, so the deploy needs a fully qualified one such as github:owner/repo/<rev>#homeConfigurations.<host>.activationPackage",
+			ref))
+	}
+	return nil
+}
+
 // Catalog is the immutable set of approved profiles.
 type Catalog struct {
 	profiles map[string]Profile

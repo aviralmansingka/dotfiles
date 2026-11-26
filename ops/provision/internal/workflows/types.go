@@ -26,6 +26,7 @@ const (
 	ActivityCheckSSMAgent         = "CheckSSMAgent"
 	ActivityEnrollHost            = "EnrollHost"
 	ActivityDeployProfile         = "DeployProfile"
+	ActivityReadBackProfile       = "ReadBackProfile"
 	ActivityAuthorizeHost         = "AuthorizeHost"
 	ActivityRevokeHostTokens      = "RevokeHostTokens"
 	ActivityRevokeHostCredentials = "RevokeHostCredentials"
@@ -145,7 +146,10 @@ type EnrollHostOutput struct {
 	Resumed    bool   `json:"resumed"`
 }
 
-// DeployProfileInput asks for the approved flake profile deployment.
+// DeployProfileInput asks for the approved flake profile deployment. ResourceID
+// is the provider resource the deploy is addressed to: the step has no other
+// transport, so a job that reached this activity with an empty one refuses
+// instead of guessing at an address.
 type DeployProfileInput struct {
 	HostID     string `json:"host_id"`
 	Name       string `json:"name"`
@@ -154,10 +158,32 @@ type DeployProfileInput struct {
 	FlakeRef   string `json:"flake_ref"`
 }
 
-// DeployProfileOutput reports the deployed immutable revision.
+// DeployProfileOutput reports the immutable revision the deploy resolved and
+// activated. The workflow does not persist it: the readback is what may report a
+// deployed revision, and this value only travels into the readback as the claim it
+// has to prove.
 type DeployProfileOutput struct {
 	FlakeRevision string `json:"flake_revision"`
 	RexURL        string `json:"rex_url"`
+}
+
+// ReadBackProfileInput asks the host what landed. FlakeRevision is the claim the
+// readback checks, and ResourceID addresses the host.
+type ReadBackProfileInput struct {
+	HostID        string `json:"host_id"`
+	Name          string `json:"name"`
+	ResourceID    string `json:"resource_id"`
+	FlakeRevision string `json:"flake_revision"`
+}
+
+// ReadBackProfileOutput is what the host itself reported. The workflow persists
+// FlakeRevision and RexURL from here and from nowhere else, so the record names the
+// revision the host is running rather than the one a caller asked for. Facts names
+// every check that held, so a later failure can say which one did not.
+type ReadBackProfileOutput struct {
+	FlakeRevision string   `json:"flake_revision"`
+	RexURL        string   `json:"rex_url"`
+	Facts         []string `json:"facts,omitempty"`
 }
 
 // AuthorizeHostInput grants the host its approved secret bundles.

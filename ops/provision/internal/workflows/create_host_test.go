@@ -49,6 +49,20 @@ func (fakeDeployer) DeployProfile(_ context.Context, req ports.DeployRequest) (p
 	return ports.DeployResult{FlakeRevision: "rev-1", RexURL: "https://rex.example"}, nil
 }
 
+// fakeReadback answers the second profile step. It reports its own revision on
+// purpose: the workflow's recorded revision must come from here, not from the
+// deploy, and a test can tell the two apart only if they differ.
+type fakeReadback struct{}
+
+func (fakeReadback) ReadBackProfile(_ context.Context, req ports.ReadbackRequest) (ports.ReadbackResult, error) {
+	return ports.ReadbackResult{
+		FlakeRevision: "rev-verified-" + req.FlakeRevision,
+		RexURL:        "https://rex.example",
+		RexPath:       "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-rex/bin/rex",
+		Facts:         []string{"rex_resolves_to_nix_store"},
+	}, nil
+}
+
 type fakeTailnet struct{}
 
 func (fakeTailnet) RemoveDevice(_ context.Context, _ ports.RemoveDeviceRequest) error {
@@ -104,6 +118,7 @@ func TestCreateHostReachesAuthorizedStateThroughTheAdapterPort(t *testing.T) {
 		Agent:      fakeProbe{},
 		Enroller:   fakes.NewEnroller(fakes.NewTailnet()),
 		Deployer:   fakeDeployer{},
+		Readback:   fakeReadback{},
 		Authorizer: authorizer,
 		Tailnet:    fakeTailnet{},
 		Clock:      fakes.NewClock(),
@@ -120,6 +135,7 @@ func TestCreateHostReachesAuthorizedStateThroughTheAdapterPort(t *testing.T) {
 	env.RegisterActivity(activities.CheckSSMAgent)
 	env.RegisterActivity(activities.EnrollHost)
 	env.RegisterActivity(activities.DeployProfile)
+	env.RegisterActivity(activities.ReadBackProfile)
 	env.RegisterActivity(activities.AuthorizeHost)
 	env.RegisterActivity(activities.RecordHostMilestone)
 
@@ -180,8 +196,13 @@ func TestCreateHostReachesAuthorizedStateThroughTheAdapterPort(t *testing.T) {
 	if host.State != domain.HostStateReady {
 		t.Fatalf("persisted host state = %q, want ready", host.State)
 	}
-	if host.FlakeRevision != "rev-1" {
-		t.Fatalf("persisted flake revision = %q", host.FlakeRevision)
+	// The revision in the record is the one the readback proved, not the one the
+	// deploy reported and not anything a caller supplied.
+	if host.FlakeRevision != "rev-verified-rev-1" {
+		t.Fatalf("persisted flake revision = %q, want the readback's", host.FlakeRevision)
+	}
+	if status.FlakeRevision != "rev-verified-rev-1" {
+		t.Fatalf("job flake revision = %q, want the readback's", status.FlakeRevision)
 	}
 
 	// The workflow result carries references only.
@@ -244,6 +265,7 @@ func TestCreateHostFailsWhenTheAuthorizerRefuses(t *testing.T) {
 		Agent:      fakeProbe{},
 		Enroller:   fakes.NewEnroller(fakes.NewTailnet()),
 		Deployer:   fakeDeployer{},
+		Readback:   fakeReadback{},
 		Authorizer: authorizer,
 		Tailnet:    fakeTailnet{},
 		Clock:      fakes.NewClock(),
@@ -257,6 +279,7 @@ func TestCreateHostFailsWhenTheAuthorizerRefuses(t *testing.T) {
 	env.RegisterActivity(activities.CheckSSMAgent)
 	env.RegisterActivity(activities.EnrollHost)
 	env.RegisterActivity(activities.DeployProfile)
+	env.RegisterActivity(activities.ReadBackProfile)
 	env.RegisterActivity(activities.AuthorizeHost)
 	env.RegisterActivity(activities.RecordHostMilestone)
 
@@ -308,3 +331,129 @@ func TestCreateHostFailsWhenTheAuthorizerRefuses(t *testing.T) {
 }
 
 func bootteeCount(b *fakes.Bootstrap) int { return len(b.Deliveries()) }
+
+// failingDeployer models an activation that exited non-zero: the profile did not
+// land, so nothing after the deploy may run.
+type failingDeployer struct {
+	err   error
+	calls int
+}
+
+func (f *failingDeployer) DeployProfile(_ context.Context, _ ports.DeployRequest) (ports.DeployResult, error) {
+	f.calls++
+	return ports.DeployResult{}, f.err
+}
+
+// countingReadback reports that the readback ran, which it must not after a failed
+// deploy.
+type countingReadback struct{ calls int }
+
+func (c *countingReadback) ReadBackProfile(_ context.Context, _ ports.ReadbackRequest) (ports.ReadbackResult, error) {
+	c.calls++
+	return ports.ReadbackResult{FlakeRevision: "rev-never"}, nil
+}
+
+// TestCreateHostNeverReachesReadyWhenActivationFails is the property the deploy
+// stage exists for. A switch that exited non-zero fails the job at "deploying": the
+// readback never runs, the authorizing stage never runs, and the job is never
+// reported ready.
+func TestCreateHostNeverReachesReadyWhenActivationFails(t *testing.T) {
+	t.Parallel()
+	store, err := jsonstore.Open(t.TempDir() + "/store.json")
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	now := time.Date(2026, 11, 26, 0, 0, 0, 0, time.UTC)
+	if _, _, err := store.CreateHost(context.Background(), domain.Host{
+		ID:            "host-0001",
+		Name:          "canary-01",
+		Provider:      domain.ProviderAWS,
+		Profile:       "rex",
+		Region:        "ap-south-1",
+		Size:          "standard",
+		InstanceType:  "t3.medium",
+		DiskGB:        40,
+		SecretBundles: []string{"bao:secret/data/hosts/host-0001/canary"},
+		OwnerClientID: "test-client",
+		JobID:         "create-host-0001",
+		State:         domain.HostStateProvisioning,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("seed host: %v", err)
+	}
+	logger := &fakes.Logger{}
+	authorizer, err := application.NewIdentityService(application.IdentityDeps{
+		Backend:  fakes.NewIdentityBackend(),
+		Delivery: fakes.NewBootstrap(),
+		Logger:   logger,
+	})
+	if err != nil {
+		t.Fatalf("NewIdentityService: %v", err)
+	}
+	deployer := &failingDeployer{err: errors.New("activate the profile did not succeed (status \"Failed\", exit 100)")}
+	readback := &countingReadback{}
+	activities := &temporaladapter.Activities{
+		Inventory:  store,
+		Providers:  fakeProvider{},
+		Agent:      fakeProbe{},
+		Enroller:   fakes.NewEnroller(fakes.NewTailnet()),
+		Deployer:   deployer,
+		Readback:   readback,
+		Authorizer: authorizer,
+		Tailnet:    fakeTailnet{},
+		Clock:      fakes.NewClock(),
+		Logger:     logger,
+	}
+
+	env := (&testsuite.WorkflowTestSuite{}).NewTestWorkflowEnvironment()
+	env.RegisterWorkflow(workflows.CreateHostWorkflow)
+	env.RegisterActivity(activities.CreateHostResource)
+	env.RegisterActivity(activities.CheckSSMAgent)
+	env.RegisterActivity(activities.EnrollHost)
+	env.RegisterActivity(activities.DeployProfile)
+	env.RegisterActivity(activities.ReadBackProfile)
+	env.RegisterActivity(activities.AuthorizeHost)
+	env.RegisterActivity(activities.RecordHostMilestone)
+	env.ExecuteWorkflow(workflows.CreateHostWorkflow, workflows.CreateHostInput{
+		Spec: workflows.HostSpec{
+			HostID:       "host-0001",
+			Name:         "canary-01",
+			Provider:     string(domain.ProviderAWS),
+			Profile:      "rex",
+			Region:       "ap-south-1",
+			Size:         "standard",
+			InstanceType: "t3.medium",
+			DiskGB:       40,
+		},
+		JobID: "create-host-0001",
+	})
+	if !env.IsWorkflowCompleted() {
+		t.Fatal("the workflow did not complete")
+	}
+	if env.GetWorkflowError() == nil {
+		t.Fatal("a failed activation reported success")
+	}
+	if readback.calls != 0 {
+		t.Fatalf("the readback ran %d times after a failed deploy", readback.calls)
+	}
+	if deployer.calls == 0 {
+		t.Fatal("the deploy never ran")
+	}
+	if roles := len(fakes.NewIdentityBackend().RoleNames()); roles != 0 {
+		t.Fatalf("roles = %d, want none: authorizing must not run after a failed deploy", roles)
+	}
+	host, err := store.GetHost(context.Background(), "host-0001")
+	if err != nil {
+		t.Fatalf("GetHost: %v", err)
+	}
+	if host.State == domain.HostStateReady {
+		t.Fatal("the durable record says ready after a failed activation")
+	}
+	if host.State != domain.HostStateFailed {
+		t.Fatalf("persisted host state = %q, want failed", host.State)
+	}
+	if host.FlakeRevision != "" || host.RexURL != "" {
+		t.Fatalf("a failed deploy recorded revision %q and address %q", host.FlakeRevision, host.RexURL)
+	}
+}

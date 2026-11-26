@@ -10,7 +10,6 @@ import (
 	"go.temporal.io/sdk/worker"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/openbao"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssh"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssm"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/tailscale"
 	temporaladapter "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/temporal"
@@ -47,21 +46,30 @@ func runWorker(args []string) error {
 		return err
 	}
 
-	// Enrollment runs over SSM only: the agent check gates it, the key travels as
-	// an encrypted parameter, and the command carries a parameter path. Profile
-	// deployment (S04) remains a refusing stub, so no job can reach "ready" before
-	// it lands. The authorizing and revoking stages are the real OpenBao adapter:
-	// per-host AppRole, own-path policy, one-use wrapped SecretID delivered as a
-	// 0600 file, and token revocation by accessor. Device removal is the real
-	// Tailscale adapter when enrollment is configured, and the refusing stub
-	// otherwise, so a teardown can never report a device removed that it never
-	// touched.
+	deployer, readback, err := newProfileSteps(state)
+	if err != nil {
+		return err
+	}
+
+	// Profile deployment is the real SSM adapter: the approved flake target is
+	// resolved on the host, the profile is activated, the account is granted the
+	// tailscaled operator role, rex-serve is enabled and restarted, and the host is
+	// polled to active. A second step then asks the host what landed, and only that
+	// step's answer is recorded as the deployed revision. Enrollment is SSM-only too:
+	// the agent check gates it, the key travels as an encrypted parameter, and the
+	// command carries a parameter path. The authorizing and revoking stages are the
+	// real OpenBao adapter: per-host AppRole, own-path policy, one-use wrapped
+	// SecretID delivered as a 0600 file, and token revocation by accessor. Device
+	// removal is the real Tailscale adapter when enrollment is configured, and the
+	// refusing stub otherwise, so a teardown can never report a device removed that
+	// it never touched.
 	activities := &temporaladapter.Activities{
 		Inventory:  state.store,
 		Providers:  provider,
 		Agent:      agent,
 		Enroller:   enrollee,
-		Deployer:   ssh.NewStub(),
+		Deployer:   deployer,
+		Readback:   readback,
 		Authorizer: authorizer,
 		Tailnet:    deviceManager,
 		Clock:      application.WallClock{},
@@ -177,6 +185,60 @@ func newEnrollment(state *loaded) (ports.HostEnroller, ports.SSMAgentProbe, port
 	// The same adapter answers device removal: it is the only component that holds
 	// the tailnet credential and knows a device id from a name.
 	return service, agent, devices, nil
+}
+
+// newProfileSteps builds the profile deploy and the readback that proves it.
+//
+// Both run over SSM Run Command, addressed by instance id, and both use one runner
+// built from the same client configuration as enrollment — with one difference:
+// the control-plane command timeout is the deploy's, not enrollment's. A profile
+// deploy took 22 minutes on 2026-11-09, and SSM cancels a command that outlives
+// the TimeoutSeconds it was sent with, so reusing the enrollment runner's 180
+// seconds would kill every real deploy regardless of what the worker's own context
+// allowed.
+//
+// It fails rather than falling back to a refusing stub, for the same reason the
+// authorizer does: a worker that cannot deploy would create an instance and then
+// fail every job at the last stage, leaving a paid host with no profile.
+func newProfileSteps(state *loaded) (ports.ProfileDeployer, ports.ProfileReadback, error) {
+	cfg := state.service.Enrollment.SSM
+	if cfg.Region == "" || cfg.ParameterPrefix == "" {
+		return nil, nil, errors.New("profile deploy needs the enrollment.ssm block: region, binary, and parameter_prefix locate the control-plane calls")
+	}
+	clientConfig := ssm.ClientConfig{Binary: cfg.Binary, Region: cfg.Region, Executor: ssm.CLIExecutor{}}
+	pollInterval := time.Duration(cfg.PollIntervalSeconds) * time.Second
+	runner, err := ssm.NewRunner(ssm.RunnerConfig{
+		Client:                clientConfig,
+		CommandTimeoutSeconds: ssm.DeployCommandTimeoutSeconds,
+		PollInterval:          pollInterval,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("profile deploy transport: %w", err)
+	}
+	agent, err := ssm.NewAgentProbe(ssm.AgentProbeConfig{
+		Client:       clientConfig,
+		Timeout:      time.Duration(cfg.AgentTimeoutSeconds) * time.Second,
+		PollInterval: pollInterval,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("profile deploy agent probe: %w", err)
+	}
+	deployer, err := ssm.NewDeployer(ssm.DeployConfig{
+		Runner: runner,
+		Agent:  agent,
+		Logger: state.log,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("profile deployer: %w", err)
+	}
+	readback, err := ssm.NewReader(ssm.ReadbackConfig{
+		Runner: runner,
+		Logger: state.log,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("profile readback: %w", err)
+	}
+	return deployer, readback, nil
 }
 
 // newAuthorizer builds the per-host OpenBao identity adapter.

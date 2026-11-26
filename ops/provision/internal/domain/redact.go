@@ -24,6 +24,11 @@ var secretValuePatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\b(api[_-]?key|token|secret|secret[_-]?id|password|passwd|credential|authorization|cookie|private[_-]?key|access[_-]?key|client[_-]?secret|refresh[_-]?token|bearer)\b\s*[:=]\s*"?[^\s"',;]+`),
 	// URLs with inline credentials: scheme://user:password@host
 	regexp.MustCompile(`([a-z][a-z0-9+.-]*://)[^/@\s]+@`),
+	// Credential shapes with a vendor prefix. They are recognized as a class rather
+	// than by context, because a prefix is the only thing that makes a short opaque
+	// string recognizable at all: a Tailscale key, an OpenBao token, a GitHub token,
+	// and an AWS access key id.
+	regexp.MustCompile(`(?i)\b(tskey-[A-Za-z0-9_-]+|hvs\.[A-Za-z0-9_-]+|gh[pousr]_[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16})\b`),
 	// Dotted quad + port is allowed (private address); long hex/base64 blobs are not.
 	regexp.MustCompile(`\b[A-Fa-f0-9]{40,}\b`),
 	regexp.MustCompile(`\b[A-Za-z0-9+/]{60,}={0,2}\b`),

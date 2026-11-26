@@ -23,6 +23,8 @@ The implementation lives in `ops/provision`, and the homelab units live in
 | wiring | `nix/services/fleet-provision.nix` | the homelab systemd user units: PostgreSQL, Temporal, the API, and the worker |
 | workflow | `internal/workflows/create_host.go` | the creation ladder, its cancellation outcome, and the milestone that keeps ownership |
 | adapter | `internal/adapters/temporal/activities.go` | adoption of an allocation a crashed run already made, and the refusal to destroy an ambiguous one |
+| adapter | `internal/adapters/ssm/deploy.go` | the profile deploy: resolve the revision on the host, activate it, grant the operator role, publish Serve, poll it |
+| adapter | `internal/adapters/ssm/readback.go` | the readback that proves what landed, and is the only source of a recorded revision and Rex address |
 | application | `internal/application/redact_log.go` | the last-line log scrubber every service line passes through |
 
 Domain code imports neither the adapter nor any HTTP client. The adapter owns every
@@ -504,8 +506,12 @@ not, and the next `systemctl start` would not notice.
 | activity `ScheduleToStartTimeout` | 2 min | `internal/workflows/create_host.go` |
 | activity `StartToCloseTimeout` | 5 min | same |
 | activity retries | 3 attempts, 1 s initial, ×2 backoff | same |
+| **deploy** `StartToCloseTimeout` | 45 min | same — a real deploy took 22 min on 2026-11-09, so the 5-minute step bound does not cover it |
+| **deploy** retries | 2 attempts, 30 s initial, ×2 backoff | same — a second attempt adopts the record a first one wrote instead of building again |
+| **readback** `StartToCloseTimeout` | 10 min | same — a handful of control-plane queries, not a build |
+| **readback** retries | 3 attempts, 10 s initial, ×2 backoff | same |
 | milestone write | 30 s, 2 attempts | same |
-| workflow execution timeout | 45 min | `internal/adapters/temporal/orchestrator.go` |
+| workflow execution timeout | 3 h | `internal/adapters/temporal/orchestrator.go` — the deploy may take 45 min twice, so a 45-minute execution bound would kill a healthy job |
 | worker concurrency | `limits.max_concurrent_jobs` workflows, `limits.max_concurrent_provisioning` activities | `cmd/provision/main.go` |
 | readiness gates | `fleet.services.fleetProvision.healthTimeoutSeconds` (300 s default) | `nix/services/fleet-provision.nix` |
 
@@ -530,6 +536,66 @@ The offline proofs live in `internal/workflows/recovery_test.go`:
 `TestCancellationKeepsOwnershipAndDropsNoResource`. Each injects the failure at the
 write and runs on the Temporal test clock, so no assertion depends on a wall-clock
 sleep.
+
+## 10.4 The profile deploy and its readback
+
+The `deploying` stage is two activities, not one. `DeployProfile` activates the
+approved flake target on the host over SSM Run Command; `ReadBackProfile` then asks
+the host what landed, and only its answer is recorded as the flake revision and Rex
+address. A job that reaches `ready` has had both.
+
+The deploy, in order (`internal/adapters/ssm/deploy.go`):
+
+1. refuse a request with no instance id, no approved flake target, or a bad name —
+   before any remote call. Every control-plane call is addressed by instance id;
+   there is no other transport, so a request that cannot name one is refused rather
+   than guessed at;
+2. wait for the host's SSM agent (the same gate enrollment uses);
+3. ask the host which commit `nix flake metadata` resolves the target to, so the
+   recorded revision is what the host actually built;
+4. activate the profile as the account, unless the host already records this exact
+   revision as activated;
+5. write the deployment record: `/var/lib/fleet-profile/<revision>` is a symlink
+   pointing at the rex binary that revision installed. It is written straight after
+   the switch, so a retry after a Serve failure adopts it instead of rebuilding;
+6. `tailscale set --operator=<account>`, then enable and restart `rex-serve` through
+   the account's own user manager (`systemctl --user -M <account>@.host`). Without
+   the grant the Serve unit fails, which is the module's own documented step;
+7. poll `rex-serve` to `active` with a bounded deadline and report the tailnet URL
+   `tailscale serve status` publishes.
+
+Every remote call is an argument array, and each element must be a bare word from a
+fixed safe set. A value carrying shell syntax is refused rather than escaped, so no
+argument can become a second command, a pipeline, or an expansion. No step handles a
+credential: the flake comes from the host's own network identity, and the authority
+is the control plane's.
+
+The readback (`internal/adapters/ssm/readback.go`) checks five facts and believes
+none of the deploy's report:
+
+| Fact | What proves it |
+|---|---|
+| `rex_resolves_to_nix_store` | `rex` resolves into `/nix/store`, and it is the binary the record for the requested revision names. A store path is a content hash, so the revision lives in the record beside it, not inside it |
+| `rex_user_unit_active` | `systemctl --user is-active rex` reports `active` |
+| `tailscale_serve_maps_443_to_127.0.0.1:7297` | `tailscale serve status` publishes an HTTPS address whose proxy target is `127.0.0.1:7297` |
+| `rex_config_links_present` | the three profile links (`init.lua`, `missions.lua`, `notify-ntfy.lua`) exist under `~/.config/rex` |
+| `linger_enabled` | `loginctl show-user <account> --property=Linger` reports `Linger=yes` |
+
+A failed fact is a `domain.ProfileNotReadyError` naming it, and it is non-retryable:
+the control plane reached the host and the host answered wrong.
+
+Two operator prerequisites the deploy does not invent:
+
+- the approved `flake_ref` must be **fully qualified**, for example
+  `github:owner/repo/<rev>#homeConfigurations.remote-mumbai.activationPackage`. The
+  catalog's `.#...` form resolves against a checkout, and a provisioned host has
+  none, so a deploy refuses it and names the fix;
+- the worker's SSM command timeout for the deploy is
+  `ssm.DeployCommandTimeoutSeconds` (2700 s), not the enrollment command's 180 s: the
+  control plane cancels a command that outlives the `TimeoutSeconds` it was sent
+  with. `cmd/provision/worker.go` builds the deploy's runner from the same client
+  configuration for exactly this reason. The host also needs `home-manager`, which
+  the first deploy fetches with `nix run`.
 
 ## 11. Major-version upgrade
 

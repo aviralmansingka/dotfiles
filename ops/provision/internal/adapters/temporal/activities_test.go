@@ -2,6 +2,8 @@ package temporaladapter_test
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -242,5 +244,139 @@ func TestRecordHostMilestoneWritesTheTombstoneOnlyWhenEveryStepReleased(t *testi
 	}
 	if host.PrivateAddress != "" || len(host.Tags) != 0 {
 		t.Fatalf("tombstoned record kept its address %q and tags %v", host.PrivateAddress, host.Tags)
+	}
+}
+
+// recordingDeployer answers the deploy port and records the request it was handed.
+type recordingDeployer struct {
+	result  ports.DeployResult
+	err     error
+	request ports.DeployRequest
+	calls   int
+}
+
+func (d *recordingDeployer) DeployProfile(_ context.Context, req ports.DeployRequest) (ports.DeployResult, error) {
+	d.calls++
+	d.request = req
+	if d.err != nil {
+		return ports.DeployResult{}, d.err
+	}
+	return d.result, nil
+}
+
+// fakeReadback answers the readback port. It reports a revision of its own so a
+// test can tell the port's answer from the payload that carried the claim, and it
+// records the request so the instance id the deploy addressed is asserted.
+type fakeReadback struct {
+	result  ports.ReadbackResult
+	err     error
+	request ports.ReadbackRequest
+	calls   int
+}
+
+func (f *fakeReadback) ReadBackProfile(_ context.Context, req ports.ReadbackRequest) (ports.ReadbackResult, error) {
+	f.calls++
+	f.request = req
+	if f.err != nil {
+		return ports.ReadbackResult{}, f.err
+	}
+	return f.result, nil
+}
+
+// TestReadBackProfileReportsOnlyWhatTheHostProved: the activity's output carries the
+// revision the readback returned, never the revision the input claimed, and it
+// addresses the host by the instance the deploy used.
+func TestReadBackProfileReportsOnlyWhatTheHostProved(t *testing.T) {
+	t.Parallel()
+	readback := &fakeReadback{result: ports.ReadbackResult{
+		FlakeRevision: "rev-the-host-records",
+		RexURL:        "https://rex-1.tail1234.ts.net",
+		RexPath:       "/nix/store/" + strings.Repeat("a", 32) + "-rex/bin/rex",
+		Facts:         []string{"rex_resolves_to_nix_store", "linger_enabled"},
+	}}
+	logger := &fakes.Logger{}
+	acts := &temporaladapter.Activities{Readback: readback, Logger: logger}
+
+	out, err := acts.ReadBackProfile(context.Background(), workflows.ReadBackProfileInput{
+		HostID:        "host-0001",
+		Name:          "rex-1",
+		ResourceID:    testInstanceID,
+		FlakeRevision: "rev-the-deploy-claimed",
+	})
+	if err != nil {
+		t.Fatalf("ReadBackProfile: %v", err)
+	}
+	if out.FlakeRevision != "rev-the-host-records" {
+		t.Fatalf("revision = %q, want the readback's, not the claim", out.FlakeRevision)
+	}
+	if out.RexURL != "https://rex-1.tail1234.ts.net" {
+		t.Fatalf("rex url = %q", out.RexURL)
+	}
+	if readback.request.InstanceID != testInstanceID {
+		t.Fatalf("readback addressed %q, want the instance the deploy used", readback.request.InstanceID)
+	}
+	if readback.request.FlakeRevision != "rev-the-deploy-claimed" {
+		t.Fatalf("the readback was handed %q as the claim", readback.request.FlakeRevision)
+	}
+	if len(logger.Lines()) == 0 {
+		t.Fatal("the readback recorded nothing")
+	}
+}
+
+// TestReadBackProfileFailsPermanentlyWhenAFactDoesNotHold: a host whose facts are
+// wrong fails the job with a non-retryable refusal, because nothing about a third
+// attempt changes what the host reported.
+func TestReadBackProfileFailsPermanentlyWhenAFactDoesNotHold(t *testing.T) {
+	t.Parallel()
+	readback := &fakeReadback{err: &domain.ProfileNotReadyError{
+		HostID: "host-0001",
+		Fact:   "linger_enabled",
+		Reason: "loginctl reports \"Linger=no\"",
+	}}
+	acts := &temporaladapter.Activities{Readback: readback, Logger: &fakes.Logger{}}
+	_, err := acts.ReadBackProfile(context.Background(), workflows.ReadBackProfileInput{
+		HostID:     "host-0001",
+		Name:       "rex-1",
+		ResourceID: testInstanceID,
+	})
+	if err == nil {
+		t.Fatal("the readback reported success for a host that failed a fact")
+	}
+	var activityErr *temporal.ApplicationError
+	if !errors.As(err, &activityErr) {
+		t.Fatalf("error = %v, want an application error", err)
+	}
+	if !activityErr.NonRetryable() {
+		t.Fatal("a fact that does not hold was reported as retryable")
+	}
+	if !strings.Contains(activityErr.Message(), "linger_enabled") {
+		t.Fatalf("the refusal does not name the fact: %s", activityErr.Message())
+	}
+}
+
+// TestDeployProfileAddressesTheHostByInstanceID: the deploy port has no address but
+// the instance, so the activity has to pass the resource id it was handed.
+func TestDeployProfileAddressesTheHostByInstanceID(t *testing.T) {
+	t.Parallel()
+	deployer := &recordingDeployer{result: ports.DeployResult{
+		FlakeRevision: "rev-1",
+		RexURL:        "https://rex-1.tail1234.ts.net",
+	}}
+	acts := &temporaladapter.Activities{Deployer: deployer, Logger: &fakes.Logger{}}
+	out, err := acts.DeployProfile(context.Background(), workflows.DeployProfileInput{
+		HostID:     "host-0001",
+		Name:       "rex-1",
+		Profile:    "rex",
+		ResourceID: testInstanceID,
+		FlakeRef:   "github:owner/repo/" + strings.Repeat("a", 40) + "#homeConfigurations.rex.activationPackage",
+	})
+	if err != nil {
+		t.Fatalf("DeployProfile: %v", err)
+	}
+	if deployer.request.InstanceID != testInstanceID {
+		t.Fatalf("deploy addressed %q, want the instance id", deployer.request.InstanceID)
+	}
+	if out.FlakeRevision != deployer.result.FlakeRevision {
+		t.Fatalf("output revision = %q, want the adapter's", out.FlakeRevision)
 	}
 }

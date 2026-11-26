@@ -68,6 +68,32 @@ func (e *AmbiguousOwnershipError) Error() string {
 	return fmt.Sprintf("refusing to destroy host %s: ownership is ambiguous (%s); reconcile the provider record by hand", e.HostID, e.Reason)
 }
 
+// ProfileNotReadyError reports a host that answered a readback with a fact that
+// does not hold: rex is not the deployed binary, the user unit is not active, the
+// Serve mapping is absent, a profile link is missing, or linger is off.
+//
+// It is its own type because the answer is a report about the host, not a
+// transport failure: the control plane reached it, the command ran, and what came
+// back was wrong. That makes it a fact an operator or the profile build fixes, not
+// something a retry converges on. The message names the fact that failed and
+// quotes no more of the host's output than a sanitized reason.
+type ProfileNotReadyError struct {
+	HostID string
+	// Fact names the readback check that failed, for example
+	// "rex_resolves_to_nix_store".
+	Fact string
+	// Reason is the sanitized detail: what the host reported instead.
+	Reason string
+}
+
+func (e *ProfileNotReadyError) Error() string {
+	reason := e.Reason
+	if reason == "" {
+		reason = "the host did not report it"
+	}
+	return fmt.Sprintf("host %s did not pass the profile readback: %s (%s)", e.HostID, e.Fact, reason)
+}
+
 // AgentNotRegisteredError reports that a host's SSM agent never registered with
 // the control plane inside the allowed window.
 //

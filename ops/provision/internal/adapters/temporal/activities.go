@@ -27,9 +27,13 @@ type Activities struct {
 	Providers ports.HostProvider
 	// Agent proves a host's SSM agent registered. It is a separate dependency
 	// because the check is its own activity, ahead of enrollment.
-	Agent      ports.SSMAgentProbe
-	Enroller   ports.HostEnroller
-	Deployer   ports.ProfileDeployer
+	Agent    ports.SSMAgentProbe
+	Enroller ports.HostEnroller
+	Deployer ports.ProfileDeployer
+	// Readback asks the host what landed. It is a separate dependency from the
+	// Deployer because it is a separate activity with its own bound, and because a
+	// workflow must not be able to report ready on the deploy's own word.
+	Readback   ports.ProfileReadback
 	Authorizer ports.HostAuthorizer
 	Tailnet    ports.TailnetDeviceManager
 	Clock      ports.Clock
@@ -49,6 +53,8 @@ func (a *Activities) Validate() error {
 		return errors.New("temporal: ssm agent probe is required")
 	case a.Deployer == nil:
 		return errors.New("temporal: profile deployer is required")
+	case a.Readback == nil:
+		return errors.New("temporal: profile readback is required")
 	case a.Authorizer == nil:
 		return errors.New("temporal: host authorizer is required")
 	case a.Tailnet == nil:
@@ -231,12 +237,43 @@ func (a *Activities) DeployProfile(ctx context.Context, in workflows.DeployProfi
 		Name:     in.Name,
 		Profile:  in.Profile,
 		FlakeRef: in.FlakeRef,
+		// The resource id is the instance the control plane addresses. It is not a
+		// display value: without it there is no transport and the step refuses.
+		InstanceID: in.ResourceID,
 	})
 	if err != nil {
 		return workflows.DeployProfileOutput{}, a.activityError("deploy_profile", in.HostID, err)
 	}
 	a.log("host.deployed", "host_id", in.HostID, "flake_revision", result.FlakeRevision)
 	return workflows.DeployProfileOutput{FlakeRevision: result.FlakeRevision, RexURL: result.RexURL}, nil
+}
+
+// ReadBackProfile asks the host what landed and reports only what the host proved.
+//
+// It is what lets the workflow write a flake revision and a Rex address: the
+// deploy's report is the claim this step checks, and a fact that does not hold
+// fails the job here rather than surfacing as a host that is "ready" and broken.
+func (a *Activities) ReadBackProfile(ctx context.Context, in workflows.ReadBackProfileInput) (workflows.ReadBackProfileOutput, error) {
+	result, err := a.Readback.ReadBackProfile(ctx, ports.ReadbackRequest{
+		HostID:        in.HostID,
+		Name:          in.Name,
+		InstanceID:    in.ResourceID,
+		FlakeRevision: in.FlakeRevision,
+	})
+	if err != nil {
+		return workflows.ReadBackProfileOutput{}, a.activityError("read_back_profile", in.HostID, err)
+	}
+	a.log("host.profile.verified",
+		"host_id", in.HostID,
+		"flake_revision", result.FlakeRevision,
+		"rex_url", result.RexURL,
+		"facts", strings.Join(result.Facts, ","),
+	)
+	return workflows.ReadBackProfileOutput{
+		FlakeRevision: result.FlakeRevision,
+		RexURL:        result.RexURL,
+		Facts:         result.Facts,
+	}, nil
 }
 
 // AuthorizeHost grants the approved secret bundles.
@@ -448,14 +485,15 @@ func (a *Activities) activityError(operation, hostID string, err error) error {
 	var notImplemented *domain.NotImplementedError
 	var invalid *domain.ValidationError
 	var agent *domain.AgentNotRegisteredError
+	var notReady *domain.ProfileNotReadyError
 	var claim *domain.RoleClaimError
 	var consumed *domain.WrapTokenConsumedError
 	var identityErr *domain.IdentityError
 	var ambiguous *domain.AmbiguousOwnershipError
 	switch {
 	case errors.As(err, &notImplemented), errors.As(err, &invalid), errors.As(err, &agent),
-		errors.As(err, &claim), errors.As(err, &consumed), errors.As(err, &identityErr),
-		errors.As(err, &ambiguous):
+		errors.As(err, &notReady), errors.As(err, &claim), errors.As(err, &consumed),
+		errors.As(err, &identityErr), errors.As(err, &ambiguous):
 		return temporal.NewNonRetryableApplicationError(jobErr.Message, jobErr.Code, nil)
 	default:
 		return fmt.Errorf("%s: %s", operation, jobErr.Message)

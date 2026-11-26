@@ -28,6 +28,7 @@ func RegisterActivitySet(reg worker.ActivityRegistry, acts *Activities) {
 	reg.RegisterActivityWithOptions(acts.CheckSSMAgent, activity.RegisterOptions{Name: workflows.ActivityCheckSSMAgent})
 	reg.RegisterActivityWithOptions(acts.EnrollHost, activity.RegisterOptions{Name: workflows.ActivityEnrollHost})
 	reg.RegisterActivityWithOptions(acts.DeployProfile, activity.RegisterOptions{Name: workflows.ActivityDeployProfile})
+	reg.RegisterActivityWithOptions(acts.ReadBackProfile, activity.RegisterOptions{Name: workflows.ActivityReadBackProfile})
 	reg.RegisterActivityWithOptions(acts.AuthorizeHost, activity.RegisterOptions{Name: workflows.ActivityAuthorizeHost})
 	reg.RegisterActivityWithOptions(acts.RevokeHostTokens, activity.RegisterOptions{Name: workflows.ActivityRevokeHostTokens})
 	reg.RegisterActivityWithOptions(acts.RevokeHostCredentials, activity.RegisterOptions{Name: workflows.ActivityRevokeHostCredentials})
