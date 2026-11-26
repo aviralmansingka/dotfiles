@@ -9,12 +9,20 @@
 # as an encrypted SSM parameter, and runs `tailscale up` over SSM Run Command from
 # the worker. Nothing here opens, or needs, an inbound connection.
 #
-# The whole bootstrap is ONE runcmd shell (a block scalar) with `set -euo pipefail`
-# and an explicit root environment. cloud-init runs runcmd with `/bin/sh` and no
-# login environment, so HOME is unset; the upstream Nix installer aborts with
+# The whole bootstrap is ONE runcmd shell (a block scalar) with `set -eu` and an
+# explicit root environment. cloud-init runs runcmd with `/bin/sh` and no login
+# environment, so HOME is unset; the upstream Nix installer aborts with
 # `$HOME is not set` on a real Ubuntu host, and a list of independent `runcmd`
 # entries let that failure be swallowed while the run still reported success.
 # Every install step below ends with a check that can fail the boot.
+#
+# `set -euo pipefail` was a live defect, not a preference: cloud-init writes its
+# runcmd script with `#!/bin/sh`, which is dash on Ubuntu, and dash rejects
+# `set -o pipefail` with exit 2 before the block's first real line. The first host
+# (fleet-s02-20261126t1015) booted with cloud-init status "error", no `nix`, no
+# `tailscaled`, and no `aws`, and cloud-init's own log line was
+# `/var/lib/cloud/instance/scripts/runcmd: 2: set: Illegal option -o pipefail`.
+# The block is therefore POSIX sh: `set -eu`, no `pipefail`, no `[[`, no arrays.
 package_update: true
 package_upgrade: false
 
@@ -36,10 +44,10 @@ write_files:
       sandbox = true
 
 runcmd:
-  # One shell, so `set -euo pipefail` covers every step and the first failure
+  # One shell, so `set -eu` covers every step and the first failure
   # stops the boot instead of being followed by a success line.
   - |
-    set -euo pipefail
+    set -eu
 
     # cloud-init gives runcmd no login environment: HOME is unset and the Nix
     # installer refuses to run. Set it explicitly, for this shell and for every

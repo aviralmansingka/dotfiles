@@ -101,7 +101,7 @@ func TestCloudInitNixInstallRunsWithExplicitHome(t *testing.T) {
 // deliver a client fails the boot instead of leaving a host that reports healthy.
 func TestCloudInitNixInstallIsVerifiedAfterInstall(t *testing.T) {
 	t.Parallel()
-	document, _ := loadCloudInit(t)
+	document, decoded := loadCloudInit(t)
 	lines := strings.Split(document, "\n")
 
 	installer := lineContaining(t, lines, "sh /tmp/nix-install.sh")
@@ -116,8 +116,25 @@ func TestCloudInitNixInstallIsVerifiedAfterInstall(t *testing.T) {
 
 	// With `set -e` in force, a failing check ends the boot. Without it the check
 	// is decoration, which is exactly how the original failure was hidden.
-	if !strings.Contains(document, "set -euo pipefail") {
-		t.Fatal("cloud-init does not run the bootstrap under `set -euo pipefail`, so a failed step cannot fail the boot")
+	if !strings.Contains(document, "set -eu\n") {
+		t.Fatal("cloud-init does not run the bootstrap under `set -eu`, so a failed step cannot fail the boot")
+	}
+	// The block is run by cloud-init with `#!/bin/sh`, which is dash on Ubuntu:
+	// `set -o pipefail` is a bash option there and dash exits 2 before the block's
+	// first real line. The first live host booted exactly that way — cloud-init
+	// status "error", `runcmd: 2: set: Illegal option -o pipefail`, no nix, no
+	// tailscaled, no aws cli — so the block itself is asserted, not the document.
+	block, ok := decoded["runcmd"].([]any)[0].(string)
+	if !ok {
+		t.Fatal("runcmd is not a block scalar")
+	}
+	for _, bashOnly := range []string{"pipefail", "[[", "set -o history"} {
+		if strings.Contains(block, bashOnly) {
+			t.Fatalf("the runcmd block holds the bash-only construct %q, but cloud-init runs it with #!/bin/sh (dash)", bashOnly)
+		}
+	}
+	if !strings.HasPrefix(strings.TrimSpace(block), "set -eu\n") {
+		t.Fatalf("the runcmd block does not start with `set -eu`: %q", firstLine(block))
 	}
 
 	// A swallowed failure (`|| true`, `; exit 0`) is the same defect wearing a
@@ -235,4 +252,10 @@ func TestCloudInitKeepsBootstrapStepOrder(t *testing.T) {
 	if lineContaining(t, lines, "aws --version") < awscli {
 		t.Fatal("aws --version runs before snap install aws-cli: the check cannot fail the boot for a missing CLI")
 	}
+}
+
+// firstLine is the leading line of a block, for a failure message that names it.
+func firstLine(block string) string {
+	head, _, _ := strings.Cut(strings.TrimSpace(block), "\n")
+	return head
 }

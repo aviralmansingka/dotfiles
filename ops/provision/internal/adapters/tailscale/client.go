@@ -117,12 +117,21 @@ func (c *apiClient) token(ctx context.Context) (domain.Secret, error) {
 	}
 	defer clientSecret.Destroy()
 
+	// A KV value is whatever an operator wrote, and a KV write made from a file
+	// carries that file's trailing newline — the lab's `fleet/tailscale-oauth`
+	// does, at 64 bytes for a 63-byte secret. Tailscale answers a secret with a
+	// newline stuck to it with `401 API token invalid`, which reads like a revoked
+	// credential and sent the first live run looking in the wrong place. An OAuth
+	// client secret is opaque bytes and nothing else, so the surrounding
+	// whitespace is trimmed at the one point where the value becomes a form field.
+	secretValue := strings.TrimSpace(string(clientSecret.Bytes()))
+
 	form := url.Values{}
 	form.Set("grant_type", "client_credentials")
 	form.Set("client_id", c.cfg.OAuthClientID)
 	// The only place the client secret exists: the token request body. It is not
 	// an argv word, an environment variable, or a log field.
-	form.Set("client_secret", string(clientSecret.Bytes()))
+	form.Set("client_secret", secretValue)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v2/oauth/token", strings.NewReader(form.Encode()))
 	if err != nil {

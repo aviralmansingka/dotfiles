@@ -476,3 +476,25 @@ func TestLookupDeviceReportsRegisteredWhenNotConnected(t *testing.T) {
 		t.Fatalf("state = %q, want a non-running state", found.State)
 	}
 }
+
+// TestOAuthClientSecretIsTrimmedBeforeTheExchange reproduces the first live run's
+// failure: the KV value `secret/data/fleet/tailscale-oauth` carries a trailing
+// newline (64 bytes for a 63-byte secret), Tailscale answers `401 API token
+// invalid` for the untrimmed value, and the job died in EnrollHost as if the
+// credential had been revoked. The fake API asserts the form field equals the
+// secret exactly, so a value that still carried the newline fails this test.
+func TestOAuthClientSecretIsTrimmedBeforeTheExchange(t *testing.T) {
+	t.Parallel()
+	api := newFakeAPI(t)
+	secrets := fakes.NewSecrets(map[string]string{oauthRef: oauthSecret + "\n"})
+	minter, _ := newMinter(t, api, secrets)
+
+	if _, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
+		HostID: hostID, HostName: hostName, Tag: domain.ApprovedTailnetTag, Policy: domain.ApprovedAuthKeyPolicy(),
+	}); err != nil {
+		t.Fatalf("MintAuthKey with a newline-terminated client secret: %v", err)
+	}
+	if tokenCalls, _, _ := api.counts(); tokenCalls != 1 {
+		t.Fatalf("token calls = %d, want 1", tokenCalls)
+	}
+}
