@@ -134,6 +134,24 @@ func validateFlakeRef(ref string) error {
 // Nix can fetch or locate without a working directory, then a location.
 var remoteFlakeSchemePattern = regexp.MustCompile(`^(github|gitlab|sourcehut|git\+https|git\+ssh|git\+file|tarball\+https|tarball\+file|path|flake):`)
 
+// remoteFlakeRevQueryPattern matches the `rev=` query parameter of a URL-shaped
+// flake reference. The value runs to the next `&`, `#`, or the end.
+var remoteFlakeRevQueryPattern = regexp.MustCompile(`[?&]rev=([^&#]*)`)
+
+// remoteFlakeForgePattern matches the forge shorthands that name the revision as
+// their final path segment: `github:owner/repo/<rev>`, `gitlab:owner/repo/<rev>`,
+// `sourcehut:~owner/repo/<rev>`.
+var remoteFlakeForgePattern = regexp.MustCompile(`^(github|gitlab|sourcehut):`)
+
+// remoteFlakeRevPattern is the only revision a remote deploy accepts: an exact
+// 40-character lowercase-hex commit id. A branch, a tag, an abbreviated rev, or
+// `HEAD` can move, and the deploy records the revision it activated.
+var remoteFlakeRevPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
+// remoteFlakeExample is the shape a deploy needs, quoted in every refusal so an
+// operator reading a failed job knows what to write in the catalog.
+const remoteFlakeExample = "git+https://github.com/owner/repo?rev=<40-character commit id>#homeConfigurations.<host>.activationPackage"
+
 // ValidateRemoteFlakeRef enforces the shape of a flake reference that can be
 // deployed to a host that is not this machine.
 //
@@ -142,18 +160,58 @@ var remoteFlakeSchemePattern = regexp.MustCompile(`^(github|gitlab|sourcehut|git
 // by the provisioner has no checkout, so a relative reference resolves against a
 // directory that does not exist there. Rather than fail on the host with a
 // confusing Nix error, a deploy over the control plane refuses a relative
-// reference here and names the fix: a fully qualified reference such as
-// `github:owner/repo/<rev>#homeConfigurations.<host>.activationPackage`.
+// reference here and names the fix.
+//
+// Three rules make the reference deployable and reproducible, and each refusal
+// names what is missing:
+//
+//   - a fully qualified scheme, so the host can fetch the flake with no checkout;
+//   - a fragment naming the output to activate;
+//   - an exact 40-character commit id, as a `?rev=` query parameter of a URL or as
+//     the final path segment of a forge shorthand. A floating branch resolves to
+//     whatever moved since the review, so it is refused rather than pinned late.
 func ValidateRemoteFlakeRef(ref string) error {
 	if err := validateFlakeRef(ref); err != nil {
 		return Invalid("flake_ref", err.Error())
 	}
 	if !remoteFlakeSchemePattern.MatchString(ref) {
 		return Invalid("flake_ref", fmt.Sprintf(
-			"%q is a local reference; a host has no checkout to resolve it against, so the deploy needs a fully qualified one such as github:owner/repo/<rev>#homeConfigurations.<host>.activationPackage",
-			ref))
+			"%q is a local reference; a host has no checkout to resolve it against, so the deploy needs a fully qualified one such as %s",
+			ref, remoteFlakeExample))
+	}
+	target, fragment, hasFragment := strings.Cut(ref, "#")
+	if !hasFragment || fragment == "" {
+		return Invalid("flake_ref", fmt.Sprintf(
+			"%q names no output; a host has to know which attribute to activate, so the deploy needs a fragment such as %s",
+			ref, remoteFlakeExample))
+	}
+	rev, hasRev := remoteFlakeRev(target)
+	if !hasRev {
+		return Invalid("flake_ref", fmt.Sprintf(
+			"%q is not revision-pinned; a branch or tag can move between the review and the deploy, so the deploy needs the exact commit it activates, as in %s",
+			ref, remoteFlakeExample))
+	}
+	if !remoteFlakeRevPattern.MatchString(rev) {
+		return Invalid("flake_ref", fmt.Sprintf(
+			"%q pins revision %q, which is not a 40-character lowercase-hex commit id; the deploy records the revision it activated, so the pin must be the exact commit, as in %s",
+			ref, rev, remoteFlakeExample))
 	}
 	return nil
+}
+
+// remoteFlakeRev extracts the revision a fully qualified reference pins: the
+// `rev=` query parameter, or the final path segment of a forge shorthand. It
+// reports false when the location names no revision at all.
+func remoteFlakeRev(target string) (string, bool) {
+	if match := remoteFlakeRevQueryPattern.FindStringSubmatch(target); match != nil {
+		return match[1], true
+	}
+	if remoteFlakeForgePattern.MatchString(target) {
+		if slash := strings.LastIndex(target, "/"); slash >= 0 {
+			return target[slash+1:], true
+		}
+	}
+	return "", false
 }
 
 // Catalog is the immutable set of approved profiles.

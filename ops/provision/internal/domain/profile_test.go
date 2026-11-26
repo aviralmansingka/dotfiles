@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -161,5 +162,138 @@ func TestCatalogRejectsDuplicateAndEmptyProfileSets(t *testing.T) {
 	}
 	if _, err := domain.NewCatalog([]domain.Profile{approvedProfile(), approvedProfile()}); err == nil {
 		t.Fatal("NewCatalog with a duplicate profile must fail")
+	}
+}
+
+// pinnedCatalogRef is the reference the shipped catalog carries: fully
+// qualified, revision-pinned, and pointing at the managed Rex output. It is
+// spelled out here so a change to the other forms of a remote reference cannot
+// quietly stop accepting the one an operator ships.
+const pinnedCatalogRef = "git+https://github.com/aviralmansingka/dotfiles?rev=704777b201e001fa6883426bd1205f1f18494f75#homeConfigurations.remote-mumbai.activationPackage"
+
+// TestValidateRemoteFlakeRefAcceptsThePinnedCatalogRef proves the shape the
+// catalog ships is deployable: a URL a host can fetch, the exact commit, and the
+// attribute path it activates. The forge-shorthand form is accepted too, because
+// it names the same immutable revision.
+func TestValidateRemoteFlakeRefAcceptsThePinnedCatalogRef(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		pinnedCatalogRef,
+		"github:aviralmansingka/dotfiles/704777b201e001fa6883426bd1205f1f18494f75#homeConfigurations.remote-mumbai.activationPackage",
+		"git+ssh://git@github.com/aviralmansingka/dotfiles?rev=704777b201e001fa6883426bd1205f1f18494f75#homeConfigurations.remote-mumbai.activationPackage",
+	}
+	for _, ref := range accepted {
+		ref := ref
+		t.Run(ref, func(t *testing.T) {
+			t.Parallel()
+			if err := domain.ValidateRemoteFlakeRef(ref); err != nil {
+				t.Fatalf("ValidateRemoteFlakeRef(%q) = %v, want nil", ref, err)
+			}
+		})
+	}
+}
+
+// TestValidateRemoteFlakeRefRefusesARelativeTargetWithTheFix: a relative target
+// resolves against a checkout a provisioned host does not have, so the refusal
+// has to name the reference to write instead. The fix is quoted in full, so an
+// operator is not left translating a Nix error from a machine they cannot log in
+// to.
+func TestValidateRemoteFlakeRefRefusesARelativeTargetWithTheFix(t *testing.T) {
+	t.Parallel()
+	err := domain.ValidateRemoteFlakeRef(".#homeConfigurations.remote-mumbai.activationPackage")
+	if err == nil {
+		t.Fatal("a relative flake target was accepted for a remote deploy")
+	}
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("refusal = %T (%v), want a *domain.ValidationError", err, err)
+	}
+	if invalid.Field != "flake_ref" {
+		t.Fatalf("refusal field = %q, want %q", invalid.Field, "flake_ref")
+	}
+	for _, want := range []string{"git+https://", "?rev=", "#homeConfigurations."} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("the refusal does not name the fix (%q missing): %v", want, err)
+		}
+	}
+}
+
+// TestValidateRemoteFlakeRefRefusesAnImpreciseRevision: a short or overlong pin
+// is not a commit id, so a deploy could not record what it activated. The
+// refusal names the length it expected.
+func TestValidateRemoteFlakeRefRefusesAnImpreciseRevision(t *testing.T) {
+	t.Parallel()
+	const rev = "704777b201e001fa6883426bd1205f1f18494f75"
+	near := map[string]string{
+		"39-character rev": rev[:39],
+		"41-character rev": rev + "0",
+		"uppercase rev":    strings.ToUpper(rev),
+		"branch as rev":    "mission/fleet-provisioning-api",
+	}
+	for label, bad := range near {
+		bad := bad
+		t.Run(label, func(t *testing.T) {
+			t.Parallel()
+			for _, ref := range []string{
+				"git+https://github.com/aviralmansingka/dotfiles?rev=" + bad + "#homeConfigurations.remote-mumbai.activationPackage",
+				"github:aviralmansingka/dotfiles/" + bad + "#homeConfigurations.remote-mumbai.activationPackage",
+			} {
+				err := domain.ValidateRemoteFlakeRef(ref)
+				if err == nil {
+					t.Fatalf("ValidateRemoteFlakeRef(%q) accepted a %s", ref, label)
+				}
+				if !strings.Contains(err.Error(), "40-character lowercase-hex") {
+					t.Fatalf("the refusal does not name the revision shape: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// TestValidateRemoteFlakeRefRefusesATargetWithNoFragment: without a fragment the
+// host has nothing to activate, so the deploy refuses it instead of resolving the
+// flake's default output on the machine.
+func TestValidateRemoteFlakeRefRefusesATargetWithNoFragment(t *testing.T) {
+	t.Parallel()
+	unfragmented := []string{
+		"git+https://github.com/aviralmansingka/dotfiles?rev=704777b201e001fa6883426bd1205f1f18494f75",
+		"github:aviralmansingka/dotfiles/704777b201e001fa6883426bd1205f1f18494f75",
+		"flake:nixpkgs",
+	}
+	for _, ref := range unfragmented {
+		ref := ref
+		t.Run(ref, func(t *testing.T) {
+			t.Parallel()
+			err := domain.ValidateRemoteFlakeRef(ref)
+			if err == nil {
+				t.Fatalf("ValidateRemoteFlakeRef(%q) accepted a target with no fragment", ref)
+			}
+			if !strings.Contains(err.Error(), "names no output") {
+				t.Fatalf("the refusal does not name the missing fragment: %v", err)
+			}
+		})
+	}
+}
+
+// TestValidateRemoteFlakeRefRefusesAFloatingBranch: a branch or `HEAD` moves, so
+// the revision the host built would depend on when the deploy ran. The catalog
+// pin is what makes the record and the build agree.
+func TestValidateRemoteFlakeRefRefusesAFloatingBranch(t *testing.T) {
+	t.Parallel()
+	floating := []string{
+		"git+https://github.com/aviralmansingka/dotfiles?ref=mission/fleet-provisioning-api#homeConfigurations.remote-mumbai.activationPackage",
+		"git+https://github.com/aviralmansingka/dotfiles#homeConfigurations.remote-mumbai.activationPackage",
+		"github:aviralmansingka/dotfiles/main#homeConfigurations.remote-mumbai.activationPackage",
+		"github:aviralmansingka/dotfiles#homeConfigurations.remote-mumbai.activationPackage",
+		"path:./nix#homeConfigurations.remote-mumbai.activationPackage",
+	}
+	for _, ref := range floating {
+		ref := ref
+		t.Run(ref, func(t *testing.T) {
+			t.Parallel()
+			if err := domain.ValidateRemoteFlakeRef(ref); err == nil {
+				t.Fatalf("ValidateRemoteFlakeRef(%q) accepted a reference that names no revision", ref)
+			}
+		})
 	}
 }

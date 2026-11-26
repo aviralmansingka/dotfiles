@@ -179,8 +179,10 @@ func TestDeployRefusesARelativeFlakeTargetWithTheFix(t *testing.T) {
 	if err == nil {
 		t.Fatal("a relative flake target was accepted for a remote deploy")
 	}
-	if !strings.Contains(err.Error(), "github:owner/repo") {
-		t.Fatalf("the refusal does not name the fix: %v", err)
+	for _, want := range []string{"git+https://", "?rev=", "#homeConfigurations."} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("the refusal does not name the fix (%q missing): %v", want, err)
+		}
 	}
 }
 

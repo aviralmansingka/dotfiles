@@ -172,7 +172,8 @@ The role is created with:
 
 900 seconds is a hard maximum, not a default. `domain.TokenPolicy.Validate` refuses
 a configuration above it, `application.NewIdentityService` refuses to start with
-such a policy, and `SessionService` refuses a session whose reported TTL is zero,
+such a policy, and `hostsession.SessionService` (`internal/hostsession/session.go`)
+refuses a session whose reported TTL is zero,
 negative, or above the maximum. Renewal asks for a 300-second increment and is
 subject to the same validation, so renewal can never extend a token past the bound.
 
@@ -205,7 +206,7 @@ durable; the session token is explicitly not, and a reboot costs one login.
 
 ## 6. Rotation and recovery
 
-Rotation (`SessionService.Rotate` →
+Rotation (`hostsession.SessionService.Rotate` →
 `HostIdentityClient.RotateSecretID`):
 
 1. mint a new response-wrapped SecretID;
@@ -586,16 +587,31 @@ the control plane reached the host and the host answered wrong.
 
 Two operator prerequisites the deploy does not invent:
 
-- the approved `flake_ref` must be **fully qualified**, for example
-  `github:owner/repo/<rev>#homeConfigurations.remote-mumbai.activationPackage`. The
-  catalog's `.#...` form resolves against a checkout, and a provisioned host has
-  none, so a deploy refuses it and names the fix;
+- the approved `flake_ref` must be **fully qualified** and **revision-pinned**. The
+  shipped `rex` profile carries
+  `git+https://github.com/aviralmansingka/dotfiles?rev=<40-character sha>#homeConfigurations.remote-mumbai.activationPackage`:
+  a `git+https` URL because the repository is public and the branch name contains a
+  slash, the full commit id because a branch name can move between the review and
+  the deploy, and a fragment because the host has to know which attribute to
+  activate. The catalog's old `.#...` form resolves against a checkout, and a
+  provisioned host has none, so a deploy refuses it and names the fix; a branch
+  name, a short rev, or a missing fragment is refused the same way. **The operator
+  must push the branch that carries the pinned commit** before a live deploy:
+  until then the revision is not on the remote, and the host cannot fetch it.
+  A `git+https` revision that is not reachable fails on the host at the
+  `nix flake metadata` step, before anything is activated;
 - the worker's SSM command timeout for the deploy is
   `ssm.DeployCommandTimeoutSeconds` (2700 s), not the enrollment command's 180 s: the
   control plane cancels a command that outlives the `TimeoutSeconds` it was sent
   with. `cmd/provision/worker.go` builds the deploy's runner from the same client
   configuration for exactly this reason. The host also needs `home-manager`, which
   the first deploy fetches with `nix run`.
+
+The host records the revision it activated in `/var/lib/fleet-profile/<rev>`: one
+symlink per activated revision, named by the full commit id and pointing at the
+`rex` binary that revision installed (step 5 above). The record is written by the
+host, not reported by the caller, and the readback checks the binary it names, so
+the revision in a job record is the revision that landed.
 
 ## 11. Major-version upgrade
 

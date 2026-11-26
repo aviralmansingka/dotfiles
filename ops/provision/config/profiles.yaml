@@ -38,7 +38,16 @@ profiles:
     # nix/modules/remote/rex-host.nix. The flake ref stays server-side, and
     # internal/config/profiles_flake_test.go asserts it names an output the flake
     # actually exposes.
-    flake_ref: .#homeConfigurations.remote-mumbai.activationPackage
+    #
+    # The reference is fully qualified and revision-pinned. A provisioned host
+    # has no checkout, so a relative `.#...` target cannot resolve there, and a
+    # branch name could move between the review and the deploy, so the deploy
+    # needs the exact commit it activates: the full 40-character SHA, in
+    # `git+https` form (the branch name contains a slash, which the `github:`
+    # shorthand cannot carry with an exact rev). The operator must push the
+    # commit before a deploy, or the revision is not reachable on the remote and
+    # the host cannot fetch it.
+    flake_ref: git+https://github.com/aviralmansingka/dotfiles?rev=704777b201e001fa6883426bd1205f1f18494f75#homeConfigurations.remote-mumbai.activationPackage
     # Tailnet tag every host of this profile joins with. This is the only source
     # of a tag: a create request has no field for one, the enrollment key is
     # minted with exactly this tag, and the device lookup searches by it, so a
