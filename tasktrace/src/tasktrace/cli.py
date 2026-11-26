@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from . import agent, hooks, probe, rex, stitch
+from . import agent, hooks, probe, rex, stitch, waterfall
 from .client import Client, ClientError, send
 from .schema import KINDS
 from .server import Collector, default_socket
@@ -161,6 +161,26 @@ def cmd_traces(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_waterfall(args: argparse.Namespace) -> int:
+    store = Store(_home(args))
+    try:
+        rows = store.rows()
+    finally:
+        store.close()
+    view = waterfall.window(
+        days=args.days,
+        since=args.since,
+        until=args.until,
+        everything=args.all,
+    )
+    found = waterfall.build(rows, view=view)
+    if args.json:
+        print(json.dumps(found.dump(), separators=(",", ":"), ensure_ascii=False))
+        return 0
+    print(waterfall.render(found, bar_width=args.bar_width))
+    return 0
+
+
 def cmd_idle(args: argparse.Namespace) -> int:
     print(probe.idle_seconds())
     return 0
@@ -237,6 +257,25 @@ def build_parser() -> argparse.ArgumentParser:
     traces.add_argument("--limit", type=int, help="only the newest N spans")
     traces.add_argument("--json", action="store_true")
     traces.set_defaults(func=cmd_traces)
+
+    fall = sub.add_parser("waterfall", help="render the task waterfall from sqlite")
+    fall.add_argument(
+        "--days",
+        type=float,
+        default=waterfall.DEFAULT_DAYS,
+        help=f"window width in days (default {waterfall.DEFAULT_DAYS:g})",
+    )
+    fall.add_argument("--since", help="window start, ISO 8601 (overrides --days)")
+    fall.add_argument("--until", help="window end, ISO 8601 (default: now)")
+    fall.add_argument("--all", action="store_true", help="ignore the window")
+    fall.add_argument(
+        "--bar-width",
+        type=int,
+        default=waterfall.BAR_WIDTH,
+        help=f"widest bar in cells (default {waterfall.BAR_WIDTH})",
+    )
+    fall.add_argument("--json", action="store_true")
+    fall.set_defaults(func=cmd_waterfall)
 
     idle = sub.add_parser("idle", help="print seconds since the last user input")
     idle.set_defaults(func=cmd_idle)

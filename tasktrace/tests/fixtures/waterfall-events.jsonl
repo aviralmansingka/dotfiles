@@ -1,0 +1,10 @@
+{"ts":"2026-11-26T11:52:28.903888+05:30","mono":499690.65367,"kind":"app","app":"Google Chrome","bundle":"com.google.Chrome","ws":"2","idle_s":7.725,"source":"aerospace","detail":{"hook":"focus","window_id":"100","title":"README - Google Docs - Google Chrome - Aviral (Mohzi)"}}
+{"ts":"2026-11-26T11:52:30.966237+05:30","mono":499692.716002,"kind":"notify","app":"pi","bundle":null,"ws":"2","idle_s":null,"source":"cli","detail":{"title":"README - Google Docs - Google Chrome - Aviral (Mohzi)","note":"turn finished"}}
+{"ts":"2026-11-26T11:52:34.119155+05:30","mono":499695.868944,"kind":"app","app":"Google Chrome","bundle":"com.google.Chrome","ws":"2","idle_s":0.02,"source":"aerospace","detail":{"hook":"focus","window_id":"100","title":"README - Google Docs - Google Chrome - Aviral (Mohzi)"}}
+{"ts":"2026-11-26T11:52:36.174016+05:30","mono":499697.923773,"kind":"app","app":"Rex Beta","bundle":null,"ws":"1","idle_s":null,"source":"cli","detail":{"title":"captain-fleet-provisioning-api - army"}}
+{"ts":"2026-11-26T11:52:37.742473+05:30","mono":499699.492227,"kind":"app","app":"Rex Beta","bundle":null,"ws":"1","idle_s":null,"source":"cli","detail":{"title":"captain-fleet-provisioning-api - army"}}
+{"ts":"2026-11-26T11:52:37.793633+05:30","mono":499699.543384,"kind":"agent_done","app":"pi","bundle":null,"ws":"1","idle_s":null,"source":"cli","detail":{"note":"step finished"}}
+{"ts":"2026-11-26T11:52:40.861436+05:30","mono":499702.611182,"kind":"app","app":"Slack","bundle":null,"ws":"S","idle_s":null,"source":"cli","detail":{"title":"core (Channel) - Mohzi - Slack"}}
+{"ts":"2026-11-26T11:52:44.911086+05:30","mono":499706.660823,"kind":"agent_done","app":"pi","bundle":null,"ws":"S","idle_s":null,"source":"cli","detail":{"title":"core (Channel) - Mohzi - Slack","note":"turn finished"}}
+{"ts":"2026-11-26T11:52:47.970133+05:30","mono":499709.719861,"kind":"app","app":"Granola","bundle":null,"ws":"G","idle_s":null,"source":"cli","detail":{"title":"Granola"}}
+{"ts":"2026-11-26T11:52:49.533049+05:30","mono":499711.282774,"kind":"app","app":"Granola","bundle":null,"ws":"G","idle_s":null,"source":"cli","detail":{"title":"Granola"}}

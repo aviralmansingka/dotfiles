@@ -445,6 +445,13 @@ jobs:
       - name: Install jiti and typebox
         run: npm install --prefix "$RUNNER_TEMP/jiti-root" jiti@2 typebox@1.3.27
 
+      # scripts/test-tasktrace.py runs the tasktrace pytest suite through
+      # `uv run --project tasktrace`, the runner tasktrace/pyproject.toml
+      # declares. Without uv that check SKIPs, so the package's own behavior
+      # would go untested here.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Set up mission CLI Go toolchain
         uses: actions/setup-go@v7
         with:

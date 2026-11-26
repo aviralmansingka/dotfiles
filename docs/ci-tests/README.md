@@ -54,6 +54,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | Fleet secrets (sops) | test-sops-secrets.py | see docs/ci-tests/sops-secrets.md | 0.07 s |
 | quicknote CLI + Rex chord | test-quicknote.sh | see docs/ci-tests/quicknote.md | 2 s warm |
 | Rex review layer + chord | test-rex-review.sh | see docs/ci-tests/rex-review.md | under 0.1 s |
+| tasktrace collector + waterfall | test-tasktrace.py | see docs/ci-tests/tasktrace.md | ~10 s (pytest suite included) |
 
 Existing wired suites (pre-wave): auto-git-sync, gh-dash-open-pr,
 herdr-clean-handoff, herdr-flash-copy, herdr-annotate-install,
@@ -110,5 +111,5 @@ ci-meta · config-lint · install-smoke · journal · just-build · mermaid · n
 nvim-ask · nvim-autoread · nvim-dap · nvim-markdown · nvim-octo · nvim-picker ·
 nvim-plugin-configs · nvim-send · nvim-ui-shape · nvim-workspaces · ops ·
 pi-dev · pi-mcp-adapter-patch · practice · python-tool · rataflow · renderer · repo-config · repo-parity ·
-run-command · sops-secrets · subagents · telegram · terminal · tuicr ·
+run-command · sops-secrets · subagents · tasktrace · telegram · terminal · tuicr ·
 user-input · zsh
