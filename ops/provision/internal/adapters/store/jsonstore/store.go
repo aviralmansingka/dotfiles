@@ -35,6 +35,47 @@ type Store struct {
 	data snapshot
 }
 
+// loadLocked refreshes the in-memory document from the file, so the two processes
+// that share one store — the API that records a request and the worker that
+// records what the provider did — each see the other's writes.
+//
+// Without this every write used the snapshot the process loaded at startup: the
+// worker's first update answered `resource not found` for a host the API had just
+// created, and a write that did match would have replaced the whole document with
+// the stale copy. Writes are seconds apart and the document is small, so it is
+// re-read on every write path rather than watched; a cross-process write lock is
+// S06's PostgreSQL store, not this one.
+func (s *Store) loadLocked() error {
+	empty := func() { s.data = snapshot{Version: schemaVersion, Hosts: []domain.Host{}, Ledger: []ports.IdempotencyRecord{}} }
+	raw, err := os.ReadFile(s.path)
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		empty()
+		return nil
+	case err != nil:
+		return fmt.Errorf("jsonstore: read: %w", err)
+	}
+	if len(raw) == 0 {
+		empty()
+		return nil
+	}
+	var data snapshot
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return fmt.Errorf("jsonstore: decode %s: %w", s.path, err)
+	}
+	if data.Version != schemaVersion {
+		return fmt.Errorf("jsonstore: unsupported schema version %d in %s", data.Version, s.path)
+	}
+	if data.Hosts == nil {
+		data.Hosts = []domain.Host{}
+	}
+	if data.Ledger == nil {
+		data.Ledger = []ports.IdempotencyRecord{}
+	}
+	s.data = data
+	return nil
+}
+
 // Open loads the store at path, creating the parent directory with 0700 when
 // missing. A missing file is an empty store.
 func Open(path string) (*Store, error) {
@@ -77,6 +118,9 @@ func (s *Store) Path() string { return s.path }
 func (s *Store) CreateHost(_ context.Context, host domain.Host) (domain.Host, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return domain.Host{}, false, err
+	}
 	if existing, ok := s.host(host.ID); ok {
 		return existing.Clone(), false, nil
 	}
@@ -113,6 +157,9 @@ func (s *Store) ListHosts(_ context.Context) ([]domain.Host, error) {
 func (s *Store) UpdateHost(_ context.Context, id string, mutate func(h *domain.Host) error) (domain.Host, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return domain.Host{}, err
+	}
 	index := s.hostIndex(id)
 	if index < 0 {
 		return domain.Host{}, domain.ErrNotFound
@@ -132,6 +179,9 @@ func (s *Store) UpdateHost(_ context.Context, id string, mutate func(h *domain.H
 func (s *Store) Reserve(_ context.Context, record ports.IdempotencyRecord) (ports.IdempotencyRecord, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return ports.IdempotencyRecord{}, false, err
+	}
 	for _, existing := range s.data.Ledger {
 		if existing.Key == record.Key {
 			return existing, false, nil
@@ -160,6 +210,9 @@ func (s *Store) Lookup(_ context.Context, key string) (ports.IdempotencyRecord, 
 func (s *Store) Release(_ context.Context, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.loadLocked(); err != nil {
+		return err
+	}
 	for i, record := range s.data.Ledger {
 		if record.Key == key {
 			s.data.Ledger = append(s.data.Ledger[:i], s.data.Ledger[i+1:]...)

@@ -318,3 +318,53 @@ func TestOpenRejectsEmptyAndCorruptDocuments(t *testing.T) {
 		t.Fatal("an unsupported schema version must fail to open")
 	}
 }
+
+// TestSecondHandleUpdatesWhatTheFirstWrote is the shape of the homelab stack: the
+// API process records a request and the worker process records what the provider
+// did. Both handles are opened before the write, so the second one's snapshot
+// predates the host — exactly the case that answered `resource not found` for a
+// host the API had already created, three attempts in a row.
+func TestSecondHandleUpdatesWhatTheFirstWrote(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "store.json")
+	ctx := context.Background()
+
+	api, err := jsonstore.Open(path)
+	if err != nil {
+		t.Fatalf("open api store: %v", err)
+	}
+	worker, err := jsonstore.Open(path)
+	if err != nil {
+		t.Fatalf("open worker store: %v", err)
+	}
+
+	service := buildService(t, api, fakes.NewOrchestrator())
+	accepted, err := service.CreateHost(ctx, ports.Principal{ClientID: "test-client"}, restartKey, restartRequest)
+	if err != nil {
+		t.Fatalf("create host: %v", err)
+	}
+
+	updated, err := worker.UpdateHost(ctx, accepted.HostID, func(h *domain.Host) error {
+		h.MarkResource("i-0123456789abcdef0", "10.99.1.10", h.CreatedAt)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("UpdateHost from the second handle: %v", err)
+	}
+	if updated.ResourceID != "i-0123456789abcdef0" {
+		t.Fatalf("resource id = %q, want the recorded instance", updated.ResourceID)
+	}
+	if len(mustList(t, api)) != 1 || len(mustList(t, worker)) != 1 {
+		t.Fatal("both handles must still see exactly one host; a stale full-document write would drop one")
+	}
+}
+
+func mustList(t *testing.T, store *jsonstore.Store) []domain.Host {
+	t.Helper()
+	hosts, err := store.ListHosts(context.Background())
+	if err != nil {
+		t.Fatalf("ListHosts: %v", err)
+	}
+	return hosts
+}

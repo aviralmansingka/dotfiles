@@ -58,10 +58,20 @@ let
   # The two directory variables are passed through the environment because systemd
   # expands %t and %h in unit directives only — a script in the Nix store that
   # spelled "%t" itself would hand that literal string to bash.
+  #
+  # The AWS shared-credentials file is the host's one approved AWS identity: the
+  # worker hands Terraform and the SSM CLI its own environment (the adapters pass no
+  # key), and this host has no attached role and no unexpired SSO session, so the
+  # profile there is the whole credential source. The file is a 0600 operator file,
+  # never a Nix store path and never written by this module. AWS_PROFILE names the
+  # section to read; a credentials file holding one non-`default` profile is not
+  # found without it, and the SDK then reports a bare STS failure.
   unitEnvironment = [
     "PATH=%h/.nix-profile/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
     "FLEET_PROVISION_RUNTIME_DIR=%t/fleet-provision"
     "FLEET_PROVISION_STATE_DIR=${cfg.stateDir}"
+    "AWS_SHARED_CREDENTIALS_FILE=%h/.config/fleet-provision/aws-credentials"
+    "AWS_PROFILE=legacy-515647909264"
   ];
 
   # One docker entry point for both installation shapes. A rootless install

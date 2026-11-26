@@ -44,7 +44,7 @@ locals {
     ManagedBy        = "terraform"
     owner            = var.owner
     "fleet-test-run" = var.test_run
-    "fleet-network"  = "fleet"
+    "fleet-network"  = "true"
   }
 }
 
