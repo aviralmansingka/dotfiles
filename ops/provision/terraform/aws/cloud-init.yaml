@@ -71,6 +71,19 @@ runcmd:
     command -v nix
     nix --version
 
+    # The upstream installer rewrites /etc/nix/nix.conf, so the write_files copy
+    # above is already gone here, and the file it leaves behind holds only
+    # `build-users-group`. A remote deploy then dies on
+    # `experimental Nix feature 'nix-command' is disabled`. Re-assert the feature
+    # set once: the guard is what keeps a preserved file from gaining a duplicate
+    # scalar setting, which Nix refuses on its own.
+    grep -q '^experimental-features' /etc/nix/nix.conf \
+      || printf '%s\n' 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf
+    # Proven with an evaluation that needs no network, no flake, and no store: the
+    # command is unavailable until the feature is on, so a failed restore fails
+    # the boot here instead of at the first deploy.
+    test "$(nix eval --expr 1 --json)" = "1"
+
     # The remote deploy runs as a user unit with no login session.
     loginctl enable-linger ubuntu
 

@@ -254,6 +254,40 @@ func TestCloudInitKeepsBootstrapStepOrder(t *testing.T) {
 	}
 }
 
+// TestCloudInitRestoresExperimentalFeaturesAfterTheInstaller is the regression
+// test for the live-run defect of 2026-11-26: write_files puts the feature set
+// into /etc/nix/nix.conf before runcmd, the upstream installer rewrites that same
+// file with only `build-users-group`, and the worker's `nix flake metadata` then
+// died with `experimental Nix feature 'nix-command' is disabled`. The bootstrap
+// has to re-assert the setting after the installer, once, and prove it locally.
+func TestCloudInitRestoresExperimentalFeaturesAfterTheInstaller(t *testing.T) {
+	t.Parallel()
+	document, _ := loadCloudInit(t)
+	lines := strings.Split(document, "\n")
+
+	installer := lineContaining(t, lines, "sh /tmp/nix-install.sh")
+	restore := lineContaining(t, lines, ">> /etc/nix/nix.conf")
+	if restore < installer {
+		t.Fatalf("the feature restore is on line %d, before the installer on line %d: the installer rewrites the file after it", restore+1, installer+1)
+	}
+
+	// A blind append breaks a file the installer did preserve, because a duplicate
+	// scalar setting is itself a Nix error. The guard is the correctness property.
+	if !strings.Contains(lines[restore-1], "grep -q") {
+		t.Fatalf("the feature restore on line %d is not guarded by a grep: a preserved nix.conf would gain a duplicate scalar setting", restore+1)
+	}
+
+	// The proof reads no network: without the feature, `nix eval` does not run at
+	// all, so this line fails the boot for exactly the defect it guards.
+	proof := lineContaining(t, lines, "nix eval --expr 1 --json")
+	if proof < restore {
+		t.Fatalf("the eval proof is on line %d, before the restore on line %d: it cannot prove the restored setting", proof+1, restore+1)
+	}
+	if !strings.Contains(document, "set -eu\n") {
+		t.Fatal("cloud-init does not run the bootstrap under `set -eu`, so a failed feature restore cannot fail the boot")
+	}
+}
+
 // firstLine is the leading line of a block, for a failure message that names it.
 func firstLine(block string) string {
 	head, _, _ := strings.Cut(strings.TrimSpace(block), "\n")
