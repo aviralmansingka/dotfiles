@@ -127,13 +127,14 @@ def task_key(workspace: str | None, project: str | None) -> str:
     return f"{workspace or '-'}/{project or '-'}"
 
 
-def _epoch(ts: str) -> float:
+def epoch(ts: str) -> float:
+    """Wall clock seconds for an ISO 8601 stamp, the only clock a gap may use."""
     return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).timestamp()
 
 
 def _order_key(row: Mapping[str, Any]) -> tuple[float, float]:
     mono = row.get("mono")
-    return (_epoch(row["ts"]), float(mono) if isinstance(mono, (int, float)) else 0.0)
+    return (epoch(row["ts"]), float(mono) if isinstance(mono, (int, float)) else 0.0)
 
 
 @dataclass(frozen=True)
@@ -161,7 +162,7 @@ class Trace:
 
     @property
     def wall_s(self) -> float:
-        return round(_epoch(self.end) - _epoch(self.start), 3)
+        return round(epoch(self.end) - epoch(self.start), 3)
 
     @property
     def apps(self) -> list[str]:
@@ -264,7 +265,7 @@ def _span_view(row: Mapping[str, Any], project: str | None) -> dict[str, Any]:
 def _splits(
     open_: _Open, ts: str, workspace: str | None, project: str | None, merge_gap_s: float
 ) -> bool:
-    if _epoch(ts) - _epoch(open_.end) >= merge_gap_s:
+    if epoch(ts) - epoch(open_.end) >= merge_gap_s:
         return True
     if workspace is not None and open_.workspace is not None and workspace != open_.workspace:
         return True
@@ -348,5 +349,5 @@ def annotate(
     for task in stitch(rows, merge_gap_s):
         for trace in task.traces:
             found.extend(dict(span) for span in trace.spans)
-    found.sort(key=lambda span: (_epoch(span["ts"]), span.get("mono") or 0.0))
+    found.sort(key=lambda span: (epoch(span["ts"]), span.get("mono") or 0.0))
     return found

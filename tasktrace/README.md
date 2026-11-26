@@ -1,9 +1,10 @@
 # tasktrace
 
 Collects attention spans — which app, on which workspace, when — into sqlite and
-a daily JSONL, then stitches them into task traces: one task per (workspace,
-project root), one trace per uninterrupted run of attention. This is the
-attention-trace mission through step S02; the waterfall comes later.
+a daily JSONL, stitches them into task traces: one task per (workspace,
+project root), one trace per uninterrupted run of attention, and draws one week
+of them as a task waterfall that reads sqlite directly, with no server and no
+daimon.
 
 ```
                  ┌──────────────────────────┐
@@ -21,6 +22,7 @@ uv run --project tasktrace tasktrace app-agent      # NSWorkspace activation age
 uv run --project tasktrace tasktrace rex -s <label> # bridge `rex events --json`
 uv run --project tasktrace tasktrace spans          # dump span rows
 uv run --project tasktrace tasktrace traces         # dump the stitched task traces
+uv run --project tasktrace tasktrace waterfall      # one box per task, one bar per dwell, over a week
 ```
 
 Defaults: home `~/.local/state/tasktrace` (`TASKTRACE_HOME`), socket
@@ -168,6 +170,44 @@ key                             trace  start  end  spans  wall_s  apps
 `--json` prints one object per task with its runs and rows, and `--limit N` keeps
 only the newest N spans.
 
+## Task waterfall (`tasktrace waterfall`)
+
+`tasktrace waterfall` reads `spans.sqlite3` and prints the view. No server, no
+daemon, no web page: the command opens the file and draws.
+
+- **One box per task**, drawn as a box, with its key, its `task_id`, and the
+  counts: spans, span events, runs, wall time and the longest span.
+- **One span per dwell**, labelled with the app and the workspace. A dwell is
+  the time from a row to the next dwell row of the same trace.
+- **`notify` and `agent_done` are span events**, marked `◆` and drawn inside the
+  dwell they happened in, so a notification does not cut the app's attention in
+  two. They stay in the span count.
+- **The last dwell of a trace is `open`**: nothing recorded where it ended, so
+  it gets a zero dwell and a dot. The task wall time still reaches the last row
+  of the run, which is the number `tasktrace traces` prints too.
+- **The window is one week by default.** `--days N`, `--since`, `--until` and
+  `--all` change it.
+
+```
+$ tasktrace waterfall
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 2/README  4f3b233d8df8                                                       │
+│ spans 3 · events 1 · runs 1 · wall 5.215 s · longest 5.215 s (Google Chrome) │
+│                                                                              │
+│   #    t+ (s)  dwell(s)  app            ws  kind  span                       │
+│   1     0.000     5.215  Google Chrome  2   app   ████████████████████       │
+│   ·     2.062     event  pi             2   notify  ◆ notify                 │
+│   2     5.215     0.000  Google Chrome  2   app   · open                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+summary
+   #  key                               task_id       spans  events  runs    wall_s  longest_s  longest span
+   1  2/README                          4f3b233d8df8      3       1     1     5.215      5.215  Google Chrome (ws 2)
+```
+
+`--json` prints the whole view as one object: the window, the totals, and every
+box with its bars and marks. `--bar-width N` widens or narrows the bars.
+
 ## Recorded sample
 
 `tasktrace/samples/2026-11-26/` holds a real recording: `events/` (collector
@@ -185,6 +225,19 @@ switch the live workspace: AeroSpace's focus callbacks on this host would move
 the user's screen mid-recording, so the hook is fed the environment AeroSpace
 passes instead.
 
+`tasktrace/tests/fixtures/waterfall-events.jsonl` is a second real capture, made
+for the waterfall: the real focus hook through the shim, `tasktrace send` rows
+for other real windows (app, workspace and window title read from the live
+AeroSpace server), `notify` and `agent_done` span events, and real sleeps between
+them, so every dwell in it is elapsed wall clock. Re-record with:
+
+```sh
+uv run --project tasktrace python tasktrace/scripts/record_waterfall.py
+```
+
+`notify` and `agent_done` have no live emitter yet: the recorder writes them with
+`tasktrace send`, so those rows are real collector rows but not yet real pi rows.
+
 ## Tests
 
 ```sh
@@ -192,5 +245,7 @@ uv run --project tasktrace pytest -q
 ```
 
 All offline: no live pi sessions, no nvim, no multiplexer servers. Servers listen
-on a socket under `/tmp`, probes are injected, and the sample test only reads
-committed files.
+on a socket under `/tmp`, probes are injected, the waterfall is rendered from
+either synthetic rows or the committed recording, and the sample test only reads
+committed files. One test really compiles the agent; it is a platform skip off
+macOS, and `scripts/test-tasktrace.py` asserts that the skip is a skip.

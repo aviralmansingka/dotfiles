@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,10 @@ import pytest
 from tasktrace import agent
 
 SOURCE = Path(__file__).resolve().parents[1] / "agent" / "AppFocus.m"
+
+# AppKit exists on macOS only, so a real compile is a platform skip, never a
+# silent pass: `scripts/test-tasktrace.py` asserts this test reports SKIPPED
+# (with this reason) on a non-macOS runner.
 
 
 def test_agent_source_is_shipped():
@@ -79,3 +84,12 @@ def test_missing_clang_is_reported(tmp_path):
 
     with pytest.raises(agent.AgentError, match="clang"):
         agent.ensure_binary(tmp_path, runner=runner)
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="AppKit needs macOS")
+def test_the_agent_builds_on_macos(tmp_path):
+    """The one test that really compiles: clang, AppKit and CoreGraphics."""
+    assert subprocess.run(["clang", "--version"], capture_output=True).returncode == 0
+    binary = agent.ensure_binary(tmp_path)
+    assert binary.is_file() and binary.stat().st_size > 0
+    assert binary == agent.binary_path(tmp_path)
