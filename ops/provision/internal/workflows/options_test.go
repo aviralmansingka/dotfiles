@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // TestActivityOptionsBoundEveryStep is the offline proof of the per-step timeout
@@ -34,7 +34,7 @@ func TestActivityOptionsBoundEveryStep(t *testing.T) {
 	for _, name := range options.RetryPolicy.NonRetryableErrorTypes {
 		nonRetryable[name] = true
 	}
-	for _, name := range []string{application.CodeNotImplemented, FailureTypePermanent} {
+	for _, name := range []string{ports.CodeNotImplemented, FailureTypePermanent} {
 		if !nonRetryable[name] {
 			t.Fatalf("%q is retryable: a permanent refusal would burn every attempt", name)
 		}

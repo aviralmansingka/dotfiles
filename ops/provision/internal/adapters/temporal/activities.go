@@ -15,6 +15,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/workflows"
 )
 
@@ -22,17 +23,17 @@ import (
 // port from internal/application, so an S01 stub can replace a real integration
 // without touching workflow code.
 type Activities struct {
-	Inventory application.HostInventory
-	Providers application.HostProvider
+	Inventory ports.HostInventory
+	Providers ports.HostProvider
 	// Agent proves a host's SSM agent registered. It is a separate dependency
 	// because the check is its own activity, ahead of enrollment.
-	Agent      application.SSMAgentProbe
-	Enroller   application.HostEnroller
-	Deployer   application.ProfileDeployer
-	Authorizer application.HostAuthorizer
-	Tailnet    application.TailnetDeviceManager
-	Clock      application.Clock
-	Logger     application.Logger
+	Agent      ports.SSMAgentProbe
+	Enroller   ports.HostEnroller
+	Deployer   ports.ProfileDeployer
+	Authorizer ports.HostAuthorizer
+	Tailnet    ports.TailnetDeviceManager
+	Clock      ports.Clock
+	Logger     ports.Logger
 }
 
 // Validate reports a missing dependency before a worker starts.
@@ -86,7 +87,7 @@ func (a *Activities) CreateHostResource(ctx context.Context, in workflows.Create
 		}, nil
 	}
 
-	resource, err := a.Providers.CreateHost(ctx, application.ProviderCreateRequest{
+	resource, err := a.Providers.CreateHost(ctx, ports.ProviderCreateRequest{
 		HostID:       in.HostID,
 		Name:         in.Name,
 		Provider:     domain.Provider(in.Provider),
@@ -142,7 +143,7 @@ func (a *Activities) recordedDevice(ctx context.Context, hostID string) (string,
 	return host.DeviceID, true, nil
 }
 
-func (a *Activities) persistResource(ctx context.Context, hostID string, resource application.ProviderResource) error {
+func (a *Activities) persistResource(ctx context.Context, hostID string, resource ports.ProviderResource) error {
 	now := a.Clock.Now()
 	_, err := a.Inventory.UpdateHost(ctx, hostID, func(h *domain.Host) error {
 		h.MarkResource(resource.ResourceID, resource.PrivateAddress, now)
@@ -187,7 +188,7 @@ func (a *Activities) EnrollHost(ctx context.Context, in workflows.EnrollHostInpu
 		return workflows.EnrollHostOutput{DeviceID: deviceID, Resumed: true}, nil
 	}
 
-	result, err := a.Enroller.Enroll(ctx, application.EnrollRequest{
+	result, err := a.Enroller.Enroll(ctx, ports.EnrollRequest{
 		HostID:         in.HostID,
 		Name:           in.Name,
 		InstanceID:     in.ResourceID,
@@ -225,7 +226,7 @@ func (a *Activities) persistDevice(ctx context.Context, hostID, deviceID string)
 
 // DeployProfile deploys the approved flake profile.
 func (a *Activities) DeployProfile(ctx context.Context, in workflows.DeployProfileInput) (workflows.DeployProfileOutput, error) {
-	result, err := a.Deployer.DeployProfile(ctx, application.DeployRequest{
+	result, err := a.Deployer.DeployProfile(ctx, ports.DeployRequest{
 		HostID:   in.HostID,
 		Name:     in.Name,
 		Profile:  in.Profile,
@@ -240,7 +241,7 @@ func (a *Activities) DeployProfile(ctx context.Context, in workflows.DeployProfi
 
 // AuthorizeHost grants the approved secret bundles.
 func (a *Activities) AuthorizeHost(ctx context.Context, in workflows.AuthorizeHostInput) error {
-	if err := a.Authorizer.AuthorizeHost(ctx, application.AuthorizeRequest{
+	if err := a.Authorizer.AuthorizeHost(ctx, ports.AuthorizeRequest{
 		HostID:        in.HostID,
 		Name:          in.Name,
 		Profile:       in.Profile,
@@ -260,7 +261,7 @@ func (a *Activities) AuthorizeHost(ctx context.Context, in workflows.AuthorizeHo
 // that only deletes the role has not actually cut the host off. Splitting the two
 // also means a failure names the exact step that is incomplete.
 func (a *Activities) RevokeHostTokens(ctx context.Context, in workflows.RevokeHostTokensInput) (workflows.RevokeHostTokensOutput, error) {
-	report, err := a.Authorizer.RevokeTokens(ctx, application.AuthorizeRequest{
+	report, err := a.Authorizer.RevokeTokens(ctx, ports.AuthorizeRequest{
 		HostID: in.HostID,
 		Name:   in.Name,
 	})
@@ -278,7 +279,7 @@ func (a *Activities) RevokeHostTokens(ctx context.Context, in workflows.RevokeHo
 // RevokeHostCredentials deletes the AppRole and the ACL policy, so no SecretID can
 // produce a new login. Issued tokens are not affected; RevokeHostTokens ran first.
 func (a *Activities) RevokeHostCredentials(ctx context.Context, in workflows.RevokeHostCredentialsInput) error {
-	if _, err := a.Authorizer.RevokeCredentials(ctx, application.AuthorizeRequest{
+	if _, err := a.Authorizer.RevokeCredentials(ctx, ports.AuthorizeRequest{
 		HostID:        in.HostID,
 		Name:          in.Name,
 		Profile:       in.Profile,
@@ -303,7 +304,7 @@ func (a *Activities) RemoveDevice(ctx context.Context, in workflows.RemoveDevice
 			Reason: "the inventory record names no tailnet device id; remove the device by name in the Tailscale admin console",
 		})
 	}
-	if err := a.Tailnet.RemoveDevice(ctx, application.RemoveDeviceRequest{
+	if err := a.Tailnet.RemoveDevice(ctx, ports.RemoveDeviceRequest{
 		HostID:   in.HostID,
 		HostName: in.HostName,
 		DeviceID: in.DeviceID,
@@ -328,7 +329,7 @@ func (a *Activities) DestroyHostResource(ctx context.Context, in workflows.Destr
 			Reason: "the inventory record names no provider resource id",
 		})
 	}
-	if err := a.Providers.DestroyHost(ctx, application.ProviderDestroyRequest{
+	if err := a.Providers.DestroyHost(ctx, ports.ProviderDestroyRequest{
 		HostID:     in.HostID,
 		Name:       in.Name,
 		Provider:   domain.Provider(in.Provider),

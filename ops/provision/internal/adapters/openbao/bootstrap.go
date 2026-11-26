@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // bootstrapFileName is the one file a host reads to unwrap its SecretID. The name
@@ -39,7 +39,7 @@ type BootstrapWriter struct {
 	dir string
 }
 
-var _ application.BootstrapDelivery = (*BootstrapWriter)(nil)
+var _ ports.BootstrapDelivery = (*BootstrapWriter)(nil)
 
 // NewBootstrapWriter validates the directory before any host is authorized. The
 // refusal list is the step's list: not the Nix store, not a Git checkout, not
@@ -55,7 +55,7 @@ func NewBootstrapWriter(cfg BootstrapConfig) (*BootstrapWriter, error) {
 // DeliverBootstrap writes the wrapping token for one host and returns its path.
 // The path is safe to log and to hand to an operator; the token is not, and it is
 // never part of the return value.
-func (w *BootstrapWriter) DeliverBootstrap(_ context.Context, material application.BootstrapMaterial) (string, error) {
+func (w *BootstrapWriter) DeliverBootstrap(_ context.Context, material ports.BootstrapMaterial) (string, error) {
 	if err := domain.ValidateHostID(material.HostID); err != nil {
 		return "", err
 	}

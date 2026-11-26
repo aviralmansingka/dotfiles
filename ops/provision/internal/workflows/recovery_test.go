@@ -35,6 +35,7 @@ import (
 	temporaladapter "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/temporal"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/workflows"
 )
@@ -70,7 +71,7 @@ type faultSpec struct {
 // work and recording it. Reads always pass through, so the fault models a lost
 // record rather than a broken database.
 type faultInventory struct {
-	inner    application.HostInventory
+	inner    ports.HostInventory
 	dropWhen func(before, after domain.Host) bool
 	persists bool
 
@@ -78,7 +79,7 @@ type faultInventory struct {
 	dropped int
 }
 
-var _ application.HostInventory = (*faultInventory)(nil)
+var _ ports.HostInventory = (*faultInventory)(nil)
 
 func (f *faultInventory) CreateHost(ctx context.Context, host domain.Host) (domain.Host, bool, error) {
 	return f.inner.CreateHost(ctx, host)
@@ -146,26 +147,26 @@ func (f *faultInventory) Dropped() int {
 // papering over a missing one.
 type recordingProvider struct {
 	mu        sync.Mutex
-	instances map[string]application.ProviderResource
+	instances map[string]ports.ProviderResource
 	allocs    int
 	destroys  int
 	refusals  int
 }
 
-var _ application.HostProvider = (*recordingProvider)(nil)
+var _ ports.HostProvider = (*recordingProvider)(nil)
 
 func newRecordingProvider() *recordingProvider {
-	return &recordingProvider{instances: map[string]application.ProviderResource{}}
+	return &recordingProvider{instances: map[string]ports.ProviderResource{}}
 }
 
-func (p *recordingProvider) CreateHost(_ context.Context, req application.ProviderCreateRequest) (application.ProviderResource, error) {
+func (p *recordingProvider) CreateHost(_ context.Context, req ports.ProviderCreateRequest) (ports.ProviderResource, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if existing, ok := p.instances[req.Name]; ok {
 		return existing, nil
 	}
 	p.allocs++
-	resource := application.ProviderResource{
+	resource := ports.ProviderResource{
 		ResourceID:     "i-0000000000000000" + string(rune('0'+p.allocs)),
 		PrivateAddress: "10.99.1.10",
 	}
@@ -173,7 +174,7 @@ func (p *recordingProvider) CreateHost(_ context.Context, req application.Provid
 	return resource, nil
 }
 
-func (p *recordingProvider) DestroyHost(_ context.Context, req application.ProviderDestroyRequest) error {
+func (p *recordingProvider) DestroyHost(_ context.Context, req ports.ProviderDestroyRequest) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if req.ResourceID == "" {
@@ -185,19 +186,19 @@ func (p *recordingProvider) DestroyHost(_ context.Context, req application.Provi
 	return nil
 }
 
-// StatusHost implements application.HostProvider: it reads what the provider
+// StatusHost implements ports.HostProvider: it reads what the provider
 // already holds and creates nothing.
-func (p *recordingProvider) StatusHost(_ context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+func (p *recordingProvider) StatusHost(_ context.Context, req ports.ProviderStatusRequest) (ports.ProviderResourceStatus, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	existing, ok := p.instances[req.Name]
 	if !ok {
-		return application.ProviderResourceStatus{Exists: false}, nil
+		return ports.ProviderResourceStatus{Exists: false}, nil
 	}
 	if req.ResourceID != "" && existing.ResourceID != req.ResourceID {
-		return application.ProviderResourceStatus{}, fmt.Errorf("test provider: host %q state holds %q, not the recorded %q", req.Name, existing.ResourceID, req.ResourceID)
+		return ports.ProviderResourceStatus{}, fmt.Errorf("test provider: host %q state holds %q, not the recorded %q", req.Name, existing.ResourceID, req.ResourceID)
 	}
-	return application.ProviderResourceStatus{
+	return ports.ProviderResourceStatus{
 		Exists:         true,
 		ResourceID:     existing.ResourceID,
 		PrivateAddress: existing.PrivateAddress,
@@ -220,29 +221,29 @@ func (p *recordingProvider) Destroys() int {
 // case, so a test can prove readiness was written by a run in which authorization
 // actually ran.
 type countingAuthorizer struct {
-	inner       application.HostAuthorizer
+	inner       ports.HostAuthorizer
 	mu          sync.Mutex
 	calls       int
 	revocations int
 }
 
-var _ application.HostAuthorizer = (*countingAuthorizer)(nil)
+var _ ports.HostAuthorizer = (*countingAuthorizer)(nil)
 
-func (c *countingAuthorizer) AuthorizeHost(ctx context.Context, req application.AuthorizeRequest) error {
+func (c *countingAuthorizer) AuthorizeHost(ctx context.Context, req ports.AuthorizeRequest) error {
 	c.mu.Lock()
 	c.calls++
 	c.mu.Unlock()
 	return c.inner.AuthorizeHost(ctx, req)
 }
 
-func (c *countingAuthorizer) RevokeTokens(ctx context.Context, req application.AuthorizeRequest) (application.TokenRevocation, error) {
+func (c *countingAuthorizer) RevokeTokens(ctx context.Context, req ports.AuthorizeRequest) (ports.TokenRevocation, error) {
 	c.mu.Lock()
 	c.revocations++
 	c.mu.Unlock()
 	return c.inner.RevokeTokens(ctx, req)
 }
 
-func (c *countingAuthorizer) RevokeCredentials(ctx context.Context, req application.AuthorizeRequest) (application.CredentialRevocation, error) {
+func (c *countingAuthorizer) RevokeCredentials(ctx context.Context, req ports.AuthorizeRequest) (ports.CredentialRevocation, error) {
 	c.mu.Lock()
 	c.revocations++
 	c.mu.Unlock()
@@ -640,12 +641,12 @@ type blockingEnroller struct {
 	started chan struct{}
 }
 
-var _ application.HostEnroller = (*blockingEnroller)(nil)
+var _ ports.HostEnroller = (*blockingEnroller)(nil)
 
-func (b *blockingEnroller) Enroll(ctx context.Context, _ application.EnrollRequest) (application.EnrollResult, error) {
+func (b *blockingEnroller) Enroll(ctx context.Context, _ ports.EnrollRequest) (ports.EnrollResult, error) {
 	b.once.Do(func() { close(b.started) })
 	<-ctx.Done()
-	return application.EnrollResult{}, ctx.Err()
+	return ports.EnrollResult{}, ctx.Err()
 }
 
 // TestCancellationKeepsOwnershipAndDropsNoResource proves the cancellation

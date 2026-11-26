@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/terraform"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // testPublicKey is inert public key material shaped like a real OpenSSH key. It
@@ -261,8 +261,8 @@ func testCatalog(t *testing.T) domain.Catalog {
 	return catalog
 }
 
-func createRequest(name string) application.ProviderCreateRequest {
-	return application.ProviderCreateRequest{
+func createRequest(name string) ports.ProviderCreateRequest {
+	return ports.ProviderCreateRequest{
 		HostID:   "host-0001",
 		Name:     name,
 		Provider: domain.ProviderAWS,
@@ -273,8 +273,8 @@ func createRequest(name string) application.ProviderCreateRequest {
 	}
 }
 
-func destroyRequest(name, resourceID string) application.ProviderDestroyRequest {
-	return application.ProviderDestroyRequest{
+func destroyRequest(name, resourceID string) ports.ProviderDestroyRequest {
+	return ports.ProviderDestroyRequest{
 		HostID:     "host-0001",
 		Name:       name,
 		Provider:   domain.ProviderAWS,
@@ -440,11 +440,11 @@ func TestCreateHostRejectsUnapprovedRegion(t *testing.T) {
 
 func TestCreateHostRejectsDivergentShape(t *testing.T) {
 	t.Parallel()
-	cases := map[string]func(*application.ProviderCreateRequest){
-		"instance type": func(req *application.ProviderCreateRequest) { req.InstanceType = "m5.24xlarge" },
-		"disk size":     func(req *application.ProviderCreateRequest) { req.DiskGB = 4000 },
-		"profile":       func(req *application.ProviderCreateRequest) { req.Profile = "unapproved" },
-		"provider":      func(req *application.ProviderCreateRequest) { req.Provider = "gcp" },
+	cases := map[string]func(*ports.ProviderCreateRequest){
+		"instance type": func(req *ports.ProviderCreateRequest) { req.InstanceType = "m5.24xlarge" },
+		"disk size":     func(req *ports.ProviderCreateRequest) { req.DiskGB = 4000 },
+		"profile":       func(req *ports.ProviderCreateRequest) { req.Profile = "unapproved" },
+		"provider":      func(req *ports.ProviderCreateRequest) { req.Provider = "gcp" },
 	}
 	for name, mutate := range cases {
 		mutate := mutate
@@ -914,8 +914,8 @@ func containsArg(args []string, want string) bool {
 }
 
 // statusRequest builds the read-only status request for one host.
-func statusRequest(name, resourceID string) application.ProviderStatusRequest {
-	return application.ProviderStatusRequest{
+func statusRequest(name, resourceID string) ports.ProviderStatusRequest {
+	return ports.ProviderStatusRequest{
 		HostID:     "host-0001",
 		Name:       name,
 		Provider:   domain.ProviderAWS,

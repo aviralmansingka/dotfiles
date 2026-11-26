@@ -1,6 +1,6 @@
-// Package application holds the provision service use cases and the port
-// interfaces they depend on. It imports the domain and token leaf packages and
-// the standard library only: Temporal and provider SDKs live in adapters.
+// Package application holds the provision service use cases. The contracts they
+// drive live in the leaf ports package; this package imports ports, domain, and
+// token only, so Temporal and provider SDKs stay in adapters.
 package application
 
 import (
@@ -12,31 +12,32 @@ import (
 	"time"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
 
 // Deps are the collaborators a Service needs. Every field is required.
 type Deps struct {
 	Profiles domain.Catalog
-	Hosts    HostInventory
-	Ledger   RequestLedger
-	Jobs     JobOrchestrator
-	Tokens   TokenStore
-	Clock    Clock
-	IDs      IDGenerator
-	Logger   Logger
+	Hosts    ports.HostInventory
+	Ledger   ports.RequestLedger
+	Jobs     ports.JobOrchestrator
+	Tokens   ports.TokenStore
+	Clock    ports.Clock
+	IDs      ports.IDGenerator
+	Logger   ports.Logger
 }
 
 // Service implements the API use cases.
 type Service struct {
 	profiles domain.Catalog
-	hosts    HostInventory
-	ledger   RequestLedger
-	jobs     JobOrchestrator
-	tokens   TokenStore
-	clock    Clock
-	ids      IDGenerator
-	log      Logger
+	hosts    ports.HostInventory
+	ledger   ports.RequestLedger
+	jobs     ports.JobOrchestrator
+	tokens   ports.TokenStore
+	clock    ports.Clock
+	ids      ports.IDGenerator
+	log      ports.Logger
 }
 
 // New validates dependencies and builds a Service.
@@ -82,25 +83,25 @@ type AcceptedIDs struct {
 
 // Authorize resolves a bearer token to a principal. Only the SHA-256 digest is
 // ever compared or stored.
-func (s *Service) Authorize(ctx context.Context, presented string) (Principal, error) {
+func (s *Service) Authorize(ctx context.Context, presented string) (ports.Principal, error) {
 	if strings.TrimSpace(presented) == "" {
-		return Principal{}, domain.ErrUnauthorized
+		return ports.Principal{}, domain.ErrUnauthorized
 	}
 	digest := token.Digest(presented)
 	record, found, err := s.tokens.LookupToken(ctx, digest)
 	if err != nil {
-		return Principal{}, fmt.Errorf("lookup token: %w", err)
+		return ports.Principal{}, fmt.Errorf("lookup token: %w", err)
 	}
 	if !found || record.Revoked || record.ClientID == "" {
-		return Principal{}, domain.ErrUnauthorized
+		return ports.Principal{}, domain.ErrUnauthorized
 	}
-	return Principal{ClientID: record.ClientID}, nil
+	return ports.Principal{ClientID: record.ClientID}, nil
 }
 
 // CreateHost validates, resolves, and durably records a host creation. The same
 // Idempotency-Key with the same body returns the same host and job and starts
 // exactly one durable operation; a different body for that key is a conflict.
-func (s *Service) CreateHost(ctx context.Context, principal Principal, idempotencyKey string, req domain.CreateHostRequest) (AcceptedIDs, error) {
+func (s *Service) CreateHost(ctx context.Context, principal ports.Principal, idempotencyKey string, req domain.CreateHostRequest) (AcceptedIDs, error) {
 	if err := domain.ValidateIdempotencyKey(idempotencyKey); err != nil {
 		return AcceptedIDs{}, err
 	}
@@ -123,7 +124,7 @@ func (s *Service) CreateHost(ctx context.Context, principal Principal, idempoten
 	}
 	now := s.clock.Now()
 
-	record, created, err := s.ledger.Reserve(ctx, IdempotencyRecord{
+	record, created, err := s.ledger.Reserve(ctx, ports.IdempotencyRecord{
 		Key:         idempotencyKey,
 		Fingerprint: fingerprint,
 		ResourceID:  hostID,
@@ -168,7 +169,7 @@ func (s *Service) CreateHost(ctx context.Context, principal Principal, idempoten
 		return AcceptedIDs{}, fmt.Errorf("record host: %w", err)
 	}
 
-	if _, err := s.jobs.StartCreateHost(ctx, CreateHostSpec{
+	if _, err := s.jobs.StartCreateHost(ctx, ports.CreateHostSpec{
 		JobID:          jobID,
 		HostID:         hostID,
 		Name:           spec.Name,
@@ -228,7 +229,7 @@ func (s *Service) CreateHost(ctx context.Context, principal Principal, idempoten
 // used), the recorded provider resource id (the ownership proof the destroy
 // checks), and the recorded device id. A teardown that had to guess any of them
 // would either destroy nothing or destroy the wrong thing.
-func (s *Service) DeleteHost(ctx context.Context, principal Principal, hostID string) (AcceptedIDs, error) {
+func (s *Service) DeleteHost(ctx context.Context, principal ports.Principal, hostID string) (AcceptedIDs, error) {
 	host, err := s.getOwnedHost(ctx, principal, hostID)
 	if err != nil {
 		return AcceptedIDs{}, err
@@ -257,7 +258,7 @@ func (s *Service) DeleteHost(ctx context.Context, principal Principal, hostID st
 	key := fmt.Sprintf("delete:%s:%d", host.ID, attempt)
 	fingerprint := "delete:" + host.ID
 	now := s.clock.Now()
-	record, created, err := s.ledger.Reserve(ctx, IdempotencyRecord{
+	record, created, err := s.ledger.Reserve(ctx, ports.IdempotencyRecord{
 		Key:         key,
 		Fingerprint: fingerprint,
 		ResourceID:  hostID,
@@ -296,7 +297,7 @@ func (s *Service) DeleteHost(ctx context.Context, principal Principal, hostID st
 		return AcceptedIDs{}, fmt.Errorf("mark host deleting: %w", err)
 	}
 
-	spec := DeleteHostSpec{
+	spec := ports.DeleteHostSpec{
 		JobID:         jobID,
 		HostID:        marked.ID,
 		Name:          marked.Name,
@@ -331,7 +332,7 @@ func (s *Service) teardownInFlight(ctx context.Context, host domain.Host) (strin
 	if host.State != domain.HostStateDeleting || host.DeleteJobID == "" {
 		return "", false
 	}
-	view, err := s.jobs.DescribeJob(ctx, JobHandle{JobID: host.DeleteJobID})
+	view, err := s.jobs.DescribeJob(ctx, ports.JobHandle{JobID: host.DeleteJobID})
 	if err != nil {
 		// No execution to describe: it expired or never started. A retry is the
 		// right answer, so this is not "in flight".
@@ -362,31 +363,31 @@ func deleteJobID(hostID string, attempt int) string {
 }
 
 // GetJob reports one job after checking that the caller owns its host.
-func (s *Service) GetJob(ctx context.Context, principal Principal, jobID string) (JobView, error) {
+func (s *Service) GetJob(ctx context.Context, principal ports.Principal, jobID string) (ports.JobView, error) {
 	if strings.TrimSpace(jobID) == "" {
-		return JobView{}, domain.Invalid("job_id", "is required")
+		return ports.JobView{}, domain.Invalid("job_id", "is required")
 	}
-	view, err := s.jobs.DescribeJob(ctx, JobHandle{JobID: jobID})
+	view, err := s.jobs.DescribeJob(ctx, ports.JobHandle{JobID: jobID})
 	if err != nil {
-		return JobView{}, err
+		return ports.JobView{}, err
 	}
 	if view.HostID == "" {
-		return JobView{}, domain.ErrNotFound
+		return ports.JobView{}, domain.ErrNotFound
 	}
 	if _, err := s.getOwnedHost(ctx, principal, view.HostID); err != nil {
-		return JobView{}, err
+		return ports.JobView{}, err
 	}
 	return view, nil
 }
 
 // GetHost returns one owned host.
-func (s *Service) GetHost(ctx context.Context, principal Principal, hostID string) (domain.Host, error) {
+func (s *Service) GetHost(ctx context.Context, principal ports.Principal, hostID string) (domain.Host, error) {
 	return s.getOwnedHost(ctx, principal, hostID)
 }
 
 // ListHosts returns the hosts owned by the caller, newest first. An empty
 // result is an empty slice, never nil, so the API renders [] rather than null.
-func (s *Service) ListHosts(ctx context.Context, principal Principal) ([]domain.Host, error) {
+func (s *Service) ListHosts(ctx context.Context, principal ports.Principal) ([]domain.Host, error) {
 	all, err := s.hosts.ListHosts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list hosts: %w", err)
@@ -408,7 +409,7 @@ func (s *Service) ListHosts(ctx context.Context, principal Principal) ([]domain.
 
 // getOwnedHost loads a host and hides hosts owned by another client behind a
 // not-found error.
-func (s *Service) getOwnedHost(ctx context.Context, principal Principal, hostID string) (domain.Host, error) {
+func (s *Service) getOwnedHost(ctx context.Context, principal ports.Principal, hostID string) (domain.Host, error) {
 	if strings.TrimSpace(hostID) == "" {
 		return domain.Host{}, domain.Invalid("host_id", "is required")
 	}

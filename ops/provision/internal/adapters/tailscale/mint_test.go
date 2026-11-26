@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/tailscale"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -147,7 +147,7 @@ func readAll(t *testing.T, r *http.Request) string {
 	return string(buf)
 }
 
-func newMinter(t *testing.T, api *fakeAPI, secrets application.SecretSource) (*tailscale.Minter, *fakes.Logger) {
+func newMinter(t *testing.T, api *fakeAPI, secrets ports.SecretSource) (*tailscale.Minter, *fakes.Logger) {
 	t.Helper()
 	logger := &fakes.Logger{}
 	minter, err := tailscale.NewMinter(tailscale.ClientConfig{
@@ -181,7 +181,7 @@ func TestMintedRequestCarriesTheApprovedPolicyAndTag(t *testing.T) {
 	if err := presented.Validate(); err != nil {
 		t.Fatalf("approved policy must validate: %v", err)
 	}
-	key, err := minter.MintAuthKey(context.Background(), application.AuthKeyRequest{
+	key, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
 		HostID:   hostID,
 		HostName: hostName,
 		Tag:      domain.ApprovedTailnetTag,
@@ -244,7 +244,7 @@ func TestAuthKeyCannotBeRendered(t *testing.T) {
 	t.Parallel()
 	api := newFakeAPI(t)
 	minter, _ := newMinter(t, api, defaultSecrets())
-	key, err := minter.MintAuthKey(context.Background(), application.AuthKeyRequest{
+	key, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
 		HostID:   hostID,
 		HostName: hostName,
 		Tag:      domain.ApprovedTailnetTag,
@@ -284,7 +284,7 @@ func TestClientSuppliedTagCannotReachTheBody(t *testing.T) {
 			t.Parallel()
 			api := newFakeAPI(t)
 			minter, _ := newMinter(t, api, defaultSecrets())
-			_, err := minter.MintAuthKey(context.Background(), application.AuthKeyRequest{
+			_, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
 				HostID:   hostID,
 				HostName: hostName,
 				Tag:      tag,
@@ -318,7 +318,7 @@ func TestRelaxedPolicyIsRefusedBeforeAnyRequest(t *testing.T) {
 			minter, _ := newMinter(t, api, defaultSecrets())
 			policy := domain.ApprovedAuthKeyPolicy()
 			mutate(&policy)
-			if _, err := minter.MintAuthKey(context.Background(), application.AuthKeyRequest{
+			if _, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
 				HostID: hostID, HostName: hostName, Tag: domain.ApprovedTailnetTag, Policy: policy,
 			}); err == nil {
 				t.Fatal("relaxed policy must be refused")
@@ -337,7 +337,7 @@ func TestKeyExpiryBeyondThePolicyWindowIsRefused(t *testing.T) {
 	api := newFakeAPI(t)
 	api.keyExpiry = "2026-11-08T14:00:00Z" // two hours, far beyond the ten-minute policy
 	minter, _ := newMinter(t, api, defaultSecrets())
-	if _, err := minter.MintAuthKey(context.Background(), application.AuthKeyRequest{
+	if _, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
 		HostID: hostID, HostName: hostName, Tag: domain.ApprovedTailnetTag, Policy: domain.ApprovedAuthKeyPolicy(),
 	}); err == nil {
 		t.Fatal("a key with an expiry beyond the policy window must be refused")
@@ -352,7 +352,7 @@ func TestSecretSourceFailureIsReportedWithoutLeaking(t *testing.T) {
 	secrets := defaultSecrets()
 	secrets.FailWith(fmt.Errorf("openbao: permission denied"))
 	minter, _ := newMinter(t, api, secrets)
-	_, err := minter.MintAuthKey(context.Background(), application.AuthKeyRequest{
+	_, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
 		HostID: hostID, HostName: hostName, Tag: domain.ApprovedTailnetTag, Policy: domain.ApprovedAuthKeyPolicy(),
 	})
 	if err == nil {
@@ -373,7 +373,7 @@ func TestReplayAwareTailnetRejectsSecondUseOfTheSameKey(t *testing.T) {
 	t.Parallel()
 	api := newFakeAPI(t)
 	minter, _ := newMinter(t, api, defaultSecrets())
-	key, err := minter.MintAuthKey(context.Background(), application.AuthKeyRequest{
+	key, err := minter.MintAuthKey(context.Background(), ports.AuthKeyRequest{
 		HostID: hostID, HostName: hostName, Tag: domain.ApprovedTailnetTag, Policy: domain.ApprovedAuthKeyPolicy(),
 	})
 	if err != nil {
@@ -417,7 +417,7 @@ func TestLookupDeviceMatchesNameAndApprovedTag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewDevices: %v", err)
 	}
-	found, ok, err := devices.LookupDevice(context.Background(), application.DeviceQuery{
+	found, ok, err := devices.LookupDevice(context.Background(), ports.DeviceQuery{
 		HostName: hostName,
 		Tag:      domain.ApprovedTailnetTag,
 	})
@@ -434,7 +434,7 @@ func TestLookupDeviceMatchesNameAndApprovedTag(t *testing.T) {
 		t.Fatalf("state = %q, want running", found.State)
 	}
 
-	missing, ok, err := devices.LookupDevice(context.Background(), application.DeviceQuery{
+	missing, ok, err := devices.LookupDevice(context.Background(), ports.DeviceQuery{
 		HostName: "rex-9",
 		Tag:      domain.ApprovedTailnetTag,
 	})
@@ -465,7 +465,7 @@ func TestLookupDeviceReportsRegisteredWhenNotConnected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewDevices: %v", err)
 	}
-	found, ok, err := devices.LookupDevice(context.Background(), application.DeviceQuery{
+	found, ok, err := devices.LookupDevice(context.Background(), ports.DeviceQuery{
 		HostName: hostName,
 		Tag:      domain.ApprovedTailnetTag,
 	})

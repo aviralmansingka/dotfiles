@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssm"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -30,7 +30,7 @@ const nodeStatusJSON = `{"Self":{"ID":"nABCDEF123","HostName":"` + hostName + `"
 // every value it was handed, so a test can prove the key arrived exactly once and
 // that the same path was deleted again.
 type fakeParameters struct {
-	puts    []application.SecureParameterRequest
+	puts    []ports.SecureParameterRequest
 	deletes []string
 	// values is what each write actually carried, copied at call time. The Secret
 	// the enroller passes is destroyed when the attempt ends, which erases the
@@ -40,9 +40,9 @@ type fakeParameters struct {
 	delErr error
 }
 
-var _ application.SSMParameterStore = (*fakeParameters)(nil)
+var _ ports.SSMParameterStore = (*fakeParameters)(nil)
 
-func (f *fakeParameters) PutSecureParameter(_ context.Context, req application.SecureParameterRequest) error {
+func (f *fakeParameters) PutSecureParameter(_ context.Context, req ports.SecureParameterRequest) error {
 	if f.putErr != nil {
 		return f.putErr
 	}
@@ -61,25 +61,25 @@ func (f *fakeParameters) DeleteParameter(_ context.Context, name string) error {
 
 // fakeAgent models the control plane's answer about a host's SSM agent.
 type fakeAgent struct {
-	status application.SSMAgentStatus
+	status ports.SSMAgentStatus
 	err    error
 	calls  int
 }
 
-var _ application.SSMAgentProbe = (*fakeAgent)(nil)
+var _ ports.SSMAgentProbe = (*fakeAgent)(nil)
 
 func onlineAgent() *fakeAgent {
-	return &fakeAgent{status: application.SSMAgentStatus{
+	return &fakeAgent{status: ports.SSMAgentStatus{
 		InstanceID: instanceID,
 		PingStatus: "Online",
 		Online:     true,
 	}}
 }
 
-func (f *fakeAgent) AwaitRegistration(_ context.Context, _ string) (application.SSMAgentStatus, error) {
+func (f *fakeAgent) AwaitRegistration(_ context.Context, _ string) (ports.SSMAgentStatus, error) {
 	f.calls++
 	if f.err != nil {
-		return application.SSMAgentStatus{}, f.err
+		return ports.SSMAgentStatus{}, f.err
 	}
 	return f.status, nil
 }
@@ -98,9 +98,9 @@ type fakeHost struct {
 	seen    string
 	keyPath string
 
-	requests []application.SSMRunRequest
+	requests []ports.SSMRunRequest
 	// mutate rewrites the result the control plane reports.
-	mutate func(*application.SSMRunResult)
+	mutate func(*ports.SSMRunResult)
 	// failCommand makes the transport fail before the host runs anything.
 	failCommand error
 
@@ -115,7 +115,7 @@ type fakeHost struct {
 	keyRemoved    bool
 }
 
-var _ application.SSMRunner = (*fakeHost)(nil)
+var _ ports.SSMRunner = (*fakeHost)(nil)
 
 func newFakeHost(t *testing.T) *fakeHost {
 	t.Helper()
@@ -160,14 +160,14 @@ func writeFile(t *testing.T, path, body string) {
 	}
 }
 
-// RunCommand implements application.SSMRunner.
-func (h *fakeHost) RunCommand(ctx context.Context, req application.SSMRunRequest) (application.SSMRunResult, error) {
+// RunCommand implements ports.SSMRunner.
+func (h *fakeHost) RunCommand(ctx context.Context, req ports.SSMRunRequest) (ports.SSMRunResult, error) {
 	h.requests = append(h.requests, req)
 	if h.failCommand != nil {
-		return application.SSMRunResult{}, h.failCommand
+		return ports.SSMRunResult{}, h.failCommand
 	}
 
-	result := application.SSMRunResult{
+	result := ports.SSMRunResult{
 		InstanceID: req.InstanceID,
 		Comment:    req.Comment,
 		Status:     "Success",
@@ -249,7 +249,7 @@ type fixture struct {
 	host    *fakeHost
 	minter  *fakes.Minter
 	logger  *fakes.Logger
-	request application.EnrollRequest
+	request ports.EnrollRequest
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -260,7 +260,7 @@ func newFixture(t *testing.T) *fixture {
 		host:   newFakeHost(t),
 		minter: fakes.NewMinter(fakeAuthKey),
 		logger: &fakes.Logger{},
-		request: application.EnrollRequest{
+		request: ports.EnrollRequest{
 			HostID:         "host-0001",
 			Name:           hostName,
 			InstanceID:     instanceID,

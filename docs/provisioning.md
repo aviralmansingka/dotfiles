@@ -11,10 +11,12 @@ The implementation lives in `ops/provision`, and the homelab units live in
 
 | Layer | File | Responsibility |
 |---|---|---|
+| ports | `internal/ports/ports.go` | the contracts the use cases drive and the values they pass; a leaf, so an adapter implements them without importing the use cases |
+| ports | `internal/ports/codes.go` | the job failure-code vocabulary the workflows and adapters share |
 | domain | `internal/domain/identity.go` | host identity, role and policy names, policy document, token and login-credential lifetimes |
 | domain | `internal/domain/bundles.go` | the per-host bundle mapping from `config/profiles.yaml` |
 | application | `internal/application/identity.go` | the authorization use case: policy, role, wrapped SecretID, out-of-band delivery |
-| application | `internal/application/session.go` | the host-side use case: unwrap once, log in, renew, rotate |
+| hostsession | `internal/hostsession/session.go` | the host-side use case: unwrap once, log in, renew, rotate |
 | adapter | `internal/adapters/openbao/identity.go` | OpenBao HTTP mechanics, response wrapping, login and renewal |
 | adapter | `internal/adapters/openbao/bootstrap.go` | the mode-0600 bootstrap file |
 | wiring | `cmd/provision/main.go` | `newAuthorizer` builds the adapter for the worker |

@@ -13,7 +13,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/provider"
 )
 
@@ -26,9 +26,9 @@ import (
 // of a resource that is already gone reports success.
 type Provider struct {
 	mu        sync.Mutex
-	resources map[string]application.ProviderResource // keyed by host id
-	names     map[string]string                       // host id -> host name
-	keys      map[string]provider.HostKey             // keyed by host id
+	resources map[string]ports.ProviderResource // keyed by host id
+	names     map[string]string                 // host id -> host name
+	keys      map[string]provider.HostKey       // keyed by host id
 	creates   int
 	allocates int
 	destroys  int
@@ -37,14 +37,14 @@ type Provider struct {
 }
 
 var (
-	_ provider.Contract        = (*Provider)(nil)
-	_ application.HostProvider = (*Provider)(nil)
+	_ provider.Contract  = (*Provider)(nil)
+	_ ports.HostProvider = (*Provider)(nil)
 )
 
 // NewProvider builds an empty provider.
 func NewProvider() *Provider {
 	return &Provider{
-		resources: map[string]application.ProviderResource{},
+		resources: map[string]ports.ProviderResource{},
 		names:     map[string]string{},
 		keys:      map[string]provider.HostKey{},
 	}
@@ -60,7 +60,7 @@ func (p *Provider) RecordHostKey(hostID, algorithm, fingerprint string) {
 
 // Create implements the contract. A second call for the same host adopts the first
 // allocation and reports the same identity.
-func (p *Provider) Create(_ context.Context, req provider.CreateRequest) (application.ProviderResource, error) {
+func (p *Provider) Create(_ context.Context, req provider.CreateRequest) (ports.ProviderResource, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.creates++
@@ -69,7 +69,7 @@ func (p *Provider) Create(_ context.Context, req provider.CreateRequest) (applic
 		return existing, nil
 	}
 	p.allocates++
-	resource := application.ProviderResource{
+	resource := ports.ProviderResource{
 		ResourceID:     fmt.Sprintf("i-%016d", p.allocates),
 		PrivateAddress: fmt.Sprintf("10.99.1.%d", 10+p.allocates),
 	}
@@ -140,10 +140,10 @@ func (p *Provider) TrustedHostKey(_ context.Context, req provider.HostKeyRequest
 	return key, nil
 }
 
-// ---- application.HostProvider, so the fake can stand in for the Terraform adapter
+// ---- ports.HostProvider, so the fake can stand in for the Terraform adapter
 
-// CreateHost implements application.HostProvider.
-func (p *Provider) CreateHost(ctx context.Context, req application.ProviderCreateRequest) (application.ProviderResource, error) {
+// CreateHost implements ports.HostProvider.
+func (p *Provider) CreateHost(ctx context.Context, req ports.ProviderCreateRequest) (ports.ProviderResource, error) {
 	return p.Create(ctx, provider.CreateRequest{
 		HostID:       req.HostID,
 		Name:         req.Name,
@@ -157,8 +157,8 @@ func (p *Provider) CreateHost(ctx context.Context, req application.ProviderCreat
 	})
 }
 
-// StatusHost implements application.HostProvider.
-func (p *Provider) StatusHost(ctx context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+// StatusHost implements ports.HostProvider.
+func (p *Provider) StatusHost(ctx context.Context, req ports.ProviderStatusRequest) (ports.ProviderResourceStatus, error) {
 	status, err := p.Status(ctx, provider.StatusRequest{
 		HostID:     req.HostID,
 		Name:       req.Name,
@@ -169,17 +169,17 @@ func (p *Provider) StatusHost(ctx context.Context, req application.ProviderStatu
 		ResourceID: req.ResourceID,
 	})
 	if err != nil {
-		return application.ProviderResourceStatus{}, err
+		return ports.ProviderResourceStatus{}, err
 	}
-	return application.ProviderResourceStatus{
+	return ports.ProviderResourceStatus{
 		Exists:         status.Exists,
 		ResourceID:     status.ResourceID,
 		PrivateAddress: status.PrivateAddress,
 	}, nil
 }
 
-// DestroyHost implements application.HostProvider.
-func (p *Provider) DestroyHost(ctx context.Context, req application.ProviderDestroyRequest) error {
+// DestroyHost implements ports.HostProvider.
+func (p *Provider) DestroyHost(ctx context.Context, req ports.ProviderDestroyRequest) error {
 	return p.Destroy(ctx, provider.DestroyRequest{
 		HostID:     req.HostID,
 		Name:       req.Name,
@@ -222,7 +222,7 @@ func (p *Provider) Statuses() int {
 }
 
 // Resource returns the resource for a host, if it still exists.
-func (p *Provider) Resource(hostID string) (application.ProviderResource, bool) {
+func (p *Provider) Resource(hostID string) (ports.ProviderResource, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	resource, ok := p.resources[hostID]

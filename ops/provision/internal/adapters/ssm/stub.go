@@ -3,8 +3,8 @@ package ssm
 import (
 	"context"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // Stub refuses enrollment and the agent check. It is the composition fallback
@@ -17,21 +17,21 @@ type Stub struct{}
 func NewStub() *Stub { return &Stub{} }
 
 var (
-	_ application.HostEnroller  = (*Stub)(nil)
-	_ application.SSMAgentProbe = (*Stub)(nil)
+	_ ports.HostEnroller  = (*Stub)(nil)
+	_ ports.SSMAgentProbe = (*Stub)(nil)
 )
 
-// Enroll implements application.HostEnroller by refusing.
-func (*Stub) Enroll(_ context.Context, _ application.EnrollRequest) (application.EnrollResult, error) {
-	return application.EnrollResult{}, &domain.NotImplementedError{
+// Enroll implements ports.HostEnroller by refusing.
+func (*Stub) Enroll(_ context.Context, _ ports.EnrollRequest) (ports.EnrollResult, error) {
+	return ports.EnrollResult{}, &domain.NotImplementedError{
 		Component: "ssm enrollment",
 		Step:      "enrollment.ssm.parameter_prefix is not configured for this worker",
 	}
 }
 
-// AwaitRegistration implements application.SSMAgentProbe by refusing.
-func (*Stub) AwaitRegistration(_ context.Context, _ string) (application.SSMAgentStatus, error) {
-	return application.SSMAgentStatus{}, &domain.NotImplementedError{
+// AwaitRegistration implements ports.SSMAgentProbe by refusing.
+func (*Stub) AwaitRegistration(_ context.Context, _ string) (ports.SSMAgentStatus, error) {
+	return ports.SSMAgentStatus{}, &domain.NotImplementedError{
 		Component: "ssm agent check",
 		Step:      "enrollment.ssm is not configured for this worker",
 	}

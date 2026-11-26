@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // ValidateParameterName enforces the shape of an enrollment parameter path. The
@@ -36,7 +36,7 @@ type ParameterStore struct {
 	tempDir string
 }
 
-var _ application.SSMParameterStore = (*ParameterStore)(nil)
+var _ ports.SSMParameterStore = (*ParameterStore)(nil)
 
 // NewParameterStore validates the configuration and builds the store.
 func NewParameterStore(cfg ParameterStoreConfig) (*ParameterStore, error) {
@@ -58,7 +58,7 @@ func NewParameterStore(cfg ParameterStoreConfig) (*ParameterStore, error) {
 //
 // There is no --description and no --allowed-pattern: SSM keeps parameter
 // metadata, and metadata is no place for a credential or a hint about one.
-func (p *ParameterStore) PutSecureParameter(ctx context.Context, req application.SecureParameterRequest) error {
+func (p *ParameterStore) PutSecureParameter(ctx context.Context, req ports.SecureParameterRequest) error {
 	if err := ValidateParameterName(req.Name); err != nil {
 		return err
 	}

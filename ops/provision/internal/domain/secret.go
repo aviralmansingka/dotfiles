@@ -1,12 +1,8 @@
-package application
+package domain
 
-import (
-	"context"
-	"fmt"
-	"strings"
-
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
-)
+// Credential values. A Secret is the one value type that holds key material: it
+// copies its input, refuses every rendering path, and reveals itself only through
+// an explicit Bytes call.
 
 // Secret is a credential value that refuses to render itself. Every formatting
 // path a log line or a payload could take — %s, %v, %#v, encoding/json — returns
@@ -66,40 +62,3 @@ func (s Secret) GoString() string { return "[redacted]" }
 // reaches a workflow payload, a job record, or a Terraform variable document
 // cannot carry key material.
 func (s Secret) MarshalJSON() ([]byte, error) { return []byte(`"[redacted]"`), nil }
-
-// SecretSource reads a credential by reference. Implementations hold the
-// credential store's own access token outside the request path: the reference is
-// the only credential-shaped value that travels, and no literal, environment
-// variable read at call time, or command argument can substitute for it.
-type SecretSource interface {
-	FetchSecret(ctx context.Context, ref string) (Secret, error)
-}
-
-// secretRefPattern bounds a secret reference: a scheme-shaped prefix, then a path
-// of safe characters. It cannot name a flag, a URL, or a shell word.
-
-// ValidateSecretRef is re-exported from the domain so adapters need one import.
-func ValidateSecretRef(ref string) error { return domain.ValidateSecretRef(ref) }
-
-// FetchSecretFrom reads ref from src and refuses an empty value. Every enrollment
-// credential goes through this helper, so "empty secret means failure" is one
-// rule rather than a check each adapter remembers.
-func FetchSecretFrom(ctx context.Context, src SecretSource, ref string) (Secret, error) {
-	if src == nil {
-		return Secret{}, fmt.Errorf("secret source is not configured")
-	}
-	if err := domain.ValidateSecretRef(ref); err != nil {
-		return Secret{}, err
-	}
-	secret, err := src.FetchSecret(ctx, ref)
-	if err != nil {
-		return Secret{}, fmt.Errorf("read secret %s: %w", ref, err)
-	}
-	if secret.Empty() {
-		return Secret{}, fmt.Errorf("secret %s is empty", ref)
-	}
-	if strings.TrimSpace(string(secret.Bytes())) == "" {
-		return Secret{}, fmt.Errorf("secret %s is blank", ref)
-	}
-	return secret, nil
-}

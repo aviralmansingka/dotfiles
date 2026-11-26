@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/openbao"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // The offline OpenBao substitute. It implements the endpoints this adapter calls
@@ -453,12 +453,12 @@ func perHostPolicies(t *testing.T, f *fakeBao) *openbao.IdentityAdmin {
 		if err != nil {
 			t.Fatalf("HostPolicyDocument(%s): %v", hostID, err)
 		}
-		if err := admin.EnsurePolicy(ctx, application.IdentityPolicy{
+		if err := admin.EnsurePolicy(ctx, ports.IdentityPolicy{
 			Name: policy.Name, HostID: hostID, Document: policy.HCL(),
 		}); err != nil {
 			t.Fatalf("EnsurePolicy(%s): %v", hostID, err)
 		}
-		if _, err := admin.EnsureAppRole(ctx, application.IdentityRole{
+		if _, err := admin.EnsureAppRole(ctx, ports.IdentityRole{
 			Name:         identity.RoleName,
 			HostID:       hostID,
 			HostName:     identity.HostName,
@@ -535,7 +535,7 @@ func TestIdentityAdminRefusesAnotherHostsRoleClaim(t *testing.T) {
 	f.claims[identity.RoleName] = "host-0001"
 	f.mu.Unlock()
 
-	_, err = admin.EnsureAppRole(context.Background(), application.IdentityRole{
+	_, err = admin.EnsureAppRole(context.Background(), ports.IdentityRole{
 		Name:         identity.RoleName,
 		HostID:       identity.HostID,
 		HostName:     identity.HostName,
@@ -569,7 +569,7 @@ func TestIdentityAdminMintsOnlyWrappedSecretIDs(t *testing.T) {
 	f := newFakeBao(t)
 	admin := perHostPolicies(t, f)
 	wrapped, err := admin.MintWrappedSecretID(context.Background(), "fleet-host-host-0001",
-		application.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
+		ports.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
 	if err != nil {
 		t.Fatalf("MintWrappedSecretID: %v", err)
 	}
@@ -613,7 +613,7 @@ func TestIdentityAdminRefusesAnUnwrappedSecretID(t *testing.T) {
 	f.mu.Unlock()
 
 	_, err := admin.MintWrappedSecretID(context.Background(), "fleet-host-host-0001",
-		application.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
+		ports.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
 	if err == nil {
 		t.Fatal("an unwrapped SecretID reply must be refused")
 	}
@@ -639,7 +639,7 @@ func TestHostClientUnwrapsOnceThenRefusesReplay(t *testing.T) {
 	f := newFakeBao(t)
 	admin := perHostPolicies(t, f)
 	wrapped, err := admin.MintWrappedSecretID(context.Background(), "fleet-host-host-0001",
-		application.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
+		ports.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
 	if err != nil {
 		t.Fatalf("MintWrappedSecretID: %v", err)
 	}
@@ -683,7 +683,7 @@ func TestHostClientLoginRenewsAndRotates(t *testing.T) {
 	f := newFakeBao(t)
 	admin := perHostPolicies(t, f)
 	wrapped, err := admin.MintWrappedSecretID(context.Background(), "fleet-host-host-0001",
-		application.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
+		ports.IdentityWrapSpec{TTL: domain.BootstrapWrapTTL})
 	if err != nil {
 		t.Fatalf("MintWrappedSecretID: %v", err)
 	}

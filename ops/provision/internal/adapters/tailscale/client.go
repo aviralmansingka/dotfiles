@@ -3,7 +3,7 @@
 //
 // Nothing here holds a credential value in a struct field, an argument, or a log
 // line: the OAuth client secret is read from an OpenBao reference through the
-// application.SecretSource port at call time and is placed only in the request
+// ports.SecretSource port at call time and is placed only in the request
 // body that must carry it.
 package tailscale
 
@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // DefaultBaseURL is the public Tailscale API.
@@ -49,9 +49,9 @@ type ClientConfig struct {
 	// OAuthSecretRef is an OpenBao reference such as
 	// bao:secret/data/fleet/tailscale-oauth. It is a path, not a value.
 	OAuthSecretRef string
-	Secrets        application.SecretSource
-	Clock          application.Clock
-	Logger         application.Logger
+	Secrets        ports.SecretSource
+	Clock          ports.Clock
+	Logger         ports.Logger
 }
 
 // apiClient exchanges the OAuth client credential for a short-lived API token
@@ -107,13 +107,13 @@ func isLoopback(host string) bool {
 // token exchanges the OAuth client credential for a bearer token. The secret is
 // read from the secret source here, used to build one form body, and never
 // stored: the returned Secret holds only the issued API token.
-func (c *apiClient) token(ctx context.Context) (application.Secret, error) {
+func (c *apiClient) token(ctx context.Context) (domain.Secret, error) {
 	if strings.TrimSpace(c.cfg.OAuthClientID) == "" {
-		return application.Secret{}, fmt.Errorf("tailscale: oauth client id is not configured")
+		return domain.Secret{}, fmt.Errorf("tailscale: oauth client id is not configured")
 	}
-	clientSecret, err := application.FetchSecretFrom(ctx, c.cfg.Secrets, c.cfg.OAuthSecretRef)
+	clientSecret, err := ports.FetchSecretFrom(ctx, c.cfg.Secrets, c.cfg.OAuthSecretRef)
 	if err != nil {
-		return application.Secret{}, err
+		return domain.Secret{}, err
 	}
 	defer clientSecret.Destroy()
 
@@ -126,7 +126,7 @@ func (c *apiClient) token(ctx context.Context) (application.Secret, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v2/oauth/token", strings.NewReader(form.Encode()))
 	if err != nil {
-		return application.Secret{}, fmt.Errorf("tailscale: build token request: %w", err)
+		return domain.Secret{}, fmt.Errorf("tailscale: build token request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
@@ -137,19 +137,19 @@ func (c *apiClient) token(ctx context.Context) (application.Secret, error) {
 		ExpiresIn   int    `json:"expires_in"`
 	}
 	if err := c.do(ctx, req, &reply); err != nil {
-		return application.Secret{}, fmt.Errorf("tailscale: oauth token exchange: %w", err)
+		return domain.Secret{}, fmt.Errorf("tailscale: oauth token exchange: %w", err)
 	}
 	if strings.TrimSpace(reply.AccessToken) == "" {
-		return application.Secret{}, fmt.Errorf("tailscale: oauth token exchange returned no access token")
+		return domain.Secret{}, fmt.Errorf("tailscale: oauth token exchange returned no access token")
 	}
 	if reply.TokenType != "" && !strings.EqualFold(reply.TokenType, "bearer") {
-		return application.Secret{}, fmt.Errorf("tailscale: oauth token exchange returned type %q", reply.TokenType)
+		return domain.Secret{}, fmt.Errorf("tailscale: oauth token exchange returned type %q", reply.TokenType)
 	}
-	return application.NewSecret("tailscale:api-token", []byte(reply.AccessToken)), nil
+	return domain.NewSecret("tailscale:api-token", []byte(reply.AccessToken)), nil
 }
 
 // call performs an authenticated JSON request. token is destroyed by the caller.
-func (c *apiClient) call(ctx context.Context, token application.Secret, method, path string, body, out any) error {
+func (c *apiClient) call(ctx context.Context, token domain.Secret, method, path string, body, out any) error {
 	return c.callAllowing(ctx, token, method, path, body, out, nil)
 }
 
@@ -159,13 +159,13 @@ func (c *apiClient) call(ctx context.Context, token application.Secret, method, 
 // teardown that reaches this call a second time must not fail. No other status is
 // tolerated: a 403 means the OAuth client cannot manage devices, and silently
 // reporting success would leave the node in the tailnet.
-func (c *apiClient) delete(ctx context.Context, token application.Secret, path string) error {
+func (c *apiClient) delete(ctx context.Context, token domain.Secret, path string) error {
 	return c.callAllowing(ctx, token, http.MethodDelete, path, nil, nil, []int{http.StatusNotFound})
 }
 
 // callAllowing is call with an explicit set of non-2xx statuses that count as
 // success for this endpoint.
-func (c *apiClient) callAllowing(ctx context.Context, token application.Secret, method, path string, body, out any, accept []int) error {
+func (c *apiClient) callAllowing(ctx context.Context, token domain.Secret, method, path string, body, out any, accept []int) error {
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)

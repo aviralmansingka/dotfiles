@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // clockSkewGrace tolerates a few seconds of clock difference between this host
@@ -22,7 +22,7 @@ type Minter struct {
 	api *apiClient
 }
 
-var _ application.AuthKeyMinter = (*Minter)(nil)
+var _ ports.AuthKeyMinter = (*Minter)(nil)
 
 // NewMinter builds the key minter.
 func NewMinter(cfg ClientConfig) (*Minter, error) {
@@ -76,46 +76,46 @@ func newMintKeyRequest(policy domain.AuthKeyPolicy, tag, description string) min
 	}
 }
 
-// MintAuthKey implements application.AuthKeyMinter.
+// MintAuthKey implements ports.AuthKeyMinter.
 //
 // It refuses before it opens a connection when the tag is not the approved one or
 // the policy is not the approved shape, so a weakened or client-chosen value
 // cannot produce a network call at all.
-func (m *Minter) MintAuthKey(ctx context.Context, req application.AuthKeyRequest) (application.AuthKey, error) {
+func (m *Minter) MintAuthKey(ctx context.Context, req ports.AuthKeyRequest) (ports.AuthKey, error) {
 	if err := domain.ValidateHostName(req.HostName); err != nil {
-		return application.AuthKey{}, err
+		return ports.AuthKey{}, err
 	}
 	if err := domain.ValidateTailnetTag(req.Tag); err != nil {
-		return application.AuthKey{}, err
+		return ports.AuthKey{}, err
 	}
 	if !domain.IsApprovedTailnetTag(req.Tag) {
-		return application.AuthKey{}, domain.Invalid("tailnet_tag",
+		return ports.AuthKey{}, domain.Invalid("tailnet_tag",
 			fmt.Sprintf("%q is not the approved tag %q; a tag is resolved server-side and never supplied by a client",
 				req.Tag, domain.ApprovedTailnetTag))
 	}
 	if err := req.Policy.Validate(); err != nil {
-		return application.AuthKey{}, domain.Invalid("auth_key_policy", err.Error())
+		return ports.AuthKey{}, domain.Invalid("auth_key_policy", err.Error())
 	}
 
 	body := newMintKeyRequest(req.Policy, req.Tag, req.HostName)
 
 	token, err := m.api.token(ctx)
 	if err != nil {
-		return application.AuthKey{}, err
+		return ports.AuthKey{}, err
 	}
 	defer token.Destroy()
 
 	var reply mintKeyResponse
 	path := fmt.Sprintf("/api/v2/tailnet/%s/keys", m.api.tailnet)
 	if err := m.api.call(ctx, token, "POST", path, body, &reply); err != nil {
-		return application.AuthKey{}, err
+		return ports.AuthKey{}, err
 	}
 	if strings.TrimSpace(reply.ID) == "" || strings.TrimSpace(reply.Key) == "" {
-		return application.AuthKey{}, fmt.Errorf("tailscale: key response is missing id or key")
+		return ports.AuthKey{}, fmt.Errorf("tailscale: key response is missing id or key")
 	}
 	expiry, err := m.issuedExpiry(reply.Expires, req.Policy)
 	if err != nil {
-		return application.AuthKey{}, err
+		return ports.AuthKey{}, err
 	}
 
 	m.api.cfg.Logger.Info("tailnet.authkey.minted",
@@ -128,9 +128,9 @@ func (m *Minter) MintAuthKey(ctx context.Context, req application.AuthKeyRequest
 		"ephemeral", req.Policy.Ephemeral,
 		"preauthorized", req.Policy.Preauthorized,
 	)
-	return application.AuthKey{
+	return ports.AuthKey{
 		ID:      reply.ID,
-		Key:     application.NewSecret("tailscale:authkey:"+reply.ID, []byte(strings.TrimSpace(reply.Key))),
+		Key:     domain.NewSecret("tailscale:authkey:"+reply.ID, []byte(strings.TrimSpace(reply.Key))),
 		Expiry:  expiry,
 		Tailnet: m.api.tailnet,
 	}, nil

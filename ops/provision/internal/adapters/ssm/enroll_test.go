@@ -9,6 +9,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssm"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 func approvedPolicy() domain.AuthKeyPolicy { return domain.ApprovedAuthKeyPolicy() }
@@ -124,7 +125,7 @@ func TestParameterIsDeletedOnSuccessAndOnFailure(t *testing.T) {
 	t.Run("join failure", func(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
-		f.host.mutate = func(result *application.SSMRunResult) {
+		f.host.mutate = func(result *ports.SSMRunResult) {
 			result.Status = "Failed"
 			result.ExitCode = 1
 			result.Stderr = "tailscale up: backend error: invalid key"
@@ -154,7 +155,7 @@ func TestParameterIsDeletedOnSuccessAndOnFailure(t *testing.T) {
 	t.Run("unreadable answer", func(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
-		f.host.mutate = func(result *application.SSMRunResult) {
+		f.host.mutate = func(result *ports.SSMRunResult) {
 			result.Stdout = "not json"
 		}
 		if _, err := f.enroller(t).Enroll(context.Background(), f.request); err == nil {
@@ -217,8 +218,8 @@ func TestEnrollmentAbortsBeforeMintingWhenTheAgentNeverRegisters(t *testing.T) {
 	if jobErr.Retryable {
 		t.Fatal("an unregistered agent must be a non-retryable job failure")
 	}
-	if jobErr.Code != application.CodeAgentUnavailable {
-		t.Fatalf("job error code = %q, want %q", jobErr.Code, application.CodeAgentUnavailable)
+	if jobErr.Code != ports.CodeAgentUnavailable {
+		t.Fatalf("job error code = %q, want %q", jobErr.Code, ports.CodeAgentUnavailable)
 	}
 }
 
@@ -276,7 +277,7 @@ esac
 func TestEnrollmentRefusesAReplyFromAnotherInstance(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t)
-	f.host.mutate = func(result *application.SSMRunResult) { result.InstanceID = otherInstance }
+	f.host.mutate = func(result *ports.SSMRunResult) { result.InstanceID = otherInstance }
 	if _, err := f.enroller(t).Enroll(context.Background(), f.request); err == nil {
 		t.Fatal("Enroll must refuse a reply from another instance")
 	}
@@ -307,14 +308,14 @@ func TestEnrollmentRejectsAnUnapprovedRequest(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name   string
-		mutate func(*application.EnrollRequest)
+		mutate func(*ports.EnrollRequest)
 	}{
-		{"unapproved tag", func(r *application.EnrollRequest) { r.TailnetTag = "tag:other" }},
-		{"malformed tag", func(r *application.EnrollRequest) { r.TailnetTag = "aws-host" }},
-		{"host name with a shell word", func(r *application.EnrollRequest) { r.Name = "rex; rm -rf /" }},
-		{"instance id that is not one", func(r *application.EnrollRequest) { r.InstanceID = "rex-1" }},
-		{"missing host id", func(r *application.EnrollRequest) { r.HostID = "" }},
-		{"weakened key policy", func(r *application.EnrollRequest) { r.KeyPolicy.Reusable = true }},
+		{"unapproved tag", func(r *ports.EnrollRequest) { r.TailnetTag = "tag:other" }},
+		{"malformed tag", func(r *ports.EnrollRequest) { r.TailnetTag = "aws-host" }},
+		{"host name with a shell word", func(r *ports.EnrollRequest) { r.Name = "rex; rm -rf /" }},
+		{"instance id that is not one", func(r *ports.EnrollRequest) { r.InstanceID = "rex-1" }},
+		{"missing host id", func(r *ports.EnrollRequest) { r.HostID = "" }},
+		{"weakened key policy", func(r *ports.EnrollRequest) { r.KeyPolicy.Reusable = true }},
 	}
 	for _, tc := range cases {
 		tc := tc
@@ -440,14 +441,14 @@ func TestNewEnrollerRequiresEveryCollaborator(t *testing.T) {
 func TestStubRefusesEnrollmentAndTheAgentCheck(t *testing.T) {
 	t.Parallel()
 	stub := ssm.NewStub()
-	if _, err := stub.Enroll(context.Background(), application.EnrollRequest{}); err == nil {
+	if _, err := stub.Enroll(context.Background(), ports.EnrollRequest{}); err == nil {
 		t.Fatal("the stub must refuse enrollment")
 	}
 	if _, err := stub.AwaitRegistration(context.Background(), instanceID); err == nil {
 		t.Fatal("the stub must refuse the agent check")
 	}
 	var notImplemented *domain.NotImplementedError
-	if _, err := stub.Enroll(context.Background(), application.EnrollRequest{}); !errors.As(err, &notImplemented) {
+	if _, err := stub.Enroll(context.Background(), ports.EnrollRequest{}); !errors.As(err, &notImplemented) {
 		t.Fatalf("the refusal is not a NotImplementedError: %v", err)
 	}
 	if jobErr := application.SanitizeError(&domain.NotImplementedError{Component: "ssm enrollment"}); jobErr.Retryable {

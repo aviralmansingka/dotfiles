@@ -11,6 +11,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssm"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 func newAgentProbe(t *testing.T, executor *fakeExecutor) *ssm.AgentProbe {
@@ -87,8 +88,8 @@ func TestAgentProbeFailsClosedWhenTheAgentNeverRegisters(t *testing.T) {
 	if jobErr.Retryable {
 		t.Fatal("an unregistered agent must be a non-retryable job failure")
 	}
-	if jobErr.Code != application.CodeAgentUnavailable {
-		t.Fatalf("job error code = %q, want %q", jobErr.Code, application.CodeAgentUnavailable)
+	if jobErr.Code != ports.CodeAgentUnavailable {
+		t.Fatalf("job error code = %q, want %q", jobErr.Code, ports.CodeAgentUnavailable)
 	}
 	if !strings.Contains(jobErr.Message, "does not fall back to ssh") {
 		t.Fatalf("the job error does not state the fail-closed rule: %q", jobErr.Message)

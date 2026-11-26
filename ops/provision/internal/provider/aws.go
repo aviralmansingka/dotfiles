@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // HostKeySource supplies the host key that was observed and recorded for a host.
@@ -27,7 +27,7 @@ type HostKeySource interface {
 // caller written against Contract cannot reach into the Terraform adapter's
 // specifics.
 type AWSIdentity struct {
-	base  application.HostProvider
+	base  ports.HostProvider
 	hosts HostKeySource
 }
 
@@ -37,7 +37,7 @@ var _ Contract = (*AWSIdentity)(nil)
 // host-key source. Both are required: without the provider nothing can be
 // allocated, and without the key source the trusted-host-key operation would have
 // to invent an answer.
-func NewAWSIdentity(base application.HostProvider, hosts HostKeySource) (*AWSIdentity, error) {
+func NewAWSIdentity(base ports.HostProvider, hosts HostKeySource) (*AWSIdentity, error) {
 	if base == nil {
 		return nil, errors.New("provider: aws host provider is required")
 	}
@@ -49,8 +49,8 @@ func NewAWSIdentity(base application.HostProvider, hosts HostKeySource) (*AWSIde
 
 // Create allocates, or adopts the allocation this host already owns. The adoption
 // decision lives in the provider port, so a retried create cannot allocate twice.
-func (a *AWSIdentity) Create(ctx context.Context, req CreateRequest) (application.ProviderResource, error) {
-	return a.base.CreateHost(ctx, application.ProviderCreateRequest{
+func (a *AWSIdentity) Create(ctx context.Context, req CreateRequest) (ports.ProviderResource, error) {
+	return a.base.CreateHost(ctx, ports.ProviderCreateRequest{
 		HostID:       req.HostID,
 		Name:         req.Name,
 		Provider:     req.Provider,
@@ -66,7 +66,7 @@ func (a *AWSIdentity) Create(ctx context.Context, req CreateRequest) (applicatio
 // Status reports whether this host's resource still exists. Never ErrNotRecorded:
 // "it does not exist" is the answer, not an error.
 func (a *AWSIdentity) Status(ctx context.Context, req StatusRequest) (ResourceStatus, error) {
-	status, err := a.base.StatusHost(ctx, application.ProviderStatusRequest{
+	status, err := a.base.StatusHost(ctx, ports.ProviderStatusRequest{
 		HostID:     req.HostID,
 		Name:       req.Name,
 		Provider:   req.Provider,
@@ -88,7 +88,7 @@ func (a *AWSIdentity) Status(ctx context.Context, req StatusRequest) (ResourceSt
 // Destroy releases this host's resource. Destroying one that is already gone is
 // success, which keeps a retried teardown idempotent.
 func (a *AWSIdentity) Destroy(ctx context.Context, req DestroyRequest) error {
-	return a.base.DestroyHost(ctx, application.ProviderDestroyRequest{
+	return a.base.DestroyHost(ctx, ports.ProviderDestroyRequest{
 		HostID:     req.HostID,
 		Name:       req.Name,
 		Provider:   req.Provider,

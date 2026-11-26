@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
@@ -58,7 +58,7 @@ func TestFailedStartReleasesTheReservation(t *testing.T) {
 	t.Parallel()
 	harness := fakes.NewHarness(t)
 	ctx := context.Background()
-	principal := application.Principal{ClientID: "test-client"}
+	principal := ports.Principal{ClientID: "test-client"}
 
 	harness.Orchestrator.FailStarts(errors.New("temporal unavailable"))
 	if _, err := harness.Service.CreateHost(ctx, principal, "idem-key-0001", createRequest); err == nil {
@@ -100,7 +100,7 @@ func TestRepeatedDeleteReusesOneJob(t *testing.T) {
 	t.Parallel()
 	harness := fakes.NewHarness(t)
 	ctx := context.Background()
-	principal := application.Principal{ClientID: "test-client"}
+	principal := ports.Principal{ClientID: "test-client"}
 
 	accepted, err := harness.Service.CreateHost(ctx, principal, "idem-key-0001", createRequest)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestRepeatedDeleteReusesOneJob(t *testing.T) {
 	}
 
 	// Another client cannot see or delete the host.
-	other := application.Principal{ClientID: "other-client"}
+	other := ports.Principal{ClientID: "other-client"}
 	if _, err := harness.Service.DeleteHost(ctx, other, accepted.HostID); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("cross-client delete = %v, want ErrNotFound", err)
 	}
@@ -143,7 +143,7 @@ func TestListHostsIsOwnerScopedAndNewestFirst(t *testing.T) {
 	t.Parallel()
 	harness := fakes.NewHarness(t)
 	ctx := context.Background()
-	owner := application.Principal{ClientID: "test-client"}
+	owner := ports.Principal{ClientID: "test-client"}
 
 	first, err := harness.Service.CreateHost(ctx, owner, "idem-key-0001", createRequest)
 	if err != nil {
@@ -168,7 +168,7 @@ func TestListHostsIsOwnerScopedAndNewestFirst(t *testing.T) {
 		t.Fatalf("hosts are not newest first: %s then %s", hosts[0].ID, hosts[1].ID)
 	}
 
-	other := application.Principal{ClientID: "other-client"}
+	other := ports.Principal{ClientID: "other-client"}
 	otherHosts, err := harness.Service.ListHosts(ctx, other)
 	if err != nil {
 		t.Fatalf("ListHosts(other): %v", err)

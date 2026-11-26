@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 )
 
-// Generator implements application.IDGenerator.
+// Generator implements ports.IDGenerator.
 type Generator struct {
 	// Bytes is the random suffix width. The zero value means 12 bytes (96 bits).
 	Bytes int

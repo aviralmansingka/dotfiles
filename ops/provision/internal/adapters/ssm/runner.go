@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const (
@@ -40,7 +40,7 @@ type Runner struct {
 	pollInterval time.Duration
 }
 
-var _ application.SSMRunner = (*Runner)(nil)
+var _ ports.SSMRunner = (*Runner)(nil)
 
 // NewRunner validates the configuration and builds the transport.
 func NewRunner(cfg RunnerConfig) (*Runner, error) {
@@ -96,19 +96,19 @@ type invocation struct {
 	StandardOutputTruncated *bool  `json:"StandardOutputTruncated"`
 }
 
-// RunCommand implements application.SSMRunner: it sends the command by instance
+// RunCommand implements ports.SSMRunner: it sends the command by instance
 // id, then polls the invocation until it reaches a terminal status.
-func (r *Runner) RunCommand(ctx context.Context, req application.SSMRunRequest) (application.SSMRunResult, error) {
+func (r *Runner) RunCommand(ctx context.Context, req ports.SSMRunRequest) (ports.SSMRunResult, error) {
 	if err := domain.ValidateInstanceID(req.InstanceID); err != nil {
-		return application.SSMRunResult{}, err
+		return ports.SSMRunResult{}, err
 	}
 	if strings.TrimSpace(req.Command) == "" {
-		return application.SSMRunResult{}, errors.New("ssm: refusing to send an empty command")
+		return ports.SSMRunResult{}, errors.New("ssm: refusing to send an empty command")
 	}
 
 	commandID, err := r.send(ctx, req)
 	if err != nil {
-		return application.SSMRunResult{}, err
+		return ports.SSMRunResult{}, err
 	}
 	result, err := r.await(ctx, commandID, req.InstanceID)
 	if err != nil {
@@ -117,19 +117,19 @@ func (r *Runner) RunCommand(ctx context.Context, req application.SSMRunRequest) 
 	if result.InstanceID != req.InstanceID {
 		// The control plane answered for another instance. IAM addressing makes
 		// this pathological, so it is refused rather than repaired.
-		return application.SSMRunResult{}, fmt.Errorf(
+		return ports.SSMRunResult{}, fmt.Errorf(
 			"ssm: invocation for instance %q answered for %q; refusing a reply that belongs to another host",
 			req.InstanceID, result.InstanceID)
 	}
 	if req.Comment != "" && result.Comment != req.Comment {
-		return application.SSMRunResult{}, fmt.Errorf(
+		return ports.SSMRunResult{}, fmt.Errorf(
 			"ssm: invocation correlation comment %q does not match %q", result.Comment, req.Comment)
 	}
 	return result, nil
 }
 
 // send issues `ssm send-command` and returns the command id to poll.
-func (r *Runner) send(ctx context.Context, req application.SSMRunRequest) (string, error) {
+func (r *Runner) send(ctx context.Context, req ports.SSMRunRequest) (string, error) {
 	body := sendCommandInput{
 		InstanceIDs:    []string{req.InstanceID},
 		DocumentName:   runShellScriptDocument,
@@ -177,7 +177,7 @@ func (r *Runner) send(ctx context.Context, req application.SSMRunRequest) (strin
 // "InvocationDoesNotExist" is not an error here: it is the normal answer for the
 // first moments after send-command, before the control plane has materialized the
 // invocation record.
-func (r *Runner) await(ctx context.Context, commandID, instanceID string) (application.SSMRunResult, error) {
+func (r *Runner) await(ctx context.Context, commandID, instanceID string) (ports.SSMRunResult, error) {
 	for {
 		result, err := r.client.run(ctx,
 			"ssm", "get-command-invocation",
@@ -188,23 +188,23 @@ func (r *Runner) await(ctx context.Context, commandID, instanceID string) (appli
 		if err != nil {
 			if notFound(err, "InvocationDoesNotExist") {
 				if waitErr := r.wait(ctx); waitErr != nil {
-					return application.SSMRunResult{}, waitErr
+					return ports.SSMRunResult{}, waitErr
 				}
 				continue
 			}
-			return application.SSMRunResult{}, fmt.Errorf("ssm: poll invocation %s: %w", commandID, err)
+			return ports.SSMRunResult{}, fmt.Errorf("ssm: poll invocation %s: %w", commandID, err)
 		}
 		var inv invocation
 		if err := json.Unmarshal([]byte(result.Stdout), &inv); err != nil {
-			return application.SSMRunResult{}, fmt.Errorf("ssm: invocation reply is not JSON: %w", err)
+			return ports.SSMRunResult{}, fmt.Errorf("ssm: invocation reply is not JSON: %w", err)
 		}
 		if inv.CommandID != "" && inv.CommandID != commandID {
-			return application.SSMRunResult{}, fmt.Errorf(
+			return ports.SSMRunResult{}, fmt.Errorf(
 				"ssm: asked for invocation %s and got %s; refusing a reply that belongs to another command",
 				commandID, inv.CommandID)
 		}
 		if terminal(inv.Status) {
-			return application.SSMRunResult{
+			return ports.SSMRunResult{
 				InstanceID: inv.InstanceID,
 				Comment:    inv.Comment,
 				Status:     inv.Status,
@@ -214,7 +214,7 @@ func (r *Runner) await(ctx context.Context, commandID, instanceID string) (appli
 			}, nil
 		}
 		if waitErr := r.wait(ctx); waitErr != nil {
-			return application.SSMRunResult{}, waitErr
+			return ports.SSMRunResult{}, waitErr
 		}
 	}
 }

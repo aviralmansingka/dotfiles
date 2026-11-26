@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const (
@@ -46,7 +46,7 @@ type AgentProbe struct {
 	pollInterval time.Duration
 }
 
-var _ application.SSMAgentProbe = (*AgentProbe)(nil)
+var _ ports.SSMAgentProbe = (*AgentProbe)(nil)
 
 // NewAgentProbe validates the configuration and builds the probe.
 func NewAgentProbe(cfg AgentProbeConfig) (*AgentProbe, error) {
@@ -84,20 +84,20 @@ type describeInstanceInformation struct {
 // domain.AgentNotRegisteredError, which the job layer reports as a non-retryable
 // failure: a host whose agent never registered is not enrolled, and this service
 // does not reach for SSH to rescue it.
-func (p *AgentProbe) AwaitRegistration(ctx context.Context, instanceID string) (application.SSMAgentStatus, error) {
+func (p *AgentProbe) AwaitRegistration(ctx context.Context, instanceID string) (ports.SSMAgentStatus, error) {
 	if err := domain.ValidateInstanceID(instanceID); err != nil {
-		return application.SSMAgentStatus{}, err
+		return ports.SSMAgentStatus{}, err
 	}
 	deadline := time.Now().Add(p.timeout)
 	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
 		deadline = ctxDeadline
 	}
 
-	var last application.SSMAgentStatus
+	var last ports.SSMAgentStatus
 	for {
 		status, err := p.query(ctx, instanceID)
 		if err != nil {
-			return application.SSMAgentStatus{}, err
+			return ports.SSMAgentStatus{}, err
 		}
 		last = status
 		if status.Online {
@@ -107,7 +107,7 @@ func (p *AgentProbe) AwaitRegistration(ctx context.Context, instanceID string) (
 			break
 		}
 		if waitErr := waitFor(ctx, p.pollInterval); waitErr != nil {
-			return application.SSMAgentStatus{}, waitErr
+			return ports.SSMAgentStatus{}, waitErr
 		}
 	}
 	return last, fmt.Errorf("wait for the ssm agent on %s: %w", instanceID, &domain.AgentNotRegisteredError{
@@ -120,18 +120,18 @@ func (p *AgentProbe) AwaitRegistration(ctx context.Context, instanceID string) (
 // query asks the control plane once. An instance the control plane has never seen
 // is a "not yet", not an error: that is exactly what a host a few seconds old
 // looks like.
-func (p *AgentProbe) query(ctx context.Context, instanceID string) (application.SSMAgentStatus, error) {
+func (p *AgentProbe) query(ctx context.Context, instanceID string) (ports.SSMAgentStatus, error) {
 	result, err := p.client.run(ctx,
 		"ssm", "describe-instance-information",
 		"--filters", "Key=InstanceIds,Values="+instanceID,
 		"--output", "json",
 	)
 	if err != nil {
-		return application.SSMAgentStatus{}, fmt.Errorf("ssm: describe instance information for %s: %w", instanceID, err)
+		return ports.SSMAgentStatus{}, fmt.Errorf("ssm: describe instance information for %s: %w", instanceID, err)
 	}
 	var decoded describeInstanceInformation
 	if err := json.Unmarshal([]byte(result.Stdout), &decoded); err != nil {
-		return application.SSMAgentStatus{}, fmt.Errorf("ssm: describe-instance-information reply is not JSON: %w", err)
+		return ports.SSMAgentStatus{}, fmt.Errorf("ssm: describe-instance-information reply is not JSON: %w", err)
 	}
 	for _, info := range decoded.InstanceInformationList {
 		// Only a record for this instance counts. The filter asks for one id, and
@@ -139,7 +139,7 @@ func (p *AgentProbe) query(ctx context.Context, instanceID string) (application.
 		if info.InstanceID != instanceID {
 			continue
 		}
-		status := application.SSMAgentStatus{
+		status := ports.SSMAgentStatus{
 			InstanceID: info.InstanceID,
 			PingStatus: info.PingStatus,
 			Online:     info.PingStatus == agentStatusOnline,
@@ -149,7 +149,7 @@ func (p *AgentProbe) query(ctx context.Context, instanceID string) (application.
 		}
 		return status, nil
 	}
-	return application.SSMAgentStatus{InstanceID: instanceID}, nil
+	return ports.SSMAgentStatus{InstanceID: instanceID}, nil
 }
 
 // waitFor pauses for d or until the context ends, whichever comes first.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // EnrollmentDeps are the collaborators the enrollment use case needs.
@@ -16,10 +17,10 @@ type EnrollmentDeps struct {
 	// Devices reports already-registered tailnet devices. It is required: without
 	// it a retry cannot tell "already enrolled" from "not enrolled yet", and a
 	// blind re-mint would register a second node for the same host.
-	Devices DeviceLookup
+	Devices ports.DeviceLookup
 	// Enroller performs the host enrollment (SSM-only in this tree).
-	Enroller HostEnroller
-	Logger   Logger
+	Enroller ports.HostEnroller
+	Logger   ports.Logger
 }
 
 // EnrollmentService is the enrollment use case: it resolves the approved tag, and
@@ -29,9 +30,9 @@ type EnrollmentDeps struct {
 // the workflow never learns about device lookups or key minting.
 type EnrollmentService struct {
 	profiles domain.Catalog
-	devices  DeviceLookup
-	enroller HostEnroller
-	log      Logger
+	devices  ports.DeviceLookup
+	enroller ports.HostEnroller
+	log      ports.Logger
 }
 
 // NewEnrollmentService validates dependencies and builds the use case.
@@ -53,7 +54,7 @@ func NewEnrollmentService(deps EnrollmentDeps) (*EnrollmentService, error) {
 	}, nil
 }
 
-var _ HostEnroller = (*EnrollmentService)(nil)
+var _ ports.HostEnroller = (*EnrollmentService)(nil)
 
 // Enroll resumes an already-running device or runs the bootstrap once.
 //
@@ -62,31 +63,31 @@ var _ HostEnroller = (*EnrollmentService)(nil)
 //  2. look the device up by host name and that tag,
 //  3. resume when it is already running — no key minted, no second node,
 //  4. otherwise bootstrap, which is the only path that mints a key.
-func (s *EnrollmentService) Enroll(ctx context.Context, req EnrollRequest) (EnrollResult, error) {
+func (s *EnrollmentService) Enroll(ctx context.Context, req ports.EnrollRequest) (ports.EnrollResult, error) {
 	profile, ok := s.profiles.Profile(req.Profile)
 	if !ok {
-		return EnrollResult{}, domain.Invalid("profile", fmt.Sprintf("%q is not an approved profile", req.Profile))
+		return ports.EnrollResult{}, domain.Invalid("profile", fmt.Sprintf("%q is not an approved profile", req.Profile))
 	}
 	// A tag on the request is allowed only when it is exactly the one the profile
 	// resolves to: the workflow copies it back from the plan, and any other value
 	// means a client-selected tag reached the application layer.
 	plan, err := domain.ResolveEnrollment(profile, nil)
 	if err != nil {
-		return EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 	if req.TailnetTag != "" && req.TailnetTag != plan.Tag {
-		return EnrollResult{}, domain.Invalid("tailnet_tag",
+		return ports.EnrollResult{}, domain.Invalid("tailnet_tag",
 			"is resolved server-side from the approved profile; a client cannot select a tag")
 	}
 	if err := req.KeyPolicyOrDefault().Validate(); err != nil {
-		return EnrollResult{}, domain.Invalid("auth_key_policy", err.Error())
+		return ports.EnrollResult{}, domain.Invalid("auth_key_policy", err.Error())
 	}
 
-	device, found, err := s.devices.LookupDevice(ctx, DeviceQuery{HostName: req.Name, Tag: plan.Tag})
+	device, found, err := s.devices.LookupDevice(ctx, ports.DeviceQuery{HostName: req.Name, Tag: plan.Tag})
 	if err != nil {
 		// A lookup failure must not fall through to minting: that is exactly the
 		// path that would register a second device for a host that already has one.
-		return EnrollResult{}, fmt.Errorf("look up tailnet device %q: %w", req.Name, err)
+		return ports.EnrollResult{}, fmt.Errorf("look up tailnet device %q: %w", req.Name, err)
 	}
 	if found && device.HasTag(plan.Tag) && device.Running() {
 		s.log.Info("host.enroll.resumed",
@@ -94,7 +95,7 @@ func (s *EnrollmentService) Enroll(ctx context.Context, req EnrollRequest) (Enro
 			"device_id", device.ID,
 			"tailnet_tag", plan.Tag,
 		)
-		return EnrollResult{
+		return ports.EnrollResult{
 			DeviceID:   device.ID,
 			TailnetTag: plan.Tag,
 			Resumed:    true,
@@ -111,7 +112,7 @@ func (s *EnrollmentService) Enroll(ctx context.Context, req EnrollRequest) (Enro
 		)
 	}
 
-	result, err := s.enroller.Enroll(ctx, EnrollRequest{
+	result, err := s.enroller.Enroll(ctx, ports.EnrollRequest{
 		HostID:         req.HostID,
 		Name:           req.Name,
 		InstanceID:     req.InstanceID,
@@ -122,10 +123,10 @@ func (s *EnrollmentService) Enroll(ctx context.Context, req EnrollRequest) (Enro
 		SecretBundles:  append([]string(nil), req.SecretBundles...),
 	})
 	if err != nil {
-		return EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 	if result.DeviceID == "" {
-		return EnrollResult{}, errors.New("application: enrollment reported no device id")
+		return ports.EnrollResult{}, errors.New("application: enrollment reported no device id")
 	}
 	result.TailnetTag = plan.Tag
 	result.Resumed = false

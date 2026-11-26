@@ -15,6 +15,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/workflows"
 )
 
@@ -25,19 +26,19 @@ const (
 	deleteJobPrefix = "delete-"
 )
 
-// Orchestrator implements application.JobOrchestrator on Temporal.
+// Orchestrator implements ports.JobOrchestrator on Temporal.
 type Orchestrator struct {
 	client    client.Client
 	namespace string
 	taskQueue string
-	log       application.Logger
+	log       ports.Logger
 }
 
-var _ application.JobOrchestrator = (*Orchestrator)(nil)
+var _ ports.JobOrchestrator = (*Orchestrator)(nil)
 
 // NewOrchestrator builds the orchestrator. It requires a client but not a live
 // connection: connection setup belongs to the composition root.
-func NewOrchestrator(c client.Client, namespace, taskQueue string, log application.Logger) (*Orchestrator, error) {
+func NewOrchestrator(c client.Client, namespace, taskQueue string, log ports.Logger) (*Orchestrator, error) {
 	if c == nil {
 		return nil, errors.New("temporal: client is required")
 	}
@@ -69,7 +70,7 @@ func (o *Orchestrator) startOptions(jobID string) client.StartWorkflowOptions {
 }
 
 // StartCreateHost starts the creation workflow under the deterministic job ID.
-func (o *Orchestrator) StartCreateHost(ctx context.Context, spec application.CreateHostSpec) (application.JobRef, error) {
+func (o *Orchestrator) StartCreateHost(ctx context.Context, spec ports.CreateHostSpec) (ports.JobRef, error) {
 	run, err := o.client.ExecuteWorkflow(ctx, o.startOptions(spec.JobID), workflows.CreateHostWorkflowName, workflows.CreateHostInput{
 		Spec: workflows.HostSpec{
 			HostID:        spec.HostID,
@@ -91,15 +92,15 @@ func (o *Orchestrator) StartCreateHost(ctx context.Context, spec application.Cre
 	if err != nil {
 		if isAlreadyStarted(err) {
 			o.log.Info("job.already_started", "job_id", spec.JobID, "host_id", spec.HostID)
-			return application.JobRef{JobID: spec.JobID, HostID: spec.HostID}, nil
+			return ports.JobRef{JobID: spec.JobID, HostID: spec.HostID}, nil
 		}
-		return application.JobRef{}, fmt.Errorf("temporal: start create workflow: %w", err)
+		return ports.JobRef{}, fmt.Errorf("temporal: start create workflow: %w", err)
 	}
-	return application.JobRef{JobID: run.GetID(), RunID: run.GetRunID(), HostID: spec.HostID}, nil
+	return ports.JobRef{JobID: run.GetID(), RunID: run.GetRunID(), HostID: spec.HostID}, nil
 }
 
 // StartDeleteHost starts the teardown workflow.
-func (o *Orchestrator) StartDeleteHost(ctx context.Context, spec application.DeleteHostSpec) (application.JobRef, error) {
+func (o *Orchestrator) StartDeleteHost(ctx context.Context, spec ports.DeleteHostSpec) (ports.JobRef, error) {
 	run, err := o.client.ExecuteWorkflow(ctx, o.startOptions(spec.JobID), workflows.DeleteHostWorkflowName, workflows.DeleteHostInput{
 		Spec: workflows.HostSpec{
 			HostID:        spec.HostID,
@@ -114,31 +115,31 @@ func (o *Orchestrator) StartDeleteHost(ctx context.Context, spec application.Del
 	if err != nil {
 		if isAlreadyStarted(err) {
 			o.log.Info("job.already_started", "job_id", spec.JobID, "host_id", spec.HostID)
-			return application.JobRef{JobID: spec.JobID, HostID: spec.HostID}, nil
+			return ports.JobRef{JobID: spec.JobID, HostID: spec.HostID}, nil
 		}
-		return application.JobRef{}, fmt.Errorf("temporal: start delete workflow: %w", err)
+		return ports.JobRef{}, fmt.Errorf("temporal: start delete workflow: %w", err)
 	}
-	return application.JobRef{JobID: run.GetID(), RunID: run.GetRunID(), HostID: spec.HostID}, nil
+	return ports.JobRef{JobID: run.GetID(), RunID: run.GetRunID(), HostID: spec.HostID}, nil
 }
 
 // DescribeJob reports a job from Temporal. A closed execution is read through
 // Describe plus the recorded result or failure; a running one is read through
 // the deterministic status query. Missing executions become ErrNotFound.
-func (o *Orchestrator) DescribeJob(ctx context.Context, handle application.JobHandle) (application.JobView, error) {
+func (o *Orchestrator) DescribeJob(ctx context.Context, handle ports.JobHandle) (ports.JobView, error) {
 	description, err := o.client.DescribeWorkflowExecution(ctx, handle.JobID, handle.RunID)
 	if err != nil {
 		var notFound *serviceerror.NotFound
 		if errors.As(err, &notFound) {
-			return application.JobView{}, domain.ErrNotFound
+			return ports.JobView{}, domain.ErrNotFound
 		}
-		return application.JobView{}, fmt.Errorf("temporal: describe job: %w", err)
+		return ports.JobView{}, fmt.Errorf("temporal: describe job: %w", err)
 	}
 	info := description.GetWorkflowExecutionInfo()
 	runID := handle.RunID
 	if runID == "" && info.GetExecution() != nil {
 		runID = info.GetExecution().GetRunId()
 	}
-	view := application.JobView{
+	view := ports.JobView{
 		JobID:     handle.JobID,
 		Kind:      kindFromJobID(handle.JobID),
 		RunID:     runID,
@@ -183,7 +184,7 @@ func (o *Orchestrator) DescribeJob(ctx context.Context, handle application.JobHa
 	return view, nil
 }
 
-func (o *Orchestrator) applyRunningStatus(ctx context.Context, jobID, runID string, view *application.JobView) {
+func (o *Orchestrator) applyRunningStatus(ctx context.Context, jobID, runID string, view *ports.JobView) {
 	value, err := o.client.QueryWorkflow(ctx, jobID, runID, workflows.StatusQueryName)
 	if err != nil {
 		// The execution may have closed between describe and query. Keep the
@@ -199,7 +200,7 @@ func (o *Orchestrator) applyRunningStatus(ctx context.Context, jobID, runID stri
 	applyStatus(status, view)
 }
 
-func (o *Orchestrator) applyCompletedResult(ctx context.Context, jobID, runID string, view *application.JobView) {
+func (o *Orchestrator) applyCompletedResult(ctx context.Context, jobID, runID string, view *ports.JobView) {
 	var status workflows.Status
 	if err := o.client.GetWorkflow(ctx, jobID, runID).Get(ctx, &status); err != nil {
 		o.log.Warn("job.result_failed", "job_id", jobID, "error", domain.SanitizeMessage(err.Error()))
@@ -208,7 +209,7 @@ func (o *Orchestrator) applyCompletedResult(ctx context.Context, jobID, runID st
 	applyStatus(status, view)
 }
 
-func (o *Orchestrator) applyFailure(ctx context.Context, jobID, runID string, view *application.JobView) {
+func (o *Orchestrator) applyFailure(ctx context.Context, jobID, runID string, view *ports.JobView) {
 	view.State = domain.JobFailed
 	if view.Stage == "" {
 		view.Stage = domain.StageQueued
@@ -221,7 +222,7 @@ func (o *Orchestrator) applyFailure(ctx context.Context, jobID, runID string, vi
 	view.Error = &jobErr
 }
 
-func applyStatus(status workflows.Status, view *application.JobView) {
+func applyStatus(status workflows.Status, view *ports.JobView) {
 	view.HostID = status.HostID
 	view.Kind = status.Kind
 	view.State = status.State
@@ -248,12 +249,12 @@ func jobErrorFromExecution(err error) domain.JobError {
 
 func codeFromFailureType(typeName string) string {
 	switch typeName {
-	case application.CodeNotImplemented:
-		return application.CodeNotImplemented
-	case application.CodeInvalidRequest:
-		return application.CodeInvalidRequest
+	case ports.CodeNotImplemented:
+		return ports.CodeNotImplemented
+	case ports.CodeInvalidRequest:
+		return ports.CodeInvalidRequest
 	default:
-		return application.CodeProvisioningFailed
+		return ports.CodeProvisioningFailed
 	}
 }
 

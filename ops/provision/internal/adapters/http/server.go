@@ -13,6 +13,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const (
@@ -26,12 +27,12 @@ const (
 // Server serves the v1 API.
 type Server struct {
 	svc     *application.Service
-	log     application.Logger
+	log     ports.Logger
 	handler http.Handler
 }
 
 // New builds the API handler tree.
-func New(svc *application.Service, log application.Logger) (*Server, error) {
+func New(svc *application.Service, log ports.Logger) (*Server, error) {
 	if svc == nil {
 		return nil, errors.New("httpapi: service is required")
 	}
@@ -174,8 +175,8 @@ func (s *Server) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	}})
 }
 
-func principalFrom(ctx context.Context) application.Principal {
-	principal, _ := ctx.Value(principalKey{}).(application.Principal)
+func principalFrom(ctx context.Context) ports.Principal {
+	principal, _ := ctx.Value(principalKey{}).(ports.Principal)
 	return principal
 }
 
@@ -231,12 +232,12 @@ type errorResponse struct {
 	Error apiError `json:"error"`
 }
 
-func writeError(w http.ResponseWriter, log application.Logger, err error) {
+func writeError(w http.ResponseWriter, log ports.Logger, err error) {
 	var invalid *domain.ValidationError
 	switch {
 	case errors.As(err, &invalid):
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: apiError{
-			Code:    application.CodeInvalidRequest,
+			Code:    ports.CodeInvalidRequest,
 			Message: domain.SanitizeMessage(invalid.Message),
 			Field:   invalid.Field,
 		}})

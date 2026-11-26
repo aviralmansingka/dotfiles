@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/tailscale"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -91,7 +91,7 @@ func TestRemoveDeviceDeletesExactlyTheRecordedDevice(t *testing.T) {
 	api := newRemovalAPI(t)
 	devices := newDevices(t, api)
 
-	if err := devices.RemoveDevice(context.Background(), application.RemoveDeviceRequest{
+	if err := devices.RemoveDevice(context.Background(), ports.RemoveDeviceRequest{
 		HostID:   hostID,
 		HostName: hostName,
 		DeviceID: "n1234CNTRL",
@@ -116,7 +116,7 @@ func TestRemoveDeviceTreatsAnAlreadyGoneDeviceAsSuccess(t *testing.T) {
 	api.Respond(http.StatusNotFound, `{"message":"device not found"}`)
 	devices := newDevices(t, api)
 
-	if err := devices.RemoveDevice(context.Background(), application.RemoveDeviceRequest{
+	if err := devices.RemoveDevice(context.Background(), ports.RemoveDeviceRequest{
 		HostID:   hostID,
 		HostName: hostName,
 		DeviceID: "n1234CNTRL",
@@ -134,7 +134,7 @@ func TestRemoveDeviceReportsAnAuthorizationFailure(t *testing.T) {
 	api.Respond(http.StatusForbidden, `{"message":"insufficient scope"}`)
 	devices := newDevices(t, api)
 
-	err := devices.RemoveDevice(context.Background(), application.RemoveDeviceRequest{
+	err := devices.RemoveDevice(context.Background(), ports.RemoveDeviceRequest{
 		HostID:   hostID,
 		HostName: hostName,
 		DeviceID: "n1234CNTRL",
@@ -156,7 +156,7 @@ func TestRemoveDeviceRefusesWithoutARecordedDeviceID(t *testing.T) {
 	api := newRemovalAPI(t)
 	devices := newDevices(t, api)
 
-	err := devices.RemoveDevice(context.Background(), application.RemoveDeviceRequest{
+	err := devices.RemoveDevice(context.Background(), ports.RemoveDeviceRequest{
 		HostID:   hostID,
 		HostName: hostName,
 	})
@@ -181,7 +181,7 @@ func TestRemoveDeviceRefusesAnUnsafeDeviceID(t *testing.T) {
 	devices := newDevices(t, api)
 
 	for _, id := range []string{"../keys", "n1/../n2", "n1?x=1", "n1 n2", "%2e%2e"} {
-		err := devices.RemoveDevice(context.Background(), application.RemoveDeviceRequest{
+		err := devices.RemoveDevice(context.Background(), ports.RemoveDeviceRequest{
 			HostID:   hostID,
 			HostName: hostName,
 			DeviceID: id,

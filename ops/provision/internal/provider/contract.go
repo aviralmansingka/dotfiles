@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // Errors the contract reports. They are typed so a caller can branch on them
@@ -164,7 +164,7 @@ type HostKey struct {
 // Those two properties are what make a retried workflow safe, so they are part of
 // the contract rather than an implementation detail.
 type Contract interface {
-	Create(ctx context.Context, req CreateRequest) (application.ProviderResource, error)
+	Create(ctx context.Context, req CreateRequest) (ports.ProviderResource, error)
 	Status(ctx context.Context, req StatusRequest) (ResourceStatus, error)
 	Destroy(ctx context.Context, req DestroyRequest) error
 	BootstrapAddress(ctx context.Context, req BootstrapRequest) (BootstrapAddress, error)
@@ -196,8 +196,8 @@ func (u *Unimplemented) refusal(operation string) error {
 }
 
 // Create implements Contract by refusing.
-func (u *Unimplemented) Create(context.Context, CreateRequest) (application.ProviderResource, error) {
-	return application.ProviderResource{}, u.refusal("create")
+func (u *Unimplemented) Create(context.Context, CreateRequest) (ports.ProviderResource, error) {
+	return ports.ProviderResource{}, u.refusal("create")
 }
 
 // Status implements Contract by refusing.

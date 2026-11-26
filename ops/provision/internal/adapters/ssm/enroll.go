@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const (
@@ -34,13 +34,13 @@ const (
 // binds the prefix, and the region is the one the provider pins.
 type EnrollConfig struct {
 	// Runner delivers the enrollment command over SSM Run Command.
-	Runner application.SSMRunner
+	Runner ports.SSMRunner
 	// Parameters stores and deletes the encrypted parameter that carries the key.
-	Parameters application.SSMParameterStore
+	Parameters ports.SSMParameterStore
 	// Agent proves the host's SSM agent registered before anything is minted.
-	Agent application.SSMAgentProbe
+	Agent ports.SSMAgentProbe
 	// Minter mints the single-use, preauthorized enrollment key.
-	Minter application.AuthKeyMinter
+	Minter ports.AuthKeyMinter
 	// ParameterPrefix is the store path host parameters live under. Defaults to
 	// DefaultParameterPrefix.
 	ParameterPrefix string
@@ -54,7 +54,7 @@ type EnrollConfig struct {
 	// which is what production uses; a test substitutes a fixed value so the
 	// parameter name is assertable.
 	Nonce  func() (string, error)
-	Logger application.Logger
+	Logger ports.Logger
 }
 
 // Enroller enrolls a host through the SSM control plane only.
@@ -62,7 +62,7 @@ type Enroller struct {
 	cfg EnrollConfig
 }
 
-var _ application.HostEnroller = (*Enroller)(nil)
+var _ ports.HostEnroller = (*Enroller)(nil)
 
 // NewEnroller validates the configuration and builds the enroller.
 func NewEnroller(cfg EnrollConfig) (*Enroller, error) {
@@ -105,7 +105,7 @@ func NewEnroller(cfg EnrollConfig) (*Enroller, error) {
 	return &Enroller{cfg: cfg}, nil
 }
 
-// Enroll implements application.HostEnroller.
+// Enroll implements ports.HostEnroller.
 //
 // The order is the security property, and the tests assert it:
 //  1. wait for the SSM agent to register. An unregistered agent cannot run a
@@ -119,19 +119,19 @@ func NewEnroller(cfg EnrollConfig) (*Enroller, error) {
 //     the parameter, write /run/fleet-enroll.key 0600, `tailscale up
 //     --auth-key=file:`, remove the file;
 //  5. delete the parameter on success and on failure.
-func (e *Enroller) Enroll(ctx context.Context, req application.EnrollRequest) (application.EnrollResult, error) {
+func (e *Enroller) Enroll(ctx context.Context, req ports.EnrollRequest) (ports.EnrollResult, error) {
 	if err := e.validate(req); err != nil {
-		return application.EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 	policy := req.KeyPolicyOrDefault()
 	if err := policy.Validate(); err != nil {
-		return application.EnrollResult{}, domain.Invalid("auth_key_policy", err.Error())
+		return ports.EnrollResult{}, domain.Invalid("auth_key_policy", err.Error())
 	}
 
 	// 1. Fail closed on an unregistered agent, before any key is minted.
 	agent, err := e.cfg.Agent.AwaitRegistration(ctx, req.InstanceID)
 	if err != nil {
-		return application.EnrollResult{}, fmt.Errorf("enrollment transport for %s is not ready: %w", req.InstanceID, err)
+		return ports.EnrollResult{}, fmt.Errorf("enrollment transport for %s is not ready: %w", req.InstanceID, err)
 	}
 	e.cfg.Logger.Info("host.enroll.agent_online",
 		"instance_id", agent.InstanceID,
@@ -139,39 +139,39 @@ func (e *Enroller) Enroll(ctx context.Context, req application.EnrollRequest) (a
 	)
 
 	// 2. Mint, now that the control plane has proven it can reach the host.
-	key, err := e.cfg.Minter.MintAuthKey(ctx, application.AuthKeyRequest{
+	key, err := e.cfg.Minter.MintAuthKey(ctx, ports.AuthKeyRequest{
 		HostID:   req.HostID,
 		HostName: req.Name,
 		Tag:      req.TailnetTag,
 		Policy:   policy,
 	})
 	if err != nil {
-		return application.EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 	defer key.Key.Destroy()
 
 	nonce, err := e.cfg.Nonce()
 	if err != nil {
-		return application.EnrollResult{}, fmt.Errorf("ssm: mint the enrollment nonce: %w", err)
+		return ports.EnrollResult{}, fmt.Errorf("ssm: mint the enrollment nonce: %w", err)
 	}
 	if err := validateNonce(nonce); err != nil {
-		return application.EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 	parameter := path.Join(e.cfg.ParameterPrefix, req.Name, nonce)
 
 	// 3. Store the key. Until this succeeds there is nothing to clean up.
-	if err := e.cfg.Parameters.PutSecureParameter(ctx, application.SecureParameterRequest{
+	if err := e.cfg.Parameters.PutSecureParameter(ctx, ports.SecureParameterRequest{
 		Name:  parameter,
 		Value: key.Key,
 	}); err != nil {
-		return application.EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 	// 4. The parameter does not outlive the attempt: it is deleted on the success
 	// and on the failure path, with a context the failure cannot cancel.
 	result, err := e.run(ctx, req, parameter, nonce)
 	if deleteErr := e.deleteParameter(ctx, parameter); deleteErr != nil {
 		if err == nil {
-			return application.EnrollResult{}, deleteErr
+			return ports.EnrollResult{}, deleteErr
 		}
 		e.cfg.Logger.Error("host.enroll.parameter_cleanup_failed",
 			"parameter", parameter,
@@ -182,7 +182,7 @@ func (e *Enroller) Enroll(ctx context.Context, req application.EnrollRequest) (a
 }
 
 // run delivers the command and reads back the node identity it reports.
-func (e *Enroller) run(ctx context.Context, req application.EnrollRequest, parameter, nonce string) (application.EnrollResult, error) {
+func (e *Enroller) run(ctx context.Context, req ports.EnrollRequest, parameter, nonce string) (ports.EnrollResult, error) {
 	script, err := Script(ScriptOptions{
 		ParameterName: parameter,
 		Nonce:         nonce,
@@ -192,12 +192,12 @@ func (e *Enroller) run(ctx context.Context, req application.EnrollRequest, param
 		Tag:           req.TailnetTag,
 	})
 	if err != nil {
-		return application.EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 
 	stepCtx, cancel := context.WithTimeout(ctx, stepTimeout)
 	defer cancel()
-	result, err := e.cfg.Runner.RunCommand(stepCtx, application.SSMRunRequest{
+	result, err := e.cfg.Runner.RunCommand(stepCtx, ports.SSMRunRequest{
 		InstanceID: req.InstanceID,
 		// The comment is the correlation token: a reply from another invocation
 		// carries another value and is refused below.
@@ -205,27 +205,27 @@ func (e *Enroller) run(ctx context.Context, req application.EnrollRequest, param
 		Command: script,
 	})
 	if err != nil {
-		return application.EnrollResult{}, fmt.Errorf("deliver the enrollment key over ssm: %w", err)
+		return ports.EnrollResult{}, fmt.Errorf("deliver the enrollment key over ssm: %w", err)
 	}
 	if result.InstanceID != req.InstanceID {
-		return application.EnrollResult{}, fmt.Errorf(
+		return ports.EnrollResult{}, fmt.Errorf(
 			"deliver the enrollment key over ssm: reply names instance %q, not %q", result.InstanceID, req.InstanceID)
 	}
 	if result.Comment != req.InstanceID {
-		return application.EnrollResult{}, fmt.Errorf(
+		return ports.EnrollResult{}, fmt.Errorf(
 			"deliver the enrollment key over ssm: reply correlation comment %q does not match %q", result.Comment, req.InstanceID)
 	}
 	if result.Status != statusSuccess || result.ExitCode != 0 {
 		// Only stderr is quoted, and it is sanitized: stdout of a successful run is
 		// the node status, and a credential must never reach a job record.
-		return application.EnrollResult{}, fmt.Errorf(
+		return ports.EnrollResult{}, fmt.Errorf(
 			"deliver the enrollment key over ssm: command did not succeed (status %q, exit %d): %s",
 			result.Status, result.ExitCode, domain.SanitizeMessage(result.Stderr))
 	}
 
 	deviceID, status, err := deviceFromStatus(result.Stdout, req.TailnetTag)
 	if err != nil {
-		return application.EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
 	e.cfg.Logger.Info("host.enroll.joined",
 		"host_id", req.HostID,
@@ -233,7 +233,7 @@ func (e *Enroller) run(ctx context.Context, req application.EnrollRequest, param
 		"tailnet_tag", req.TailnetTag,
 		"node_hostname", status.Self.HostName,
 	)
-	return application.EnrollResult{
+	return ports.EnrollResult{
 		DeviceID:   deviceID,
 		TailnetTag: req.TailnetTag,
 	}, nil
@@ -250,7 +250,7 @@ func (e *Enroller) deleteParameter(ctx context.Context, parameter string) error 
 // validate refuses a request before any I/O. The tag must be the approved one,
 // the instance id must be well formed, and the host name must be a name, because
 // all three are interpolated into the host script.
-func (e *Enroller) validate(req application.EnrollRequest) error {
+func (e *Enroller) validate(req ports.EnrollRequest) error {
 	if strings.TrimSpace(req.HostID) == "" {
 		return domain.Invalid("host_id", "is required")
 	}

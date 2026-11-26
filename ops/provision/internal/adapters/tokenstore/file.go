@@ -11,7 +11,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 var digestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -31,7 +31,7 @@ type Client struct {
 
 // File is the loaded token digest set.
 type File struct {
-	records map[string]application.TokenRecord
+	records map[string]ports.TokenRecord
 }
 
 // Load reads the digest file. A missing, empty, or malformed file is an error:
@@ -63,7 +63,7 @@ func New(clients []Client) (*File, error) {
 	if len(clients) == 0 {
 		return nil, fmt.Errorf("tokenstore: at least one client token digest is required")
 	}
-	records := make(map[string]application.TokenRecord, len(clients))
+	records := make(map[string]ports.TokenRecord, len(clients))
 	for _, client := range clients {
 		if client.ClientID == "" {
 			return nil, fmt.Errorf("tokenstore: client_id is required")
@@ -74,7 +74,7 @@ func New(clients []Client) (*File, error) {
 		if _, dup := records[client.TokenSHA256]; dup {
 			return nil, fmt.Errorf("tokenstore: duplicate token digest for client %q", client.ClientID)
 		}
-		records[client.TokenSHA256] = application.TokenRecord{
+		records[client.TokenSHA256] = ports.TokenRecord{
 			ClientID:    client.ClientID,
 			Description: client.Description,
 			Revoked:     client.Revoked,
@@ -83,9 +83,9 @@ func New(clients []Client) (*File, error) {
 	return &File{records: records}, nil
 }
 
-// LookupToken implements application.TokenStore. It never sees a plaintext
+// LookupToken implements ports.TokenStore. It never sees a plaintext
 // token, only a digest.
-func (f *File) LookupToken(_ context.Context, tokenDigestHex string) (application.TokenRecord, bool, error) {
+func (f *File) LookupToken(_ context.Context, tokenDigestHex string) (ports.TokenRecord, bool, error) {
 	record, ok := f.records[tokenDigestHex]
 	return record, ok, nil
 }

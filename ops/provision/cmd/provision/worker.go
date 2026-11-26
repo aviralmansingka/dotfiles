@@ -17,6 +17,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/terraform"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 func runWorker(args []string) error {
@@ -91,7 +92,7 @@ func runWorker(args []string) error {
 // at load time. When enrollment is not configured at all the refusing stubs are
 // kept, so no job can reach "ready" without a real enrollment step and no teardown
 // can claim a device was removed by a component that is not wired.
-func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgentProbe, application.TailnetDeviceManager, error) {
+func newEnrollment(state *loaded) (ports.HostEnroller, ports.SSMAgentProbe, ports.TailnetDeviceManager, error) {
 	cfg := state.service.Enrollment
 	if !cfg.Configured() {
 		state.log.Warn("enrollment.not_configured",
@@ -185,7 +186,7 @@ func newEnrollment(state *loaded) (application.HostEnroller, application.SSMAgen
 // stage, leaving a real instance with no identity. The management token is read
 // once from a 0600 file, and bootstrap material is written as 0600 files outside
 // the Nix store, Git, Terraform state, and every job record.
-func newAuthorizer(state *loaded) (application.HostAuthorizer, error) {
+func newAuthorizer(state *loaded) (ports.HostAuthorizer, error) {
 	cfg := state.service.OpenBao
 	if !cfg.Configured() {
 		return nil, errors.New("openbao identity is not configured: set openbao.address, openbao.token_file, and openbao.bootstrap_dir")
@@ -222,7 +223,7 @@ func newAuthorizer(state *loaded) (application.HostAuthorizer, error) {
 // newHostProvider builds the AWS compute provider from the approved
 // configuration. It fails rather than falling back to the refusing stub: a
 // worker that cannot create hosts must not start and must not report success.
-func newHostProvider(state *loaded) (application.HostProvider, error) {
+func newHostProvider(state *loaded) (ports.HostProvider, error) {
 	aws := state.service.Providers["aws"]
 	provider, err := terraform.NewAWS(terraform.AWSConfig{
 		Profiles:         state.catalog,

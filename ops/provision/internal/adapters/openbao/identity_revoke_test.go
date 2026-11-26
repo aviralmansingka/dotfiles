@@ -8,6 +8,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -195,8 +196,8 @@ func TestRevokeTokensErrorIsSanitized(t *testing.T) {
 }
 
 // authorizeRequestFor builds the request a teardown makes for one host.
-func authorizeRequestFor(hostID, name string) application.AuthorizeRequest {
-	return application.AuthorizeRequest{
+func authorizeRequestFor(hostID, name string) ports.AuthorizeRequest {
+	return ports.AuthorizeRequest{
 		HostID:        hostID,
 		Name:          name,
 		Profile:       "rex",

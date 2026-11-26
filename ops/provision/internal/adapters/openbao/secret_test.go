@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/openbao"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const (
@@ -185,7 +185,7 @@ func TestFetchSecretFromRefusesEmptyValues(t *testing.T) {
 	kv := newKVServer(t)
 	kv.body = `{"data":{"data":{"value":""}}}`
 	source := newSource(t, kv)
-	if _, err := application.FetchSecretFrom(context.Background(), source, secretRef); err == nil {
+	if _, err := ports.FetchSecretFrom(context.Background(), source, secretRef); err == nil {
 		t.Fatal("an empty secret must be refused")
 	}
 }

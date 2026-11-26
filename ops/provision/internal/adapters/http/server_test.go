@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	httpapi "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/http"
-	application "github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -334,8 +334,8 @@ func TestCreateRejectsArbitraryCommandsAndPaths(t *testing.T) {
 			if recorder.Code != http.StatusBadRequest {
 				t.Fatalf("%s: status = %d, want 400 (body %s)", tc.label, recorder.Code, recorder.Body.String())
 			}
-			if code := errorCode(t, recorder); code != application.CodeInvalidRequest {
-				t.Fatalf("%s: error code = %q, want %s", tc.label, code, application.CodeInvalidRequest)
+			if code := errorCode(t, recorder); code != ports.CodeInvalidRequest {
+				t.Fatalf("%s: error code = %q, want %s", tc.label, code, ports.CodeInvalidRequest)
 			}
 		})
 	}

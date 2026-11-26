@@ -16,6 +16,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -30,7 +31,7 @@ func newDeleteHarness(t *testing.T) *deleteHarness {
 	t.Helper()
 	harness := fakes.NewHarness(t)
 	ctx := context.Background()
-	principal := application.Principal{ClientID: "test-client"}
+	principal := ports.Principal{ClientID: "test-client"}
 
 	accepted, err := harness.Service.CreateHost(ctx, principal, "idem-key-0001", createRequest)
 	if err != nil {
@@ -51,7 +52,7 @@ func newDeleteHarness(t *testing.T) *deleteHarness {
 // startDelete issues one DELETE and returns the accepted identifiers.
 func (d *deleteHarness) startDelete(t *testing.T) application.AcceptedIDs {
 	t.Helper()
-	accepted, err := d.Service.DeleteHost(context.Background(), application.Principal{ClientID: "test-client"}, d.HostID)
+	accepted, err := d.Service.DeleteHost(context.Background(), ports.Principal{ClientID: "test-client"}, d.HostID)
 	if err != nil {
 		t.Fatalf("DeleteHost: %v", err)
 	}
@@ -168,13 +169,13 @@ func TestDeleteRetriesAPartialTeardownWithANewJob(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("record partial teardown: %v", err)
 	}
-	d.Orchestrator.SetJob(application.JobView{
+	d.Orchestrator.SetJob(ports.JobView{
 		JobID:  first.JobID,
 		HostID: d.HostID,
 		Kind:   domain.JobKindDelete,
 		State:  domain.JobFailed,
 		Stage:  domain.StageDestroying,
-		Error:  &domain.JobError{Code: application.CodeTeardownIncomplete, Message: "incomplete", Retryable: true},
+		Error:  &domain.JobError{Code: ports.CodeTeardownIncomplete, Message: "incomplete", Retryable: true},
 	})
 
 	second := d.startDelete(t)
@@ -218,7 +219,7 @@ func TestDeleteRefusesAForeignHost(t *testing.T) {
 	t.Parallel()
 	d := newDeleteHarness(t)
 
-	_, err := d.Service.DeleteHost(context.Background(), application.Principal{ClientID: "another-client"}, d.HostID)
+	_, err := d.Service.DeleteHost(context.Background(), ports.Principal{ClientID: "another-client"}, d.HostID)
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("error = %v, want not found for a host owned by another client", err)
 	}
@@ -231,7 +232,7 @@ func TestDeleteRefusesAForeignHost(t *testing.T) {
 }
 
 // deleteSpec returns the spec the service handed the orchestrator for one job.
-func (d *deleteHarness) deleteSpec(t *testing.T, jobID string) application.DeleteHostSpec {
+func (d *deleteHarness) deleteSpec(t *testing.T, jobID string) ports.DeleteHostSpec {
 	t.Helper()
 	specs := d.Orchestrator.DeleteSpecs()
 	for _, spec := range specs {
@@ -240,7 +241,7 @@ func (d *deleteHarness) deleteSpec(t *testing.T, jobID string) application.Delet
 		}
 	}
 	t.Fatalf("no teardown spec was recorded for job %q (recorded: %d)", jobID, len(specs))
-	return application.DeleteHostSpec{}
+	return ports.DeleteHostSpec{}
 }
 
 // host reads the stored record.

@@ -1,4 +1,4 @@
-// Package fakes provides in-memory implementations of the application ports for
+// Package fakes provides in-memory implementations of the ports contracts for
 // offline tests. It never touches a network, a cloud account, or Temporal.
 package fakes
 
@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/tokenstore"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
 
@@ -29,7 +29,7 @@ func NewClock() *Clock {
 	return &Clock{t: time.Date(2026, 11, 8, 12, 0, 0, 0, time.UTC)}
 }
 
-// Now implements application.Clock.
+// Now implements ports.Clock.
 func (c *Clock) Now() time.Time {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -49,7 +49,7 @@ type IDs struct {
 	n  int
 }
 
-// NewID implements application.IDGenerator.
+// NewID implements ports.IDGenerator.
 func (i *IDs) NewID(prefix string) string {
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -63,13 +63,13 @@ type Logger struct {
 	lines []string
 }
 
-// Info implements application.Logger.
+// Info implements ports.Logger.
 func (l *Logger) Info(msg string, kv ...any) { l.record("INFO", msg, kv...) }
 
-// Warn implements application.Logger.
+// Warn implements ports.Logger.
 func (l *Logger) Warn(msg string, kv ...any) { l.record("WARN", msg, kv...) }
 
-// Error implements application.Logger.
+// Error implements ports.Logger.
 func (l *Logger) Error(msg string, kv ...any) { l.record("ERROR", msg, kv...) }
 
 func (l *Logger) record(level, msg string, kv ...any) {
@@ -90,9 +90,9 @@ func (l *Logger) Lines() []string {
 type Orchestrator struct {
 	mu          sync.Mutex
 	starts      map[string]int
-	views       map[string]application.JobView
+	views       map[string]ports.JobView
 	order       []string
-	deleteSpecs []application.DeleteHostSpec
+	deleteSpecs []ports.DeleteHostSpec
 	startErr    error
 }
 
@@ -100,11 +100,11 @@ type Orchestrator struct {
 func NewOrchestrator() *Orchestrator {
 	return &Orchestrator{
 		starts: map[string]int{},
-		views:  map[string]application.JobView{},
+		views:  map[string]ports.JobView{},
 	}
 }
 
-var _ application.JobOrchestrator = (*Orchestrator)(nil)
+var _ ports.JobOrchestrator = (*Orchestrator)(nil)
 
 // FailStarts makes every subsequent start return err.
 func (o *Orchestrator) FailStarts(err error) {
@@ -113,13 +113,13 @@ func (o *Orchestrator) FailStarts(err error) {
 	o.startErr = err
 }
 
-// StartCreateHost implements application.JobOrchestrator.
-func (o *Orchestrator) StartCreateHost(_ context.Context, spec application.CreateHostSpec) (application.JobRef, error) {
+// StartCreateHost implements ports.JobOrchestrator.
+func (o *Orchestrator) StartCreateHost(_ context.Context, spec ports.CreateHostSpec) (ports.JobRef, error) {
 	return o.start("create", spec.JobID, spec.HostID, domain.JobKindCreate, domain.StageQueued, domain.JobQueued)
 }
 
-// StartDeleteHost implements application.JobOrchestrator.
-func (o *Orchestrator) StartDeleteHost(_ context.Context, spec application.DeleteHostSpec) (application.JobRef, error) {
+// StartDeleteHost implements ports.JobOrchestrator.
+func (o *Orchestrator) StartDeleteHost(_ context.Context, spec ports.DeleteHostSpec) (ports.JobRef, error) {
 	o.mu.Lock()
 	o.deleteSpecs = append(o.deleteSpecs, spec)
 	o.mu.Unlock()
@@ -128,21 +128,21 @@ func (o *Orchestrator) StartDeleteHost(_ context.Context, spec application.Delet
 
 // DeleteSpecs returns every teardown spec that reached the orchestrator, so a test
 // can assert what a delete job was actually handed.
-func (o *Orchestrator) DeleteSpecs() []application.DeleteHostSpec {
+func (o *Orchestrator) DeleteSpecs() []ports.DeleteHostSpec {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	return append([]application.DeleteHostSpec(nil), o.deleteSpecs...)
+	return append([]ports.DeleteHostSpec(nil), o.deleteSpecs...)
 }
 
-func (o *Orchestrator) start(_ string, jobID, hostID string, kind domain.JobKind, stage domain.Stage, state domain.JobState) (application.JobRef, error) {
+func (o *Orchestrator) start(_ string, jobID, hostID string, kind domain.JobKind, stage domain.Stage, state domain.JobState) (ports.JobRef, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.startErr != nil {
-		return application.JobRef{}, o.startErr
+		return ports.JobRef{}, o.startErr
 	}
 	o.starts[jobID]++
 	o.order = append(o.order, jobID)
-	o.views[jobID] = application.JobView{
+	o.views[jobID] = ports.JobView{
 		JobID:     jobID,
 		HostID:    hostID,
 		Kind:      kind,
@@ -152,23 +152,23 @@ func (o *Orchestrator) start(_ string, jobID, hostID string, kind domain.JobKind
 		UpdatedAt: time.Date(2026, 11, 8, 12, 0, 0, 0, time.UTC),
 		RunID:     "run-" + jobID,
 	}
-	return application.JobRef{JobID: jobID, HostID: hostID, RunID: "run-" + jobID}, nil
+	return ports.JobRef{JobID: jobID, HostID: hostID, RunID: "run-" + jobID}, nil
 }
 
-// DescribeJob implements application.JobOrchestrator.
-func (o *Orchestrator) DescribeJob(_ context.Context, handle application.JobHandle) (application.JobView, error) {
+// DescribeJob implements ports.JobOrchestrator.
+func (o *Orchestrator) DescribeJob(_ context.Context, handle ports.JobHandle) (ports.JobView, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	view, ok := o.views[handle.JobID]
 	if !ok {
-		return application.JobView{}, domain.ErrNotFound
+		return ports.JobView{}, domain.ErrNotFound
 	}
 	return view, nil
 }
 
 // SetJob replaces the reported view for a job, which lets a test model a
 // workflow that progressed or failed.
-func (o *Orchestrator) SetJob(view application.JobView) {
+func (o *Orchestrator) SetJob(view ports.JobView) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.views[view.JobID] = view

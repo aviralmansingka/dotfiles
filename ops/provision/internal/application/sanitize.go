@@ -4,23 +4,7 @@ import (
 	"errors"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
-)
-
-// Failure codes reported in JobError.Code.
-const (
-	CodeInvalidRequest     = "invalid_request"
-	CodeNotImplemented     = "not_implemented"
-	CodeProvisioningFailed = "provisioning_failed"
-	// CodeCanceled reports a job an operator cancelled. A cancelled job is not a
-	// failure: it keeps whatever it allocated.
-	CodeCanceled = "canceled"
-	// CodeAgentUnavailable reports a host whose SSM agent never registered. It is
-	// non-retryable: enrollment fails closed rather than trying another transport.
-	CodeAgentUnavailable = "host_agent_unavailable"
-	// CodeTeardownIncomplete reports a teardown that finished some steps and not
-	// others. It is retryable: every cleanup step is idempotent, so a retry
-	// finishes what is left, and the message names the steps that did not finish.
-	CodeTeardownIncomplete = "teardown_incomplete"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // SanitizeError converts any error into a client-safe JobError. Unknown errors
@@ -28,12 +12,12 @@ const (
 // not, because retrying cannot change the outcome.
 func SanitizeError(err error) domain.JobError {
 	if err == nil {
-		return domain.JobError{Code: CodeProvisioningFailed, Message: "operation failed", Retryable: true}
+		return domain.JobError{Code: ports.CodeProvisioningFailed, Message: "operation failed", Retryable: true}
 	}
 	var notImplemented *domain.NotImplementedError
 	if errors.As(err, &notImplemented) {
 		return domain.JobError{
-			Code:      CodeNotImplemented,
+			Code:      ports.CodeNotImplemented,
 			Message:   domain.SanitizeMessage(notImplemented.Error()),
 			Retryable: false,
 		}
@@ -41,7 +25,7 @@ func SanitizeError(err error) domain.JobError {
 	var invalid *domain.ValidationError
 	if errors.As(err, &invalid) {
 		return domain.JobError{
-			Code:      CodeInvalidRequest,
+			Code:      ports.CodeInvalidRequest,
 			Message:   domain.SanitizeMessage(invalid.Error()),
 			Retryable: false,
 		}
@@ -49,7 +33,7 @@ func SanitizeError(err error) domain.JobError {
 	var agent *domain.AgentNotRegisteredError
 	if errors.As(err, &agent) {
 		return domain.JobError{
-			Code:      CodeAgentUnavailable,
+			Code:      ports.CodeAgentUnavailable,
 			Message:   domain.SanitizeMessage(agent.Error()),
 			Retryable: false,
 		}
@@ -60,7 +44,7 @@ func SanitizeError(err error) domain.JobError {
 	var identityErr *domain.IdentityError
 	if errors.As(err, &identityErr) {
 		return domain.JobError{
-			Code:      CodeProvisioningFailed,
+			Code:      ports.CodeProvisioningFailed,
 			Message:   domain.SanitizeMessage(identityErr.Error()),
 			Retryable: false,
 		}
@@ -71,7 +55,7 @@ func SanitizeError(err error) domain.JobError {
 	var ambiguous *domain.AmbiguousOwnershipError
 	if errors.As(err, &ambiguous) {
 		return domain.JobError{
-			Code:      CodeProvisioningFailed,
+			Code:      ports.CodeProvisioningFailed,
 			Message:   domain.SanitizeMessage(ambiguous.Error()),
 			Retryable: false,
 		}
@@ -79,7 +63,7 @@ func SanitizeError(err error) domain.JobError {
 	var claim *domain.RoleClaimError
 	if errors.As(err, &claim) {
 		return domain.JobError{
-			Code:      CodeProvisioningFailed,
+			Code:      ports.CodeProvisioningFailed,
 			Message:   domain.SanitizeMessage(claim.Error()),
 			Retryable: false,
 		}
@@ -87,13 +71,13 @@ func SanitizeError(err error) domain.JobError {
 	var consumed *domain.WrapTokenConsumedError
 	if errors.As(err, &consumed) {
 		return domain.JobError{
-			Code:      CodeProvisioningFailed,
+			Code:      ports.CodeProvisioningFailed,
 			Message:   domain.SanitizeMessage(consumed.Error()),
 			Retryable: false,
 		}
 	}
 	return domain.JobError{
-		Code:      CodeProvisioningFailed,
+		Code:      ports.CodeProvisioningFailed,
 		Message:   domain.SanitizeMessage(err.Error()),
 		Retryable: true,
 	}

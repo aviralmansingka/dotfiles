@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -18,7 +18,7 @@ func TestCreateHostRendersTheApprovedBundlesForItsOwnHost(t *testing.T) {
 	t.Parallel()
 	harness := fakes.NewHarness(t)
 	accepted, err := harness.Service.CreateHost(context.Background(),
-		application.Principal{ClientID: "test-client"},
+		ports.Principal{ClientID: "test-client"},
 		"idem-key-0001",
 		domain.CreateHostRequest{
 			Provider: string(domain.ProviderAWS),

@@ -33,6 +33,7 @@ import (
 	temporaladapter "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/temporal"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/workflows"
 )
@@ -59,45 +60,45 @@ func (r *recorder) Steps() []string {
 
 // orderedAuthorizer records the OpenBao steps before delegating.
 type orderedAuthorizer struct {
-	inner application.HostAuthorizer
+	inner ports.HostAuthorizer
 	rec   *recorder
 	// failTokens and failCredentials inject a refusal at that step.
 	failTokens      error
 	failCredentials error
 }
 
-var _ application.HostAuthorizer = (*orderedAuthorizer)(nil)
+var _ ports.HostAuthorizer = (*orderedAuthorizer)(nil)
 
-func (o *orderedAuthorizer) AuthorizeHost(ctx context.Context, req application.AuthorizeRequest) error {
+func (o *orderedAuthorizer) AuthorizeHost(ctx context.Context, req ports.AuthorizeRequest) error {
 	return o.inner.AuthorizeHost(ctx, req)
 }
 
-func (o *orderedAuthorizer) RevokeTokens(ctx context.Context, req application.AuthorizeRequest) (application.TokenRevocation, error) {
+func (o *orderedAuthorizer) RevokeTokens(ctx context.Context, req ports.AuthorizeRequest) (ports.TokenRevocation, error) {
 	o.rec.add("openbao_tokens")
 	if o.failTokens != nil {
-		return application.TokenRevocation{}, o.failTokens
+		return ports.TokenRevocation{}, o.failTokens
 	}
 	return o.inner.RevokeTokens(ctx, req)
 }
 
-func (o *orderedAuthorizer) RevokeCredentials(ctx context.Context, req application.AuthorizeRequest) (application.CredentialRevocation, error) {
+func (o *orderedAuthorizer) RevokeCredentials(ctx context.Context, req ports.AuthorizeRequest) (ports.CredentialRevocation, error) {
 	o.rec.add("openbao_credentials")
 	if o.failCredentials != nil {
-		return application.CredentialRevocation{}, o.failCredentials
+		return ports.CredentialRevocation{}, o.failCredentials
 	}
 	return o.inner.RevokeCredentials(ctx, req)
 }
 
 // orderedTailnet records the device step before delegating.
 type orderedTailnet struct {
-	inner application.TailnetDeviceManager
+	inner ports.TailnetDeviceManager
 	rec   *recorder
 	fail  error
 }
 
-var _ application.TailnetDeviceManager = (*orderedTailnet)(nil)
+var _ ports.TailnetDeviceManager = (*orderedTailnet)(nil)
 
-func (o *orderedTailnet) RemoveDevice(ctx context.Context, req application.RemoveDeviceRequest) error {
+func (o *orderedTailnet) RemoveDevice(ctx context.Context, req ports.RemoveDeviceRequest) error {
 	o.rec.add("tailscale_device")
 	if o.fail != nil {
 		return o.fail
@@ -107,22 +108,22 @@ func (o *orderedTailnet) RemoveDevice(ctx context.Context, req application.Remov
 
 // orderedProvider records the provider step before delegating.
 type orderedProvider struct {
-	inner application.HostProvider
+	inner ports.HostProvider
 	rec   *recorder
 	fail  error
 }
 
-var _ application.HostProvider = (*orderedProvider)(nil)
+var _ ports.HostProvider = (*orderedProvider)(nil)
 
-func (o *orderedProvider) CreateHost(ctx context.Context, req application.ProviderCreateRequest) (application.ProviderResource, error) {
+func (o *orderedProvider) CreateHost(ctx context.Context, req ports.ProviderCreateRequest) (ports.ProviderResource, error) {
 	return o.inner.CreateHost(ctx, req)
 }
 
-func (o *orderedProvider) StatusHost(ctx context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+func (o *orderedProvider) StatusHost(ctx context.Context, req ports.ProviderStatusRequest) (ports.ProviderResourceStatus, error) {
 	return o.inner.StatusHost(ctx, req)
 }
 
-func (o *orderedProvider) DestroyHost(ctx context.Context, req application.ProviderDestroyRequest) error {
+func (o *orderedProvider) DestroyHost(ctx context.Context, req ports.ProviderDestroyRequest) error {
 	o.rec.add("terraform_resources")
 	if o.fail != nil {
 		return o.fail
@@ -186,14 +187,14 @@ func newDeleteFixture(t *testing.T) *deleteFixture {
 
 	// Two provider allocations and two joined devices, so the records hold the real
 	// identifiers a teardown consumes.
-	resource, err := f.provider.CreateHost(ctx, application.ProviderCreateRequest{
+	resource, err := f.provider.CreateHost(ctx, ports.ProviderCreateRequest{
 		HostID: targetHost, Name: targetName, Provider: domain.ProviderAWS,
 		Profile: "rex", Region: "ap-south-1", Size: "standard",
 	})
 	if err != nil {
 		t.Fatalf("create resource for %s: %v", targetHost, err)
 	}
-	foreignResource, err := f.provider.CreateHost(ctx, application.ProviderCreateRequest{
+	foreignResource, err := f.provider.CreateHost(ctx, ports.ProviderCreateRequest{
 		HostID: foreignHost, Name: foreignName, Provider: domain.ProviderAWS,
 		Profile: "rex", Region: "ap-south-1", Size: "standard",
 	})
@@ -211,7 +212,7 @@ func newDeleteFixture(t *testing.T) *deleteFixture {
 
 	for _, host := range []struct {
 		id, name, device string
-		resource         application.ProviderResource
+		resource         ports.ProviderResource
 	}{
 		{targetHost, targetName, f.targetDevice, resource},
 		{foreignHost, foreignName, f.foreignDev, foreignResource},
@@ -284,8 +285,8 @@ func newDeleteFixture(t *testing.T) *deleteFixture {
 }
 
 // authorizeRequestFor builds the revocation request for one host.
-func authorizeRequestFor(hostID, name string) application.AuthorizeRequest {
-	return application.AuthorizeRequest{
+func authorizeRequestFor(hostID, name string) ports.AuthorizeRequest {
+	return ports.AuthorizeRequest{
 		HostID:        hostID,
 		Name:          name,
 		Profile:       "rex",

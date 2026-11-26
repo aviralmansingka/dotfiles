@@ -1,4 +1,11 @@
-package application
+// Package ports holds the contracts the provision use cases require and the
+// values those contracts pass.
+//
+// It is a leaf: it imports the domain package and the standard library only. An
+// adapter implements a port from here, a use case in internal/application drives
+// one, and neither has to import the other. The values here carry references and
+// resolved shapes, never credential values.
+package ports
 
 import (
 	"context"
@@ -397,7 +404,7 @@ type AuthKeyRequest struct {
 // and JSON forms are redacted, so it cannot reach a log or a payload by accident.
 type AuthKey struct {
 	ID      string
-	Key     Secret
+	Key     domain.Secret
 	Expiry  time.Time
 	Tailnet string
 }
@@ -446,7 +453,7 @@ type SSMRunner interface {
 type SecureParameterRequest struct {
 	// Name is the parameter path, for example /fleet/enroll/rex-1/9f3c1d.
 	Name  string
-	Value Secret
+	Value domain.Secret
 }
 
 // SSMParameterStore holds the single-use parameter that carries an enrollment

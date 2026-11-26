@@ -2,28 +2,29 @@ package application
 
 import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // RedactingLogger decorates a Logger so that no credential shape can reach the
 // log sink even if a caller passes one by mistake.
 //
 // The service already refuses to log secret values by construction — ports carry
-// references, application.Secret renders as "[redacted]", and every error is
+// references, domain.Secret renders as "[redacted]", and every error is
 // sanitized before it becomes a JobError. This wrapper is the last line of that
 // defence: it runs the same scrubber over the message and every string, byte
 // slice, and error value, so a raw provider message, a URL with inline
 // credentials, or a base64 blob that reached a log call by accident is redacted
 // there rather than trusted to the caller.
 type RedactingLogger struct {
-	inner Logger
+	inner ports.Logger
 }
 
-var _ Logger = RedactingLogger{}
+var _ ports.Logger = RedactingLogger{}
 
 // NewRedactingLogger wraps inner. A nil inner yields a logger that drops lines:
 // there is no useful sink to write to, and silently forwarding would hide the
 // misconfiguration.
-func NewRedactingLogger(inner Logger) Logger {
+func NewRedactingLogger(inner ports.Logger) ports.Logger {
 	if inner == nil {
 		return NoopLogger{}
 	}

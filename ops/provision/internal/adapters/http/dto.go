@@ -3,8 +3,8 @@ package httpapi
 import (
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // createHostRequest is the complete accepted create body. Unknown JSON fields are
@@ -56,7 +56,7 @@ type jobResponse struct {
 	IncompleteCleanup []string `json:"incomplete_cleanup,omitempty"`
 }
 
-func toJobResponse(job application.JobView) jobResponse {
+func toJobResponse(job ports.JobView) jobResponse {
 	response := jobResponse{
 		JobID:             job.JobID,
 		HostID:            job.HostID,

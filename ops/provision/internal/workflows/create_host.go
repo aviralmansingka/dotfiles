@@ -9,6 +9,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const (
@@ -32,7 +33,7 @@ func activityOptions() workflow.ActivityOptions {
 			InitialInterval:        time.Second,
 			BackoffCoefficient:     2,
 			MaximumAttempts:        3,
-			NonRetryableErrorTypes: []string{application.CodeNotImplemented, FailureTypePermanent},
+			NonRetryableErrorTypes: []string{ports.CodeNotImplemented, FailureTypePermanent},
 		},
 	}
 }
@@ -195,7 +196,7 @@ func terminate(ctx workflow.Context, state Status, cause error) (Status, error) 
 		detached, _ := workflow.NewDisconnectedContext(ctx)
 		state.State = domain.JobCanceled
 		state.Error = &domain.JobError{
-			Code:      application.CodeCanceled,
+			Code:      ports.CodeCanceled,
 			Message:   "job canceled; anything already allocated stays owned and is not destroyed automatically",
 			Retryable: false,
 		}

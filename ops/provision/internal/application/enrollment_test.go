@@ -8,11 +8,12 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
-func enrollmentRequest() application.EnrollRequest {
-	return application.EnrollRequest{
+func enrollmentRequest() ports.EnrollRequest {
+	return ports.EnrollRequest{
 		HostID:         "host-0001",
 		Name:           "rex-1",
 		InstanceID:     "i-0123456789abcdef0",

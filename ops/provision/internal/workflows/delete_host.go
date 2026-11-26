@@ -10,6 +10,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // cleanupLog accumulates one outcome per teardown step. It is the workflow's
@@ -171,7 +172,7 @@ func partialTeardown(ctx workflow.Context, state Status) (Status, error) {
 	message := "teardown did not finish; incomplete cleanup: " + strings.Join(details, "; ")
 
 	jobErr := domain.JobError{
-		Code:      application.CodeTeardownIncomplete,
+		Code:      ports.CodeTeardownIncomplete,
 		Message:   message,
 		Retryable: true,
 	}

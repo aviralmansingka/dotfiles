@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/hostsession"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // IdentityBackend is an in-process fake of the OpenBao identity mechanics. It
@@ -19,10 +18,10 @@ import (
 // accessors rather than trusting the role deletion.
 type IdentityBackend struct {
 	mu        sync.Mutex
-	policies  map[string]application.IdentityPolicy
-	roles     map[string]application.IdentityRole
+	policies  map[string]ports.IdentityPolicy
+	roles     map[string]ports.IdentityRole
 	claims    map[string]string
-	tokens    map[string]application.TokenAccessorInfo
+	tokens    map[string]ports.TokenAccessorInfo
 	accessor  int
 	mints     []string
 	revoked   []string
@@ -36,14 +35,14 @@ type IdentityBackend struct {
 // NewIdentityBackend builds an empty backend.
 func NewIdentityBackend() *IdentityBackend {
 	return &IdentityBackend{
-		policies: map[string]application.IdentityPolicy{},
-		roles:    map[string]application.IdentityRole{},
+		policies: map[string]ports.IdentityPolicy{},
+		roles:    map[string]ports.IdentityRole{},
 		claims:   map[string]string{},
-		tokens:   map[string]application.TokenAccessorInfo{},
+		tokens:   map[string]ports.TokenAccessorInfo{},
 	}
 }
 
-var _ application.IdentityBackend = (*IdentityBackend)(nil)
+var _ ports.IdentityBackend = (*IdentityBackend)(nil)
 
 // FailWith makes every call fail.
 func (b *IdentityBackend) FailWith(err error) {
@@ -76,8 +75,8 @@ func (b *IdentityBackend) SeedRoleClaim(roleName, hostID string) {
 	b.claims[roleName] = hostID
 }
 
-// EnsurePolicy implements application.IdentityBackend.
-func (b *IdentityBackend) EnsurePolicy(_ context.Context, policy application.IdentityPolicy) error {
+// EnsurePolicy implements ports.IdentityBackend.
+func (b *IdentityBackend) EnsurePolicy(_ context.Context, policy ports.IdentityPolicy) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.err != nil {
@@ -87,15 +86,15 @@ func (b *IdentityBackend) EnsurePolicy(_ context.Context, policy application.Ide
 	return nil
 }
 
-// EnsureAppRole implements application.IdentityBackend.
-func (b *IdentityBackend) EnsureAppRole(_ context.Context, role application.IdentityRole) (application.IdentityRoleState, error) {
+// EnsureAppRole implements ports.IdentityBackend.
+func (b *IdentityBackend) EnsureAppRole(_ context.Context, role ports.IdentityRole) (ports.IdentityRoleState, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.err != nil {
-		return application.IdentityRoleState{}, b.err
+		return ports.IdentityRoleState{}, b.err
 	}
 	if claimed, ok := b.claims[role.Name]; ok && claimed != role.HostID {
-		return application.IdentityRoleState{}, &domain.RoleClaimError{
+		return ports.IdentityRoleState{}, &domain.RoleClaimError{
 			RoleName:    role.Name,
 			ClaimedHost: claimed,
 			RequestedBy: role.HostID,
@@ -103,7 +102,7 @@ func (b *IdentityBackend) EnsureAppRole(_ context.Context, role application.Iden
 	}
 	existing, exists := b.roles[role.Name]
 	if exists && existing.PolicyName != role.PolicyName {
-		return application.IdentityRoleState{}, &domain.RoleClaimError{
+		return ports.IdentityRoleState{}, &domain.RoleClaimError{
 			RoleName:    role.Name,
 			ClaimedHost: existing.HostID,
 			RequestedBy: role.HostID,
@@ -111,20 +110,20 @@ func (b *IdentityBackend) EnsureAppRole(_ context.Context, role application.Iden
 	}
 	b.claims[role.Name] = role.HostID
 	b.roles[role.Name] = role
-	return application.IdentityRoleState{Name: role.Name, HostID: role.HostID, Exists: exists}, nil
+	return ports.IdentityRoleState{Name: role.Name, HostID: role.HostID, Exists: exists}, nil
 }
 
-// MintWrappedSecretID implements application.IdentityBackend. It generates a
+// MintWrappedSecretID implements ports.IdentityBackend. It generates a
 // SecretID, keeps it on the fake's side, and returns only a wrapping token: the
 // caller never sees the value.
-func (b *IdentityBackend) MintWrappedSecretID(_ context.Context, roleName string, spec application.IdentityWrapSpec) (application.WrappedSecretID, error) {
+func (b *IdentityBackend) MintWrappedSecretID(_ context.Context, roleName string, spec ports.IdentityWrapSpec) (ports.WrappedSecretID, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.err != nil {
-		return application.WrappedSecretID{}, b.err
+		return ports.WrappedSecretID{}, b.err
 	}
 	if b.mintErr != nil {
-		return application.WrappedSecretID{}, b.mintErr
+		return ports.WrappedSecretID{}, b.mintErr
 	}
 	b.accessor++
 	ttl := spec.TTL
@@ -136,14 +135,14 @@ func (b *IdentityBackend) MintWrappedSecretID(_ context.Context, roleName string
 	if value == "" {
 		value = fmt.Sprintf("wrap-token-%s-%04d", roleName, b.accessor)
 	}
-	return application.WrappedSecretID{
-		WrapToken: application.NewSecret("fake:wrap-token", []byte(value)),
+	return ports.WrappedSecretID{
+		WrapToken: domain.NewSecret("fake:wrap-token", []byte(value)),
 		Accessor:  fmt.Sprintf("accessor-%04d", b.accessor),
 		TTL:       ttl,
 	}, nil
 }
 
-// DeleteAppRole implements application.IdentityBackend.
+// DeleteAppRole implements ports.IdentityBackend.
 func (b *IdentityBackend) DeleteAppRole(_ context.Context, roleName string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -155,7 +154,7 @@ func (b *IdentityBackend) DeleteAppRole(_ context.Context, roleName string) erro
 	return nil
 }
 
-// DeletePolicy implements application.IdentityBackend.
+// DeletePolicy implements ports.IdentityBackend.
 func (b *IdentityBackend) DeletePolicy(_ context.Context, name string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -166,7 +165,7 @@ func (b *IdentityBackend) DeletePolicy(_ context.Context, name string) error {
 	return nil
 }
 
-// ListTokenAccessors implements application.IdentityBackend.
+// ListTokenAccessors implements ports.IdentityBackend.
 func (b *IdentityBackend) ListTokenAccessors(_ context.Context) ([]string, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -189,23 +188,23 @@ func (b *IdentityBackend) ListTokenAccessors(_ context.Context) ([]string, error
 	return accessors, nil
 }
 
-// LookupTokenAccessor implements application.IdentityBackend. A token that is
+// LookupTokenAccessor implements ports.IdentityBackend. A token that is
 // gone is reported as not found rather than as an error, exactly as the real
 // server reports an expired token.
-func (b *IdentityBackend) LookupTokenAccessor(_ context.Context, accessor string) (application.TokenAccessorInfo, bool, error) {
+func (b *IdentityBackend) LookupTokenAccessor(_ context.Context, accessor string) (ports.TokenAccessorInfo, bool, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.err != nil {
-		return application.TokenAccessorInfo{}, false, b.err
+		return ports.TokenAccessorInfo{}, false, b.err
 	}
 	if b.lookupErr != nil {
-		return application.TokenAccessorInfo{}, false, b.lookupErr
+		return ports.TokenAccessorInfo{}, false, b.lookupErr
 	}
 	info, ok := b.tokens[accessor]
 	return info, ok, nil
 }
 
-// RevokeTokenAccessor implements application.IdentityBackend.
+// RevokeTokenAccessor implements ports.IdentityBackend.
 func (b *IdentityBackend) RevokeTokenAccessor(_ context.Context, accessor string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -228,7 +227,7 @@ func (b *IdentityBackend) IssueToken(policies ...string) string {
 	defer b.mu.Unlock()
 	b.accessor++
 	accessor := fmt.Sprintf("accessor-%04d", b.accessor)
-	b.tokens[accessor] = application.TokenAccessorInfo{
+	b.tokens[accessor] = ports.TokenAccessorInfo{
 		Accessor: accessor,
 		Policies: append([]string(nil), policies...),
 	}
@@ -289,7 +288,7 @@ func (b *IdentityBackend) FailListTokenAccessors(err error) {
 }
 
 // Policy returns the stored policy for a name.
-func (b *IdentityBackend) Policy(name string) (application.IdentityPolicy, bool) {
+func (b *IdentityBackend) Policy(name string) (ports.IdentityPolicy, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	policy, ok := b.policies[name]
@@ -304,7 +303,7 @@ func (b *IdentityBackend) PolicyNames() []string {
 }
 
 // Role returns the stored role for a name.
-func (b *IdentityBackend) Role(name string) (application.IdentityRole, bool) {
+func (b *IdentityBackend) Role(name string) (ports.IdentityRole, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	role, ok := b.roles[name]
@@ -344,7 +343,7 @@ func sortedKeys[V any](values map[string]V) []string {
 // an accidental format verb prints a placeholder.
 type Bootstrap struct {
 	mu         sync.Mutex
-	deliveries []application.BootstrapMaterial
+	deliveries []ports.BootstrapMaterial
 	paths      []string
 	err        error
 }
@@ -352,7 +351,7 @@ type Bootstrap struct {
 // NewBootstrap builds an empty fake delivery.
 func NewBootstrap() *Bootstrap { return &Bootstrap{} }
 
-var _ application.BootstrapDelivery = (*Bootstrap)(nil)
+var _ ports.BootstrapDelivery = (*Bootstrap)(nil)
 
 // FailWith makes every delivery fail.
 func (b *Bootstrap) FailWith(err error) {
@@ -361,8 +360,8 @@ func (b *Bootstrap) FailWith(err error) {
 	b.err = err
 }
 
-// DeliverBootstrap implements application.BootstrapDelivery.
-func (b *Bootstrap) DeliverBootstrap(_ context.Context, material application.BootstrapMaterial) (string, error) {
+// DeliverBootstrap implements ports.BootstrapDelivery.
+func (b *Bootstrap) DeliverBootstrap(_ context.Context, material ports.BootstrapMaterial) (string, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.err != nil {
@@ -375,10 +374,10 @@ func (b *Bootstrap) DeliverBootstrap(_ context.Context, material application.Boo
 }
 
 // Deliveries returns the delivered material.
-func (b *Bootstrap) Deliveries() []application.BootstrapMaterial {
+func (b *Bootstrap) Deliveries() []ports.BootstrapMaterial {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return append([]application.BootstrapMaterial(nil), b.deliveries...)
+	return append([]ports.BootstrapMaterial(nil), b.deliveries...)
 }
 
 // Paths returns the delivered paths.
@@ -418,7 +417,7 @@ func NewHostSessions() *HostSessions {
 	}
 }
 
-var _ hostsession.HostSessionClient = (*HostSessions)(nil)
+var _ ports.HostSessionClient = (*HostSessions)(nil)
 
 // IssueWrapToken registers a wrapping token that unwraps to a fake SecretID.
 func (h *HostSessions) IssueWrapToken(wrapToken string) {
@@ -462,81 +461,81 @@ func (h *HostSessions) FailUnwrap(err error) {
 	h.unwrapErr = err
 }
 
-// UnwrapSecretID implements hostsession.HostSessionClient. A wrapping token that
+// UnwrapSecretID implements ports.HostSessionClient. A wrapping token that
 // was already consumed is refused before anything else, which is the replay
 // guard.
-func (h *HostSessions) UnwrapSecretID(_ context.Context, wrapToken application.Secret) (application.Secret, error) {
+func (h *HostSessions) UnwrapSecretID(_ context.Context, wrapToken domain.Secret) (domain.Secret, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.err != nil {
-		return application.Secret{}, h.err
+		return domain.Secret{}, h.err
 	}
 	if h.unwrapErr != nil {
-		return application.Secret{}, h.unwrapErr
+		return domain.Secret{}, h.unwrapErr
 	}
 	value := string(wrapToken.Bytes())
 	if h.consumed[value] {
-		return application.Secret{}, &domain.WrapTokenConsumedError{}
+		return domain.Secret{}, &domain.WrapTokenConsumedError{}
 	}
 	secretID, ok := h.issued[value]
 	if !ok {
-		return application.Secret{}, fmt.Errorf("fake host sessions: unknown wrapping token")
+		return domain.Secret{}, fmt.Errorf("fake host sessions: unknown wrapping token")
 	}
 	h.consumed[value] = true
 	h.unwraps++
-	return application.NewSecret("fake:secret-id", []byte(secretID)), nil
+	return domain.NewSecret("fake:secret-id", []byte(secretID)), nil
 }
 
-// Login implements hostsession.HostSessionClient.
-func (h *HostSessions) Login(_ context.Context, roleID string, secretID application.Secret) (hostsession.HostSession, error) {
+// Login implements ports.HostSessionClient.
+func (h *HostSessions) Login(_ context.Context, roleID string, secretID domain.Secret) (ports.HostSession, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.err != nil {
-		return hostsession.HostSession{}, h.err
+		return ports.HostSession{}, h.err
 	}
 	if secretID.Empty() {
-		return hostsession.HostSession{}, fmt.Errorf("fake host sessions: login without a secret id")
+		return ports.HostSession{}, fmt.Errorf("fake host sessions: login without a secret id")
 	}
 	h.logins = append(h.logins, roleID)
 	h.issuesSession++
-	return hostsession.HostSession{
-		Token:     application.NewSecret("fake:session", []byte(fmt.Sprintf("session-token-%04d", h.issuesSession))),
+	return ports.HostSession{
+		Token:     domain.NewSecret("fake:session", []byte(fmt.Sprintf("session-token-%04d", h.issuesSession))),
 		TTL:       h.loginTTL,
 		Renewable: h.renewable,
 		Accessor:  fmt.Sprintf("token-accessor-%04d", h.issuesSession),
 	}, nil
 }
 
-// RenewSelf implements hostsession.HostSessionClient.
-func (h *HostSessions) RenewSelf(_ context.Context, token application.Secret) (hostsession.HostSession, error) {
+// RenewSelf implements ports.HostSessionClient.
+func (h *HostSessions) RenewSelf(_ context.Context, token domain.Secret) (ports.HostSession, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.err != nil {
-		return hostsession.HostSession{}, h.err
+		return ports.HostSession{}, h.err
 	}
 	if token.Empty() {
-		return hostsession.HostSession{}, fmt.Errorf("fake host sessions: renewal without a token")
+		return ports.HostSession{}, fmt.Errorf("fake host sessions: renewal without a token")
 	}
 	h.issuesSession++
-	return hostsession.HostSession{
-		Token:     application.NewSecret("fake:session", []byte(fmt.Sprintf("session-token-%04d", h.issuesSession))),
+	return ports.HostSession{
+		Token:     domain.NewSecret("fake:session", []byte(fmt.Sprintf("session-token-%04d", h.issuesSession))),
 		TTL:       h.renewTTL,
 		Renewable: h.renewable,
 		Accessor:  fmt.Sprintf("token-accessor-%04d", h.issuesSession),
 	}, nil
 }
 
-// RotateSecretID implements hostsession.HostSessionClient.
-func (h *HostSessions) RotateSecretID(_ context.Context, roleName, previousAccessor string) (application.WrappedSecretID, error) {
+// RotateSecretID implements ports.HostSessionClient.
+func (h *HostSessions) RotateSecretID(_ context.Context, roleName, previousAccessor string) (ports.WrappedSecretID, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.err != nil {
-		return application.WrappedSecretID{}, h.err
+		return ports.WrappedSecretID{}, h.err
 	}
 	h.rotations = append(h.rotations, roleName+"|"+previousAccessor)
 	h.accessors++
-	return application.WrappedSecretID{
-		WrapToken: application.NewSecret("fake:wrap-token", []byte(fmt.Sprintf("rotate-wrap-%04d", h.accessors))),
+	return ports.WrappedSecretID{
+		WrapToken: domain.NewSecret("fake:wrap-token", []byte(fmt.Sprintf("rotate-wrap-%04d", h.accessors))),
 		Accessor:  fmt.Sprintf("rotated-accessor-%04d", h.accessors),
 		TTL:       domain.BootstrapWrapTTL,
 	}, nil

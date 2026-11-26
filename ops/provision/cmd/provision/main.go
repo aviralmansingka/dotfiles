@@ -19,6 +19,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/config"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const defaultConfigPath = "/etc/fleet-provision/service.yaml"
@@ -69,7 +70,7 @@ func (l slogLogger) Info(msg string, kv ...any)  { l.logger.Info(msg, kv...) }
 func (l slogLogger) Warn(msg string, kv ...any)  { l.logger.Warn(msg, kv...) }
 func (l slogLogger) Error(msg string, kv ...any) { l.logger.Error(msg, kv...) }
 
-func newLogger(cfg config.Logging) application.Logger {
+func newLogger(cfg config.Logging) ports.Logger {
 	level := slog.LevelInfo
 	switch strings.ToLower(cfg.Level) {
 	case "debug":
@@ -95,7 +96,7 @@ type loaded struct {
 	catalog  domain.Catalog
 	store    *jsonstore.Store
 	tokens   *tokenstore.File
-	log      application.Logger
+	log      ports.Logger
 	temporal client.Client
 }
 

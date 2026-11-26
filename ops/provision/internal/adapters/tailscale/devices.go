@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // deviceStateRegistered is reported for a device that exists in the tailnet but
@@ -20,8 +20,8 @@ type Devices struct {
 }
 
 var (
-	_ application.DeviceLookup         = (*Devices)(nil)
-	_ application.TailnetDeviceManager = (*Devices)(nil)
+	_ ports.DeviceLookup         = (*Devices)(nil)
+	_ ports.TailnetDeviceManager = (*Devices)(nil)
 )
 
 // NewDevices builds the device lookup adapter.
@@ -43,43 +43,43 @@ type deviceListResponse struct {
 	} `json:"devices"`
 }
 
-// LookupDevice implements application.DeviceLookup.
+// LookupDevice implements ports.DeviceLookup.
 //
 // The match is exact on the host name and requires the approved tag, so a device
 // that belongs to another profile — or another fleet — is never mistaken for this
 // host.
-func (d *Devices) LookupDevice(ctx context.Context, query application.DeviceQuery) (application.TailnetDevice, bool, error) {
+func (d *Devices) LookupDevice(ctx context.Context, query ports.DeviceQuery) (ports.TailnetDevice, bool, error) {
 	if err := domain.ValidateHostName(query.HostName); err != nil {
-		return application.TailnetDevice{}, false, err
+		return ports.TailnetDevice{}, false, err
 	}
 	if err := domain.ValidateTailnetTag(query.Tag); err != nil {
-		return application.TailnetDevice{}, false, err
+		return ports.TailnetDevice{}, false, err
 	}
 
 	token, err := d.api.token(ctx)
 	if err != nil {
-		return application.TailnetDevice{}, false, err
+		return ports.TailnetDevice{}, false, err
 	}
 	defer token.Destroy()
 
 	var reply deviceListResponse
 	path := fmt.Sprintf("/api/v2/tailnet/%s/devices", d.api.tailnet)
 	if err := d.api.call(ctx, token, "GET", path, nil, &reply); err != nil {
-		return application.TailnetDevice{}, false, err
+		return ports.TailnetDevice{}, false, err
 	}
 
 	for _, device := range reply.Devices {
 		if !deviceMatches(device.Name, query.HostName) && !deviceMatches(device.Hostname, query.HostName) {
 			continue
 		}
-		found := application.TailnetDevice{
+		found := ports.TailnetDevice{
 			ID:    device.ID,
 			Name:  firstNonEmpty(device.Name, device.Hostname),
 			State: deviceStateRegistered,
 			Tags:  append([]string(nil), device.Tags...),
 		}
 		if device.ConnectedToControl {
-			found.State = application.TailnetDeviceStateRunning
+			found.State = ports.TailnetDeviceStateRunning
 		}
 		if !found.HasTag(query.Tag) {
 			// Same name, wrong tag: not this host. Reporting it would let a retry
@@ -88,7 +88,7 @@ func (d *Devices) LookupDevice(ctx context.Context, query application.DeviceQuer
 		}
 		return found, true, nil
 	}
-	return application.TailnetDevice{}, false, nil
+	return ports.TailnetDevice{}, false, nil
 }
 
 // deviceMatches compares a device name to the host name, ignoring the tailnet
@@ -104,7 +104,7 @@ func deviceMatches(candidate, hostName string) bool {
 	return found && base == hostName
 }
 
-// RemoveDevice implements application.TailnetDeviceManager: DELETE
+// RemoveDevice implements ports.TailnetDeviceManager: DELETE
 // /api/v2/device/<id>.
 //
 // It removes exactly the recorded device and nothing else. The id comes from the
@@ -115,7 +115,7 @@ func deviceMatches(candidate, hostName string) bool {
 // retried teardown must not fail because the first attempt already did the work. A
 // record with no device id is refused rather than guessed at — a name lookup could
 // match a node this host does not own.
-func (d *Devices) RemoveDevice(ctx context.Context, req application.RemoveDeviceRequest) error {
+func (d *Devices) RemoveDevice(ctx context.Context, req ports.RemoveDeviceRequest) error {
 	if strings.TrimSpace(req.DeviceID) == "" {
 		return &domain.AmbiguousOwnershipError{
 			HostID: req.HostID,

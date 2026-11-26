@@ -8,7 +8,8 @@ import (
 	"testing"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssm"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 func newParameterStore(t *testing.T, executor *fakeExecutor) *ssm.ParameterStore {
@@ -30,9 +31,9 @@ func TestPutSecureParameterKeepsTheValueOutOfArgv(t *testing.T) {
 	t.Parallel()
 	executor := &fakeExecutor{}
 	store := newParameterStore(t, executor)
-	if err := store.PutSecureParameter(context.Background(), application.SecureParameterRequest{
+	if err := store.PutSecureParameter(context.Background(), ports.SecureParameterRequest{
 		Name:  parameterPath,
-		Value: application.NewSecret("tailscale:authkey", []byte(fakeAuthKey)),
+		Value: domain.NewSecret("tailscale:authkey", []byte(fakeAuthKey)),
 	}); err != nil {
 		t.Fatalf("PutSecureParameter: %v", err)
 	}
@@ -91,9 +92,9 @@ func TestPutSecureParameterRefusesAnEmptyKey(t *testing.T) {
 	t.Parallel()
 	executor := &fakeExecutor{}
 	store := newParameterStore(t, executor)
-	err := store.PutSecureParameter(context.Background(), application.SecureParameterRequest{
+	err := store.PutSecureParameter(context.Background(), ports.SecureParameterRequest{
 		Name:  parameterPath,
-		Value: application.NewSecret("tailscale:authkey", nil),
+		Value: domain.NewSecret("tailscale:authkey", nil),
 	})
 	if err == nil {
 		t.Fatal("PutSecureParameter must refuse an empty key")
@@ -110,9 +111,9 @@ func TestPutSecureParameterRefusesAnUnsafePath(t *testing.T) {
 	executor := &fakeExecutor{}
 	store := newParameterStore(t, executor)
 	for _, name := range []string{"", "/fleet/enroll/rex-1/../x", "/fleet/enroll/rex'1/abc", "fleet/enroll"} {
-		err := store.PutSecureParameter(context.Background(), application.SecureParameterRequest{
+		err := store.PutSecureParameter(context.Background(), ports.SecureParameterRequest{
 			Name:  name,
-			Value: application.NewSecret("tailscale:authkey", []byte(fakeAuthKey)),
+			Value: domain.NewSecret("tailscale:authkey", []byte(fakeAuthKey)),
 		})
 		if err == nil {
 			t.Fatalf("PutSecureParameter accepted %q", name)
@@ -169,9 +170,9 @@ func TestPutSecureParameterNamesTheAWSManagedKey(t *testing.T) {
 	t.Parallel()
 	executor := &fakeExecutor{}
 	store := newParameterStore(t, executor)
-	if err := store.PutSecureParameter(context.Background(), application.SecureParameterRequest{
+	if err := store.PutSecureParameter(context.Background(), ports.SecureParameterRequest{
 		Name:  parameterPath,
-		Value: application.NewSecret("tailscale:authkey", []byte(fakeAuthKey)),
+		Value: domain.NewSecret("tailscale:authkey", []byte(fakeAuthKey)),
 	}); err != nil {
 		t.Fatalf("PutSecureParameter: %v", err)
 	}

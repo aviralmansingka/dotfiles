@@ -14,6 +14,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/store/jsonstore"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/workflows"
 )
@@ -34,10 +35,10 @@ func TestBootstrapFileIsOwnerOnlyAndOutsideTheRecordStores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewBootstrapWriter: %v", err)
 	}
-	path, err := writer.DeliverBootstrap(context.Background(), application.BootstrapMaterial{
+	path, err := writer.DeliverBootstrap(context.Background(), ports.BootstrapMaterial{
 		HostID:  "host-0001",
 		RoleID:  "fleet-host-host-0001",
-		WrapTok: application.NewSecret("test:wrapping-token", []byte(canarySentinel)),
+		WrapTok: domain.NewSecret("test:wrapping-token", []byte(canarySentinel)),
 		TTL:     domain.BootstrapWrapTTL,
 	})
 	if err != nil {
@@ -124,7 +125,7 @@ func TestBootstrapTokenNeverReachesArgvLogsStateOrJobRecords(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewIdentityService: %v", err)
 	}
-	req := application.AuthorizeRequest{
+	req := ports.AuthorizeRequest{
 		HostID:        "host-0001",
 		Name:          "canary-01",
 		Profile:       "rex",
@@ -163,7 +164,7 @@ func TestBootstrapTokenNeverReachesArgvLogsStateOrJobRecords(t *testing.T) {
 		t.Fatalf("marshal workflow status: %v", err)
 	}
 	assertNoSentinel(t, "workflow status", string(statusPayload))
-	viewPayload, err := json.Marshal(application.JobView{JobID: "create-host-0001", HostID: req.HostID})
+	viewPayload, err := json.Marshal(ports.JobView{JobID: "create-host-0001", HostID: req.HostID})
 	if err != nil {
 		t.Fatalf("marshal job view: %v", err)
 	}

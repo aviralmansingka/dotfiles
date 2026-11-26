@@ -9,8 +9,8 @@ package terraform
 import (
 	"context"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // Stub refuses every provider operation. It exists so the workflow, activity,
@@ -21,26 +21,26 @@ type Stub struct{}
 // NewStub builds the provider stub.
 func NewStub() *Stub { return &Stub{} }
 
-var _ application.HostProvider = (*Stub)(nil)
+var _ ports.HostProvider = (*Stub)(nil)
 
-// CreateHost implements application.HostProvider by refusing.
-func (*Stub) CreateHost(_ context.Context, _ application.ProviderCreateRequest) (application.ProviderResource, error) {
-	return application.ProviderResource{}, &domain.NotImplementedError{
+// CreateHost implements ports.HostProvider by refusing.
+func (*Stub) CreateHost(_ context.Context, _ ports.ProviderCreateRequest) (ports.ProviderResource, error) {
+	return ports.ProviderResource{}, &domain.NotImplementedError{
 		Component: "terraform aws provider stub",
 		Step:      "compose the real AWS provider (terraform.NewAWS) instead",
 	}
 }
 
-// StatusHost implements application.HostProvider by refusing.
-func (*Stub) StatusHost(_ context.Context, _ application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
-	return application.ProviderResourceStatus{}, &domain.NotImplementedError{
+// StatusHost implements ports.HostProvider by refusing.
+func (*Stub) StatusHost(_ context.Context, _ ports.ProviderStatusRequest) (ports.ProviderResourceStatus, error) {
+	return ports.ProviderResourceStatus{}, &domain.NotImplementedError{
 		Component: "terraform aws provider stub",
 		Step:      "compose the real AWS provider (terraform.NewAWS) instead",
 	}
 }
 
-// DestroyHost implements application.HostProvider by refusing.
-func (*Stub) DestroyHost(_ context.Context, _ application.ProviderDestroyRequest) error {
+// DestroyHost implements ports.HostProvider by refusing.
+func (*Stub) DestroyHost(_ context.Context, _ ports.ProviderDestroyRequest) error {
 	return &domain.NotImplementedError{
 		Component: "terraform aws provider stub",
 		Step:      "compose the real AWS provider (terraform.NewAWS) instead",

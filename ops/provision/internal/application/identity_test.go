@@ -9,6 +9,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -40,8 +41,8 @@ func newIdentityHarness(t *testing.T) *identityHarness {
 	return h
 }
 
-func authorizeRequest(hostID, name string) application.AuthorizeRequest {
-	return application.AuthorizeRequest{
+func authorizeRequest(hostID, name string) ports.AuthorizeRequest {
+	return ports.AuthorizeRequest{
 		HostID:        hostID,
 		Name:          name,
 		Profile:       "rex",
@@ -56,7 +57,7 @@ func TestAuthorizeHostCreatesOneRoleAndPolicyPerHost(t *testing.T) {
 	t.Parallel()
 	h := newIdentityHarness(t)
 	ctx := context.Background()
-	for _, req := range []application.AuthorizeRequest{
+	for _, req := range []ports.AuthorizeRequest{
 		authorizeRequest("host-0001", "canary-01"),
 		authorizeRequest("host-0002", "canary-02"),
 	} {

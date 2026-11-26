@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // maxResponseBytes bounds a KV reply.
@@ -43,15 +43,15 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// SecretSource implements application.SecretSource against OpenBao's KV API.
+// SecretSource implements ports.SecretSource against OpenBao's KV API.
 type SecretSource struct {
 	address   string
 	namespace string
-	token     application.Secret
+	token     domain.Secret
 	http      HTTPClient
 }
 
-var _ application.SecretSource = (*SecretSource)(nil)
+var _ ports.SecretSource = (*SecretSource)(nil)
 
 // NewSecretSource reads the access token file once and builds the source.
 func NewSecretSource(cfg SecretSourceConfig) (*SecretSource, error) {
@@ -90,31 +90,31 @@ func NewSecretSource(cfg SecretSourceConfig) (*SecretSource, error) {
 		address:   address,
 		namespace: cfg.Namespace,
 		// The token is held as a Secret: %v, %#v, and JSON all render a placeholder.
-		token: application.NewSecret("openbao:access-token", []byte(token)),
+		token: domain.NewSecret("openbao:access-token", []byte(token)),
 		http:  client,
 	}, nil
 }
 
-// FetchSecret implements application.SecretSource.
+// FetchSecret implements ports.SecretSource.
 //
 // The reference is `bao:<kv-path>`; the scheme prefix is stripped and the rest is
 // appended to /v1/. The token travels in a header, so it is never in a URL, a log
 // line, or an argument.
-func (s *SecretSource) FetchSecret(ctx context.Context, ref string) (application.Secret, error) {
+func (s *SecretSource) FetchSecret(ctx context.Context, ref string) (domain.Secret, error) {
 	if err := domain.ValidateSecretRef(ref); err != nil {
-		return application.Secret{}, err
+		return domain.Secret{}, err
 	}
 	scheme, kvPath, found := strings.Cut(ref, ":")
 	if !found || kvPath == "" {
-		return application.Secret{}, domain.Invalid("secret_ref", "must be scheme:path")
+		return domain.Secret{}, domain.Invalid("secret_ref", "must be scheme:path")
 	}
 	if scheme != "bao" {
-		return application.Secret{}, domain.Invalid("secret_ref", fmt.Sprintf("scheme %q is not supported", scheme))
+		return domain.Secret{}, domain.Invalid("secret_ref", fmt.Sprintf("scheme %q is not supported", scheme))
 	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, s.address+"/v1/"+strings.TrimLeft(kvPath, "/"), nil)
 	if err != nil {
-		return application.Secret{}, fmt.Errorf("openbao: build request: %w", err)
+		return domain.Secret{}, fmt.Errorf("openbao: build request: %w", err)
 	}
 	request.Header.Set("X-Vault-Token", string(s.token.Bytes()))
 	request.Header.Set("Accept", "application/json")
@@ -124,24 +124,24 @@ func (s *SecretSource) FetchSecret(ctx context.Context, ref string) (application
 
 	response, err := s.http.Do(request)
 	if err != nil {
-		return application.Secret{}, fmt.Errorf("openbao: read %s: %w", kvPath, err)
+		return domain.Secret{}, fmt.Errorf("openbao: read %s: %w", kvPath, err)
 	}
 	defer func() { _ = response.Body.Close() }()
 	payload, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
 	if err != nil {
-		return application.Secret{}, fmt.Errorf("openbao: read %s: %w", kvPath, err)
+		return domain.Secret{}, fmt.Errorf("openbao: read %s: %w", kvPath, err)
 	}
 	if response.StatusCode != http.StatusOK {
 		// A failure body is quoted only after sanitizing: it can echo the request.
-		return application.Secret{}, fmt.Errorf("openbao: read %s: status %d: %s",
+		return domain.Secret{}, fmt.Errorf("openbao: read %s: status %d: %s",
 			kvPath, response.StatusCode, domain.SanitizeMessage(string(payload)))
 	}
 
 	value, err := extractValue(payload)
 	if err != nil {
-		return application.Secret{}, fmt.Errorf("openbao: read %s: %w", kvPath, err)
+		return domain.Secret{}, fmt.Errorf("openbao: read %s: %w", kvPath, err)
 	}
-	return application.NewSecret(ref, []byte(value)), nil
+	return domain.NewSecret(ref, []byte(value)), nil
 }
 
 // extractValue reads the credential field from a KV v2 (data.data.value) or KV v1

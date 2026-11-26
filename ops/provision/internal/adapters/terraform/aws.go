@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const (
@@ -121,7 +121,7 @@ type AWS struct {
 	locker        KeyedLocker
 }
 
-var _ application.HostProvider = (*AWS)(nil)
+var _ ports.HostProvider = (*AWS)(nil)
 
 // NewAWS validates the configuration and builds the provider. A configuration
 // error here is fatal at worker start: an unusable provider must never look
@@ -232,39 +232,39 @@ func ResourceName(hostName string) string {
 // safely: a state object that already records an instance is returned as is,
 // so a retried request yields one instance and one state path rather than a
 // second host.
-func (a *AWS) CreateHost(ctx context.Context, req application.ProviderCreateRequest) (application.ProviderResource, error) {
+func (a *AWS) CreateHost(ctx context.Context, req ports.ProviderCreateRequest) (ports.ProviderResource, error) {
 	plan, err := a.resolve(req.Name, req.Provider, req.Profile, req.Region, req.Size, req.InstanceType, req.DiskGB, req.Tags)
 	if err != nil {
-		return application.ProviderResource{}, err
+		return ports.ProviderResource{}, err
 	}
 
 	unlock := a.locker.Lock(hostLockKey(plan.name), stateLockKey(plan.stateKey))
 	defer unlock()
 
 	if err := a.prepare(plan); err != nil {
-		return application.ProviderResource{}, err
+		return ports.ProviderResource{}, err
 	}
 	if _, err := a.invoke(ctx, plan, a.initArgs(plan)...); err != nil {
-		return application.ProviderResource{}, err
+		return ports.ProviderResource{}, err
 	}
 
 	existing, recorded, err := a.recorded(ctx, plan)
 	if err != nil {
-		return application.ProviderResource{}, err
+		return ports.ProviderResource{}, err
 	}
 	if recorded {
 		return existing, nil
 	}
 
 	if _, err := a.invoke(ctx, plan, a.applyArgs(plan)...); err != nil {
-		return application.ProviderResource{}, err
+		return ports.ProviderResource{}, err
 	}
 	created, recorded, err := a.recorded(ctx, plan)
 	if err != nil {
-		return application.ProviderResource{}, err
+		return ports.ProviderResource{}, err
 	}
 	if !recorded || created.ResourceID == "" {
-		return application.ProviderResource{}, fmt.Errorf("terraform: apply for host %q recorded no instance id", plan.name)
+		return ports.ProviderResource{}, fmt.Errorf("terraform: apply for host %q recorded no instance id", plan.name)
 	}
 	return created, nil
 }
@@ -276,36 +276,36 @@ func (a *AWS) CreateHost(ctx context.Context, req application.ProviderCreateRequ
 // A state object with no instance is reported as not existing rather than as an
 // error, because that is the normal answer for a host that was never applied or
 // has already been destroyed.
-func (a *AWS) StatusHost(ctx context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
+func (a *AWS) StatusHost(ctx context.Context, req ports.ProviderStatusRequest) (ports.ProviderResourceStatus, error) {
 	plan, err := a.resolve(req.Name, req.Provider, req.Profile, req.Region, req.Size, "", 0, nil)
 	if err != nil {
-		return application.ProviderResourceStatus{}, err
+		return ports.ProviderResourceStatus{}, err
 	}
 
 	unlock := a.locker.Lock(hostLockKey(plan.name), stateLockKey(plan.stateKey))
 	defer unlock()
 
 	if err := a.prepare(plan); err != nil {
-		return application.ProviderResourceStatus{}, err
+		return ports.ProviderResourceStatus{}, err
 	}
 	if _, err := a.invoke(ctx, plan, a.initArgs(plan)...); err != nil {
-		return application.ProviderResourceStatus{}, err
+		return ports.ProviderResourceStatus{}, err
 	}
 	existing, recorded, err := a.recorded(ctx, plan)
 	if err != nil {
-		return application.ProviderResourceStatus{}, err
+		return ports.ProviderResourceStatus{}, err
 	}
 	if !recorded {
-		return application.ProviderResourceStatus{Exists: false}, nil
+		return ports.ProviderResourceStatus{Exists: false}, nil
 	}
 	// The state names a different instance than the record does. Reporting it as
 	// this host's resource would let a teardown destroy somebody else's machine.
 	if req.ResourceID != "" && existing.ResourceID != req.ResourceID {
-		return application.ProviderResourceStatus{}, fmt.Errorf(
+		return ports.ProviderResourceStatus{}, fmt.Errorf(
 			"terraform: host %q state holds instance %q, not the recorded %q; refusing to report it as this host's resource",
 			plan.name, existing.ResourceID, req.ResourceID)
 	}
-	return application.ProviderResourceStatus{
+	return ports.ProviderResourceStatus{
 		Exists:         true,
 		ResourceID:     existing.ResourceID,
 		PrivateAddress: existing.PrivateAddress,
@@ -319,7 +319,7 @@ func (a *AWS) StatusHost(ctx context.Context, req application.ProviderStatusRequ
 // sibling host, the long-lived Mumbai host, and every account-level object are
 // out of reach. A state that records a different instance than the inventory
 // does is refused rather than destroyed.
-func (a *AWS) DestroyHost(ctx context.Context, req application.ProviderDestroyRequest) error {
+func (a *AWS) DestroyHost(ctx context.Context, req ports.ProviderDestroyRequest) error {
 	plan, err := a.resolve(req.Name, req.Provider, req.Profile, req.Region, req.Size, "", 0, nil)
 	if err != nil {
 		return err
@@ -466,20 +466,20 @@ func (a *AWS) prepare(plan hostPlan) error {
 // outputs, is reported as "not recorded" rather than as an error: that is
 // exactly what a first create looks like. A real failure surfaces on the apply
 // or destroy that follows.
-func (a *AWS) recorded(ctx context.Context, plan hostPlan) (application.ProviderResource, bool, error) {
+func (a *AWS) recorded(ctx context.Context, plan hostPlan) (ports.ProviderResource, bool, error) {
 	result, err := a.invoke(ctx, plan, "output", "-json")
 	if err != nil {
-		return application.ProviderResource{}, false, nil
+		return ports.ProviderResource{}, false, nil
 	}
 	var outputs map[string]stateOutput
 	if err := json.Unmarshal([]byte(result.Stdout), &outputs); err != nil {
-		return application.ProviderResource{}, false, fmt.Errorf("terraform: host %q: unreadable state output: %w", plan.name, err)
+		return ports.ProviderResource{}, false, fmt.Errorf("terraform: host %q: unreadable state output: %w", plan.name, err)
 	}
 	id := outputString(outputs, "instance_id")
 	if id == "" {
-		return application.ProviderResource{}, false, nil
+		return ports.ProviderResource{}, false, nil
 	}
-	return application.ProviderResource{ResourceID: id, PrivateAddress: outputString(outputs, "private_ip")}, true, nil
+	return ports.ProviderResource{ResourceID: id, PrivateAddress: outputString(outputs, "private_ip")}, true, nil
 }
 
 // stateOutput is one entry of `terraform output -json`.

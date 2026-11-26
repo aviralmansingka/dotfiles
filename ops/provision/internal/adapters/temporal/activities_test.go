@@ -8,8 +8,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 
 	temporaladapter "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/temporal"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/workflows"
 )
@@ -18,15 +18,15 @@ const testInstanceID = "i-0123456789abcdef0"
 
 // fakeProbe answers the agent check without a control plane.
 type fakeProbe struct {
-	status application.SSMAgentStatus
+	status ports.SSMAgentStatus
 	err    error
 	calls  int
 }
 
-func (f *fakeProbe) AwaitRegistration(_ context.Context, _ string) (application.SSMAgentStatus, error) {
+func (f *fakeProbe) AwaitRegistration(_ context.Context, _ string) (ports.SSMAgentStatus, error) {
 	f.calls++
 	if f.err != nil {
-		return application.SSMAgentStatus{}, f.err
+		return ports.SSMAgentStatus{}, f.err
 	}
 	return f.status, nil
 }
@@ -35,7 +35,7 @@ func (f *fakeProbe) AwaitRegistration(_ context.Context, _ string) (application.
 // activity, and its answer is what the workflow history keeps.
 func TestCheckSSMAgentIsAnExplicitGateWithARecordedAnswer(t *testing.T) {
 	t.Parallel()
-	probe := &fakeProbe{status: application.SSMAgentStatus{
+	probe := &fakeProbe{status: ports.SSMAgentStatus{
 		InstanceID: testInstanceID,
 		PingStatus: "Online",
 		Online:     true,
@@ -85,8 +85,8 @@ func TestCheckSSMAgentFailsTheJobPermanentlyWithoutSSH(t *testing.T) {
 	if !asApplicationError(err, &appErr) {
 		t.Fatalf("error is not a Temporal application error: %v", err)
 	}
-	if appErr.Type() != application.CodeAgentUnavailable {
-		t.Fatalf("error type = %q, want %q", appErr.Type(), application.CodeAgentUnavailable)
+	if appErr.Type() != ports.CodeAgentUnavailable {
+		t.Fatalf("error type = %q, want %q", appErr.Type(), ports.CodeAgentUnavailable)
 	}
 	if !appErr.NonRetryable() {
 		t.Fatal("an unregistered agent must be non-retryable")

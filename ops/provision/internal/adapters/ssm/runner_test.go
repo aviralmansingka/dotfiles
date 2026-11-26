@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/ssm"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // invocationJSON builds a get-command-invocation reply, so the embedded output is
@@ -56,7 +56,7 @@ func TestRunCommandSendsByInstanceIDAndReadsTheInvocation(t *testing.T) {
 		return ssm.Result{Stdout: invocationJSON("Success", 0, nodeStatusJSON, "")}, nil
 	}}
 	runner := newRunner(t, executor)
-	result, err := runner.RunCommand(context.Background(), application.SSMRunRequest{
+	result, err := runner.RunCommand(context.Background(), ports.SSMRunRequest{
 		InstanceID: instanceID,
 		Comment:    instanceID,
 		Command:    "set -eu\nset +x\ntailscale status --json\n",
@@ -127,7 +127,7 @@ func TestRunCommandPollsUntilTheInvocationIsTerminal(t *testing.T) {
 		return ssm.Result{Stdout: invocationJSON(status, 0, "{}", "")}, nil
 	}}
 	runner := newRunner(t, executor)
-	if _, err := runner.RunCommand(context.Background(), application.SSMRunRequest{
+	if _, err := runner.RunCommand(context.Background(), ports.SSMRunRequest{
 		InstanceID: instanceID,
 		Comment:    instanceID,
 		Command:    "true",
@@ -154,7 +154,7 @@ func TestRunCommandToleratesAnInvocationThatDoesNotExistYet(t *testing.T) {
 		}
 	}}
 	runner := newRunner(t, executor)
-	if _, err := runner.RunCommand(context.Background(), application.SSMRunRequest{
+	if _, err := runner.RunCommand(context.Background(), ports.SSMRunRequest{
 		InstanceID: instanceID,
 		Comment:    instanceID,
 		Command:    "true",
@@ -183,7 +183,7 @@ func TestRunCommandRefusesAReplyForAnotherCommandOrInstance(t *testing.T) {
 				return ssm.Result{Stdout: reply}, nil
 			}}
 			runner := newRunner(t, executor)
-			_, err := runner.RunCommand(context.Background(), application.SSMRunRequest{
+			_, err := runner.RunCommand(context.Background(), ports.SSMRunRequest{
 				InstanceID: instanceID,
 				Comment:    instanceID,
 				Command:    "true",
@@ -206,7 +206,7 @@ func TestRunCommandReportsATerminalFailure(t *testing.T) {
 		return ssm.Result{Stdout: invocationJSON("Failed", 1, "", "tailscale: boom")}, nil
 	}}
 	runner := newRunner(t, executor)
-	result, err := runner.RunCommand(context.Background(), application.SSMRunRequest{
+	result, err := runner.RunCommand(context.Background(), ports.SSMRunRequest{
 		InstanceID: instanceID,
 		Comment:    instanceID,
 		Command:    "true",
@@ -228,10 +228,10 @@ func TestRunCommandRefusesAnEmptyCommandOrABadInstanceID(t *testing.T) {
 	t.Parallel()
 	executor := &fakeExecutor{}
 	runner := newRunner(t, executor)
-	if _, err := runner.RunCommand(context.Background(), application.SSMRunRequest{InstanceID: instanceID}); err == nil {
+	if _, err := runner.RunCommand(context.Background(), ports.SSMRunRequest{InstanceID: instanceID}); err == nil {
 		t.Fatal("RunCommand must refuse an empty command")
 	}
-	if _, err := runner.RunCommand(context.Background(), application.SSMRunRequest{InstanceID: "rex-1", Command: "true"}); err == nil {
+	if _, err := runner.RunCommand(context.Background(), ports.SSMRunRequest{InstanceID: "rex-1", Command: "true"}); err == nil {
 		t.Fatal("RunCommand must refuse a non-instance-id target")
 	}
 	if len(executor.calls) != 0 {

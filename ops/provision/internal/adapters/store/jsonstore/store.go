@@ -16,16 +16,16 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 const schemaVersion = 1
 
 type snapshot struct {
-	Version int                             `json:"version"`
-	Hosts   []domain.Host                   `json:"hosts"`
-	Ledger  []application.IdempotencyRecord `json:"idempotency"`
+	Version int                       `json:"version"`
+	Hosts   []domain.Host             `json:"hosts"`
+	Ledger  []ports.IdempotencyRecord `json:"idempotency"`
 }
 
 // Store is the durable inventory and ledger.
@@ -44,7 +44,7 @@ func Open(path string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, fmt.Errorf("jsonstore: create directory: %w", err)
 	}
-	store := &Store{path: path, data: snapshot{Version: schemaVersion, Hosts: []domain.Host{}, Ledger: []application.IdempotencyRecord{}}}
+	store := &Store{path: path, data: snapshot{Version: schemaVersion, Hosts: []domain.Host{}, Ledger: []ports.IdempotencyRecord{}}}
 	raw, err := os.ReadFile(path)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
@@ -65,7 +65,7 @@ func Open(path string) (*Store, error) {
 		store.data.Hosts = []domain.Host{}
 	}
 	if store.data.Ledger == nil {
-		store.data.Ledger = []application.IdempotencyRecord{}
+		store.data.Ledger = []ports.IdempotencyRecord{}
 	}
 	return store, nil
 }
@@ -73,7 +73,7 @@ func Open(path string) (*Store, error) {
 // Path reports the backing file.
 func (s *Store) Path() string { return s.path }
 
-// CreateHost implements application.HostInventory.
+// CreateHost implements ports.HostInventory.
 func (s *Store) CreateHost(_ context.Context, host domain.Host) (domain.Host, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -87,7 +87,7 @@ func (s *Store) CreateHost(_ context.Context, host domain.Host) (domain.Host, bo
 	return host.Clone(), true, nil
 }
 
-// GetHost implements application.HostInventory.
+// GetHost implements ports.HostInventory.
 func (s *Store) GetHost(_ context.Context, id string) (domain.Host, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -98,7 +98,7 @@ func (s *Store) GetHost(_ context.Context, id string) (domain.Host, error) {
 	return host.Clone(), nil
 }
 
-// ListHosts implements application.HostInventory.
+// ListHosts implements ports.HostInventory.
 func (s *Store) ListHosts(_ context.Context) ([]domain.Host, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -109,7 +109,7 @@ func (s *Store) ListHosts(_ context.Context) ([]domain.Host, error) {
 	return out, nil
 }
 
-// UpdateHost implements application.HostInventory atomically.
+// UpdateHost implements ports.HostInventory atomically.
 func (s *Store) UpdateHost(_ context.Context, id string, mutate func(h *domain.Host) error) (domain.Host, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -128,8 +128,8 @@ func (s *Store) UpdateHost(_ context.Context, id string, mutate func(h *domain.H
 	return updated.Clone(), nil
 }
 
-// Reserve implements application.RequestLedger with compare-and-set semantics.
-func (s *Store) Reserve(_ context.Context, record application.IdempotencyRecord) (application.IdempotencyRecord, bool, error) {
+// Reserve implements ports.RequestLedger with compare-and-set semantics.
+func (s *Store) Reserve(_ context.Context, record ports.IdempotencyRecord) (ports.IdempotencyRecord, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, existing := range s.data.Ledger {
@@ -139,13 +139,13 @@ func (s *Store) Reserve(_ context.Context, record application.IdempotencyRecord)
 	}
 	s.data.Ledger = append(s.data.Ledger, record)
 	if err := s.persistLocked(); err != nil {
-		return application.IdempotencyRecord{}, false, err
+		return ports.IdempotencyRecord{}, false, err
 	}
 	return record, true, nil
 }
 
-// Lookup implements application.RequestLedger.
-func (s *Store) Lookup(_ context.Context, key string) (application.IdempotencyRecord, bool, error) {
+// Lookup implements ports.RequestLedger.
+func (s *Store) Lookup(_ context.Context, key string) (ports.IdempotencyRecord, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, record := range s.data.Ledger {
@@ -153,10 +153,10 @@ func (s *Store) Lookup(_ context.Context, key string) (application.IdempotencyRe
 			return record, true, nil
 		}
 	}
-	return application.IdempotencyRecord{}, false, nil
+	return ports.IdempotencyRecord{}, false, nil
 }
 
-// Release implements application.RequestLedger.
+// Release implements ports.RequestLedger.
 func (s *Store) Release(_ context.Context, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

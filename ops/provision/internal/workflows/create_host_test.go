@@ -16,6 +16,7 @@ import (
 	temporaladapter "github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/temporal"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/workflows"
 )
@@ -24,33 +25,33 @@ import (
 // workflow's authorizing stage reaches the HostAuthorizer port and nothing else.
 type fakeProvider struct{}
 
-func (fakeProvider) CreateHost(_ context.Context, req application.ProviderCreateRequest) (application.ProviderResource, error) {
-	return application.ProviderResource{ResourceID: "i-0123456789abcdef0", PrivateAddress: "10.99.1.10"}, nil
+func (fakeProvider) CreateHost(_ context.Context, req ports.ProviderCreateRequest) (ports.ProviderResource, error) {
+	return ports.ProviderResource{ResourceID: "i-0123456789abcdef0", PrivateAddress: "10.99.1.10"}, nil
 }
 
-func (fakeProvider) DestroyHost(_ context.Context, _ application.ProviderDestroyRequest) error {
+func (fakeProvider) DestroyHost(_ context.Context, _ ports.ProviderDestroyRequest) error {
 	return nil
 }
 
-func (fakeProvider) StatusHost(_ context.Context, req application.ProviderStatusRequest) (application.ProviderResourceStatus, error) {
-	return application.ProviderResourceStatus{Exists: true, ResourceID: "i-0123456789abcdef0", PrivateAddress: "10.99.1.10"}, nil
+func (fakeProvider) StatusHost(_ context.Context, req ports.ProviderStatusRequest) (ports.ProviderResourceStatus, error) {
+	return ports.ProviderResourceStatus{Exists: true, ResourceID: "i-0123456789abcdef0", PrivateAddress: "10.99.1.10"}, nil
 }
 
 type fakeProbe struct{}
 
-func (fakeProbe) AwaitRegistration(_ context.Context, instanceID string) (application.SSMAgentStatus, error) {
-	return application.SSMAgentStatus{InstanceID: instanceID, PingStatus: "Online", Online: true}, nil
+func (fakeProbe) AwaitRegistration(_ context.Context, instanceID string) (ports.SSMAgentStatus, error) {
+	return ports.SSMAgentStatus{InstanceID: instanceID, PingStatus: "Online", Online: true}, nil
 }
 
 type fakeDeployer struct{}
 
-func (fakeDeployer) DeployProfile(_ context.Context, req application.DeployRequest) (application.DeployResult, error) {
-	return application.DeployResult{FlakeRevision: "rev-1", RexURL: "https://rex.example"}, nil
+func (fakeDeployer) DeployProfile(_ context.Context, req ports.DeployRequest) (ports.DeployResult, error) {
+	return ports.DeployResult{FlakeRevision: "rev-1", RexURL: "https://rex.example"}, nil
 }
 
 type fakeTailnet struct{}
 
-func (fakeTailnet) RemoveDevice(_ context.Context, _ application.RemoveDeviceRequest) error {
+func (fakeTailnet) RemoveDevice(_ context.Context, _ ports.RemoveDeviceRequest) error {
 	return nil
 }
 

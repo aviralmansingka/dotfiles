@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // Tailnet is an in-memory tailnet that behaves like the real thing in the two
@@ -15,7 +15,7 @@ import (
 // single-use.
 type Tailnet struct {
 	mu             sync.Mutex
-	devices        []application.TailnetDevice
+	devices        []ports.TailnetDevice
 	usedKeys       map[string]string
 	joins          int
 	removals       int
@@ -29,8 +29,8 @@ func NewTailnet() *Tailnet {
 }
 
 var (
-	_ application.DeviceLookup         = (*Tailnet)(nil)
-	_ application.TailnetDeviceManager = (*Tailnet)(nil)
+	_ ports.DeviceLookup         = (*Tailnet)(nil)
+	_ ports.TailnetDeviceManager = (*Tailnet)(nil)
 )
 
 // ErrAuthKeyReused is returned when a key is presented a second time.
@@ -51,10 +51,10 @@ func (t *Tailnet) Join(hostName, tag, authKey string) (string, error) {
 	t.joins++
 	deviceID := fmt.Sprintf("n%04d", t.joins)
 	t.usedKeys[authKey] = deviceID
-	t.devices = append(t.devices, application.TailnetDevice{
+	t.devices = append(t.devices, ports.TailnetDevice{
 		ID:    deviceID,
 		Name:  hostName,
-		State: application.TailnetDeviceStateRunning,
+		State: ports.TailnetDeviceStateRunning,
 		Tags:  []string{tag},
 	})
 	return deviceID, nil
@@ -67,26 +67,26 @@ func (t *Tailnet) FailLookup(err error) {
 	t.lookupErr = err
 }
 
-// LookupDevice implements application.DeviceLookup: exact name and tag.
-func (t *Tailnet) LookupDevice(_ context.Context, query application.DeviceQuery) (application.TailnetDevice, bool, error) {
+// LookupDevice implements ports.DeviceLookup: exact name and tag.
+func (t *Tailnet) LookupDevice(_ context.Context, query ports.DeviceQuery) (ports.TailnetDevice, bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.lookupErr != nil {
-		return application.TailnetDevice{}, false, t.lookupErr
+		return ports.TailnetDevice{}, false, t.lookupErr
 	}
 	for _, device := range t.devices {
 		if device.Name == query.HostName && device.HasTag(query.Tag) {
 			return device, true, nil
 		}
 	}
-	return application.TailnetDevice{}, false, nil
+	return ports.TailnetDevice{}, false, nil
 }
 
 // Devices returns a copy of the registered devices, in registration order.
-func (t *Tailnet) Devices() []application.TailnetDevice {
+func (t *Tailnet) Devices() []ports.TailnetDevice {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return append([]application.TailnetDevice(nil), t.devices...)
+	return append([]ports.TailnetDevice(nil), t.devices...)
 }
 
 // JoinCount reports how many joins succeeded.
@@ -107,10 +107,10 @@ func (t *Tailnet) SetState(name, state string) {
 	}
 }
 
-// RemoveDevice implements application.TailnetDeviceManager. Removing a device that
+// RemoveDevice implements ports.TailnetDeviceManager. Removing a device that
 // is already gone is success, which is what makes a retried teardown idempotent.
 // A request with no device id is refused: the port does not guess by name.
-func (t *Tailnet) RemoveDevice(_ context.Context, req application.RemoveDeviceRequest) error {
+func (t *Tailnet) RemoveDevice(_ context.Context, req ports.RemoveDeviceRequest) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if strings.TrimSpace(req.DeviceID) == "" {
@@ -147,7 +147,7 @@ func (t *Tailnet) AbsentRemovals() int {
 }
 
 // DeviceByID returns the device with the given id, if it is still registered.
-func (t *Tailnet) DeviceByID(id string) (application.TailnetDevice, bool) {
+func (t *Tailnet) DeviceByID(id string) (ports.TailnetDevice, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for _, device := range t.devices {
@@ -155,7 +155,7 @@ func (t *Tailnet) DeviceByID(id string) (application.TailnetDevice, bool) {
 			return device, true
 		}
 	}
-	return application.TailnetDevice{}, false
+	return ports.TailnetDevice{}, false
 }
 
 // Secrets is a SecretSource over an in-memory map of references to values. It
@@ -172,7 +172,7 @@ func NewSecrets(values map[string]string) *Secrets {
 	return &Secrets{values: values}
 }
 
-var _ application.SecretSource = (*Secrets)(nil)
+var _ ports.SecretSource = (*Secrets)(nil)
 
 // FailWith makes every read fail.
 func (s *Secrets) FailWith(err error) {
@@ -181,19 +181,19 @@ func (s *Secrets) FailWith(err error) {
 	s.readErr = err
 }
 
-// FetchSecret implements application.SecretSource.
-func (s *Secrets) FetchSecret(_ context.Context, ref string) (application.Secret, error) {
+// FetchSecret implements ports.SecretSource.
+func (s *Secrets) FetchSecret(_ context.Context, ref string) (domain.Secret, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.refs = append(s.refs, ref)
 	if s.readErr != nil {
-		return application.Secret{}, s.readErr
+		return domain.Secret{}, s.readErr
 	}
 	value, ok := s.values[ref]
 	if !ok {
-		return application.Secret{}, fmt.Errorf("fake secret source: %s not found", ref)
+		return domain.Secret{}, fmt.Errorf("fake secret source: %s not found", ref)
 	}
-	return application.NewSecret(ref, []byte(value)), nil
+	return domain.NewSecret(ref, []byte(value)), nil
 }
 
 // Refs returns the references that were read.
@@ -203,20 +203,20 @@ func (s *Secrets) Refs() []string {
 	return append([]string(nil), s.refs...)
 }
 
-// Minter is a fake application.AuthKeyMinter. It hands out one fixed key so a
+// Minter is a fake ports.AuthKeyMinter. It hands out one fixed key so a
 // test can follow that key through delivery, and it counts mints so a test can
 // prove a resumed enrollment minted nothing.
 type Minter struct {
 	mu       sync.Mutex
 	key      string
 	err      error
-	requests []application.AuthKeyRequest
+	requests []ports.AuthKeyRequest
 }
 
 // NewMinter builds a minter that hands out key.
 func NewMinter(key string) *Minter { return &Minter{key: key} }
 
-var _ application.AuthKeyMinter = (*Minter)(nil)
+var _ ports.AuthKeyMinter = (*Minter)(nil)
 
 // FailWith makes the next and every later mint fail.
 func (m *Minter) FailWith(err error) {
@@ -225,17 +225,17 @@ func (m *Minter) FailWith(err error) {
 	m.err = err
 }
 
-// MintAuthKey implements application.AuthKeyMinter.
-func (m *Minter) MintAuthKey(_ context.Context, req application.AuthKeyRequest) (application.AuthKey, error) {
+// MintAuthKey implements ports.AuthKeyMinter.
+func (m *Minter) MintAuthKey(_ context.Context, req ports.AuthKeyRequest) (ports.AuthKey, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.err != nil {
-		return application.AuthKey{}, m.err
+		return ports.AuthKey{}, m.err
 	}
 	m.requests = append(m.requests, req)
-	return application.AuthKey{
+	return ports.AuthKey{
 		ID:      "key-0001",
-		Key:     application.NewSecret("fake:authkey", []byte(m.key)),
+		Key:     domain.NewSecret("fake:authkey", []byte(m.key)),
 		Tailnet: "fake",
 	}, nil
 }
@@ -248,20 +248,20 @@ func (m *Minter) MintCount() int {
 }
 
 // Requests returns the requests the minter received.
-func (m *Minter) Requests() []application.AuthKeyRequest {
+func (m *Minter) Requests() []ports.AuthKeyRequest {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return append([]application.AuthKeyRequest(nil), m.requests...)
+	return append([]ports.AuthKeyRequest(nil), m.requests...)
 }
 
-// Enroller is a fake application.HostEnroller. With a Tailnet attached it joins
+// Enroller is a fake ports.HostEnroller. With a Tailnet attached it joins
 // the device for real in that fake, so "a retry must not create a second device"
 // can be asserted against device state rather than against a call counter alone.
 type Enroller struct {
 	mu       sync.Mutex
 	tailnet  *Tailnet
 	err      error
-	calls    []application.EnrollRequest
+	calls    []ports.EnrollRequest
 	nextKey  int
 	keyValue string
 }
@@ -271,7 +271,7 @@ func NewEnroller(tailnet *Tailnet) *Enroller {
 	return &Enroller{tailnet: tailnet}
 }
 
-var _ application.HostEnroller = (*Enroller)(nil)
+var _ ports.HostEnroller = (*Enroller)(nil)
 
 // FailWith makes every enrollment fail.
 func (e *Enroller) FailWith(err error) {
@@ -280,24 +280,24 @@ func (e *Enroller) FailWith(err error) {
 	e.err = err
 }
 
-// Enroll implements application.HostEnroller.
-func (e *Enroller) Enroll(_ context.Context, req application.EnrollRequest) (application.EnrollResult, error) {
+// Enroll implements ports.HostEnroller.
+func (e *Enroller) Enroll(_ context.Context, req ports.EnrollRequest) (ports.EnrollResult, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.err != nil {
-		return application.EnrollResult{}, e.err
+		return ports.EnrollResult{}, e.err
 	}
 	e.calls = append(e.calls, req)
 	if e.tailnet == nil {
-		return application.EnrollResult{DeviceID: "n-fake"}, nil
+		return ports.EnrollResult{DeviceID: "n-fake"}, nil
 	}
 	e.nextKey++
 	key := fmt.Sprintf("%s-auth-%d", strings.TrimSpace(e.keyValue), e.nextKey)
 	deviceID, err := e.tailnet.Join(req.Name, req.TailnetTag, key)
 	if err != nil {
-		return application.EnrollResult{}, err
+		return ports.EnrollResult{}, err
 	}
-	return application.EnrollResult{DeviceID: deviceID}, nil
+	return ports.EnrollResult{DeviceID: deviceID}, nil
 }
 
 // CallCount reports how many enrollments ran.
@@ -308,8 +308,8 @@ func (e *Enroller) CallCount() int {
 }
 
 // Requests returns the enrollment requests the fake received.
-func (e *Enroller) Requests() []application.EnrollRequest {
+func (e *Enroller) Requests() []ports.EnrollRequest {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return append([]application.EnrollRequest(nil), e.calls...)
+	return append([]ports.EnrollRequest(nil), e.calls...)
 }

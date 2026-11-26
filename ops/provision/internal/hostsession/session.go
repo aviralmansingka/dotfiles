@@ -12,41 +12,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
-
-// HostSession is one logged-in host token. The token is a Secret: it never
-// renders itself, and the TTL is the lifetime the server reported, already
-// checked against the hard maximum.
-type HostSession struct {
-	Token     application.Secret
-	TTL       time.Duration
-	Renewable bool
-	// Accessor identifies the token for revocation without revealing it.
-	Accessor string
-}
-
-// HostSessionClient is the host-side OpenBao mechanics port. It is implemented
-// by the openbao adapter and by an in-process fake in tests. It holds no
-// management token: every call authenticates with the material the host has.
-//
-// UnwrapSecretID must refuse a wrapping token it has already consumed
-// (domain.WrapTokenConsumedError) without a network call, and the server refuses
-// a second unwrap independently.
-type HostSessionClient interface {
-	UnwrapSecretID(ctx context.Context, wrapToken application.Secret) (application.Secret, error)
-	Login(ctx context.Context, roleID string, secretID application.Secret) (HostSession, error)
-	RenewSelf(ctx context.Context, token application.Secret) (HostSession, error)
-	RotateSecretID(ctx context.Context, roleName string, previousAccessor string) (application.WrappedSecretID, error)
-}
 
 // SessionDeps are the collaborators of the host-side session use case.
 type SessionDeps struct {
-	Client      HostSessionClient
-	Logger      application.Logger
+	Client      ports.HostSessionClient
+	Logger      ports.Logger
 	TokenPolicy domain.TokenPolicy
 }
 
@@ -55,8 +29,8 @@ type SessionDeps struct {
 // session it returns, so a misconfigured role cannot hand a host a long-lived
 // token.
 type SessionService struct {
-	client HostSessionClient
-	log    application.Logger
+	client ports.HostSessionClient
+	log    ports.Logger
 	policy domain.TokenPolicy
 }
 
@@ -81,22 +55,22 @@ func NewSessionService(deps SessionDeps) (*SessionService, error) {
 // LoginFromWrapped unwraps the one-use bootstrap SecretID and logs in with it.
 // The wrapping token is one-use by contract: a second call with the same value is
 // refused by the client before any network call.
-func (s *SessionService) LoginFromWrapped(ctx context.Context, roleID string, wrapToken application.Secret) (HostSession, error) {
+func (s *SessionService) LoginFromWrapped(ctx context.Context, roleID string, wrapToken domain.Secret) (ports.HostSession, error) {
 	if wrapToken.Empty() {
-		return HostSession{}, domain.Invalid("wrapping_token", "is required")
+		return ports.HostSession{}, domain.Invalid("wrapping_token", "is required")
 	}
 	secretID, err := s.client.UnwrapSecretID(ctx, wrapToken)
 	if err != nil {
-		return HostSession{}, fmt.Errorf("openbao session: unwrap secret id: %w", err)
+		return ports.HostSession{}, fmt.Errorf("openbao session: unwrap secret id: %w", err)
 	}
 	defer secretID.Destroy()
 	session, err := s.client.Login(ctx, roleID, secretID)
 	if err != nil {
-		return HostSession{}, fmt.Errorf("openbao session: login: %w", err)
+		return ports.HostSession{}, fmt.Errorf("openbao session: login: %w", err)
 	}
 	if err := s.validate(session); err != nil {
 		session.Token.Destroy()
-		return HostSession{}, err
+		return ports.HostSession{}, err
 	}
 	s.log.Info("host.session.login",
 		"role", roleID,
@@ -108,17 +82,17 @@ func (s *SessionService) LoginFromWrapped(ctx context.Context, roleID string, wr
 
 // Renew extends a live session. Renewal may not return a token older than the
 // hard maximum, and it never asks for more than the remaining maximum.
-func (s *SessionService) Renew(ctx context.Context, token application.Secret) (HostSession, error) {
+func (s *SessionService) Renew(ctx context.Context, token domain.Secret) (ports.HostSession, error) {
 	if token.Empty() {
-		return HostSession{}, domain.Invalid("token", "is required")
+		return ports.HostSession{}, domain.Invalid("token", "is required")
 	}
 	session, err := s.client.RenewSelf(ctx, token)
 	if err != nil {
-		return HostSession{}, fmt.Errorf("openbao session: renew: %w", err)
+		return ports.HostSession{}, fmt.Errorf("openbao session: renew: %w", err)
 	}
 	if err := s.validate(session); err != nil {
 		session.Token.Destroy()
-		return HostSession{}, err
+		return ports.HostSession{}, err
 	}
 	s.log.Info("host.session.renewed", "ttl_seconds", int(session.TTL.Seconds()))
 	return session, nil
@@ -127,13 +101,13 @@ func (s *SessionService) Renew(ctx context.Context, token application.Secret) (H
 // Rotate replaces the rotating login SecretID. The previous one keeps working for
 // the rotation grace, so a host that is rebooting during the rotation still logs
 // in with the material it already has.
-func (s *SessionService) Rotate(ctx context.Context, roleName, previousAccessor string) (application.WrappedSecretID, error) {
+func (s *SessionService) Rotate(ctx context.Context, roleName, previousAccessor string) (ports.WrappedSecretID, error) {
 	if roleName == "" {
-		return application.WrappedSecretID{}, domain.Invalid("role_name", "is required")
+		return ports.WrappedSecretID{}, domain.Invalid("role_name", "is required")
 	}
 	wrapped, err := s.client.RotateSecretID(ctx, roleName, previousAccessor)
 	if err != nil {
-		return application.WrappedSecretID{}, fmt.Errorf("openbao session: rotate secret id: %w", err)
+		return ports.WrappedSecretID{}, fmt.Errorf("openbao session: rotate secret id: %w", err)
 	}
 	s.log.Info("host.session.rotate", "role", roleName, "accessor", wrapped.Accessor)
 	return wrapped, nil
@@ -143,7 +117,7 @@ func (s *SessionService) Rotate(ctx context.Context, roleName, previousAccessor 
 // means the credential does not expire; anything above the maximum means the role
 // is misconfigured and the host must not proceed with a token the service cannot
 // bound.
-func (s *SessionService) validate(session HostSession) error {
+func (s *SessionService) validate(session ports.HostSession) error {
 	if session.Token.Empty() {
 		return &domain.IdentityError{Operation: "session", Reason: "no token was issued"}
 	}

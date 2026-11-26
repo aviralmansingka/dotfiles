@@ -14,6 +14,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/store/jsonstore"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
@@ -138,7 +139,7 @@ func TestDurableJobSurvivesProcessRestart(t *testing.T) {
 	// the workflow again, TotalStarts would be 1.
 	orchestrator := fakes.NewOrchestrator()
 	restarted := buildService(t, reopened, orchestrator)
-	accepted, err := restarted.CreateHost(ctx, application.Principal{ClientID: "test-client"}, restartKey, restartRequest)
+	accepted, err := restarted.CreateHost(ctx, ports.Principal{ClientID: "test-client"}, restartKey, restartRequest)
 	if err != nil {
 		t.Fatalf("replay after restart: %v", err)
 	}
@@ -162,7 +163,7 @@ func TestDurableJobSurvivesProcessRestart(t *testing.T) {
 
 	// A brand-new Idempotency-Key after the restart still creates a new job, so
 	// the replay above was a replay and not a wedged store.
-	next, err := restarted.CreateHost(ctx, application.Principal{ClientID: "test-client"}, "restart-key-0002", restartRequest)
+	next, err := restarted.CreateHost(ctx, ports.Principal{ClientID: "test-client"}, "restart-key-0002", restartRequest)
 	if err != nil {
 		t.Fatalf("new key after restart: %v", err)
 	}
@@ -187,7 +188,7 @@ func runRestartWritePhase(t *testing.T, storePath string) {
 	}
 	orchestrator := fakes.NewOrchestrator()
 	service := buildService(t, store, orchestrator)
-	accepted, err := service.CreateHost(context.Background(), application.Principal{ClientID: "test-client"}, restartKey, restartRequest)
+	accepted, err := service.CreateHost(context.Background(), ports.Principal{ClientID: "test-client"}, restartKey, restartRequest)
 	if err != nil {
 		t.Fatalf("create host: %v", err)
 	}
@@ -253,7 +254,7 @@ func TestReopenedStoreKeepsHostsAndReservations(t *testing.T) {
 		t.Fatalf("open store: %v", err)
 	}
 	service := buildService(t, first, fakes.NewOrchestrator())
-	accepted, err := service.CreateHost(ctx, application.Principal{ClientID: "test-client"}, restartKey, restartRequest)
+	accepted, err := service.CreateHost(ctx, ports.Principal{ClientID: "test-client"}, restartKey, restartRequest)
 	if err != nil {
 		t.Fatalf("create host: %v", err)
 	}
@@ -276,7 +277,7 @@ func TestReopenedStoreKeepsHostsAndReservations(t *testing.T) {
 	if record.JobID != accepted.JobID {
 		t.Fatalf("reservation job = %q, want %q", record.JobID, accepted.JobID)
 	}
-	if _, created, err := second.Reserve(ctx, application.IdempotencyRecord{Key: restartKey, Fingerprint: "different"}); err != nil {
+	if _, created, err := second.Reserve(ctx, ports.IdempotencyRecord{Key: restartKey, Fingerprint: "different"}); err != nil {
 		t.Fatalf("Reserve: %v", err)
 	} else if created {
 		t.Fatal("a persisted reservation must not be reserved twice")

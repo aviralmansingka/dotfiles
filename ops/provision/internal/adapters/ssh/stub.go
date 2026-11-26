@@ -11,8 +11,8 @@ package ssh
 import (
 	"context"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // Stub refuses profile deployment. It is the composition fallback until the
@@ -22,11 +22,11 @@ type Stub struct{}
 // NewStub builds the deployment stub.
 func NewStub() *Stub { return &Stub{} }
 
-var _ application.ProfileDeployer = (*Stub)(nil)
+var _ ports.ProfileDeployer = (*Stub)(nil)
 
-// DeployProfile implements application.ProfileDeployer by refusing.
-func (*Stub) DeployProfile(_ context.Context, _ application.DeployRequest) (application.DeployResult, error) {
-	return application.DeployResult{}, &domain.NotImplementedError{
+// DeployProfile implements ports.ProfileDeployer by refusing.
+func (*Stub) DeployProfile(_ context.Context, _ ports.DeployRequest) (ports.DeployResult, error) {
+	return ports.DeployResult{}, &domain.NotImplementedError{
 		Component: "nix profile deployment",
 		Step:      "S04 deploys the approved flake revision",
 	}

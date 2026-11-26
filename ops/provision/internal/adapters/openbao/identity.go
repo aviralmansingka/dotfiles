@@ -16,9 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/hostsession"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/ports"
 )
 
 // IdentityConfig locates the management API and the token file. Every field is a
@@ -37,7 +36,7 @@ type IdentityConfig struct {
 	Timeout time.Duration
 }
 
-// IdentityAdmin implements application.IdentityBackend against OpenBao's policy,
+// IdentityAdmin implements ports.IdentityBackend against OpenBao's policy,
 // AppRole, and KV APIs. It decides nothing: every name, policy document, and
 // lifetime comes from the domain, and the SecretID it mints is wrapped
 // server-side, so the value exists only inside OpenBao until the host unwraps it.
@@ -45,7 +44,7 @@ type IdentityAdmin struct {
 	client *baoClient
 }
 
-var _ application.IdentityBackend = (*IdentityAdmin)(nil)
+var _ ports.IdentityBackend = (*IdentityAdmin)(nil)
 
 // NewIdentityAdmin reads the management token once and builds the adapter.
 func NewIdentityAdmin(cfg IdentityConfig) (*IdentityAdmin, error) {
@@ -65,12 +64,12 @@ func NewIdentityAdmin(cfg IdentityConfig) (*IdentityAdmin, error) {
 	if token == "" {
 		return nil, errors.New("openbao: token file is empty")
 	}
-	client.token = application.NewSecret("openbao:management-token", []byte(token))
+	client.token = domain.NewSecret("openbao:management-token", []byte(token))
 	return &IdentityAdmin{client: client}, nil
 }
 
 // EnsurePolicy writes the host's ACL policy document exactly as rendered.
-func (a *IdentityAdmin) EnsurePolicy(ctx context.Context, policy application.IdentityPolicy) error {
+func (a *IdentityAdmin) EnsurePolicy(ctx context.Context, policy ports.IdentityPolicy) error {
 	if policy.Name == "" || policy.Document == "" {
 		return errors.New("openbao: policy name and document are required")
 	}
@@ -87,20 +86,20 @@ func (a *IdentityAdmin) EnsurePolicy(ctx context.Context, policy application.Ide
 // The claim is a non-secret KV record at secret/data/fleet/identity/roles/<role>.
 // It is written create-only, so the second host that reaches an existing role
 // name is refused instead of silently sharing it.
-func (a *IdentityAdmin) EnsureAppRole(ctx context.Context, role application.IdentityRole) (application.IdentityRoleState, error) {
+func (a *IdentityAdmin) EnsureAppRole(ctx context.Context, role ports.IdentityRole) (ports.IdentityRoleState, error) {
 	if role.Name == "" || role.HostID == "" || role.PolicyName == "" {
-		return application.IdentityRoleState{}, errors.New("openbao: role name, host id, and policy are required")
+		return ports.IdentityRoleState{}, errors.New("openbao: role name, host id, and policy are required")
 	}
 	claimPath, err := domain.RoleClaimPath(role.Name)
 	if err != nil {
-		return application.IdentityRoleState{}, err
+		return ports.IdentityRoleState{}, err
 	}
 	claimed, found, err := a.readClaim(ctx, claimPath)
 	if err != nil {
-		return application.IdentityRoleState{}, err
+		return ports.IdentityRoleState{}, err
 	}
 	if found && claimed != role.HostID {
-		return application.IdentityRoleState{}, &domain.RoleClaimError{
+		return ports.IdentityRoleState{}, &domain.RoleClaimError{
 			RoleName:    role.Name,
 			ClaimedHost: claimed,
 			RequestedBy: role.HostID,
@@ -109,14 +108,14 @@ func (a *IdentityAdmin) EnsureAppRole(ctx context.Context, role application.Iden
 
 	policies, exists, err := a.readRolePolicies(ctx, role.Name)
 	if err != nil {
-		return application.IdentityRoleState{}, err
+		return ports.IdentityRoleState{}, err
 	}
 	if exists && !containsString(policies, role.PolicyName) {
 		attributed := claimed
 		if attributed == "" {
 			attributed = "an unknown host"
 		}
-		return application.IdentityRoleState{}, &domain.RoleClaimError{
+		return ports.IdentityRoleState{}, &domain.RoleClaimError{
 			RoleName:    role.Name,
 			ClaimedHost: attributed,
 			RequestedBy: role.HostID,
@@ -135,7 +134,7 @@ func (a *IdentityAdmin) EnsureAppRole(ctx context.Context, role application.Iden
 		"secret_id_num_uses":      role.SecretIDUses,
 	}
 	if err := a.client.write(ctx, http.MethodPost, domain.AppRolePathPrefix+role.Name, body); err != nil {
-		return application.IdentityRoleState{}, fmt.Errorf("openbao: write role %s: %w", role.Name, err)
+		return ports.IdentityRoleState{}, fmt.Errorf("openbao: write role %s: %w", role.Name, err)
 	}
 
 	if !found {
@@ -149,32 +148,32 @@ func (a *IdentityAdmin) EnsureAppRole(ctx context.Context, role application.Iden
 			// silent overwrite.
 			current, ok, readErr := a.readClaim(ctx, claimPath)
 			if readErr == nil && ok && current == role.HostID {
-				return application.IdentityRoleState{Name: role.Name, HostID: role.HostID, Exists: exists}, nil
+				return ports.IdentityRoleState{Name: role.Name, HostID: role.HostID, Exists: exists}, nil
 			}
 			if readErr == nil && ok {
-				return application.IdentityRoleState{}, &domain.RoleClaimError{
+				return ports.IdentityRoleState{}, &domain.RoleClaimError{
 					RoleName:    role.Name,
 					ClaimedHost: current,
 					RequestedBy: role.HostID,
 				}
 			}
-			return application.IdentityRoleState{}, fmt.Errorf("openbao: claim role %s: %w", role.Name, err)
+			return ports.IdentityRoleState{}, fmt.Errorf("openbao: claim role %s: %w", role.Name, err)
 		}
 	}
-	return application.IdentityRoleState{Name: role.Name, HostID: role.HostID, Exists: exists}, nil
+	return ports.IdentityRoleState{Name: role.Name, HostID: role.HostID, Exists: exists}, nil
 }
 
 // MintWrappedSecretID mints a SecretID with response wrapping and returns only
 // the wrapping token. An unwrapped reply is refused: a SecretID must never reach
 // this process.
-func (a *IdentityAdmin) MintWrappedSecretID(ctx context.Context, roleName string, spec application.IdentityWrapSpec) (application.WrappedSecretID, error) {
+func (a *IdentityAdmin) MintWrappedSecretID(ctx context.Context, roleName string, spec ports.IdentityWrapSpec) (ports.WrappedSecretID, error) {
 	ttl := spec.TTL
 	if ttl <= 0 {
 		ttl = domain.BootstrapWrapTTL
 	}
 	wrapped, err := a.client.mintWrapped(ctx, roleName, ttl)
 	if err != nil {
-		return application.WrappedSecretID{}, err
+		return ports.WrappedSecretID{}, err
 	}
 	return wrapped, nil
 }
@@ -231,9 +230,9 @@ func (a *IdentityAdmin) ListTokenAccessors(ctx context.Context) ([]string, error
 // LookupTokenAccessor reports the policies one accessor carries. A token that
 // expired between the listing and this call is reported as not found with no
 // error: it is already gone, which is the outcome revocation wanted.
-func (a *IdentityAdmin) LookupTokenAccessor(ctx context.Context, accessor string) (application.TokenAccessorInfo, bool, error) {
+func (a *IdentityAdmin) LookupTokenAccessor(ctx context.Context, accessor string) (ports.TokenAccessorInfo, bool, error) {
 	if strings.TrimSpace(accessor) == "" {
-		return application.TokenAccessorInfo{}, false, errors.New("openbao: token accessor is required")
+		return ports.TokenAccessorInfo{}, false, errors.New("openbao: token accessor is required")
 	}
 	var reply struct {
 		Data struct {
@@ -243,12 +242,12 @@ func (a *IdentityAdmin) LookupTokenAccessor(ctx context.Context, accessor string
 	}
 	found, err := a.client.writeIntoStatus(ctx, domain.TokenLookupAccessorPath, map[string]any{"accessor": accessor}, &reply)
 	if err != nil {
-		return application.TokenAccessorInfo{}, false, fmt.Errorf("openbao: look up token accessor: %w", err)
+		return ports.TokenAccessorInfo{}, false, fmt.Errorf("openbao: look up token accessor: %w", err)
 	}
 	if !found {
-		return application.TokenAccessorInfo{}, false, nil
+		return ports.TokenAccessorInfo{}, false, nil
 	}
-	return application.TokenAccessorInfo{
+	return ports.TokenAccessorInfo{
 		Accessor: firstNonEmptyString(reply.Data.Accessor, accessor),
 		Policies: append([]string(nil), reply.Data.Policies...),
 	}, true, nil
@@ -357,7 +356,7 @@ func containsString(values []string, want string) bool {
 	return false
 }
 
-// HostIdentityClient implements hostsession.HostSessionClient on the host: it
+// HostIdentityClient implements ports.HostSessionClient on the host: it
 // unwraps a one-use SecretID, logs in, renews, and rotates. It holds no
 // management token and no SecretID: the only credential it ever holds is the
 // wrapping token it is given and the session token it gets back.
@@ -368,7 +367,7 @@ type HostIdentityClient struct {
 	consumed map[string]bool
 }
 
-var _ hostsession.HostSessionClient = (*HostIdentityClient)(nil)
+var _ ports.HostSessionClient = (*HostIdentityClient)(nil)
 
 // NewHostIdentityClient builds the host-side client.
 func NewHostIdentityClient(address, namespace string, httpClient HTTPClient, timeout time.Duration) (*HostIdentityClient, error) {
@@ -382,17 +381,17 @@ func NewHostIdentityClient(address, namespace string, httpClient HTTPClient, tim
 // UnwrapSecretID unwraps a one-use wrapping token. The token is marked consumed
 // before the call, so a replay is refused locally even if the server call fails
 // midway; OpenBao refuses a second unwrap independently.
-func (h *HostIdentityClient) UnwrapSecretID(ctx context.Context, wrapToken application.Secret) (application.Secret, error) {
+func (h *HostIdentityClient) UnwrapSecretID(ctx context.Context, wrapToken domain.Secret) (domain.Secret, error) {
 	value := wrapToken.Bytes()
 	defer clear(value)
 	if len(value) == 0 {
-		return application.Secret{}, errors.New("openbao: wrapping token is required")
+		return domain.Secret{}, errors.New("openbao: wrapping token is required")
 	}
 	fingerprint := digest(value)
 	h.mu.Lock()
 	if h.consumed[fingerprint] {
 		h.mu.Unlock()
-		return application.Secret{}, &domain.WrapTokenConsumedError{}
+		return domain.Secret{}, &domain.WrapTokenConsumedError{}
 	}
 	h.consumed[fingerprint] = true
 	h.mu.Unlock()
@@ -402,68 +401,68 @@ func (h *HostIdentityClient) UnwrapSecretID(ctx context.Context, wrapToken appli
 	}
 	request, err := h.client.request(ctx, http.MethodPost, domain.WrappingUnwrapPath, nil)
 	if err != nil {
-		return application.Secret{}, fmt.Errorf("openbao: unwrap secret id: %w", err)
+		return domain.Secret{}, fmt.Errorf("openbao: unwrap secret id: %w", err)
 	}
 	// The wrapping token is the request token, never a body field or a URL.
 	request.Header.Set("X-Vault-Token", string(value))
 	if err := h.client.do(request, &reply); err != nil {
-		return application.Secret{}, fmt.Errorf("openbao: unwrap secret id: %w", err)
+		return domain.Secret{}, fmt.Errorf("openbao: unwrap secret id: %w", err)
 	}
 	secretID, _ := reply.Data["secret_id"].(string)
 	if secretID == "" {
-		return application.Secret{}, errors.New("openbao: unwrap returned no secret id")
+		return domain.Secret{}, errors.New("openbao: unwrap returned no secret id")
 	}
-	return application.NewSecret("openbao:wrapped-secret-id", []byte(secretID)), nil
+	return domain.NewSecret("openbao:wrapped-secret-id", []byte(secretID)), nil
 }
 
 // Login exchanges the AppRole credentials for a short-lived token.
-func (h *HostIdentityClient) Login(ctx context.Context, roleID string, secretID application.Secret) (hostsession.HostSession, error) {
+func (h *HostIdentityClient) Login(ctx context.Context, roleID string, secretID domain.Secret) (ports.HostSession, error) {
 	value := secretID.Bytes()
 	defer clear(value)
 	if roleID == "" || len(value) == 0 {
-		return hostsession.HostSession{}, errors.New("openbao: role id and secret id are required")
+		return ports.HostSession{}, errors.New("openbao: role id and secret id are required")
 	}
 	body := map[string]any{"role_id": roleID, "secret_id": string(value)}
 	var reply loginReply
 	if err := h.client.writeInto(ctx, http.MethodPost, domain.AppRoleLoginPath, body, &reply); err != nil {
-		return hostsession.HostSession{}, fmt.Errorf("openbao: approle login: %w", err)
+		return ports.HostSession{}, fmt.Errorf("openbao: approle login: %w", err)
 	}
 	return reply.session()
 }
 
 // RenewSelf renews the session token in hand.
-func (h *HostIdentityClient) RenewSelf(ctx context.Context, token application.Secret) (hostsession.HostSession, error) {
+func (h *HostIdentityClient) RenewSelf(ctx context.Context, token domain.Secret) (ports.HostSession, error) {
 	value := token.Bytes()
 	defer clear(value)
 	if len(value) == 0 {
-		return hostsession.HostSession{}, errors.New("openbao: session token is required")
+		return ports.HostSession{}, errors.New("openbao: session token is required")
 	}
 	request, err := h.client.request(ctx, http.MethodPost, domain.TokenRenewPath,
 		map[string]any{"increment": int64(domain.TokenRenewIncrement / time.Second)})
 	if err != nil {
-		return hostsession.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
+		return ports.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
 	}
 	request.Header.Set("X-Vault-Token", string(value))
 	var reply loginReply
 	if err := h.client.do(request, &reply); err != nil {
-		return hostsession.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
+		return ports.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
 	}
 	return reply.session()
 }
 
 // RotateSecretID mints a fresh wrapped SecretID and destroys the previous one
 // after the new one exists, so a host always has a usable login credential.
-func (h *HostIdentityClient) RotateSecretID(ctx context.Context, roleName string, previousAccessor string) (application.WrappedSecretID, error) {
+func (h *HostIdentityClient) RotateSecretID(ctx context.Context, roleName string, previousAccessor string) (ports.WrappedSecretID, error) {
 	wrapped, err := h.client.mintWrapped(ctx, roleName, domain.BootstrapWrapTTL)
 	if err != nil {
-		return application.WrappedSecretID{}, err
+		return ports.WrappedSecretID{}, err
 	}
 	if previousAccessor != "" {
 		destroy := map[string]any{"secret_id_accessor": previousAccessor}
 		if err := h.client.write(ctx, http.MethodPost,
 			domain.AppRolePathPrefix+roleName+"/secret-id-accessor/destroy", destroy); err != nil {
 			wrapped.WrapToken.Destroy()
-			return application.WrappedSecretID{}, fmt.Errorf("openbao: retire previous secret id accessor: %w", err)
+			return ports.WrappedSecretID{}, fmt.Errorf("openbao: retire previous secret id accessor: %w", err)
 		}
 	}
 	return wrapped, nil
@@ -479,12 +478,12 @@ type loginReply struct {
 	} `json:"auth"`
 }
 
-func (r loginReply) session() (hostsession.HostSession, error) {
+func (r loginReply) session() (ports.HostSession, error) {
 	if r.Auth.ClientToken == "" {
-		return hostsession.HostSession{}, errors.New("openbao: auth reply carried no client token")
+		return ports.HostSession{}, errors.New("openbao: auth reply carried no client token")
 	}
-	return hostsession.HostSession{
-		Token:     application.NewSecret("openbao:session-token", []byte(r.Auth.ClientToken)),
+	return ports.HostSession{
+		Token:     domain.NewSecret("openbao:session-token", []byte(r.Auth.ClientToken)),
 		TTL:       time.Duration(r.Auth.LeaseDuration) * time.Second,
 		Renewable: r.Auth.Renewable,
 		Accessor:  r.Auth.Accessor,
@@ -494,13 +493,13 @@ func (r loginReply) session() (hostsession.HostSession, error) {
 // mintWrapped asks for a response-wrapped SecretID. The wrap TTL travels in a
 // header and the reply is required to be wrapped: an unwrapped SecretID is a hard
 // error, because the value must never enter this process.
-func (c *baoClient) mintWrapped(ctx context.Context, roleName string, ttl time.Duration) (application.WrappedSecretID, error) {
+func (c *baoClient) mintWrapped(ctx context.Context, roleName string, ttl time.Duration) (ports.WrappedSecretID, error) {
 	if roleName == "" {
-		return application.WrappedSecretID{}, errors.New("openbao: role name is required")
+		return ports.WrappedSecretID{}, errors.New("openbao: role name is required")
 	}
 	request, err := c.request(ctx, http.MethodPost, domain.AppRolePathPrefix+roleName+domain.SecretIDPathSuffix, map[string]any{})
 	if err != nil {
-		return application.WrappedSecretID{}, fmt.Errorf("openbao: mint secret id: %w", err)
+		return ports.WrappedSecretID{}, fmt.Errorf("openbao: mint secret id: %w", err)
 	}
 	request.Header.Set("X-Vault-Wrap-TTL", fmt.Sprintf("%d", int64(ttl/time.Second)))
 	var reply struct {
@@ -515,12 +514,12 @@ func (c *baoClient) mintWrapped(ctx context.Context, roleName string, ttl time.D
 		} `json:"data"`
 	}
 	if err := c.do(request, &reply); err != nil {
-		return application.WrappedSecretID{}, fmt.Errorf("openbao: mint secret id for role %s: %w", roleName, err)
+		return ports.WrappedSecretID{}, fmt.Errorf("openbao: mint secret id for role %s: %w", roleName, err)
 	}
 	if reply.WrapInfo.Token == "" {
 		// A server that ignored the wrap header would hand us a SecretID in the
 		// clear. Refuse, and do not echo the reply: it may contain the value.
-		return application.WrappedSecretID{}, errors.New("openbao: server did not response-wrap the secret id; refusing an unwrapped credential")
+		return ports.WrappedSecretID{}, errors.New("openbao: server did not response-wrap the secret id; refusing an unwrapped credential")
 	}
 	wrapTTL := time.Duration(reply.WrapInfo.TTL) * time.Second
 	if wrapTTL <= 0 {
@@ -530,8 +529,8 @@ func (c *baoClient) mintWrapped(ctx context.Context, roleName string, ttl time.D
 	if accessor == "" {
 		accessor = reply.WrapInfo.Accessor
 	}
-	return application.WrappedSecretID{
-		WrapToken: application.NewSecret("openbao:wrapping-token", []byte(reply.WrapInfo.Token)),
+	return ports.WrappedSecretID{
+		WrapToken: domain.NewSecret("openbao:wrapping-token", []byte(reply.WrapInfo.Token)),
 		Accessor:  accessor,
 		TTL:       wrapTTL,
 	}, nil
@@ -543,7 +542,7 @@ func (c *baoClient) mintWrapped(ctx context.Context, roleName string, ttl time.D
 type baoClient struct {
 	address   string
 	namespace string
-	token     application.Secret
+	token     domain.Secret
 	http      HTTPClient
 }
 

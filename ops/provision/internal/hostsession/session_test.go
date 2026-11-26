@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/hostsession"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
@@ -31,7 +30,7 @@ func TestSessionLoginUnwrapsOnceAndLogsIn(t *testing.T) {
 	t.Parallel()
 	client, logger, service := newSessionHarness(t)
 	client.IssueWrapToken("wrap-token-one-use")
-	wrap := application.NewSecret("bootstrap:wrapping-token", []byte("wrap-token-one-use"))
+	wrap := domain.NewSecret("bootstrap:wrapping-token", []byte("wrap-token-one-use"))
 
 	session, err := service.LoginFromWrapped(context.Background(), "fleet-host-host-0001", wrap)
 	if err != nil {
@@ -74,7 +73,7 @@ func TestSessionRefusesATokenLongerThanTheHardMaximum(t *testing.T) {
 	client.SetLoginTTL(16 * time.Minute)
 
 	_, err := service.LoginFromWrapped(context.Background(), "fleet-host-host-0001",
-		application.NewSecret("bootstrap:wrapping-token", []byte("wrap-token-long")))
+		domain.NewSecret("bootstrap:wrapping-token", []byte("wrap-token-long")))
 	if err == nil {
 		t.Fatal("a 16 minute token must be refused")
 	}
@@ -92,7 +91,7 @@ func TestSessionRefusesATokenLongerThanTheHardMaximum(t *testing.T) {
 func TestSessionRenewKeepsTheHardMaximum(t *testing.T) {
 	t.Parallel()
 	client, _, service := newSessionHarness(t)
-	token := application.NewSecret("openbao:session-token", []byte("session-token-value"))
+	token := domain.NewSecret("openbao:session-token", []byte("session-token-value"))
 
 	session, err := service.Renew(context.Background(), token)
 	if err != nil {
@@ -137,10 +136,10 @@ func TestSessionRotateMintsAFreshWrappedSecretID(t *testing.T) {
 func TestSessionRefusesAnEmptyCredential(t *testing.T) {
 	t.Parallel()
 	client, _, service := newSessionHarness(t)
-	if _, err := service.LoginFromWrapped(context.Background(), "fleet-host-host-0001", application.Secret{}); err == nil {
+	if _, err := service.LoginFromWrapped(context.Background(), "fleet-host-host-0001", domain.Secret{}); err == nil {
 		t.Fatal("an empty wrapping token must be refused")
 	}
-	if _, err := service.Renew(context.Background(), application.Secret{}); err == nil {
+	if _, err := service.Renew(context.Background(), domain.Secret{}); err == nil {
 		t.Fatal("an empty token must be refused")
 	}
 	if client.UnwrapCount() != 0 || client.LoginCount() != 0 {
