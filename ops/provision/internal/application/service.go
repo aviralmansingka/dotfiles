@@ -19,7 +19,7 @@ import (
 // Deps are the collaborators a Service needs. Every field is required.
 type Deps struct {
 	Profiles domain.Catalog
-	Hosts    ports.HostInventory
+	Hosts    ports.HostRepository
 	Ledger   ports.RequestLedger
 	Jobs     ports.JobOrchestrator
 	Tokens   ports.TokenStore
@@ -31,7 +31,7 @@ type Deps struct {
 // Service implements the API use cases.
 type Service struct {
 	profiles domain.Catalog
-	hosts    ports.HostInventory
+	hosts    ports.HostRepository
 	ledger   ports.RequestLedger
 	jobs     ports.JobOrchestrator
 	tokens   ports.TokenStore

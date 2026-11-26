@@ -73,7 +73,7 @@ func Open(path string) (*Store, error) {
 // Path reports the backing file.
 func (s *Store) Path() string { return s.path }
 
-// CreateHost implements ports.HostInventory.
+// CreateHost implements ports.HostRepository.
 func (s *Store) CreateHost(_ context.Context, host domain.Host) (domain.Host, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -87,7 +87,7 @@ func (s *Store) CreateHost(_ context.Context, host domain.Host) (domain.Host, bo
 	return host.Clone(), true, nil
 }
 
-// GetHost implements ports.HostInventory.
+// GetHost implements ports.HostRepository.
 func (s *Store) GetHost(_ context.Context, id string) (domain.Host, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -98,7 +98,7 @@ func (s *Store) GetHost(_ context.Context, id string) (domain.Host, error) {
 	return host.Clone(), nil
 }
 
-// ListHosts implements ports.HostInventory.
+// ListHosts implements ports.HostRepository.
 func (s *Store) ListHosts(_ context.Context) ([]domain.Host, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -109,7 +109,7 @@ func (s *Store) ListHosts(_ context.Context) ([]domain.Host, error) {
 	return out, nil
 }
 
-// UpdateHost implements ports.HostInventory atomically.
+// UpdateHost implements ports.HostRepository atomically.
 func (s *Store) UpdateHost(_ context.Context, id string, mutate func(h *domain.Host) error) (domain.Host, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

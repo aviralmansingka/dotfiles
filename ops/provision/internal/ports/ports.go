@@ -124,10 +124,10 @@ type JobOrchestrator interface {
 	DescribeJob(ctx context.Context, handle JobHandle) (JobView, error)
 }
 
-// HostInventory is the durable record of owned hosts. It is independent of
-// workflow history so a completed or expired execution cannot delete ownership
-// information.
-type HostInventory interface {
+// HostRepository stores and retrieves domain.Host aggregate records. It is
+// independent of workflow history, so a completed or expired execution cannot
+// delete ownership information, and it has no cloud or workflow knowledge.
+type HostRepository interface {
 	// CreateHost stores a new host. The bool is false when a host with the same
 	// ID already exists (in which case the stored host is returned).
 	CreateHost(ctx context.Context, host domain.Host) (domain.Host, bool, error)

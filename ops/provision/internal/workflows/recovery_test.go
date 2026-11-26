@@ -71,7 +71,7 @@ type faultSpec struct {
 // work and recording it. Reads always pass through, so the fault models a lost
 // record rather than a broken database.
 type faultInventory struct {
-	inner    ports.HostInventory
+	inner    ports.HostRepository
 	dropWhen func(before, after domain.Host) bool
 	persists bool
 
@@ -79,7 +79,7 @@ type faultInventory struct {
 	dropped int
 }
 
-var _ ports.HostInventory = (*faultInventory)(nil)
+var _ ports.HostRepository = (*faultInventory)(nil)
 
 func (f *faultInventory) CreateHost(ctx context.Context, host domain.Host) (domain.Host, bool, error) {
 	return f.inner.CreateHost(ctx, host)

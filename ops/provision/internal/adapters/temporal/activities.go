@@ -23,7 +23,7 @@ import (
 // port from internal/application, so an S01 stub can replace a real integration
 // without touching workflow code.
 type Activities struct {
-	Inventory ports.HostInventory
+	Inventory ports.HostRepository
 	Providers ports.HostProvider
 	// Agent proves a host's SSM agent registered. It is a separate dependency
 	// because the check is its own activity, ahead of enrollment.
