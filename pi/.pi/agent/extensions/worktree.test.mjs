@@ -282,7 +282,10 @@ esac
 			assert.equal(isError, false, text);
 			assert.match(text, /session in the worktree pane/);
 			assert.match(text, /No task was sent and no subagent runs there/);
-			assert.match(text, /cd \/private\/|cd \/var\//, "the ack names the path to work at");
+			assert.ok(
+				text.includes(`cd ${fakePath} &&`),
+				"the ack names the path to work at",
+			);
 			assert.match(text, /`subagent` and `cwd: /, "the ack names the dispatch route");
 			assert.deepEqual(calls()[0], [
 				"worktree", "create", "--cwd", repo,
