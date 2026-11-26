@@ -41,7 +41,9 @@ printf '%s\n' "# Amdahl's law bounds the speedup" > "$vault/2_knowledge/amdahls-
 
 # The Rex chords must stay wired to the binary they launch.
 grep -q 'rex.bind("cmd+shift+n", "capture_note")' "$repo_root/rex/.config/rex/notes.lua"
-grep -q 'rex.bind("cmd+shift+p", "process_notes")' "$repo_root/rex/.config/rex/notes.lua"
+grep -q 'rex.bind("cmd+shift+t", "process_notes")' "$repo_root/rex/.config/rex/notes.lua"
+# Cmd+Shift+P belongs to the command palette; the notes must not shadow it.
+! grep -q 'cmd+shift+p' "$repo_root/rex/.config/rex/notes.lua"
 grep -q 'open_layer(ctx, CARD_W, CARD_H, { "quicknote", "ui" })' "$repo_root/rex/.config/rex/notes.lua"
 grep -q 'open_layer(ctx, REVIEW_W, REVIEW_H, { "quicknote", "review" })' "$repo_root/rex/.config/rex/notes.lua"
 grep -q 'require("notes")' "$repo_root/rex/.config/rex/init.lua"
