@@ -12,6 +12,13 @@
     # below decides whether anything is enabled, so a host without Docker carries no
     # failing units.
     ../../services/fleet-provision.nix
+    # OpenBao: the server unit, its rendered config, the unseal oneshot, and the
+    # snapshot timer. Homelab-only because the preflight in docs/secrets.md
+    # proved the lab is the only host with the ports free, the Linger session,
+    # and the intent; the module declares its own units, and the two `sops`
+    # secrets it reads are declared in this file below, because this is the file
+    # that names the secrets file they live in.
+    ../../services/openbao.nix
   ];
 
   # Off until the host has Docker and the two password files. The units are
@@ -53,6 +60,14 @@
     # Sourced from ~/.zshenv below so every shell — interactive pi sessions
     # and ssh commands alike — carries the key.
     "pi-mcp-oauth.env".mode = "0400";
+    # The two OpenBao keys are custody material, not unit environment:
+    # `openbao-init.json` is `bao operator init`'s output (five unseal shares,
+    # threshold 3, and the root token), and `openbao-snapshot-token` is the
+    # periodic token `openbao-snapshot.service` reads. Neither is read at boot
+    # except by `openbao-unseal.service`; see docs/secrets.md, "Runbook 5 —
+    # OpenBao on the lab".
+    "openbao-init.json".mode = "0400";
+    "openbao-snapshot-token".mode = "0400";
   };
 
   # The fleet provisioning stack's two database passwords. Declared only when the
