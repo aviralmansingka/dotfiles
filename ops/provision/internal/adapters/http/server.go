@@ -41,6 +41,10 @@ func New(svc *application.Service, log ports.Logger) (*Server, error) {
 	}
 	server := &Server{svc: svc, log: log}
 	mux := http.NewServeMux()
+	// /healthz is the liveness probe: a probe cannot hold a bearer token, so this
+	// route answers without one and reports nothing but the fact that the process
+	// is serving. It touches no state.
+	mux.HandleFunc("GET /healthz", server.handleHealth)
 	mux.HandleFunc("POST /v1/hosts", server.handleCreateHost)
 	mux.HandleFunc("GET /v1/hosts", server.handleListHosts)
 	mux.HandleFunc("GET /v1/hosts/{id}", server.handleGetHost)
@@ -62,6 +66,12 @@ func (s *Server) withAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if r.URL.Path == "/healthz" {
+			// The liveness probe has no credential to present; only this one route
+			// skips the check, and only for the path the mux already limits to GET.
+			next.ServeHTTP(w, r)
+			return
+		}
 		token, ok := bearerToken(r.Header.Get("Authorization"))
 		if !ok {
 			s.unauthorized(w, r, "missing bearer token")
@@ -173,6 +183,12 @@ func (s *Server) handleNotFound(w http.ResponseWriter, r *http.Request) {
 		Code:    "not_found",
 		Message: "no such route",
 	}})
+}
+
+// handleHealth answers the liveness probe. It reads no state and names no
+// dependency, so a green answer means exactly "this process is serving".
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func principalFrom(ctx context.Context) ports.Principal {

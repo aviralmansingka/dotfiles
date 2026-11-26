@@ -490,3 +490,30 @@ func TestTombstonedHostIsVisibleWithItsIdentifiersAndCleanupOutcomes(t *testing.
 		t.Fatalf("a repeat delete against a tombstoned host started %d operation(s), want none", after-before)
 	}
 }
+
+// TestHealthIsUnauthenticatedAndUnknownRoutesStillFail covers the liveness probe:
+// GET /healthz answers 200 without a token, and the catch-all still answers 404
+// so the probe cannot be mistaken for a hole in the route table.
+func TestHealthIsUnauthenticatedAndUnknownRoutesStillFail(t *testing.T) {
+	api := newAPI(t)
+
+	recorder := api.do(http.MethodGet, "/healthz", "", "", "")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("GET /healthz without a token: got %d, want 200 (%s)", recorder.Code, recorder.Body.String())
+	}
+	if body := decodeObject(t, recorder); body["status"] != "ok" {
+		t.Fatalf("GET /healthz body: got %q, want {\"status\":\"ok\"}", recorder.Body.String())
+	}
+
+	// The catch-all still answers 404 for a real client, so the probe route is not
+	// a hole in the table: unknown paths keep going through the auth gate first
+	// (401 without a token) and only then reach handleNotFound.
+	unknownAnon := api.do(http.MethodGet, "/v1/nope", "", "", "")
+	if unknownAnon.Code != http.StatusUnauthorized {
+		t.Fatalf("GET /v1/nope without a token: got %d, want 401", unknownAnon.Code)
+	}
+	unknown := api.authorized(http.MethodGet, "/v1/nope", "", "")
+	if unknown.Code != http.StatusNotFound {
+		t.Fatalf("GET /v1/nope with a token: got %d, want 404", unknown.Code)
+	}
+}

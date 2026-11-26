@@ -224,10 +224,19 @@ let
       ${dockerShim} start ${temporalContainer} >/dev/null
       exit 0
     fi
-    # The server renders its own config from the environment, so no config file is
-    # mounted. The database password arrives through a 0600 env file; BIND_ON_IP is
-    # what lets the published loopback port reach the frontend, and the frontend is
-    # the only published port in the stack.
+    # The server renders its *static* config from the environment, but its dynamic
+    # config is a file: temporal-server start defaults to
+    # /etc/temporal/config/dynamicconfig/docker.yaml, and the pinned image ships no
+    # config directory at all (/etc/temporal holds only entrypoint.sh). Without the
+    # mount the container exits 1 on "unable to create dynamic config client" and
+    # the frontend port never opens. An empty map is the whole dynamic config this
+    # stack needs, so it is written here rather than baked into the image.
+    #
+    # The database password arrives through a 0600 env file; BIND_ON_IP is what lets
+    # the published loopback port reach the frontend, and the frontend is the only
+    # published port in the stack.
+    printf '{}\n' > "$runtime/dynamicconfig.yaml"
+    chmod 0644 "$runtime/dynamicconfig.yaml"
     ${dockerShim} run -d \
       --name ${temporalContainer} \
       --network ${network} \
@@ -241,6 +250,7 @@ let
       --env VISIBILITY_DBNAME=${visibilityDatabaseName} \
       --env POSTGRES_USER=${databaseUser} \
       --env BIND_ON_IP=0.0.0.0 \
+      --volume "$runtime/dynamicconfig.yaml:/etc/temporal/config/dynamicconfig/docker.yaml:ro" \
       ${cfg.temporalServerImage} >/dev/null
   '';
 

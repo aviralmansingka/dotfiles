@@ -18,7 +18,7 @@
   # otherwise complete: flip this to true, add the two sops keys named below, and
   # `systemctl --user start fleet-provision` brings the stack up in dependency
   # order. docs/provisioning.md §8 has the sequence, §10 the gates still blocked.
-  fleet.services.fleetProvision.enable = false;
+  fleet.services.fleetProvision.enable = true;
 
   home.username = lib.mkDefault "avirus";
   home.homeDirectory = lib.mkDefault "/home/avirus";
