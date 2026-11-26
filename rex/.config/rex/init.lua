@@ -448,3 +448,10 @@ rex.bind("ctrl+a>shift+4", "session.rename")
 for tab = 1, 9 do
   rex.bind("ctrl+a>" .. tab, "client.tab.goto", { index = tab })
 end
+
+-- >>> leaf >>>
+-- Managed by `leaf rex install`; `leaf rex uninstall` removes it.
+-- plugin: 4ba1d6441a3165f9
+dofile("/Users/aviral/.config/rex/plugins/leaf/init.lua").setup({ bin = { "/Users/aviral/.local/bin/leaf" } })
+-- open: idle
+-- <<< leaf <<<
