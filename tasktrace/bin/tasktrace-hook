@@ -1,0 +1,43 @@
+#!/bin/sh
+# Collector hook shim.  AeroSpace runs this through exec-and-forget (or /bin/sh
+# for exec-on-workspace-change).  The first argument is a hook entry point; with
+# no argument the shim uses `focus`, so one config line covers app and
+# workspace focus.
+#
+# This is the dev shim: the stowed config calls `tasktrace-hook` from the nix
+# profile, which needs no `uv` at all.  A hook runs with a bare PATH, so `uv` is
+# not on it; find it the same way the collector finds `aerospace` instead of
+# assuming a login shell.
+set -u
+
+entry="focus"
+if [ "$#" -gt 0 ]; then
+    entry="$1"
+    shift
+fi
+
+repo=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+uv=""
+for candidate in \
+    "${TASKTRACE_UV:-}" \
+    "$(command -v uv 2>/dev/null || true)" \
+    "$HOME/.nix-profile/bin/uv" \
+    "/etc/profiles/per-user/${USER:-$(id -un)}/bin/uv" \
+    /run/current-system/sw/bin/uv \
+    /opt/homebrew/bin/uv \
+    /usr/local/bin/uv
+do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+        uv="$candidate"
+        break
+    fi
+done
+
+if [ -z "$uv" ]; then
+    echo "tasktrace-hook: no uv found; install the nix profile (it ships tasktrace-hook)" >&2
+    exit 127
+fi
+
+# exec-and-forget discards this process, so nothing here may block the UI.
+exec "$uv" run --quiet --project "$repo" tasktrace hook "$entry" "$@"

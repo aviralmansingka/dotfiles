@@ -50,3 +50,6 @@ keys.txt
 
 # stray module-root binary from a bare `go build ./...`
 /go/quicknote/quicknote
+
+# Python virtualenvs (uv projects keep theirs in-tree)
+.venv/
