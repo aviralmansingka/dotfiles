@@ -66,7 +66,6 @@ func TestCommandRenderRefusesShellMetacharacters(t *testing.T) {
 		"paren":           "a(b)",
 		"bang":            "a!b",
 		"tilde":           "~root",
-		"question":        "a?b",
 		"caret":           "a^b",
 		"carriage return": "a\rb",
 	}
@@ -76,6 +75,47 @@ func TestCommandRenderRefusesShellMetacharacters(t *testing.T) {
 			t.Parallel()
 			if _, err := (command{"tailscale", arg}).render(); err == nil {
 				t.Fatalf("%q was rendered; every one of these must be refused", arg)
+			}
+		})
+	}
+}
+
+// TestCommandRenderAcceptsAFlakeReference pins the documented contract of the safe
+// set against the value that actually has to reach a remote host: a flake
+// reference carries both a query (`?rev=`) and an attribute path (`#`), and a
+// refusal of either byte refuses the whole deploy. The `#` case is here beside the
+// `?` case so the two exceptions cannot drift apart, and the refusals below it are
+// the bytes that still have to be gone.
+func TestCommandRenderAcceptsAFlakeReference(t *testing.T) {
+	t.Parallel()
+	updated := "git+https://github.com/example/dotfiles?rev=0123456789abcdef0123456789abcdef01234567#homeConfigurations.remote-mumbai.activationPackage"
+	attribute := "git+https://github.com/example/dotfiles/archive/0123456789abcdef0123456789abcdef01234567.tar.gz#homeConfigurations.remote-mumbai.activationPackage"
+	for _, arg := range []string{updated, attribute} {
+		arg := arg
+		t.Run("accepted", func(t *testing.T) {
+			t.Parallel()
+			program, err := (command{"nix", "profile", "add", arg}).render()
+			if err != nil {
+				t.Fatalf("flake reference %q was refused: %v", arg, err)
+			}
+			if !strings.Contains(program, "'"+arg+"'") {
+				t.Fatalf("flake reference %q is not one quoted word in %q", arg, program)
+			}
+		})
+	}
+	refused := map[string]string{
+		"semicolon": "a?rev=1;id",
+		"ampersand": "a?rev=1&&id",
+		"backtick":  "a?rev=`id`",
+		"dollar":    "a?rev=$(id)",
+		"newline":   "a?rev=1\nid",
+	}
+	for name, arg := range refused {
+		arg := arg
+		t.Run("refused "+name, func(t *testing.T) {
+			t.Parallel()
+			if _, err := (command{"nix", "profile", "add", arg}).render(); err == nil {
+				t.Fatalf("%q was rendered; a query-bearing reference must not carry shell syntax", arg)
 			}
 		})
 	}

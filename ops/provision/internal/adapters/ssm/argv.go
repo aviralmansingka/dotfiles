@@ -22,13 +22,15 @@ type command []string
 // safeArgBytes is the set an argument may be made of. It covers a store path, a
 // flake reference, a unit name, an account@machine string, and an env assignment,
 // and it excludes every byte a shell would treat as syntax if the quoting were
-// ever lost: no whitespace, no quotes, no `$`, no backtick, no `;`, `|`, `<`, `>`,
-// `(`, `)`, `\`, `*`, `~`, or `!`. `#`, `?`, `&`, `=`, `+`, `,`, `%`, `^`, `@`,
-// `:`, `/`, `.`, `_`, and `-` stay, because flake references and paths need them;
-// so do `=`, `,`, `%`, and `+`, which a flake reference or an env assignment can
-// contain. `#` stays because a flake attribute path needs it, and it is inert
-// inside a quoted word.
-const safeArgBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./_-:@+=,%#"
+// ever lost: no whitespace, no quotes, no `$`, no backtick, no `;`, `|`, `&`, `<`,
+// `>`, `(`, `)`, `\`, `*`, `~`, `!`, `{`, `}`, or `^`. `#`, `?`, `=`, `+`, `,`,
+// `%`, `@`, `:`, `/`, `.`, `_`, and `-` stay, because flake references, store
+// paths, and env assignments need them. `#` stays because a flake attribute path
+// needs it (`...#homeConfigurations.remote-mumbai.activationPackage`), and `?`
+// stays because a flake reference carries its query (`git+https://...?rev=...`);
+// both are inert inside a quoted word, and neither can start a new word, a
+// command, or an expansion on its own.
+const safeArgBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./_-:@+=,%#?"
 
 // remotePath is the PATH every remote program runs with.
 //
