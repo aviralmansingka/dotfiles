@@ -1,5 +1,6 @@
 // worktree tool — create/reuse a linked worktree from main and open it as a
-// user-driven session (an unfocused pi in the worktree pane or Rex tab).
+// session (an unfocused pi in the worktree pane or Rex tab), dispatching an
+// optional task into a Rex tab's pi.
 //
 // Coverage here mirrors the house offline pattern (cleanup.test.mjs fixtures
 // + the interactive-subagents fake-mux bins): stubbed pi package imports, a
@@ -205,8 +206,8 @@ esac
 	);
 	assert.deepEqual(
 		Object.keys(tool.parameters).sort(),
-		["base", "branch"],
-		"no task and no agent: this tool opens a session for the human, not a worker",
+		["base", "branch", "task"],
+		"a task dispatches the work into the tab; without one the tool parks it for the human",
 	);
 
 	const calls = () => {
@@ -279,8 +280,13 @@ esac
 			process.env.WT_TEST_BRANCH = "feat/dark-mode";
 			const { text, isError, details } = await finish(run({ branch: "dark-mode" }, repo));
 			assert.equal(isError, false, text);
-			assert.match(text, /user-driven session/);
-			assert.match(text, /No subagent runs there and this tool sent no task/);
+			assert.match(text, /session in the worktree pane/);
+			assert.match(text, /No task was sent and no subagent runs there/);
+			assert.ok(
+				text.includes(`cd ${fakePath} &&`),
+				"the ack names the path to work at",
+			);
+			assert.match(text, /`subagent` and `cwd: /, "the ack names the dispatch route");
 			assert.deepEqual(calls()[0], [
 				"worktree", "create", "--cwd", repo,
 				"--branch", "feat/dark-mode", "--base", "main", "--no-focus",
@@ -304,6 +310,31 @@ esac
 			assert.equal(details.mode, "created");
 			assert.equal(details.startedPi, true);
 			assert.equal(details.warning, null);
+			assert.equal(details.cwd, fakePath, "the ack carries the path as cwd for subagent");
+			assert.equal(details.block, "wT:p1");
+			assert.equal(details.task, null);
+			assert.equal(details.dispatched, false, "Herdr tabs park: no task is dispatched there");
+		}
+
+		// Herdr never dispatches a task: it parks pi, says so, and names the two
+		// routes that do work (work at the path, or subagent with cwd).
+		{
+			clearCalls();
+			spawnCalls.length = 0;
+			const repo = makeRepo();
+			process.env.WT_TEST_BRANCH = "feat/with-task";
+			const { text, isError, details } = await finish(
+				run({ branch: "with-task", task: "make the tests pass" }, repo),
+			);
+			assert.equal(isError, false, text);
+			assert.equal(details.dispatched, false);
+			assert.equal(details.task, "make the tests pass");
+			assert.match(String(details.warning), /only Rex tabs take one/);
+			assert.deepEqual(
+				calls()[1],
+				["pane", "run", "wT:p1", "pi"],
+				"the task is never typed into a Herdr pane",
+			);
 		}
 
 		// A session inside a linked worktree still addresses herdr through the
@@ -502,6 +533,34 @@ esac
 				assert.equal(details.startedPi, true);
 				assert.equal(spawnCalls.length, 0, "no subagent and no worktree-session adoption");
 				assert.equal(calls().length, 0, "Rex is created with git and rex, never through Herdr");
+
+				// A task rides in as pi's positional prompt, and the ack hands back the
+				// rex send line that steers that tab afterwards.
+				process.env.WT_REX_LIST = '{"windows":[]}';
+				clearRexCalls();
+				const dispatched = await finish(
+					run({ branch: "rex-task", task: "fix the failing suite" }, repo),
+				);
+				assert.equal(dispatched.isError, false, dispatched.text);
+				assert.deepEqual(
+					rexCalls()[1],
+					[
+						"window", "new", "-s", "session:test", "π rex-task",
+						"--focus=false", "-c", dispatched.details.path, "--json", "--", "pi",
+						"fix the failing suite",
+					],
+					"the tab starts as `pi <task>`, so no send can race the shell",
+				);
+				assert.equal(dispatched.details.dispatched, true);
+				assert.equal(dispatched.details.task, "fix the failing suite");
+				assert.equal(dispatched.details.cwd, dispatched.details.path);
+				assert.match(dispatched.text, /task: dispatched to that tab's pi at startup/);
+				assert.match(
+					dispatched.text,
+					/rex send -b block:wt '<text>' && rex send-key -b block:wt enter/,
+					"the parent steers the other agent over rex send",
+				);
+				assert.match(dispatched.text, /Do not edit the parent checkout/);
 				assert.equal(
 					gitx(["-C", repo, "config", "--local", "--get", "branch.feat/dark-mode.piWorktree"], { encoding: "utf8" }).trim(),
 					"pi-worktree",
@@ -514,13 +573,14 @@ esac
 					'{"windows":[{"label":"π dark-mode","window_id":"window:wt"}]}';
 				process.env.WT_REX_INSPECT = '{"focused_block_id":"block:wt"}';
 				clearRexCalls();
-				const again = await finish(run({ branch: "dark-mode" }, repo));
+				const again = await finish(run({ branch: "dark-mode", task: "keep going" }, repo));
 				assert.equal(again.isError, false, again.text);
 				assert.equal(again.details.mode, "reused");
 				assert.equal(again.details.path, expectedPath);
 				assert.equal(again.details.session, "session:test");
 				assert.equal(again.details.pane, "block:wt");
 				assert.equal(again.details.startedPi, false, "a reused tab is never relaunched");
+				assert.match(again.text, /task: not sent \(the tab already existed\)/);
 				assert.equal(
 					rexCalls().some((call) => call[0] === "window" && call[1] === "new"),
 					false,
