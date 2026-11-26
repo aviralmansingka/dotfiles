@@ -1,0 +1,7 @@
+{"type":"session_event","payload":{"session_id":"session:01a2140c-e628-7c8a-bf52-b55de55fe27d","event":{"type":"block_created","payload":{"block_id":"block:01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4"}}}}
+{"type":"session_event","payload":{"session_id":"session:01a2140c-e628-7c8a-bf52-b55de55fe27d","event":{"type":"block_owner_changed","payload":{"block_id":"block:01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4","owner":"client:01a2140e-fb03-74e9-ae67-c65ade250bf9","reason":"create"}}}}
+{"type":"session_event","payload":{"session_id":"session:01a2140c-e628-7c8a-bf52-b55de55fe27d","event":{"type":"session_view_changed","payload":{"revision":3}}}}
+{"type":"session_event","payload":{"session_id":"session:01a2140c-e628-7c8a-bf52-b55de55fe27d","event":{"type":"block_owner_changed","payload":{"block_id":"block:01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4","previous":"client:01a2140e-fb03-74e9-ae67-c65ade250bf9","reason":"disconnect"}}}}
+{"type":"session_event","payload":{"session_id":"session:01a2140c-e628-7c8a-bf52-b55de55fe27d","event":{"type":"session_view_changed","payload":{"revision":4}}}}
+{"type":"session_event","payload":{"session_id":"session:01a2140c-e628-7c8a-bf52-b55de55fe27d","event":{"type":"block_closed","payload":{"block_id":"block:01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4"}}}}
+{"type":"session_event","payload":{"session_id":"session:01a2140c-e628-7c8a-bf52-b55de55fe27d","event":{"type":"session_view_changed","payload":{"revision":5}}}}

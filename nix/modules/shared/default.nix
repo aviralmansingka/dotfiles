@@ -21,6 +21,11 @@ let
   # In-repo script package: vim keys for terminal-browser tabs. The source
   # lives in scripts/tb-vim, so no flake input is needed.
   tb-vim = pkgs.callPackage ../../pkgs/tb-vim.nix { };
+
+  # In-repo script package: the attention-span collector and the `tasktrace-hook`
+  # AeroSpace runs. AeroSpace hooks get a bare PATH, so this ships a wrapper
+  # with python3 in it instead of a shim that would need `uv`.
+  tasktrace = pkgs.callPackage ../../pkgs/tasktrace.nix { };
 in
 
 {
@@ -35,7 +40,10 @@ in
   # `stow` comes from the profile: install.sh bootstraps Nix, the profile
   # installs stow, then install.sh stows the file packages with it.
   home.packages =
-    [ tb-vim ]
+    [
+      tb-vim
+      tasktrace
+    ]
     ++ lib.optional (rataflow-view != null) rataflow-view
     ++ (
       with pkgs;

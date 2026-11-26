@@ -1,0 +1,12 @@
+id	ts	mono	kind	app	bundle	ws	idle_s	source	detail
+1	2026-11-26T00:34:52.897462+05:30	488442.550026	app	Rex Beta	com.superlogical.rex		0.55	nsworkspace	{"pid":783,"why":"start"}
+2	2026-11-26T00:34:53.588137+05:30	488443.240704	app	Finder	com.apple.finder		0.74	nsworkspace	{"pid":844,"why":"activate"}
+3	2026-11-26T00:34:55.117921+05:30	488444.770488	app	Ghostty	com.mitchellh.ghostty		1.269	nsworkspace	{"pid":823,"why":"activate"}
+4	2026-11-26T00:34:56.620759+05:30	488446.273308	app	Rex Beta	com.superlogical.rex		0.773	nsworkspace	{"pid":783,"why":"activate"}
+5	2026-11-26T00:34:58.257946+05:30	488447.910509	app	Rex Beta	com.superlogical.rex	1	0.035	aerospace	{"hook":"focus","window_id":"8749"}
+6	2026-11-26T00:34:58.398042+05:30	488448.050596	ws	Finder	com.apple.finder	2	0.176	aerospace	{"hook":"workspace","prev_ws":"1"}
+7	2026-11-26T00:34:58.521425+05:30	488448.173979	ws	Finder	com.apple.finder	1	0.299	aerospace	{"hook":"workspace","prev_ws":"2"}
+8	2026-11-26T00:34:58.572106+05:30	488448.22465	rex					rex	{"rex_type":"block_created","session":"01a2140c-e628-7c8a-bf52-b55de55fe27d","block":"01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4"}
+9	2026-11-26T00:34:58.573589+05:30	488448.22612	rex					rex	{"rex_type":"block_owner_changed","session":"01a2140c-e628-7c8a-bf52-b55de55fe27d","block":"01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4","reason":"create","owner":"client:01a2140e-fb03-74e9-ae67-c65ade250bf9"}
+10	2026-11-26T00:34:58.574285+05:30	488448.226812	rex					rex	{"rex_type":"block_owner_changed","session":"01a2140c-e628-7c8a-bf52-b55de55fe27d","block":"01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4","reason":"disconnect","previous":"client:01a2140e-fb03-74e9-ae67-c65ade250bf9"}
+11	2026-11-26T00:34:58.575116+05:30	488448.227642	rex					rex	{"rex_type":"block_closed","session":"01a2140c-e628-7c8a-bf52-b55de55fe27d","block":"01a2140e-fb04-7bf2-88ad-5f7b4a9eedb4"}
