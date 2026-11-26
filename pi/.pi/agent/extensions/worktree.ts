@@ -1,7 +1,12 @@
 /**
  * `worktree` — put change work in a linked Git worktree instead of the main
- * checkout, and open that checkout as a user-driven session: an unfocused
- * Rex tab (or the Herdr worktree pane) running an ordinary `pi` there.
+ * checkout, and open that checkout as a session: an unfocused Rex tab (or the
+ * Herdr worktree pane) running an ordinary `pi` there.
+ *
+ * A `task` is dispatched into that tab: under Rex the tab starts as
+ * `pi "<task>"`, and the ack returns a `rex send -b <block>` line that steers
+ * it later. Without a task the tab parks, and the caller works at the returned
+ * path or hands that path to `subagent` as `cwd`.
  *
  * Why: an agent that edits directly in the main checkout moves the repo's
  * neutral `main` branch — the picker invariants, the line-diff totals
@@ -345,15 +350,19 @@ export function openRexTab(
 	session: string,
 	branch: string,
 	cwd: string,
+	task?: string | null,
 ): { window: string; pane: string; created: boolean } {
 	const label = rexTabLabel(branch);
 	const existing = rexWindowByLabel(session, label);
 	if (existing) {
 		return { window: existing, pane: rexWindowBlock(session, existing) ?? "", created: false };
 	}
+	// A task rides in as pi's positional prompt, so the tab starts working it
+	// without a typed line and without a send race against shell startup.
 	const out = mux("rex", [
 		"window", "new", "-s", session, label,
 		"--focus=false", "-c", cwd, "--json", "--", "pi",
+		...(task ? [task] : []),
 	]);
 	let parsed: any;
 	try {
@@ -385,15 +394,25 @@ const WorktreeParams = Type.Object({
 				"must exist locally). Ignored when reusing or checking out an existing branch.",
 		}),
 	),
+	task: Type.Optional(
+		Type.String({
+			description:
+				"What to get done in that worktree. Under Rex the new tab's pi starts with this as its " +
+				"prompt, so the work happens there while this session stays free; steer it later with the " +
+				"`rex send -b <block>` line the result returns. Omit it to park the tab for the human and " +
+				"work at the returned path yourself (or hand that path to `subagent` as `cwd`).",
+		}),
+	),
 });
 
 const DESCRIPTION =
-	"Put change work in a linked Git worktree based on the repo's local main, and open that checkout " +
-	"as a user-driven session. Use this instead of editing the main checkout. The checkout lands at " +
-	"~/.herdr/worktrees/<repo>/<branch> and gets its own session: under Herdr it joins the repo's " +
-	"shared workspace, under Rex it opens a labeled tab running an ordinary pi. No subagent runs " +
-	"there and no task is passed — the human drives that session. Tear down with /cleanup from it " +
-	"after the work ships.";
+	"Put change work in a linked Git worktree based on the repo's local main. Use this instead of " +
+	"editing the main checkout. The checkout lands at ~/.herdr/worktrees/<repo>/<branch> and gets its " +
+	"own session: under Herdr it joins the repo's shared workspace, under Rex it opens a labeled tab " +
+	"running an ordinary pi. Pass `task` to dispatch the work: under Rex that tab's pi starts with " +
+	"the task, and the result returns a `rex send -b <block>` line that steers it afterwards. Without " +
+	"a task the tab parks for the human, and you work at the returned path or hand that path to " +
+	"`subagent` as `cwd`. Tear down with /cleanup from it after the work ships.";
 
 export default function worktreeExtension(pi: ExtensionAPI): void {
 	pi.registerTool({
@@ -402,8 +421,9 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 		description: DESCRIPTION,
 		promptSnippet:
 			"Make repo changes with the worktree tool instead of editing the main checkout. It bases the " +
-			"worktree on local main, never on the current branch, and opens it as a user-driven tab for " +
-			"the human; it launches no subagent and passes no task.",
+			"worktree on local main, never on the current branch, and opens a tab for that checkout: pass " +
+			"`task` and the tab's pi starts on it (steer later with the returned `rex send -b <block>` " +
+			"line), or omit `task` and work at the returned path yourself.",
 		parameters: WorktreeParams,
 		annotations: {
 			readOnlyHint: false,
@@ -447,6 +467,8 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			} catch (error: any) {
 				return fail(error?.message ?? String(error));
 			}
+			const task =
+				typeof params.task === "string" && params.task.trim() !== "" ? params.task.trim() : null;
 			const base = (params.base ?? DEFAULT_BASE).trim();
 			if (base === branch) {
 				return fail(`base and branch are both ${branch} — pick a different branch name.`);
@@ -523,7 +545,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 					);
 				}
 				try {
-					const opened = openRexTab(rexSessionId, branch, worktreePath);
+					const opened = openRexTab(rexSessionId, branch, worktreePath, task);
 					rootPane = opened.pane;
 					surfaceSession = rexSessionId;
 					startedPi = opened.created;
@@ -595,8 +617,9 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				}
 			}
 
-			// 6. Ack. No subagent runs here and no steer follows: the tab is the
-			// human's, parked and unfocused, with an ordinary pi at its prompt.
+			// 6. Ack. A task is dispatched into the tab's pi when this call started it;
+			// otherwise the tab parks, and the caller works at the path or hands that
+			// path to a subagent. Either way the ack names the path and the steer line.
 			const label = labelFor(branch);
 			const where =
 				surface === "herdr"
@@ -609,30 +632,57 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			const startHint = startedPi
 				? ""
 				: `\n- pi: not started (the surface was reused; run \`pi\` there if it is idle)`;
+			const dispatched = task !== null && startedPi && surface === "rex";
+			if (task !== null && !dispatched && surface === "herdr") {
+				warning = `the task was not dispatched: only Rex tabs take one. Work at ${worktreePath}, ` +
+					`or hand it to \`subagent\` as \`cwd\`.`;
+			}
+			const steer =
+				rootPane && surface === "rex"
+					? `\`rex send -b ${rootPane} '<text>' && rex send-key -b ${rootPane} enter\``
+					: null;
+			const taskLine =
+				task === null
+					? ""
+					: dispatched
+						? "\n- task: dispatched to that tab's pi at startup"
+						: `\n- task: not sent (the tab already existed)${steer ? ` — steer it with ${steer}` : ""}`;
+			const steerLine = steer ? `\n- steer it: ${steer}` : "";
+			const closing = dispatched
+				? `That tab is working the task. Do not edit the parent checkout: keep the work in this ` +
+					`worktree, and send follow-ups with the steer line. Tear down with /cleanup from a session ` +
+					`in that worktree, or reopen it any time with ${reopenHint}.`
+				: `No task was sent and no subagent runs there. Do not edit the parent checkout: run commands ` +
+					`as \`cd ${worktreePath} && …\`, read and edit with absolute paths under it, or dispatch a ` +
+					`worker with \`subagent\` and \`cwd: ${worktreePath}\`. Tear down with /cleanup from a session ` +
+					`in that worktree, or reopen it any time with ${reopenHint}.`;
 			return {
 				content: [
 					{
 						type: "text" as const,
 						text:
-							`Worktree ${mode === "reused" ? "reused" : "created"}; user-driven session ${where}.\n` +
+							`Worktree ${mode === "reused" ? "reused" : "created"}; session ${where}.\n` +
 							`- branch: ${branch}${mode === "created" ? ` (from ${base})` : ""}\n` +
-							`- path: ${worktreePath}${startHint}` +
+							`- path: ${worktreePath}${startHint}${taskLine}${steerLine}` +
 							(warning ? `\n- warning: ${warning}` : "") +
-							`\n\nNo subagent runs there and this tool sent no task — switch to that tab and drive it. ` +
-							`Tear down with /cleanup from a session in that worktree, or reopen it any time with ${reopenHint}.`,
+							`\n\n${closing}`,
 					},
 				],
 				details: {
 					branch,
 					base: mode === "created" ? base : null,
 					path: worktreePath,
+					cwd: worktreePath,
 					pane: rootPane,
+					block: rootPane,
 					workspace: workspaceId ?? null,
 					session: surfaceSession,
 					label,
 					tab: surface === "rex" ? rexTabLabel(branch) : null,
 					surface,
 					mode,
+					task,
+					dispatched,
 					startedPi,
 					warning,
 				},
