@@ -25,7 +25,8 @@ joins `scripts-tests` only when the Rex config or this suite changes.
   (`is not in a git repository`) and still opens the layer.
 - The wiring: `init.lua` has `require("review"){ block_cwd = block_cwd }` and
   still requires `notes`; `notes.lua` returns `CARD_W`, `CARD_H`, and
-  `bounds_for`; the `cmd+shift+n` and `cmd+shift+p` note chords are unchanged.
+  `bounds_for`; `cmd+shift+n` captures a note, `cmd+shift+t` processes the
+  queue, and the command palette keeps `cmd+shift+p`.
 
 ## Rules
 

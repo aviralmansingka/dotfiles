@@ -158,10 +158,11 @@ rex.action{
   end,
 }
 
--- Cmd+Shift+N takes the note mnemonic and Cmd+Shift+P the processing one. Both
+-- Cmd+Shift+P stays Rex's command palette, so the notes get the mnemonic
+-- instead: Cmd+Shift+N captures a note, Cmd+Shift+T processes the queue. Both
 -- collide with nothing else here: j/k cycle layers, =/- resize.
 rex.bind("cmd+shift+n", "capture_note")
-rex.bind("cmd+shift+p", "process_notes")
+rex.bind("cmd+shift+t", "process_notes")
 
 -- The card helpers are the one copy of where a small layer sits and how big it
 -- is, so another file can cut its own layer the same way. review.lua and

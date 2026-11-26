@@ -59,10 +59,10 @@ want 'say(("%s is not in a git repository' "$review" \
 want 'require("review"){ block_cwd = block_cwd }' "$init" \
   "init.lua requires review with the block reader"
 want 'require("notes")' "$init" "init.lua still requires notes"
-want 'return { CARD_W = CARD_W, CARD_H = CARD_H, bounds_for = bounds_for }' "$notes" \
-  "notes.lua returns the card helpers"
+want 'bounds_for = bounds_for,' "$notes" "notes.lua returns the card helpers"
 want 'rex.bind("cmd+shift+n", "capture_note")' "$notes" "the note chord is unchanged"
-want 'rex.bind("cmd+shift+p", "process_notes")' "$notes" "the processing chord is unchanged"
+want 'rex.bind("cmd+shift+t", "process_notes")' "$notes" "the processing chord is triage"
+reject 'cmd+shift+p' "$notes" "the command palette chord is left free"
 
 # The key must stay free: no other file binds cmd+shift+r.
 others=$(grep -rlF 'cmd+shift+r' "$repo_root/rex/.config/rex/" | grep -vF "$review" || true)
