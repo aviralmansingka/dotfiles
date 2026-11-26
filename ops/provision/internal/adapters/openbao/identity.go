@@ -18,6 +18,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/hostsession"
 )
 
 // IdentityConfig locates the management API and the token file. Every field is a
@@ -356,7 +357,7 @@ func containsString(values []string, want string) bool {
 	return false
 }
 
-// HostIdentityClient implements application.HostSessionClient on the host: it
+// HostIdentityClient implements hostsession.HostSessionClient on the host: it
 // unwraps a one-use SecretID, logs in, renews, and rotates. It holds no
 // management token and no SecretID: the only credential it ever holds is the
 // wrapping token it is given and the session token it gets back.
@@ -367,7 +368,7 @@ type HostIdentityClient struct {
 	consumed map[string]bool
 }
 
-var _ application.HostSessionClient = (*HostIdentityClient)(nil)
+var _ hostsession.HostSessionClient = (*HostIdentityClient)(nil)
 
 // NewHostIdentityClient builds the host-side client.
 func NewHostIdentityClient(address, namespace string, httpClient HTTPClient, timeout time.Duration) (*HostIdentityClient, error) {
@@ -416,36 +417,36 @@ func (h *HostIdentityClient) UnwrapSecretID(ctx context.Context, wrapToken appli
 }
 
 // Login exchanges the AppRole credentials for a short-lived token.
-func (h *HostIdentityClient) Login(ctx context.Context, roleID string, secretID application.Secret) (application.HostSession, error) {
+func (h *HostIdentityClient) Login(ctx context.Context, roleID string, secretID application.Secret) (hostsession.HostSession, error) {
 	value := secretID.Bytes()
 	defer clear(value)
 	if roleID == "" || len(value) == 0 {
-		return application.HostSession{}, errors.New("openbao: role id and secret id are required")
+		return hostsession.HostSession{}, errors.New("openbao: role id and secret id are required")
 	}
 	body := map[string]any{"role_id": roleID, "secret_id": string(value)}
 	var reply loginReply
 	if err := h.client.writeInto(ctx, http.MethodPost, domain.AppRoleLoginPath, body, &reply); err != nil {
-		return application.HostSession{}, fmt.Errorf("openbao: approle login: %w", err)
+		return hostsession.HostSession{}, fmt.Errorf("openbao: approle login: %w", err)
 	}
 	return reply.session()
 }
 
 // RenewSelf renews the session token in hand.
-func (h *HostIdentityClient) RenewSelf(ctx context.Context, token application.Secret) (application.HostSession, error) {
+func (h *HostIdentityClient) RenewSelf(ctx context.Context, token application.Secret) (hostsession.HostSession, error) {
 	value := token.Bytes()
 	defer clear(value)
 	if len(value) == 0 {
-		return application.HostSession{}, errors.New("openbao: session token is required")
+		return hostsession.HostSession{}, errors.New("openbao: session token is required")
 	}
 	request, err := h.client.request(ctx, http.MethodPost, domain.TokenRenewPath,
 		map[string]any{"increment": int64(domain.TokenRenewIncrement / time.Second)})
 	if err != nil {
-		return application.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
+		return hostsession.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
 	}
 	request.Header.Set("X-Vault-Token", string(value))
 	var reply loginReply
 	if err := h.client.do(request, &reply); err != nil {
-		return application.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
+		return hostsession.HostSession{}, fmt.Errorf("openbao: renew token: %w", err)
 	}
 	return reply.session()
 }
@@ -478,11 +479,11 @@ type loginReply struct {
 	} `json:"auth"`
 }
 
-func (r loginReply) session() (application.HostSession, error) {
+func (r loginReply) session() (hostsession.HostSession, error) {
 	if r.Auth.ClientToken == "" {
-		return application.HostSession{}, errors.New("openbao: auth reply carried no client token")
+		return hostsession.HostSession{}, errors.New("openbao: auth reply carried no client token")
 	}
-	return application.HostSession{
+	return hostsession.HostSession{
 		Token:     application.NewSecret("openbao:session-token", []byte(r.Auth.ClientToken)),
 		TTL:       time.Duration(r.Auth.LeaseDuration) * time.Second,
 		Renewable: r.Auth.Renewable,

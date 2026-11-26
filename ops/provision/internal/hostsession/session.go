@@ -1,4 +1,12 @@
-package application
+// Package hostsession holds the OpenBao session client that runs on a managed
+// host, not in the service.
+//
+// It is the host-side relogin path: a host that has rebooted takes its one-use
+// wrapping token, unwraps the bootstrap SecretID, logs in, renews, and rotates
+// the reboot-safe SecretID. Nothing here is compiled into, or reachable from, the
+// API server or the worker binary, and no management token ever reaches this
+// package. See internal/application for the service-side use cases.
+package hostsession
 
 import (
 	"context"
@@ -6,6 +14,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 )
 
@@ -13,7 +22,7 @@ import (
 // renders itself, and the TTL is the lifetime the server reported, already
 // checked against the hard maximum.
 type HostSession struct {
-	Token     Secret
+	Token     application.Secret
 	TTL       time.Duration
 	Renewable bool
 	// Accessor identifies the token for revocation without revealing it.
@@ -28,16 +37,16 @@ type HostSession struct {
 // (domain.WrapTokenConsumedError) without a network call, and the server refuses
 // a second unwrap independently.
 type HostSessionClient interface {
-	UnwrapSecretID(ctx context.Context, wrapToken Secret) (Secret, error)
-	Login(ctx context.Context, roleID string, secretID Secret) (HostSession, error)
-	RenewSelf(ctx context.Context, token Secret) (HostSession, error)
-	RotateSecretID(ctx context.Context, roleName string, previousAccessor string) (WrappedSecretID, error)
+	UnwrapSecretID(ctx context.Context, wrapToken application.Secret) (application.Secret, error)
+	Login(ctx context.Context, roleID string, secretID application.Secret) (HostSession, error)
+	RenewSelf(ctx context.Context, token application.Secret) (HostSession, error)
+	RotateSecretID(ctx context.Context, roleName string, previousAccessor string) (application.WrappedSecretID, error)
 }
 
 // SessionDeps are the collaborators of the host-side session use case.
 type SessionDeps struct {
 	Client      HostSessionClient
-	Logger      Logger
+	Logger      application.Logger
 	TokenPolicy domain.TokenPolicy
 }
 
@@ -47,7 +56,7 @@ type SessionDeps struct {
 // token.
 type SessionService struct {
 	client HostSessionClient
-	log    Logger
+	log    application.Logger
 	policy domain.TokenPolicy
 }
 
@@ -72,7 +81,7 @@ func NewSessionService(deps SessionDeps) (*SessionService, error) {
 // LoginFromWrapped unwraps the one-use bootstrap SecretID and logs in with it.
 // The wrapping token is one-use by contract: a second call with the same value is
 // refused by the client before any network call.
-func (s *SessionService) LoginFromWrapped(ctx context.Context, roleID string, wrapToken Secret) (HostSession, error) {
+func (s *SessionService) LoginFromWrapped(ctx context.Context, roleID string, wrapToken application.Secret) (HostSession, error) {
 	if wrapToken.Empty() {
 		return HostSession{}, domain.Invalid("wrapping_token", "is required")
 	}
@@ -99,7 +108,7 @@ func (s *SessionService) LoginFromWrapped(ctx context.Context, roleID string, wr
 
 // Renew extends a live session. Renewal may not return a token older than the
 // hard maximum, and it never asks for more than the remaining maximum.
-func (s *SessionService) Renew(ctx context.Context, token Secret) (HostSession, error) {
+func (s *SessionService) Renew(ctx context.Context, token application.Secret) (HostSession, error) {
 	if token.Empty() {
 		return HostSession{}, domain.Invalid("token", "is required")
 	}
@@ -118,13 +127,13 @@ func (s *SessionService) Renew(ctx context.Context, token Secret) (HostSession, 
 // Rotate replaces the rotating login SecretID. The previous one keeps working for
 // the rotation grace, so a host that is rebooting during the rotation still logs
 // in with the material it already has.
-func (s *SessionService) Rotate(ctx context.Context, roleName, previousAccessor string) (WrappedSecretID, error) {
+func (s *SessionService) Rotate(ctx context.Context, roleName, previousAccessor string) (application.WrappedSecretID, error) {
 	if roleName == "" {
-		return WrappedSecretID{}, domain.Invalid("role_name", "is required")
+		return application.WrappedSecretID{}, domain.Invalid("role_name", "is required")
 	}
 	wrapped, err := s.client.RotateSecretID(ctx, roleName, previousAccessor)
 	if err != nil {
-		return WrappedSecretID{}, fmt.Errorf("openbao session: rotate secret id: %w", err)
+		return application.WrappedSecretID{}, fmt.Errorf("openbao session: rotate secret id: %w", err)
 	}
 	s.log.Info("host.session.rotate", "role", roleName, "accessor", wrapped.Accessor)
 	return wrapped, nil

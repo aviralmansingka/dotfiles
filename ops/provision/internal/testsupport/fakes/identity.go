@@ -8,6 +8,7 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/hostsession"
 )
 
 // IdentityBackend is an in-process fake of the OpenBao identity mechanics. It
@@ -417,7 +418,7 @@ func NewHostSessions() *HostSessions {
 	}
 }
 
-var _ application.HostSessionClient = (*HostSessions)(nil)
+var _ hostsession.HostSessionClient = (*HostSessions)(nil)
 
 // IssueWrapToken registers a wrapping token that unwraps to a fake SecretID.
 func (h *HostSessions) IssueWrapToken(wrapToken string) {
@@ -461,7 +462,7 @@ func (h *HostSessions) FailUnwrap(err error) {
 	h.unwrapErr = err
 }
 
-// UnwrapSecretID implements application.HostSessionClient. A wrapping token that
+// UnwrapSecretID implements hostsession.HostSessionClient. A wrapping token that
 // was already consumed is refused before anything else, which is the replay
 // guard.
 func (h *HostSessions) UnwrapSecretID(_ context.Context, wrapToken application.Secret) (application.Secret, error) {
@@ -486,19 +487,19 @@ func (h *HostSessions) UnwrapSecretID(_ context.Context, wrapToken application.S
 	return application.NewSecret("fake:secret-id", []byte(secretID)), nil
 }
 
-// Login implements application.HostSessionClient.
-func (h *HostSessions) Login(_ context.Context, roleID string, secretID application.Secret) (application.HostSession, error) {
+// Login implements hostsession.HostSessionClient.
+func (h *HostSessions) Login(_ context.Context, roleID string, secretID application.Secret) (hostsession.HostSession, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.err != nil {
-		return application.HostSession{}, h.err
+		return hostsession.HostSession{}, h.err
 	}
 	if secretID.Empty() {
-		return application.HostSession{}, fmt.Errorf("fake host sessions: login without a secret id")
+		return hostsession.HostSession{}, fmt.Errorf("fake host sessions: login without a secret id")
 	}
 	h.logins = append(h.logins, roleID)
 	h.issuesSession++
-	return application.HostSession{
+	return hostsession.HostSession{
 		Token:     application.NewSecret("fake:session", []byte(fmt.Sprintf("session-token-%04d", h.issuesSession))),
 		TTL:       h.loginTTL,
 		Renewable: h.renewable,
@@ -506,18 +507,18 @@ func (h *HostSessions) Login(_ context.Context, roleID string, secretID applicat
 	}, nil
 }
 
-// RenewSelf implements application.HostSessionClient.
-func (h *HostSessions) RenewSelf(_ context.Context, token application.Secret) (application.HostSession, error) {
+// RenewSelf implements hostsession.HostSessionClient.
+func (h *HostSessions) RenewSelf(_ context.Context, token application.Secret) (hostsession.HostSession, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.err != nil {
-		return application.HostSession{}, h.err
+		return hostsession.HostSession{}, h.err
 	}
 	if token.Empty() {
-		return application.HostSession{}, fmt.Errorf("fake host sessions: renewal without a token")
+		return hostsession.HostSession{}, fmt.Errorf("fake host sessions: renewal without a token")
 	}
 	h.issuesSession++
-	return application.HostSession{
+	return hostsession.HostSession{
 		Token:     application.NewSecret("fake:session", []byte(fmt.Sprintf("session-token-%04d", h.issuesSession))),
 		TTL:       h.renewTTL,
 		Renewable: h.renewable,
@@ -525,7 +526,7 @@ func (h *HostSessions) RenewSelf(_ context.Context, token application.Secret) (a
 	}, nil
 }
 
-// RotateSecretID implements application.HostSessionClient.
+// RotateSecretID implements hostsession.HostSessionClient.
 func (h *HostSessions) RotateSecretID(_ context.Context, roleName, previousAccessor string) (application.WrappedSecretID, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

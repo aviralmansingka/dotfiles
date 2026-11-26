@@ -1,4 +1,4 @@
-package application_test
+package hostsession_test
 
 import (
 	"context"
@@ -9,14 +9,15 @@ import (
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/hostsession"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
 )
 
-func newSessionHarness(t *testing.T) (*fakes.HostSessions, *fakes.Logger, *application.SessionService) {
+func newSessionHarness(t *testing.T) (*fakes.HostSessions, *fakes.Logger, *hostsession.SessionService) {
 	t.Helper()
 	client := fakes.NewHostSessions()
 	logger := &fakes.Logger{}
-	service, err := application.NewSessionService(application.SessionDeps{Client: client, Logger: logger})
+	service, err := hostsession.NewSessionService(hostsession.SessionDeps{Client: client, Logger: logger})
 	if err != nil {
 		t.Fatalf("NewSessionService: %v", err)
 	}
