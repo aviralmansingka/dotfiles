@@ -11,6 +11,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/tokenstore"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
 
 // TestToken is the plaintext bearer token used by offline tests. Only its digest
@@ -197,17 +198,17 @@ func TokenStore(t interface{ Fatalf(string, ...any) }) *tokenstore.File {
 	store, err := tokenstore.New([]tokenstore.Client{
 		{
 			ClientID:    "test-client",
-			TokenSHA256: application.TokenDigest(TestToken),
+			TokenSHA256: token.Digest(TestToken),
 			Description: "offline test client",
 		},
 		{
 			ClientID:    "other-client",
-			TokenSHA256: application.TokenDigest(OtherToken),
+			TokenSHA256: token.Digest(OtherToken),
 			Description: "second offline client",
 		},
 		{
 			ClientID:    "revoked-client",
-			TokenSHA256: application.TokenDigest(RevokedToken),
+			TokenSHA256: token.Digest(RevokedToken),
 			Description: "revoked offline client",
 			Revoked:     true,
 		},

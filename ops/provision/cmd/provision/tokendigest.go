@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
 
 func runTokenDigest(args []string) error {
@@ -24,10 +24,10 @@ func runTokenDigest(args []string) error {
 		}
 		return errors.New("read token from stdin: empty input")
 	}
-	token := strings.TrimSpace(scanner.Text())
-	if token == "" {
+	presented := strings.TrimSpace(scanner.Text())
+	if presented == "" {
 		return errors.New("read token from stdin: empty token")
 	}
-	fmt.Println(application.TokenDigest(token))
+	fmt.Println(token.Digest(presented))
 	return nil
 }

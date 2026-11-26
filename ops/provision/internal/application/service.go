@@ -1,12 +1,10 @@
 // Package application holds the provision service use cases and the port
-// interfaces they depend on. It imports the domain package and the standard
-// library only: Temporal and provider SDKs live in adapters.
+// interfaces they depend on. It imports the domain and token leaf packages and
+// the standard library only: Temporal and provider SDKs live in adapters.
 package application
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
@@ -14,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
 
 // Deps are the collaborators a Service needs. Every field is required.
@@ -83,11 +82,11 @@ type AcceptedIDs struct {
 
 // Authorize resolves a bearer token to a principal. Only the SHA-256 digest is
 // ever compared or stored.
-func (s *Service) Authorize(ctx context.Context, token string) (Principal, error) {
-	if strings.TrimSpace(token) == "" {
+func (s *Service) Authorize(ctx context.Context, presented string) (Principal, error) {
+	if strings.TrimSpace(presented) == "" {
 		return Principal{}, domain.ErrUnauthorized
 	}
-	digest := TokenDigest(token)
+	digest := token.Digest(presented)
 	record, found, err := s.tokens.LookupToken(ctx, digest)
 	if err != nil {
 		return Principal{}, fmt.Errorf("lookup token: %w", err)
@@ -96,12 +95,6 @@ func (s *Service) Authorize(ctx context.Context, token string) (Principal, error
 		return Principal{}, domain.ErrUnauthorized
 	}
 	return Principal{ClientID: record.ClientID}, nil
-}
-
-// TokenDigest is the server-side representation of a client token.
-func TokenDigest(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
 }
 
 // CreateHost validates, resolves, and durably records a host creation. The same

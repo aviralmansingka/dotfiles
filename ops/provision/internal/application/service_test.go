@@ -8,6 +8,7 @@ import (
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/domain"
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/testsupport/fakes"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
 
 var createRequest = domain.CreateHostRequest{
@@ -37,7 +38,7 @@ func TestAuthorizeAcceptsOnlyIssuedDigests(t *testing.T) {
 		{"whitespace token", "   "},
 		{"unknown token", "not-an-issued-token"},
 		{"revoked token", fakes.RevokedToken},
-		{"digest used as a token", application.TokenDigest(fakes.TestToken)},
+		{"digest used as a token", token.Digest(fakes.TestToken)},
 	}
 	for _, tc := range rejected {
 		tc := tc

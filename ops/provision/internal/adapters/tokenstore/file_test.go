@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/aviralmansingka/dotfiles/ops/provision/internal/adapters/tokenstore"
-	"github.com/aviralmansingka/dotfiles/ops/provision/internal/application"
+	"github.com/aviralmansingka/dotfiles/ops/provision/internal/token"
 )
 
 // plaintextToken is a stand-in client token used only inside tests. The file that
@@ -37,7 +37,7 @@ func digestFileContents(extra string) string {
     token_sha256: %s
     description: revoked client
     revoked: true
-%s`, application.TokenDigest(plaintextToken), application.TokenDigest("offline-revoked-token"), extra)
+%s`, token.Digest(plaintextToken), token.Digest("offline-revoked-token"), extra)
 }
 
 // TestTokenFileStoresOnlyDigests covers the "tokens stored only as digests" half
@@ -54,7 +54,7 @@ func TestTokenFileStoresOnlyDigests(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	digest := application.TokenDigest(plaintextToken)
+	digest := token.Digest(plaintextToken)
 	record, found, err := loaded.LookupToken(ctx, digest)
 	if err != nil || !found {
 		t.Fatalf("digest lookup: found=%v err=%v", found, err)
@@ -78,7 +78,7 @@ func TestTokenFileStoresOnlyDigests(t *testing.T) {
 		t.Fatal("the token file must contain the digest")
 	}
 
-	revoked, found, err := loaded.LookupToken(ctx, application.TokenDigest("offline-revoked-token"))
+	revoked, found, err := loaded.LookupToken(ctx, token.Digest("offline-revoked-token"))
 	if err != nil || !found {
 		t.Fatalf("revoked digest lookup: found=%v err=%v", found, err)
 	}
@@ -107,19 +107,19 @@ func TestTokenFileRejectsPlaintextAndMalformedDigests(t *testing.T) {
 		},
 		{
 			label:    "missing client_id",
-			contents: "clients:\n  - token_sha256: " + application.TokenDigest("x") + "\n",
+			contents: "clients:\n  - token_sha256: " + token.Digest("x") + "\n",
 		},
 		{
 			label: "duplicate digest",
 			contents: `clients:
   - client_id: one
-    token_sha256: ` + application.TokenDigest("dup") + `
+    token_sha256: ` + token.Digest("dup") + `
   - client_id: two
-    token_sha256: ` + application.TokenDigest("dup") + "\n",
+    token_sha256: ` + token.Digest("dup") + "\n",
 		},
 		{
 			label:    "uppercase digest",
-			contents: "clients:\n  - client_id: one\n    token_sha256: " + strings.ToUpper(application.TokenDigest("up")) + "\n",
+			contents: "clients:\n  - client_id: one\n    token_sha256: " + strings.ToUpper(token.Digest("up")) + "\n",
 		},
 		{
 			label:    "short digest",
