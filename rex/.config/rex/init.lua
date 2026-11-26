@@ -453,5 +453,5 @@ end
 -- Managed by `leaf rex install`; `leaf rex uninstall` removes it.
 -- plugin: 4ba1d6441a3165f9
 dofile("/Users/aviral/.config/rex/plugins/leaf/init.lua").setup({ bin = { "/Users/aviral/.local/bin/leaf" } })
--- open: idle
+-- open: diff classic
 -- <<< leaf <<<
