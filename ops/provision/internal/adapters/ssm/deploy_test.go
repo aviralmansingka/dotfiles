@@ -115,6 +115,42 @@ func TestDeployActivatesTheProfileInTheOrderTheProfileNeeds(t *testing.T) {
 	assertArgvOnly(t, runner)
 }
 
+// TestDeployResolvesTheFlakeWithoutTheAttributeFragment is the regression test for
+// the live-run defect of 2026-11-27: the deploy handed the whole catalog reference
+// -- fragment included -- to `nix flake metadata`, which resolves a flake and
+// refuses a fragment, so every job died at DeployProfile with `unexpected fragment
+// 'homeConfigurations...' in flake reference`. The resolution must see the target
+// alone, and the activation must still carry the attribute it runs.
+func TestDeployResolvesTheFlakeWithoutTheAttributeFragment(t *testing.T) {
+	t.Parallel()
+	runner := healthyProfile()
+	deployer := newDeployer(t, runner, onlineAgent(), &fakes.Logger{})
+	if _, err := deployer.DeployProfile(context.Background(), deployRequest()); err != nil {
+		t.Fatalf("DeployProfile: %v", err)
+	}
+
+	target, fragment, ok := strings.Cut(flakeRef, "#")
+	if !ok || fragment == "" {
+		t.Fatalf("the test reference %q has no fragment, so this test proves nothing", flakeRef)
+	}
+
+	metadata := argvOf(runner.programFor(t, "flake-metadata", 0))
+	for _, arg := range metadata {
+		if strings.Contains(arg, "#") {
+			t.Fatalf("the metadata argv carries a fragment in %q: `nix flake metadata` refuses one (argv %v)", arg, metadata)
+		}
+	}
+	if !contains(metadata, target) {
+		t.Fatalf("the metadata argv does not name the flake target %q: %v", target, metadata)
+	}
+
+	// The attribute is not dropped, only moved: activation is the command that runs it.
+	activate := argvOf(runner.programFor(t, "activate", 0))
+	if !contains(activate, flakeRef) {
+		t.Fatalf("the activation argv lost the attribute it runs (%q): %v", flakeRef, activate)
+	}
+}
+
 // TestDeployRecordsTheRevisionItResolved proves the deployment record is written
 // once, named by the revision, and pointing at the binary that revision installed.
 func TestDeployRecordsTheRevisionItResolved(t *testing.T) {

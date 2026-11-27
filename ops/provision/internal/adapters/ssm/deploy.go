@@ -272,13 +272,25 @@ func (m flakeMetadata) rev() string {
 	return m.Locked.Rev
 }
 
+// flakeTarget is the part of a reference before the `#`: the flake itself.
+//
+// `nix flake metadata` resolves a flake and never an attribute, and it refuses a
+// reference that carries a fragment ("unexpected fragment 'x' in flake
+// reference"), so the resolution is handed the target alone. The fragment stays
+// with the command that runs an attribute -- `--flake <ref>#<attr>` in the
+// activation -- because that is the command that needs one.
+func flakeTarget(ref string) string {
+	target, _, _ := strings.Cut(ref, "#")
+	return target
+}
+
 // resolveRevision asks the host which commit the approved flake target is.
 //
 // It runs as the account, because that is whose Nix profile and cache will build
 // the profile, and it runs before activation, so a flake target that does not
 // resolve fails the job before anything on the host is touched.
 func (d *Deployer) resolveRevision(ctx context.Context, req ports.DeployRequest) (string, error) {
-	argv := d.asAccount(command{"nix", "flake", "metadata", "--json", req.FlakeRef})
+	argv := d.asAccount(command{"nix", "flake", "metadata", "--json", flakeTarget(req.FlakeRef)})
 	result, err := d.call(req, "flake-metadata", d.cfg.CommandTimeout).run(ctx, argv)
 	if err != nil {
 		return "", fmt.Errorf("resolve the flake revision on %s: %w", req.InstanceID, err)
