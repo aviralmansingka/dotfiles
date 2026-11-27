@@ -52,6 +52,24 @@ thread. Use it for pieces that did not fit in the 30-line cap, or for natural
 next decisions. Skip the section only for trivial acknowledgements (e.g. a bare
 "Done.").
 
+## Task delegation
+
+- **Keep it simple.** Do small or tightly coupled work yourself. For complex
+  work, make the smallest task DAG that captures real dependencies. Do not
+  draw it unless useful.
+- **Default to a subagent** for a well-scoped task that consumes a lot of
+  context but returns a short brief. Delegate substantial coding tasks when
+  you can give them a clear scope and acceptance checks.
+- **Match the role to the task.** Use a scout for codebase recon, a researcher
+  for research, and a worker for implementation. Use a separate agent for
+  independent validation when it matters.
+- **Run ready tasks in parallel.** Give each subagent its goal, inputs,
+  `cwd`, scope, and expected result with evidence. Keep write scopes
+  disjoint. Start dependent tasks when their inputs arrive.
+- **Keep synthesis, integration, and user decisions in the parent.** Use
+  the existing checkout when it fits. Do not create a worktree just to
+  delegate.
+
 ## Diagrams
 
 When an answer presents a plan, a dependency structure, or a flow, call the
