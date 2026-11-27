@@ -103,3 +103,46 @@ published commit.
 `host-89e209ad5ac401a170adf89c` is stuck at `state=provisioning` with no
 resource. It is read-only evidence for the S04 teardown step, which must not
 leave it pointing at nothing.
+
+## Run 4 (after publishing the branch)
+
+- `git push -u origin mission/fleet-live-validation` → exit 0, `* [new branch]
+  mission/fleet-live-validation -> mission/fleet-live-validation`; HEAD
+  `23dbc0317b240e4c2152e7b68e00afb7a42f494f` equals `git ls-remote origin
+  refs/heads/mission/fleet-live-validation`, so the pinned history is reachable.
+- Window 07:03:27–07:12:33; POST 07:03:28, key `fleet-s03-push-20261127T070328Z`,
+  **HTTP 202**, host `host-de6206017ca02c6af479134c`, job
+  `create-host-de6206017ca02c6af479134c`, run `01a21bd0-f9d8-7179-8da3-710537aa1b28`.
+- Poll: `07:03:35 in_progress/enrolling`, then `deploying` at 07:03:50, 07:04:05,
+  07:04:20, 07:04:35, 07:04:50, 07:05:05, `07:05:20 failed`.
+- Error (stored form is truncated at 200 bytes): `activate the profile did not
+  succeed (status "Failed", exit 1): error: flake 'git+https://github.com/aviralmansingka/dotfiles?rev=[redacted]'
+  does not provide attribute 'packages.x86_64-linux.homeConf…'`.
+
+### Root cause of run 4
+
+The two invocation shapes disagree about what the fragment means:
+
+- `nix build --dry-run '<ref>#homeConfigurations.remote-mumbai.activationPackage'`
+  on the adopted host **succeeds** (`--eval` returns
+  `/nix/store/di84k04548lxq4fk6da4f4a7sar0naak-home-manager-generation.drv`), so
+  the catalog's attribute path is real for `nix build`.
+- The deployer's activation argv is `DefaultSwitchArgv` +
+  `--flake <ref>`: `nix run github:nix-community/home-manager -- switch --flake
+  '<ref>#homeConfigurations.remote-mumbai.activationPackage'`
+  (`internal/adapters/ssm/hostprofile.go:79`). `home-manager switch --flake`
+  reads the fragment as the *homeConfiguration name*, so it looks for
+  `homeConfigurations."homeConfigurations.remote-mumbai.activationPackage"`.
+  Nix then lists its candidate expansions starting
+  `packages.x86_64-linux.homeConfigurations…`, which is exactly the truncated
+  message observed.
+
+So run 4 was **not** a fragment bug in our metadata call (that fix holds) and not
+a pin problem (the rev resolves): it is a contract mismatch between the catalog
+ref, which names an activation package, and `home-manager`, which wants the
+configuration name (`remote-mumbai`). Confirming dry-run with
+`--flake '<ref>#remote-mumbai'` was still running when the window closed
+(SSM command `0a6c264c-e797-49b7-9bc0-446aaee2a079`, `InProgress`).
+
+Daemon state after run 4: `host-de6206017ca02c6af479134c` is
+`state=failed` and names no resource this run; no new instance was created.
