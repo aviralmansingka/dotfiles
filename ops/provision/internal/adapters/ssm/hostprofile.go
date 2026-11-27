@@ -78,6 +78,37 @@ const (
 // `switch` an argument of home-manager rather than of `nix run`.
 var DefaultSwitchArgv = []string{"nix", "run", "github:nix-community/home-manager", "--", "switch"}
 
+// The flake output a home-manager configuration lives under, and the attribute a
+// switch ultimately builds.
+const (
+	homeManagerOutput   = "homeConfigurations"
+	homeManagerActivate = "activationPackage"
+)
+
+// switchTarget is the reference the profile switch is handed.
+//
+// The catalog names the output to activate -- `#homeConfigurations.<name>.<activationPackage>`
+// -- which is the installable `nix build` takes. `home-manager switch --flake`
+// takes a *configuration name* instead and builds that attribute itself, so a full
+// attribute path in this position makes it look for
+// `homeConfigurations."homeConfigurations.<name>.<activationPackage>"`, and Nix
+// refuses with a candidate list (the live message started
+// `does not provide attribute 'packages.x86_64-linux.homeConf…`). The name is what
+// belongs here. A reference that is not a home-manager output is returned
+// unchanged, because a build-shaped switch needs every segment of its attribute
+// path.
+func switchTarget(ref string) string {
+	target, fragment, hasFragment := strings.Cut(ref, "#")
+	if !hasFragment {
+		return ref
+	}
+	parts := strings.Split(fragment, ".")
+	if len(parts) == 3 && parts[0] == homeManagerOutput && parts[2] == homeManagerActivate && parts[1] != "" {
+		return target + "#" + parts[1]
+	}
+	return ref
+}
+
 // profileHost is the resolved shape of the account and the paths a step talks to.
 type profileHost struct {
 	account      string

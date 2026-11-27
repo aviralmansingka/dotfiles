@@ -26,6 +26,12 @@ const (
 	// refused before any remote call, because a host has no checkout to resolve it
 	// against.
 	flakeRef = "github:aviralmansingka/dotfiles/" + deployRevision + "#homeConfigurations.remote-mumbai.activationPackage"
+	// switchRef is what `home-manager switch --flake` takes for that target: the
+	// configuration name, because home-manager builds the activation package itself.
+	switchRef = "github:aviralmansingka/dotfiles/" + deployRevision + "#remote-mumbai"
+	// homeManagerAttribute is the attribute path home-manager appends to switchRef. A
+	// switch argv that carries it is switching the wrong thing.
+	homeManagerAttribute = "homeConfigurations.remote-mumbai.activationPackage"
 	// rexStorePath is where the fake profile put the rex binary.
 	rexStorePath = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-home-manager-generation/home-path/bin/rex"
 	// olderRexStorePath is the binary of an older generation.

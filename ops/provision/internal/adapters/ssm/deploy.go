@@ -352,11 +352,19 @@ func (d *Deployer) activatedRexPath(ctx context.Context, req ports.DeployRequest
 }
 
 // activate switches the profile on the host.
+//
+// The switch is handed `switchTarget(req.FlakeRef)` rather than the catalog
+// reference: home-manager takes a configuration name where a build takes the
+// attribute path. The full reference is what the run records and what a
+// build-shaped switch receives, and `switchTarget` returns it unchanged for
+// anything that is not a home-manager output.
 func (d *Deployer) activate(ctx context.Context, req ports.DeployRequest) error {
-	argv := d.asAccount(append(append(command(nil), d.cfg.Switch...), "--flake", req.FlakeRef))
+	target := switchTarget(req.FlakeRef)
+	argv := d.asAccount(append(append(command(nil), d.cfg.Switch...), "--flake", target))
 	logInfo(d.cfg.Logger, "host.deploy.activating",
 		"host_id", req.HostID,
 		"flake_ref", req.FlakeRef,
+		"switch_target", target,
 		"account", d.host.account,
 	)
 	result, err := d.call(req, "activate", d.cfg.ActivationTimeout).run(ctx, argv)

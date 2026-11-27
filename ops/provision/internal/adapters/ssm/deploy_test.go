@@ -89,10 +89,11 @@ func TestDeployActivatesTheProfileInTheOrderTheProfileNeeds(t *testing.T) {
 		t.Fatalf("the operator grant came after the Serve restart: %v", runner.steps())
 	}
 
-	// The activation runs as the profile's account, from a fully qualified target.
+	// The activation runs as the profile's account, from a fully qualified target --
+	// named by its configuration, because that is what home-manager switches.
 	activate := argvOf(runner.programFor(t, "activate", 0))
-	if got := activate[len(activate)-2] + " " + activate[len(activate)-1]; got != "--flake "+flakeRef {
-		t.Fatalf("activation argv tail = %q, want --flake %s (argv %v)", got, flakeRef, activate)
+	if got, want := activate[len(activate)-2]+" "+activate[len(activate)-1], "--flake "+switchRef; got != want {
+		t.Fatalf("activation argv tail = %q, want %q (argv %v)", got, want, activate)
 	}
 	if !contains(activate, "runuser") || !contains(activate, account) {
 		t.Fatalf("activation argv does not run as %s: %v", account, activate)
@@ -144,10 +145,46 @@ func TestDeployResolvesTheFlakeWithoutTheAttributeFragment(t *testing.T) {
 		t.Fatalf("the metadata argv does not name the flake target %q: %v", target, metadata)
 	}
 
-	// The attribute is not dropped, only moved: activation is the command that runs it.
+	// The attribute is not dropped, only moved: the switch names the configuration,
+	// and home-manager builds that configuration's activation package itself.
 	activate := argvOf(runner.programFor(t, "activate", 0))
-	if !contains(activate, flakeRef) {
-		t.Fatalf("the activation argv lost the attribute it runs (%q): %v", flakeRef, activate)
+	if !contains(activate, switchRef) {
+		t.Fatalf("the activation argv does not name the configuration %q: %v", switchRef, activate)
+	}
+}
+
+// TestDeploySwitchesTheConfigurationNameAndBuildsTheFullAttribute is the
+// regression test for the live-run defect of 2026-11-27: the switch was handed the
+// catalog's full attribute path
+// (`#homeConfigurations.<name>.activationPackage`), and `home-manager switch
+// --flake` read that as a configuration *name*, so Nix refused with
+// `does not provide attribute 'packages.x86_64-linux.homeConf<...>'`. Home-manager
+// adds the attribute itself, so the switch gets `#<name>`; a reference that is not
+// a home-manager output is untouched, because a build needs every segment.
+func TestDeploySwitchesTheConfigurationNameAndBuildsTheFullAttribute(t *testing.T) {
+	t.Parallel()
+	runner := healthyProfile()
+	deployer := newDeployer(t, runner, onlineAgent(), &fakes.Logger{})
+	if _, err := deployer.DeployProfile(context.Background(), deployRequest()); err != nil {
+		t.Fatalf("DeployProfile: %v", err)
+	}
+
+	activate := argvOf(runner.programFor(t, "activate", 0))
+	if !contains(activate, switchRef) {
+		t.Fatalf("the switch argv does not carry the configuration name %q: %v", switchRef, activate)
+	}
+	for _, arg := range activate {
+		if strings.Contains(arg, "#"+homeManagerAttribute) {
+			t.Fatalf("the switch argv carries the full attribute path in %q; home-manager takes the configuration name and builds that attribute itself (argv %v)", arg, activate)
+		}
+	}
+
+	// The catalog reference is not rewritten in place: the build-shaped form keeps
+	// its whole attribute path, which is the installable `nix build` resolves. That
+	// rewrite is a pure function, so its own table test sits beside the argv tests
+	// in the package that owns it.
+	if !strings.Contains(flakeRef, "#"+homeManagerAttribute) {
+		t.Fatalf("the test reference %q no longer names the activation package", flakeRef)
 	}
 }
 
