@@ -76,14 +76,18 @@ const base = {
 	PI_SUBAGENT_CWD: "/worktree",
 };
 
-test("a child in another session floats in that session's first window", () => {
+test("a captain's trooper floats in the captain's own window", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
-	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-rex-army" }, () => {
+	// A captain runs in the army session and passes no routing variable: its
+	// trooper follows the caller, so the layer lands over the captain's block in
+	// the captain's own window, in the mission worktree.
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}` }, () => {
 		assert.equal(rex.createSurface("trooper-S03"), "block:child");
 		const created = fake.calls().find(line => line.includes("session.new_layer"));
 		assert.ok(created, "no session.new_layer call was made");
-		assert.match(created, /session:mission/);
+		assert.match(created, /session:army/);
+		assert.doesNotMatch(created, /session:mission/);
 		assert.match(created, /window:anchor/);
 		assert.doesNotMatch(created, /window:active/);
 		assert.match(created, /\/worktree/);
@@ -93,6 +97,42 @@ test("a child in another session floats in that session's first window", () => {
 		assert.ok(minimized, "the child was not minimized");
 		assert.match(minimized, /minimized/);
 	});
+});
+
+test("PI_SUBAGENT_SESSION is a session file, never a routing label", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	// The variable names the child's own pi session file. A plain label in it used
+	// to route troopers into a mission session, which put them in another tab the
+	// captain could not see. It routes nothing now.
+	withEnv(
+		{ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-rex-army" },
+		() => {
+			rex.createSurface("trooper-S03");
+			const created = fake.calls().find(line => line.includes("session.new_layer"));
+			assert.ok(created, "no session.new_layer call was made");
+			assert.match(created, /session:army/);
+			assert.doesNotMatch(created, /session:mission/);
+			assert.match(created, /window:anchor/);
+		},
+	);
+});
+
+test("a routed child floats in that session's first window", () => {
+	const fake = fakeRex();
+	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
+	withEnv(
+		{ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_REX_SESSION: "mission-rex-army" },
+		() => {
+			rex.createSurface("trooper-S03");
+			const created = fake.calls().find(line => line.includes("session.new_layer"));
+			assert.ok(created, "no session.new_layer call was made");
+			assert.match(created, /session:mission/);
+			// Never the active window: that follows whatever tab the human looks at.
+			assert.match(created, /window:anchor/);
+			assert.doesNotMatch(created, /window:active/);
+		},
+	);
 });
 
 test("a child in the caller's session floats in the tab it came from", () => {
@@ -156,7 +196,7 @@ test("closing a floating child closes its layer, not the tab", () => {
 test("a split stays beside its anchor and keeps the anchor's session", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
-	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-rex-army" }, () => {
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_REX_SESSION: "mission-rex-army" }, () => {
 		assert.equal(rex.createSurfaceSplit("trooper-S05", "right", "block:army"), "block:child");
 		const split = fake.calls().find(line => line.includes("split"));
 		assert.ok(split, "no split call was made");
@@ -168,11 +208,12 @@ test("a split stays beside its anchor and keeps the anchor's session", () => {
 test("an explicit session argument wins over the environment", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
-	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, PI_SUBAGENT_SESSION: "mission-from-env" }, () => {
-		rex.createSurface("trooper-S06", { session: "mission-rex-army", cwd: "/explicit" });
+	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, REX_SESSION: "session:other", PI_SUBAGENT_REX_SESSION: "mission-rex-army" }, () => {
+		rex.createSurface("trooper-S06", { session: "session:explicit", cwd: "/explicit" });
 		const created = fake.calls().find(line => line.includes("session.new_layer"));
 		assert.ok(created, "no session.new_layer call was made");
-		assert.match(created, /session:mission/);
+		assert.match(created, /session:explicit/);
+		assert.doesNotMatch(created, /session:mission/);
 		assert.match(created, /\/explicit/);
 	});
 });
@@ -180,8 +221,9 @@ test("an explicit session argument wins over the environment", () => {
 test("an explicit target session carries the child's later sends and captures", () => {
 	const fake = fakeRex();
 	const rex = createJiti(import.meta.url)("./interactive-subagents/pi-extension/subagents/rex.ts");
-	// The caller is the captain, seated in the army session. The trooper it
-	// deploys is named the mission session, so the tab lands there.
+	// A caller seated in the army session can still name another session for one
+	// child; every later call on that block resolves inside the session that owns
+	// it, because rex refuses a block target from another session.
 	withEnv({ ...base, PATH: `${fake.dir}:${process.env.PATH}`, REX_SESSION: "session:army" }, () => {
 		delete process.env.PI_SUBAGENT_SESSION;
 		const child = rex.createSurface("trooper-S05", { session: "mission-rex-army" });

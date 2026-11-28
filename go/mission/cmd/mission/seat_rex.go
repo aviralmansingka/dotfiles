@@ -48,7 +48,8 @@ func rexCall(method string, args map[string]any) (map[string]any, error) {
 
 // rexSeat seats one plan in Rex. A Rex session holds windows, so the plan maps
 // onto it directly: the army session holds the commander window and one captain
-// window per mission, and each mission owns a subagent session for its troopers.
+// window per mission. A mission gets no session of its own, because its troopers
+// float in the captain's window.
 type rexSeat struct{}
 
 func (rexSeat) mux() string { return "rex" }
@@ -75,9 +76,10 @@ func (rexSeat) sessions() (map[string]string, error) {
 }
 
 // ensureSession creates one Rex session. The army session opens with its
-// commander window; a session with no window is a place for troopers only, so it
-// is created bare. The cwd is unused: a Rex window carries no cwd of its own, and
-// the army session's commander is a shell that starts wherever Rex starts.
+// commander window; deploy asks for no other session, because a mission's
+// troopers float in its captain's window. The cwd is unused: a Rex window carries
+// no cwd of its own, and the army session's commander is a shell that starts
+// wherever Rex starts.
 func (rexSeat) ensureSession(label, window, _ string) (string, error) {
 	args := map[string]any{"label": label}
 	if window != "" {
@@ -88,9 +90,7 @@ func (rexSeat) ensureSession(label, window, _ string) (string, error) {
 		return "", rexProblem("session.create", e)
 	}
 	id := text(v["session_id"])
-	// A trooper session needs no id here, so only the army session's absence is
-	// an error: deploy seats the captain in the session it was handed.
-	if window != "" && id == "" {
+	if id == "" {
 		return "", mission.Problem("rex_error", "rex created session %q without returning its id", label)
 	}
 	return id, nil

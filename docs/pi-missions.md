@@ -94,7 +94,7 @@ attachments to the same Pi session file.
 CLI to seat the mission: `mission deploy REPO/SLUG --mux rex|herdr`, where the mux
 is the one this session runs in (`herdr` when the session carries a Herdr pane,
 `rex` when it carries a Rex block). The CLI reserves the launch intent, seats the
-army session, the captain's window and the mission's subagent session, acks the
+army session and the captain's window, acks the
 launch, and reports the deployment. `start` then reads the runtime back from
 `mission show`: the record, not the launch, is the authority on where the captain
 runs. A repeat press finds the captain already seated and focuses it; `start`
@@ -126,7 +126,7 @@ touchpoint.
 > **Rank vocabulary.** The rank this mission deploys for that seat is the
 > **captain**, and the launch prompt has one owner: `mission plan` renders it as
 > `captain_brief` (`captainBrief` in `go/mission/cmd/mission/plan.go`), together
-> with `captain_argv` and the `subagent_session` its troopers work in. `mission
+> with `captain_argv`. `mission
 > deploy` writes that text into the seat as the exec line's last argument, so the
 > plan is the only description of the rank: the extension holds no second copy
 > and no fallback contract. The sections below that speak of the captain (`The
@@ -274,8 +274,10 @@ A captain never resets a step to weaken a check. It sends the block instead.
 
 `mission plan REPO/SLUG [--mux rex]` is the read-only launch description. It
 returns the rank vocabulary (session `army`, windows `commander` and
-`captain-<slug>`, subagent session `mission-<slug>`), the captain argv and the
-captain brief text, the mission worktree and branch, and an ack token. The plan
+`captain-<slug>`), the captain argv and the
+captain brief text, the mission worktree and branch, and an ack token. A mission
+has no session of its own: its troopers float in the captain's window, so no
+third seat label exists. The plan
 owns those names; no adapter spells them itself. `--mux` is accepted so a caller
 can say which surface it deploys to, and the description never depends on it.
 
@@ -307,11 +309,12 @@ clear, and the captain's placement, and `rexSeat` and `herdrSeat` implement it. 
 unknown `--mux` is refused with `mux_unsupported` before deploy reads anything.
 
 Deploy reads the plan, then reserves the launch intent (a `launch-<uid>` id), then
-creates only what is missing: the `army` session with its `commander` window, the
-mission's `mission-<slug>` session, and its `captain-<slug>` window in army. The
-captain window runs the plan's argv and a brief rendered from that reserved
-intent, so the captain attaches with the id the record holds. The ack lands last,
-with the plan's derived token beside the reserved intent.
+creates only what is missing: the `army` session with its `commander` window, and
+the mission's `captain-<slug>` window in army. A mission gets no session of its
+own, because its troopers float in the captain's window. The captain window runs
+the plan's argv and a brief rendered from that reserved intent, so the captain
+attaches with the id the record holds. The ack lands last, with the plan's
+reserved intent beside its derived token.
 
 Both adapters seat the captain the same way, because the seat is the plan's and
 not the mux's: a login shell reads the plan's `exec env …` line, and deploy then
@@ -323,9 +326,11 @@ A Rex window takes the captain as its own command, so that seat is one phase:
 `$SHELL -l -c <exec line>`, and Rex runs it. There is no prompt, no readiness
 wait, no write, and no submit — zsh reads the line as its `-c` argument, and
 `exec` replaces it with pi, so the block's foreground is pi from the start. The
-line starts the plan's absolute pi with `REX_SESSION=army`,
-`PI_SUBAGENT_SESSION=<mission-<slug>>`, and `PI_SUBAGENT_CWD=<worktree>`; the
-brief arrives as pi's first message. It does not name `REX_BLOCK`: Rex sets that
+line starts the plan's absolute pi with `REX_SESSION=army` and
+`PI_SUBAGENT_CWD=<worktree>`; the
+brief arrives as pi's first message. It names no `PI_SUBAGENT_SESSION`: that
+variable holds a child's own pi session file, and a label in it marks the seat as
+a trooper. It does not name `REX_BLOCK` either: Rex sets that
 in the environment of the program it starts in a block, so the captain already
 reads its own block, and a window command cannot carry an id that does not exist
 until the window has been created.
@@ -383,7 +388,10 @@ inventing names:
 | army session `army` | a Rex session | a workspace labeled `army`, found by label and created once |
 | commander window `commander` | the army session's first window | the army workspace's root tab, renamed |
 | captain window `captain-<slug>` | a window in army | a tab in the army workspace, cwd the mission worktree |
-| subagent session `mission-<slug>` | a Rex session troopers open windows in | the seat's `PI_SUBAGENT_SESSION`: Herdr has no session object, and troopers are tabs beside their captain |
+
+A deployment creates no third seat in either mux. Rex has no session object for a
+mission, because the captain's troopers float in the captain's own window; Herdr
+has none either, because its troopers are tabs beside their captain.
 
 Seating is two phases here, unlike Rex. `tab create` opens a tab on the human's
 login shell and names its pane; deploy polls `pane process-info` until that pane
@@ -400,7 +408,7 @@ The Herdr exec line carries no seat identity: Herdr sets `HERDR_PANE_ID` and
 its environment. The Rex line names `REX_SESSION=army`, the session's label,
 because mission identities are labels; `REX_BLOCK` is Rex's own answer in the
 block's environment. Everything else is the one `seatExecLine`:
-`PI_SUBAGENT_SESSION`, `PI_SUBAGENT_CWD`, the plan's absolute pi, its `--tools`
+`PI_SUBAGENT_CWD`, the plan's absolute pi, its `--tools`
 allowlist, and the brief last.
 
 Herdr reports the Pi session file for the agent it detects in the tab. Deploy
@@ -436,7 +444,7 @@ commands, run in the captain's own block:
 ```sh
 command -v pi rex mission          # all three must print a path
 mission --json show dotfiles/<slug> | jq -r '.data.state.active_attempt'
-rex capture -s mission-<slug> -b <block> --trim --unwrap | tail -5
+rex capture -s army -b <block> --trim --unwrap | tail -5
 ```
 
 A bound attempt and a live pane mean the seat works. The failure signatures name
@@ -469,6 +477,31 @@ Step 3 is not optional. Without it the transcript survives and the mission does
 not: every lifecycle call fails, and the captain reports warnings instead of
 work. The attempt it held stays attached to the session id, so a re-attach lands
 in the same attempt rather than opening a second one.
+
+### Where a trooper runs
+
+The captain is the only rank that deploys a trooper, and it does that through the
+shared `subagent` tool of the interactive-subagents extension. A trooper is an
+ordinary subagent: no mission identity, no timer, no watchdog, and no session
+argument on the call.
+
+| Mux | Where the trooper appears | What it inherits |
+| --- | --- | --- |
+| Rex | a floating layer over the captain's own window, in the army session, minimized until restored | `PI_SUBAGENT_CWD`, the mission worktree |
+| Herdr | a tab beside the captain's tab | the mission worktree as the tab's cwd |
+
+Rex floats a child over the caller's block whenever the child stays in the
+caller's session. A captain runs in army and exports no routing label, so its
+troopers land in its own window; two captains in army never share one. The layer
+opens minimized, so the human's view does not change; restoring it shows the
+trooper beside the rank that sent it. Nothing creates a `mission-<slug>` session:
+a second session would put the trooper in another tab the captain cannot see.
+
+Both inherits are deliberate. `PI_SUBAGENT_CWD` keeps every trooper in the
+mission worktree, and the result of a trooper is steered back to the captain that
+spawned it, whatever surface the trooper ran on. The captain still owns the
+cleanup: when a trooper exits, the extension closes the layer or tab it created,
+never the captain's window and never the army session.
 
 ## Mission desk
 
@@ -595,7 +628,7 @@ Every verification runs through a judge subagent, never through the driver. Afte
 the work subagent reports, the driver calls `mission action="judge"`. That call
 returns the judge task plus the artifact path, the step's acceptance criteria, the
 check list, and one capability path. The driver spawns one judge subagent with the
-returned task verbatim, in its own session and never the work subagent's session.
+returned task verbatim, in its own session file and never the work subagent's.
 
 The capability is how the judge reaches the CLI without borrowing the driver's
 session. `action="judge"` writes the attempt token to

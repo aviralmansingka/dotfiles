@@ -3029,16 +3029,18 @@ esac
 		assert.match(pathCall, /-s session:caller/, "a session file path is ignored for routing");
 		assert.doesNotMatch(pathCall, /\.jsonl/, "the child's session file never reaches rex");
 
-		// 3. Compatibility: mission deploy still exports a plain label in the
-		// old variable, and that label keeps routing.
+		// 3. A plain label in PI_SUBAGENT_SESSION is not a session target either.
+		// The variable names the child's own pi session file, so a label there used
+		// to send troopers to a mission session nobody watched. It follows the
+		// caller now.
 		process.env.PI_SUBAGENT_SESSION = "mission-y";
 		process.env.REX_TEST_LIST =
 			'{"sessions":[{"session_id":"session:x","label":"mission-x"},{"session_id":"session:y","label":"mission-y"}]}';
 		loadRoutingRex().createSurface("trooper-y");
 		assert.match(
 			lastWindowNew(),
-			/-s session:y/,
-			"a plain label in PI_SUBAGENT_SESSION still routes (today's captains)",
+			/-s session:caller/,
+			"a plain label in PI_SUBAGENT_SESSION never routes a child",
 		);
 
 		// 4. No routing variable at all: the child follows the caller.

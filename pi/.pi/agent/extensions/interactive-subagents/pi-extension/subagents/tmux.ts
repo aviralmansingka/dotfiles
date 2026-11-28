@@ -118,8 +118,10 @@ function rebalanceSurfaces(hintPane?: string): void {
 /**
  * Where a new child surface should live. Rex resolves both per call; tmux and
  * Herdr have no session concept, so they accept the same shape and ignore it.
- * Absent fields fall back to the environment (PI_SUBAGENT_SESSION /
+ * Absent fields fall back to the environment (PI_SUBAGENT_REX_SESSION /
  * PI_SUBAGENT_CWD), which is how a captain fans work out without arguments.
+ * A mission captain sets neither: its children follow it and float in its own
+ * window, in the army session it already runs in.
  */
 export interface SurfaceOptions {
   session?: string;

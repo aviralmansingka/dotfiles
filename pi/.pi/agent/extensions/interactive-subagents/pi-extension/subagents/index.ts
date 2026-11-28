@@ -147,7 +147,7 @@ const SubagentParams = Type.Object({
   session: Type.Optional(
     Type.String({
       description:
-        "Rex session label or id for the child tab, such as mission-fix-login. Defaults to this session. Use it to keep workers in their mission's session instead of your own.",
+        "Rex session label or id for the child surface. Defaults to this session, which keeps a mission captain's troopers floating in its own window. Pass it only to put children in a different session.",
     }),
   ),
 });

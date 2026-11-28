@@ -331,9 +331,9 @@ func TestDeploySeatsHerdr(t *testing.T) {
 
 	d, e := s.deploy(h, "herdr")
 	must(t, e)
-	// Same plan, same geometry: one army session, one captain window, one
-	// subagent session, whichever mux seats them.
-	if d.Mux != "herdr" || d.Session != p.Session || d.CaptainWindow != p.CaptainWindow || d.SubagentSession != p.SubagentSession {
+	// Same plan, same geometry: one army session and one captain window, whichever
+	// mux seats them.
+	if d.Mux != "herdr" || d.Session != p.Session || d.CaptainWindow != p.CaptainWindow {
 		t.Fatalf("deployment = %+v, plan = %+v", d, p)
 	}
 	if !d.SessionCreated || d.Focused {
@@ -369,13 +369,11 @@ func TestDeploySeatsHerdr(t *testing.T) {
 	if flagOf(tab, "--cwd") != p.Cwd {
 		t.Fatalf("the captain's tab opens in %q, want %q", flagOf(tab, "--cwd"), p.Cwd)
 	}
-	// The exec line keeps the plan's argv and brief, and carries the mission's
-	// subagent session: Herdr has no session object, so that label travels in the
-	// seat itself. A Herdr pane already knows its own workspace and pane, so the
-	// line carries no seat identity of its own.
+	// The exec line keeps the plan's argv and brief, and names the mission worktree
+	// that every trooper starts in. A Herdr pane already knows its own workspace
+	// and pane, so the line carries no seat identity of its own.
 	line := f.execLine()
 	for _, want := range []string{
-		"'PI_SUBAGENT_SESSION=" + p.SubagentSession + "'",
 		"'PI_SUBAGENT_CWD=" + p.Cwd + "'",
 		shellQuote(p.CaptainArgv[0]),
 		"'--tools'",
@@ -607,10 +605,10 @@ func TestDeployCommandSeatsTheChosenMux(t *testing.T) {
 	}
 }
 
-// One plan, two muxes: the same army session, captain window, and subagent
-// session, and the same captain argv and brief. What differs is only the seat's
-// own identity in the exec line, because a Rex block must be told which block it
-// is while a Herdr pane already knows its own workspace and pane.
+// One plan, two muxes: the same army session, captain window, captain argv and
+// brief. What differs is only the seat's own identity in the exec line, because a
+// Rex block must be told which session it is while a Herdr pane already knows its
+// own workspace and pane.
 func TestDeploySeatsTheSamePlanInEitherMux(t *testing.T) {
 	rexStore, rexHandle, _ := piFixture(t)
 	rexFakeServer := fakeRex(t)
@@ -629,7 +627,6 @@ func TestDeploySeatsTheSamePlanInEitherMux(t *testing.T) {
 	for _, want := range [][2]string{
 		{rexDeployment.Session, herdrDeployment.Session},
 		{rexDeployment.CaptainWindow, herdrDeployment.CaptainWindow},
-		{rexDeployment.SubagentSession, herdrDeployment.SubagentSession},
 	} {
 		if want[0] != want[1] {
 			t.Fatalf("the two muxes disagree on a plan label: rex %q, herdr %q", want[0], want[1])
@@ -651,12 +648,12 @@ func TestDeploySeatsTheSamePlanInEitherMux(t *testing.T) {
 	// Deploy re-renders the brief with the intent it reserved, so the plan a seat
 	// is built from is the plan with that intent in it.
 	rexSeated := rexPlan
-	rexSeated.CaptainBrief = captainPrompt(rexHandle, rexPlan.SubagentSession, rexDeployment.LaunchID)
+	rexSeated.CaptainBrief = captainPrompt(rexHandle, rexDeployment.LaunchID)
 	if want := seatExecLine(rexSeated, "REX_SESSION="+armySession); rexLine != want {
 		t.Fatalf("the rex seat is not the shared exec line:\n got %s\nwant %s", rexLine, want)
 	}
 	herdrSeated := herdrPlan
-	herdrSeated.CaptainBrief = captainPrompt(herdrHandle, herdrPlan.SubagentSession, herdrDeployment.LaunchID)
+	herdrSeated.CaptainBrief = captainPrompt(herdrHandle, herdrDeployment.LaunchID)
 	if want := seatExecLine(herdrSeated); herdrLine != want {
 		t.Fatalf("the herdr seat is not the shared exec line:\n got %s\nwant %s", herdrLine, want)
 	}

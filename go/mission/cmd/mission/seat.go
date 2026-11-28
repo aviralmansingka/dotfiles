@@ -89,16 +89,20 @@ var (
 // sets no PATH: the login shell already carries the human's PATH, so `mission`,
 // `rex`, and `pi` resolve inside the captain exactly as they do in the human's
 // own terminal.
+//
+// The one environment pair the seat adds is PI_SUBAGENT_CWD, the mission
+// worktree every trooper starts in. There is no PI_SUBAGENT_SESSION: that
+// variable names a child's own pi session file, and outside a child it marks the
+// seat as a trooper, so the editor extension would close the human's panes when
+// the captain exits. A captain's troopers need no routing label either, because
+// they float in the captain's window in the army session it already runs in.
 func seatExecLine(p Plan, identity ...string) string {
 	argv := append(append([]string{}, p.CaptainArgv...), p.CaptainBrief)
 	parts := []string{"exec", "env"}
 	for _, kv := range identity {
 		parts = append(parts, shellQuote(kv))
 	}
-	parts = append(parts,
-		shellQuote("PI_SUBAGENT_SESSION="+p.SubagentSession),
-		shellQuote("PI_SUBAGENT_CWD="+p.Cwd),
-	)
+	parts = append(parts, shellQuote("PI_SUBAGENT_CWD="+p.Cwd))
 	for _, a := range argv {
 		parts = append(parts, shellQuote(a))
 	}

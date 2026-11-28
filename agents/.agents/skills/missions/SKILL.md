@@ -118,7 +118,7 @@ detail's five views, and `L` asks for a launch.
 - `mission {action:"start", handle:"REPO/SLUG"}` prepares the mission worktree
   (`mission workspace`) and hands the launch to the CLI: `mission deploy
   REPO/SLUG --mux rex|herdr`, whichever mux this session runs in. The CLI seats
-  the army session, the captain's window and the mission's subagent session, and
+  the army session and the captain's window, and
   the worker it seats is a full Pi agent, not a subagent: no subagent identity,
   loadout, timer, or watchdog. The tool then reads the runtime back from
   `mission show`; a repeat press reports the live seat instead of a second one.
@@ -149,7 +149,8 @@ explicit. At a review, wait for the user to decide and direct continuation.
 
 One mission owns one persistent linked worktree and one durable Pi owner in one
 seat. In Herdr every mission's captain shares the `army` workspace (one tab per
-captain); in Rex the army session holds one captain window per mission. Attempts
+captain); in Rex the army session holds one captain window per mission, and each
+captain's troopers float inside its own window. Attempts
 belong to steps, not to new worktrees.
 Do not remove a worktree after a step. Never bypass a pending launch by launching
 again: a crash may have started the first session. Inspect its recorded session
@@ -159,6 +160,29 @@ diverge: `mission deploy` reserves the intent, seats the captain, verifies that 
 took the seat, retries the submit once, and acks. The seat's label is derived from
 the handle, so a second press focuses the live captain instead of seating
 another.
+
+## Deploy the troopers
+
+A mission has three ranks. The commander answers asks and may change the mission.
+The captain owns the claim, edits no repository file, and sends the work out. The
+troopers do the work and judge it. A subagent call places troopers only.
+
+A captain deploys a trooper with the shared `subagent` tool of the
+interactive-subagents extension, and it passes no `session`. A trooper is an
+ordinary subagent: no mission identity, no timer, no watchdog.
+
+- In Rex the trooper opens as a minimized floating layer over the captain's own
+  window, in the `army` session. Restore the layer to watch it work beside the
+  rank that sent it. Do not create a `mission-<slug>` Rex session, and never pass
+  `session=mission-<slug>`: no such session exists, and a session argument moves
+  the trooper out of the captain's window.
+- In Herdr the trooper opens as a tab beside the captain's tab.
+
+`PI_SUBAGENT_CWD` puts every trooper in the mission worktree, so a trooper call
+needs no `cwd`. The result of a trooper steers back to the captain that sent it.
+When a trooper exits, the extension closes the layer or tab it created, so the
+captain owns no cleanup call. Never close the `army` session, the captain's
+window, or another captain's troopers.
 
 ## Work and report
 
@@ -200,7 +224,7 @@ A step's verification belongs to one judge subagent, never to the session that
 holds the claim. After the work reports, call `mission {action:"judge"}`. It
 returns the judge task plus the artifact path, the acceptance criteria, the check
 list, and a one-shot capability path. Spawn one judge subagent with that task
-verbatim, in its own session and never the work subagent's session. The judge
+verbatim, in its own session file and never the work subagent's. The judge
 reads the artifact, runs the CLI check run itself through `mission verify` with the
 capability, and records its verdict with reasons as progress citing the artifact.
 `verify` and `finish` follow a recorded pass only; a failed verdict leaves the step
