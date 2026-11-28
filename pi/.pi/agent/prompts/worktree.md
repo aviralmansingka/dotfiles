@@ -1,8 +1,12 @@
 ---
-description: Start work in a worktree made from main
+description: Start isolated work in a Pi tab for human follow-up
 argument-hint: "[branch or theme]"
 ---
-Put this work in a Git worktree, and do the work there.
+An explicit `/worktree` request opts in to a separate tab. Otherwise, start a
+worktree session only when the user will need to review, steer, or resume the
+work there and the work benefits from Git isolation. For bounded work with
+no human follow-up in its own tab, stay in the current checkout or use a
+subagent. Follow the repository's checkout rules.
 
 The text after the command is: ${@:-the changes discussed in this conversation}
 
@@ -13,23 +17,17 @@ or a base.
   that name.
 - Otherwise derive `<type>/<slug>` from the text and the conversation. Pick the
   type from feat, fix, explore, chore, task.
-- Call the worktree tool with `base: "main"`. Base the worktree on local main,
-  never on the current branch. It takes `branch`, `base`, and an optional
-  `task`.
-- Do not edit the main checkout. Not one line.
+- Call the worktree tool with `base: "main"` and a concrete `task`. Include
+  the goal, relevant context, and checks. Omit `task` only if the user asks
+  for an idle tab.
 
-Then continue the work in the checkout you just got. Two routes, pick one and
-say which:
+Opening the tab does not start the work. Check the result:
 
-- **Dispatch.** Pass `task` with the concrete job. Under Rex the new tab's pi
-  starts on it, so the work runs there while this session stays free. Steer it
-  afterwards with the `rex send -b <block>` line the result returns, and read
-  its screen with `rex capture -b <block>`. Do not poll it.
-- **Do it here.** Work at `details.cwd`: `cd` there for commands, and use
-  absolute paths under it for read, edit, and write.
+- If `details.dispatched` is true, the new Rex tab owns the task. Use the
+  returned steer line for follow-ups. Do not duplicate the work or poll it.
+- If dispatch did not happen, use the returned steer line if it targets an
+  existing Pi session. Otherwise, continue at `details.cwd` yourself or pass
+  it as the subagent's `cwd`. Run commands and edit files in that checkout.
 
-Never edit the parent checkout and never call the worktree tool to "park" work
-you then do in place. If the ack says the tab already existed, the task was not
-sent: use the steer line, or work at the path.
-
-Report the branch, the path, and which route you took.
+Do not do the task in the parent checkout. Report the branch, the path, and
+where the task is running.
