@@ -397,22 +397,20 @@ const WorktreeParams = Type.Object({
 	task: Type.Optional(
 		Type.String({
 			description:
-				"What to get done in that worktree. Under Rex the new tab's pi starts with this as its " +
-				"prompt, so the work happens there while this session stays free; steer it later with the " +
-				"`rex send -b <block>` line the result returns. Omit it to park the tab for the human and " +
-				"work at the returned path yourself (or hand that path to `subagent` as `cwd`).",
+				"Concrete job for the worktree: goal, relevant context, and checks. New Rex tabs start " +
+				"with this prompt. If dispatch does not happen, use a valid steer line or work at the " +
+				"returned cwd. Omit only when the user asks for an idle tab.",
 		}),
 	),
 });
 
 const DESCRIPTION =
-	"Put change work in a linked Git worktree based on the repo's local main. Use this instead of " +
-	"editing the main checkout. The checkout lands at ~/.herdr/worktrees/<repo>/<branch> and gets its " +
-	"own session: under Herdr it joins the repo's shared workspace, under Rex it opens a labeled tab " +
-	"running an ordinary pi. Pass `task` to dispatch the work: under Rex that tab's pi starts with " +
-	"the task, and the result returns a `rex send -b <block>` line that steers it afterwards. Without " +
-	"a task the tab parks for the human, and you work at the returned path or hand that path to " +
-	"`subagent` as `cwd`. Tear down with /cleanup from it after the work ships.";
+	"Open a Pi tab in a linked Git worktree based on local main. Use this when the user needs to " +
+	"review, steer, or resume work in its own tab and the work benefits from Git isolation. Honor " +
+	"explicit worktree requests and repository checkout rules. For other bounded work, use the " +
+	"current checkout or a subagent. Pass a concrete `task` and check `details.dispatched`. If false, " +
+	"steer a running Pi with the returned line or continue at `details.cwd`, never in the parent " +
+	"checkout. Tear down with /cleanup after the work ships.";
 
 export default function worktreeExtension(pi: ExtensionAPI): void {
 	pi.registerTool({
@@ -420,10 +418,8 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 		label: "worktree",
 		description: DESCRIPTION,
 		promptSnippet:
-			"Make repo changes with the worktree tool instead of editing the main checkout. It bases the " +
-			"worktree on local main, never on the current branch, and opens a tab for that checkout: pass " +
-			"`task` and the tab's pi starts on it (steer later with the returned `rex send -b <block>` " +
-			"line), or omit `task` and work at the returned path yourself.",
+			"Open an isolated Pi tab for human follow-up or when the user or repo requires it. " +
+			"Pass a concrete `task` and continue the work in that checkout.",
 		parameters: WorktreeParams,
 		annotations: {
 			readOnlyHint: false,
