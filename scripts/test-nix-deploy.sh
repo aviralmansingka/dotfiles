@@ -188,7 +188,7 @@ STUB_HOSTNAME=testmac run "dry remote" remote devbox --dry-run
 expect_rc "dry remote" 0 "exit 0"
 expect_contains "dry remote" "homeConfigurations.remote-devbox" "names the devbox attribute"
 expect_contains "dry remote" "remote switch over" "reports the remote mode"
-expect_contains "dry remote" "flake.nix flake.lock nix justfile scripts/nix-deploy rataflow terminfo" "lists the deploy tree only"
+expect_contains "dry remote" "flake.nix flake.lock nix justfile scripts/nix-deploy rataflow tasktrace terminfo" "lists the deploy tree only"
 expect_contains "dry remote" "terminfo zsh secrets scripts/stow-packages" "stages the encrypted secrets the sops module reads at evaluation"
 
 echo "== remote deploy copies the tree and switches over ssh"
