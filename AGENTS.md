@@ -27,7 +27,13 @@ Treat repository, worktree, and session identity as three distinct concepts:
 
 ## Worktree tool for change work
 
-Agents making repo changes do not work from `main`. `pi/.pi/agent/extensions/worktree.ts` registers the `worktree`
+Agents making repo changes do not work from `main`.
+
+Choose the dispatch surface from the current checkout. On `main`, prefer the `worktree` tool, which opens the
+owning tab. In a linked worktree, open no other tab: dispatch an interactive subagent with `cwd` set to that
+checkout. A tab per worktree multiplies durable sessions, and a subagent inherits the existing checkout.
+
+`pi/.pi/agent/extensions/worktree.ts` registers the `worktree`
 tool: it creates or reuses `~/.herdr/worktrees/<repo>/<type>-<slug>` from local `main` (always `--no-focus`) and
 opens that checkout as a tab in the repository's own session — `herdr pane run <pane> pi` under
 Herdr, `rex window new -s $REX_SESSION "π <slug>" --focus=false -c <checkout> -- pi "<task>"` under Rex. A Rex
