@@ -30,16 +30,19 @@ Treat repository, worktree, and session identity as three distinct concepts:
 Agents making repo changes do not work from `main`. `pi/.pi/agent/extensions/worktree.ts` registers the `worktree`
 tool: it creates or reuses `~/.herdr/worktrees/<repo>/<type>-<slug>` from local `main` (always `--no-focus`) and
 opens that checkout as a tab in the repository's own session — `herdr pane run <pane> pi` under
-Herdr, `rex window new -s $REX_SESSION "π <slug>" --focus=false -c <checkout> -- pi` under Rex. A Rex session is
-the analogue of a Herdr workspace, not of a worktree row, so a worktree never gets a session of its own; the tab
+Herdr, `rex window new -s $REX_SESSION "π <slug>" --focus=false -c <checkout> -- pi "<task>"` under Rex. A Rex
+session is the analogue of a Herdr workspace, not of a worktree row, so a worktree never gets a session of its
+own; the tab
 is keyed by that label and reused on a repeat call. A reused worktree never starts a second pi.
 
-It takes `branch`, `base`, and an optional `task`, and it never spawns a subagent or registers a name. Under Rex,
-`task` rides in as pi's positional prompt (`-- pi "<task>"`), so the tab starts the work with no send racing shell
-startup; the result returns `details.cwd`, `details.block`, `details.dispatched`, and a copyable
+It takes `branch`, `base`, and a required, non-empty `task`, and it never spawns a subagent or registers a name.
+A missing, empty, or whitespace-only task is refused before any Git or multiplexer call, so it creates no checkout
+and no tab; there is no idle mode. Under Rex, `task` rides in as pi's positional prompt (`-- pi "<task>"`), so the
+tab starts the work with no send racing shell startup; the result returns `details.cwd`, `details.block`,
+`details.dispatched`, and a copyable
 `rex send -b <block> '<text>' && rex send-key -b <block> enter` line. That line is the agent-to-agent channel: send
 text, then Enter, because `rex send` types without submitting. `rex capture -b <block>` reads the other side back.
-Without `task`, or on the Herdr surface, the tab parks for the human and the caller works at `details.cwd` with
+On the Herdr surface the task is not dispatched: the caller works at `details.cwd` with
 absolute paths or passes that path to `subagent` as `cwd`. An ack that says "switch to that tab and drive it" is a
 bug: no tool writes into another pi session. Branches are
 ownership-marked (`branch.<b>.piWorktree` in git config, the gh-dash-open-pr pattern); anything the tool does not own
@@ -48,9 +51,9 @@ is refused. Teardown after ship stays with `/cleanup`.
 `/worktree` is the human entry point, and it is a prompt template, not an extension command:
 `pi/.pi/agent/prompts/worktree.md`. The text after the command is either a branch (`feat/build-skill`) or a theme
 ("the changes in this conversation"). The agent derives the type and slug from that text and the conversation. It
-asks no questions and always passes `base: "main"`, so a worktree never starts from the current branch. It then
-reports the branch, the path, and the tab, and it continues the work in the session it just opened: pass `task`, or
-work at `details.cwd`.
+asks no questions and always passes `base: "main"` and a concrete `task`, so a worktree never starts from the
+current branch and never opens idle. It then reports the branch, the path, and the tab, and it continues the work
+in the session it just opened: steer that tab with the returned line, or work at `details.cwd`.
 
 ## Captain prompt budget: deferred tools
 
