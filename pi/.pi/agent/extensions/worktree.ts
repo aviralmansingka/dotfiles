@@ -3,10 +3,10 @@
  * checkout, and open that checkout as a session: an unfocused Rex tab (or the
  * Herdr worktree pane) running an ordinary `pi` there.
  *
- * A `task` is dispatched into that tab: under Rex the tab starts as
- * `pi "<task>"`, and the ack returns a `rex send -b <block>` line that steers
- * it later. Without a task the tab parks, and the caller works at the returned
- * path or hands that path to `subagent` as `cwd`.
+ * A `task` is required and dispatched into that tab: under Rex the tab starts
+ * as `pi "<task>"`, and the ack returns a `rex send -b <block>` line that
+ * steers it later. A missing, empty, or whitespace-only task is refused before
+ * any checkout or tab is made: there is no idle mode.
  *
  * Why: an agent that edits directly in the main checkout moves the repo's
  * neutral `main` branch — the picker invariants, the line-diff totals
@@ -26,10 +26,9 @@
  *      surface may already host the session's own pi.
  *
  * No subagent. Nothing is spawned, registered, watched, or auto-exited, so
- * the tab stays parked for the human, carries no `PI_SUBAGENT_*` identity,
- * and never reports a completion steer. The tool passes no task: the human
- * drives the session. There is no `task` or `agent` parameter, so a caller
- * that wants a worker uses `subagent` instead.
+ * the tab carries no `PI_SUBAGENT_*` identity and never reports a completion
+ * steer. The required `task` holds the work, and there is no `agent`
+ * parameter, so a caller that wants a worker profile uses `subagent` instead.
  *
  * Ownership: a fresh branch is marked `branch.<b>.piWorktree` in the repo's
  * local git config — the same pattern gh-dash-open-pr uses with
@@ -350,19 +349,19 @@ export function openRexTab(
 	session: string,
 	branch: string,
 	cwd: string,
-	task?: string | null,
+	task: string,
 ): { window: string; pane: string; created: boolean } {
 	const label = rexTabLabel(branch);
 	const existing = rexWindowByLabel(session, label);
 	if (existing) {
 		return { window: existing, pane: rexWindowBlock(session, existing) ?? "", created: false };
 	}
-	// A task rides in as pi's positional prompt, so the tab starts working it
+	// The task rides in as pi's positional prompt, so the tab starts working it
 	// without a typed line and without a send race against shell startup.
 	const out = mux("rex", [
 		"window", "new", "-s", session, label,
 		"--focus=false", "-c", cwd, "--json", "--", "pi",
-		...(task ? [task] : []),
+		task,
 	]);
 	let parsed: any;
 	try {
@@ -394,14 +393,12 @@ const WorktreeParams = Type.Object({
 				"must exist locally). Ignored when reusing or checking out an existing branch.",
 		}),
 	),
-	task: Type.Optional(
-		Type.String({
-			description:
-				"Concrete job for the worktree: goal, relevant context, and checks. New Rex tabs start " +
-				"with this prompt. If dispatch does not happen, use a valid steer line or work at the " +
-				"returned cwd. Omit only when the user asks for an idle tab.",
-		}),
-	),
+	task: Type.String({
+		description:
+			"Required. Concrete job for the worktree: goal, relevant context, and checks. New Rex " +
+			"tabs start with this prompt. Missing, empty, and whitespace-only tasks are refused; " +
+			"there is no idle mode. Use the current checkout or a `subagent` instead.",
+	}),
 });
 
 const DESCRIPTION =
@@ -436,6 +433,18 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				details: { error: message, ...details },
 			});
 
+			// 0. Task guard — the tab exists to run one concrete job. Refuse a missing,
+			// empty, or whitespace-only task before any Git or multiplexer call, so a
+			// rejected input never leaves a checkout or a tab behind.
+			const task = typeof params.task === "string" ? params.task.trim() : "";
+			if (!task) {
+				return fail(
+					"The worktree tool needs a non-empty `task`: the goal, relevant context, and " +
+						"checks for the work that runs in the new tab. There is no idle mode — use " +
+						"the current checkout, or `subagent` with a `cwd`, when no Pi tab is needed.",
+				);
+			}
+
 			// 1. Surface guard — Herdr drives worktrees through its workspace API;
 			// Rex has no worktree command, so this file runs git directly there.
 			const surface = detectSurface();
@@ -463,8 +472,6 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			} catch (error: any) {
 				return fail(error?.message ?? String(error));
 			}
-			const task =
-				typeof params.task === "string" && params.task.trim() !== "" ? params.task.trim() : null;
 			const base = (params.base ?? DEFAULT_BASE).trim();
 			if (base === branch) {
 				return fail(`base and branch are both ${branch} — pick a different branch name.`);
@@ -613,9 +620,9 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 				}
 			}
 
-			// 6. Ack. A task is dispatched into the tab's pi when this call started it;
-			// otherwise the tab parks, and the caller works at the path or hands that
-			// path to a subagent. Either way the ack names the path and the steer line.
+			// 6. Ack. The task is dispatched into the tab's pi when this call started a
+			// Rex tab; otherwise it was not sent, and the caller works at the path or
+			// hands that path to a subagent. Either way the ack names the steer line.
 			const label = labelFor(branch);
 			const where =
 				surface === "herdr"
@@ -628,21 +635,22 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
 			const startHint = startedPi
 				? ""
 				: `\n- pi: not started (the surface was reused; run \`pi\` there if it is idle)`;
-			const dispatched = task !== null && startedPi && surface === "rex";
-			if (task !== null && !dispatched && surface === "herdr") {
-				warning = `the task was not dispatched: only Rex tabs take one. Work at ${worktreePath}, ` +
+			const dispatched = startedPi && surface === "rex";
+			if (!dispatched && surface === "herdr") {
+				const dispatchWarning =
+					`the task was not dispatched: only Rex tabs take one. Work at ${worktreePath}, ` +
 					`or hand it to \`subagent\` as \`cwd\`.`;
+				warning = warning ? `${warning}; ${dispatchWarning}` : dispatchWarning;
 			}
 			const steer =
 				rootPane && surface === "rex"
 					? `\`rex send -b ${rootPane} '<text>' && rex send-key -b ${rootPane} enter\``
 					: null;
-			const taskLine =
-				task === null
-					? ""
-					: dispatched
-						? "\n- task: dispatched to that tab's pi at startup"
-						: `\n- task: not sent (the tab already existed)${steer ? ` — steer it with ${steer}` : ""}`;
+			const taskLine = dispatched
+				? "\n- task: dispatched to that tab's pi at startup"
+				: surface === "herdr"
+					? "\n- task: not sent (Herdr panes do not take one)"
+					: `\n- task: not sent (the tab already existed)${steer ? ` — steer it with ${steer}` : ""}`;
 			const steerLine = steer ? `\n- steer it: ${steer}` : "";
 			const closing = dispatched
 				? `That tab is working the task. Do not edit the parent checkout: keep the work in this ` +

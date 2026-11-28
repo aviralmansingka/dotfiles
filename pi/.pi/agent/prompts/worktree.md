@@ -17,11 +17,12 @@ or a base.
   that name.
 - Otherwise derive `<type>/<slug>` from the text and the conversation. Pick the
   type from feat, fix, explore, chore, task.
-- Call the worktree tool with `base: "main"` and a concrete `task`. Include
-  the goal, relevant context, and checks. Omit `task` only if the user asks
-  for an idle tab.
+- Call the worktree tool with `base: "main"` and a required, non-empty
+  `task`. Include the goal, relevant context, and checks. The tool refuses a
+  missing, empty, or whitespace-only task, so always write one; there is no
+  idle tab.
 
-Opening the tab does not start the work. Check the result:
+Opening a tab is not proof that the task was dispatched. Check the result:
 
 - If `details.dispatched` is true, the new Rex tab owns the task. Use the
   returned steer line for follow-ups. Do not duplicate the work or poll it.

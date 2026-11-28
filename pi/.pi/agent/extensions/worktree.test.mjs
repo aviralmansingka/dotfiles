@@ -1,6 +1,7 @@
 // worktree tool — create/reuse a linked worktree from main and open it as a
-// session (an unfocused pi in the worktree pane or Rex tab), dispatching an
-// optional task into a Rex tab's pi.
+// session (an unfocused pi in the worktree pane or Rex tab), dispatching the
+// required task into a Rex tab's pi and refusing a missing, empty, or
+// whitespace-only task before any checkout or tab exists.
 //
 // Coverage here mirrors the house offline pattern (cleanup.test.mjs fixtures
 // + the interactive-subagents fake-mux bins): stubbed pi package imports, a
@@ -32,9 +33,22 @@ const { createJiti } = require(jitiPath);
 // must match what the tool actually saw.
 const root = realpathSync(mkdtempSync(join(tmpdir(), "worktree-tool-test-")));
 try {
-	// typebox stub: parameter schemas only need to load, not validate here.
+	// typebox stub: mirror required-ness so the suite can assert the schema
+	// demands a task. Real validation belongs to pi, not this suite.
 	const typebox = join(root, "typebox.cjs");
-	writeFileSync(typebox, "exports.Type = new Proxy({}, { get: () => (value) => value });\n");
+	writeFileSync(
+		typebox,
+		`exports.Type = {
+	Object: (properties) => ({
+		type: "object",
+		properties,
+		required: Object.keys(properties).filter((key) => properties[key]?.__optional !== true),
+	}),
+	String: (options = {}) => ({ type: "string", ...options }),
+	Optional: (schema) => ({ ...schema, __optional: true }),
+};
+`,
+	);
 	// pi-coding-agent stub: worktree.ts/cleanup.ts import only types from it.
 	const agentStub = join(root, "agent.cjs");
 	writeFileSync(agentStub, "exports.registerCommand = () => {};\n");
@@ -205,9 +219,14 @@ esac
 		"creating a worktree mutates but does not destroy; repeat calls reuse",
 	);
 	assert.deepEqual(
-		Object.keys(tool.parameters).sort(),
+		Object.keys(tool.parameters.properties).sort(),
 		["base", "branch", "task"],
-		"a task dispatches the work into the tab; without one the tool parks it for the human",
+		"a task holds the work; there is no other dispatch input",
+	);
+	assert.deepEqual(
+		tool.parameters.required.slice().sort(),
+		["branch", "task"],
+		"a missing task fails schema validation; only base stays optional",
 	);
 
 	const calls = () => {
@@ -278,7 +297,9 @@ esac
 			spawnCalls.length = 0;
 			const repo = makeRepo();
 			process.env.WT_TEST_BRANCH = "feat/dark-mode";
-			const { text, isError, details } = await finish(run({ branch: "dark-mode" }, repo));
+			const { text, isError, details } = await finish(
+				run({ branch: "dark-mode", task: "add the dark-mode toggle" }, repo),
+			);
 			assert.equal(isError, false, text);
 			assert.match(text, /session in the worktree pane/);
 			assert.match(text, /No task was sent and no subagent runs there/);
@@ -309,10 +330,14 @@ esac
 			assert.equal(details.label, "dark-mode");
 			assert.equal(details.mode, "created");
 			assert.equal(details.startedPi, true);
-			assert.equal(details.warning, null);
+			assert.match(
+				String(details.warning),
+				/only Rex tabs take one/,
+				"a Herdr pane never receives the task, and the ack says so",
+			);
 			assert.equal(details.cwd, fakePath, "the ack carries the path as cwd for subagent");
 			assert.equal(details.block, "wT:p1");
-			assert.equal(details.task, null);
+			assert.equal(details.task, "add the dark-mode toggle");
 			assert.equal(details.dispatched, false, "Herdr tabs park: no task is dispatched there");
 		}
 
@@ -347,7 +372,9 @@ esac
 			const linkedPath = join(root, "linked-checkout");
 			gitx(["-C", repo, "worktree", "add", "-q", "-b", "feat/other", linkedPath]);
 			process.env.WT_TEST_BRANCH = "feat/from-linked";
-			const { isError } = await finish(run({ branch: "from-linked" }, linkedPath));
+			const { isError } = await finish(
+				run({ branch: "from-linked", task: "check the linked checkout" }, linkedPath),
+			);
 			assert.equal(isError, false);
 			const createCall = calls()[0];
 			assert.equal(createCall[1], "create");
@@ -364,7 +391,9 @@ esac
 			clearCalls();
 			const repo = makeRepo();
 			process.env.WT_TEST_BRANCH = "fix/pane-size";
-			const { isError, details } = await finish(run({ branch: "fix/pane-size" }, repo));
+			const { isError, details } = await finish(
+				run({ branch: "fix/pane-size", task: "fix the pane size" }, repo),
+			);
 			assert.equal(isError, false);
 			assert.equal(details.branch, "fix/pane-size");
 			assert.equal(details.label, "pane-size");
@@ -372,10 +401,16 @@ esac
 
 		// Invalid branch / missing base / base==branch: refused before any herdr call.
 		for (const [params, pattern] of [
-			[{ branch: "docs/readme" }, /branch type "docs"/],
-			[{ branch: "feat/a..b" }, /\.\./],
-			[{ branch: "feat/x", base: "develop" }, /base branch "develop" does not exist locally/],
-			[{ branch: "feat/x", base: "feat/x" }, /base and branch are both feat\/x/],
+			[{ branch: "docs/readme", task: "write the docs" }, /branch type "docs"/],
+			[{ branch: "feat/a..b", task: "do the work" }, /\.\./],
+			[
+				{ branch: "feat/x", base: "develop", task: "do the work" },
+				/base branch "develop" does not exist locally/,
+			],
+			[
+				{ branch: "feat/x", base: "feat/x", task: "do the work" },
+				/base and branch are both feat\/x/,
+			],
 		]) {
 			clearCalls();
 			spawnCalls.length = 0;
@@ -387,6 +422,60 @@ esac
 			assert.equal(spawnCalls.length, 0, "no spawn for a refused request");
 		}
 
+		// Missing, empty, and whitespace-only tasks are refused at the top of
+		// execute: before Git runs, so no checkout appears, and before the mux, so
+		// no tab opens. Non-string input is treated the same way.
+		{
+			const repo = makeRepo();
+			const homeRoot = mkdtempSync(join(tmpdir(), "worktree-home-"));
+			const savedHome = process.env.HOME;
+			delete process.env.HERDR_ENV;
+			delete process.env.HERDR_PANE_ID;
+			process.env.REX_SESSION = "session:test";
+			process.env.REX_BLOCK = "block:test";
+			process.env.HOME = homeRoot;
+			try {
+				const wtRoot = join(realpathSync(homeRoot), ".herdr", "worktrees", basename(repo));
+				for (const params of [
+					{ branch: "no-task" },
+					{ branch: "empty-task", task: "" },
+					{ branch: "blank-task", task: " \n\t " },
+					{ branch: "wrong-type-task", task: 42 },
+				]) {
+					clearCalls();
+					clearRexCalls();
+					spawnCalls.length = 0;
+					const { isError, text } = await finish(run(params, repo));
+					assert.equal(isError, true, JSON.stringify(params));
+					assert.match(text, /needs a non-empty `task`/);
+					assert.deepEqual(calls(), [], "no Herdr call for a rejected task");
+					assert.deepEqual(rexCalls(), [], "no tab for a rejected task");
+					assert.equal(existsSync(wtRoot), false, "no checkout for a rejected task");
+					assert.equal(
+						gitx(["-C", repo, "branch", "--list", "feat/*"], { encoding: "utf8" }).trim(),
+						"",
+						"no branch was created",
+					);
+					assert.equal(
+						gitx(["-C", repo, "worktree", "list", "--porcelain"], { encoding: "utf8" })
+							.trim()
+							.split("\n\n").length,
+						1,
+						"no checkout was added",
+					);
+					assert.equal(spawnCalls.length, 0, "no subagent for a rejected task");
+				}
+			} finally {
+				if (savedHome === undefined) delete process.env.HOME;
+				else process.env.HOME = savedHome;
+				delete process.env.REX_SESSION;
+				delete process.env.REX_BLOCK;
+				process.env.HERDR_ENV = "1";
+				process.env.HERDR_PANE_ID = "wT:p0";
+				rmSync(homeRoot, { recursive: true, force: true });
+			}
+		}
+
 		// Reuse: an owned, checked-out worktree is opened (never recreated), and
 		// no second pi is started in a pane that may already host one.
 		{
@@ -396,7 +485,9 @@ esac
 			const reusePath = join(root, "reuse-checkout");
 			gitx(["-C", repo, "worktree", "add", "-q", "-b", "feat/reuse", reusePath]);
 			gitx(["-C", repo, "config", "--local", "branch.feat/reuse.piWorktree", "pi-worktree"]);
-			const { text, isError, details } = await finish(run({ branch: "reuse" }, repo));
+			const { text, isError, details } = await finish(
+				run({ branch: "reuse", task: "keep working the reuse case" }, repo),
+			);
 			assert.equal(isError, false, text);
 			assert.match(text, /Worktree reused/);
 			assert.deepEqual(calls()[0], [
@@ -416,7 +507,7 @@ esac
 			const repo = makeRepo();
 			gitx(["-C", repo, "worktree", "add", "-q", "-b", "feat/foreign", join(root, "foreign-checkout")]);
 			clearCalls();
-			const { isError, text } = await finish(run({ branch: "foreign" }, repo));
+			const { isError, text } = await finish(run({ branch: "foreign", task: "x" }, repo));
 			assert.equal(isError, true);
 			assert.match(text, /was not created by the worktree tool/);
 			assert.equal(calls().length, 0);
@@ -425,7 +516,7 @@ esac
 			const repo = makeRepo();
 			gitx(["-C", repo, "branch", "feat/loose"]);
 			clearCalls();
-			const { isError, text } = await finish(run({ branch: "loose" }, repo));
+			const { isError, text } = await finish(run({ branch: "loose", task: "x" }, repo));
 			assert.equal(isError, true);
 			assert.match(text, /was not created by the worktree tool/);
 		}
@@ -436,7 +527,7 @@ esac
 			gitx(["-C", repo, "config", "--local", "branch.feat/gone.piWorktree", "pi-worktree"]);
 			rmSync(gonePath, { recursive: true, force: true });
 			clearCalls();
-			const { isError, text } = await finish(run({ branch: "gone" }, repo));
+			const { isError, text } = await finish(run({ branch: "gone", task: "x" }, repo));
 			assert.equal(isError, true);
 			assert.match(text, /git worktree prune/);
 		}
@@ -449,7 +540,9 @@ esac
 			gitx(["-C", repo, "branch", "feat/owned"]);
 			gitx(["-C", repo, "config", "--local", "branch.feat/owned.piWorktree", "pi-worktree"]);
 			process.env.WT_TEST_BRANCH = "feat/owned";
-			const { isError, details } = await finish(run({ branch: "owned" }, repo));
+			const { isError, details } = await finish(
+				run({ branch: "owned", task: "check out the owned branch" }, repo),
+			);
 			assert.equal(isError, false);
 			const createCall = calls()[0];
 			assert.equal(createCall[1], "create");
@@ -464,7 +557,9 @@ esac
 		{
 			const repo = makeRepo();
 			process.env.WT_TEST_FAIL_PANE = "1";
-			const { isError, text, details } = await finish(run({ branch: "pi-fail" }, repo));
+			const { isError, text, details } = await finish(
+				run({ branch: "pi-fail", task: "survive the failed launch" }, repo),
+			);
 			assert.equal(isError, false, text);
 			assert.equal(details.startedPi, false);
 			assert.match(String(details.warning), /pi did not start/);
@@ -477,7 +572,9 @@ esac
 		{
 			const repo = makeRepo();
 			process.env.WT_TEST_FAIL_CREATE = "1";
-			const { isError, text } = await finish(run({ branch: "herdrfail" }, repo));
+			const { isError, text } = await finish(
+				run({ branch: "herdrfail", task: "surface the create failure" }, repo),
+			);
 			assert.equal(isError, true);
 			assert.match(text, /herdr worktree create .* failed/);
 			assert.match(text, /boom create/);
@@ -501,7 +598,9 @@ esac
 			process.env.HOME = homeRoot;
 			process.env.WT_REX_LIST = '{"windows":[]}';
 			try {
-				const { isError, text, details } = await finish(run({ branch: "dark-mode" }, repo));
+				const { isError, text, details } = await finish(
+					run({ branch: "dark-mode", task: "build the dark-mode toggle" }, repo),
+				);
 				assert.equal(isError, false, text);
 				const expectedPath = join(
 					realpathSync(homeRoot),
@@ -523,8 +622,9 @@ esac
 					[
 						"window", "new", "-s", "session:test", "π dark-mode",
 						"--focus=false", "-c", expectedPath, "--json", "--", "pi",
+						"build the dark-mode toggle",
 					],
-					"one tab per worktree, in the caller's session, unfocused, running an ordinary pi",
+					"one tab per worktree, in the caller's session, unfocused, running an ordinary pi on its task",
 				);
 				assert.equal(details.session, "session:test", "the tab joins the repository's session");
 				assert.equal(details.tab, "π dark-mode");
@@ -539,7 +639,7 @@ esac
 				process.env.WT_REX_LIST = '{"windows":[]}';
 				clearRexCalls();
 				const dispatched = await finish(
-					run({ branch: "rex-task", task: "fix the failing suite" }, repo),
+					run({ branch: "rex-task", task: "  fix the failing suite  " }, repo),
 				);
 				assert.equal(dispatched.isError, false, dispatched.text);
 				assert.deepEqual(
@@ -611,7 +711,9 @@ esac
 			const savedNew = process.env.WT_REX_NEW;
 			process.env.WT_REX_NEW = "not json";
 			try {
-				const { isError, text, details } = await finish(run({ branch: "rex-fail" }, repo));
+				const { isError, text, details } = await finish(
+					run({ branch: "rex-fail", task: "fail to open a tab" }, repo),
+				);
 				assert.equal(isError, true);
 				assert.match(text, /its tab could not be opened/);
 				assert.match(text, /rex window new π rex-fail -c /);
@@ -631,7 +733,7 @@ esac
 		// Outside a git repo, and outside Herdr/Rex: clear refusals.
 		{
 			const empty = mkdtempSync(join(tmpdir(), "worktree-empty-"));
-			const { isError, text } = await finish(run({ branch: "x" }, empty));
+			const { isError, text } = await finish(run({ branch: "x", task: "do the work" }, empty));
 			assert.equal(isError, true);
 			assert.match(text, /is not inside a Git repository/);
 			rmSync(empty, { recursive: true, force: true });
@@ -639,7 +741,7 @@ esac
 		{
 			delete process.env.HERDR_ENV;
 			const repo = makeRepo();
-			const { isError, text } = await finish(run({ branch: "x" }, repo));
+			const { isError, text } = await finish(run({ branch: "x", task: "do the work" }, repo));
 			assert.equal(isError, true);
 			assert.match(text, /requires a session inside Herdr or Rex/);
 			process.env.HERDR_ENV = "1";
