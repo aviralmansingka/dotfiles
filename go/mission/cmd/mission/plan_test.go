@@ -51,8 +51,8 @@ func TestPlanDescribesTheArmy(t *testing.T) {
 	if p.Step != "S01" {
 		t.Fatalf("step = %q, want S01", p.Step)
 	}
-	// The plan owns the rank vocabulary: one army session, the commander and the
-	// captain as its windows, and one subagent session named after the mission.
+	// The plan owns the rank vocabulary: one army session, with the commander and
+	// the captain as its windows. A mission has no session of its own.
 	if p.Session != "army" {
 		t.Fatalf("session = %q", p.Session)
 	}
@@ -61,9 +61,6 @@ func TestPlanDescribesTheArmy(t *testing.T) {
 	}
 	if p.CaptainWindow != "captain-test-mission" {
 		t.Fatalf("captain window = %q", p.CaptainWindow)
-	}
-	if p.SubagentSession != "mission-test-mission" {
-		t.Fatalf("subagent session = %q, want %q", p.SubagentSession, seatLabel(subagentPrefix, p.Slug))
 	}
 	r, e := s.load(h)
 	must(t, e)
@@ -100,16 +97,17 @@ func TestPlanDescribesTheArmy(t *testing.T) {
 			t.Fatalf("brief does not name %q:\n%s", duty, p.CaptainBrief)
 		}
 	}
-	// The session clause is the captain's only way to place a trooper: the brief
-	// names the plan's subagent session, and the captain passes that label as the
-	// `session` argument of every subagent call, so no rank tab lands in the army
-	// session. The label the brief names IS Plan.SubagentSession, so an adapter
-	// that sets it in the environment and a captain that passes it by hand agree.
-	if !strings.Contains(p.CaptainBrief, "session="+p.SubagentSession) {
-		t.Fatalf("brief does not name the subagent session %q:\n%s", p.SubagentSession, p.CaptainBrief)
+	// The launch clause is the captain's only way to place a trooper: it sends
+	// every one through the shared subagent launcher with no session override, so
+	// the child floats in the captain's own window, and it names the worktree the
+	// child starts in.
+	for _, clause := range []string{"pass no session", "floats in your own window", armySession} {
+		if !strings.Contains(p.CaptainBrief, clause) {
+			t.Fatalf("brief does not name %q:\n%s", clause, p.CaptainBrief)
+		}
 	}
-	if p.SubagentSession != seatLabel(subagentPrefix, p.Slug) {
-		t.Fatalf("subagent session = %q, want %q", p.SubagentSession, seatLabel(subagentPrefix, p.Slug))
+	if strings.Contains(p.CaptainBrief, "session=mission-") {
+		t.Fatalf("brief still routes troopers into a mission session:\n%s", p.CaptainBrief)
 	}
 	if b, e := hex.DecodeString(strings.TrimPrefix(p.Ack, "ack-")); e != nil || len(b) != 8 {
 		t.Fatalf("ack token = %q", p.Ack)
@@ -227,7 +225,7 @@ func TestPlanBriefNamesAReservedLaunch(t *testing.T) {
 	if reserved.Ack != plain.Ack {
 		t.Fatalf("the reserved launch moved the ack token: %s -> %s", plain.Ack, reserved.Ack)
 	}
-	if reserved.CaptainWindow != plain.CaptainWindow || reserved.SubagentSession != plain.SubagentSession {
+	if reserved.CaptainWindow != plain.CaptainWindow {
 		t.Fatal("a reserved launch changed the rank vocabulary")
 	}
 }
@@ -246,7 +244,7 @@ func TestPlanAcceptsAMuxWithoutDependingOnIt(t *testing.T) {
 	}
 	other, e := s.plan(h, "herdr", "")
 	must(t, e)
-	if other.Mux != "herdr" || other.CaptainWindow != p.CaptainWindow || other.SubagentSession != p.SubagentSession || other.Ack != p.Ack {
+	if other.Mux != "herdr" || other.CaptainWindow != p.CaptainWindow || other.Ack != p.Ack {
 		t.Fatalf("another mux changed the description: %+v", other)
 	}
 }
@@ -370,7 +368,7 @@ func TestSeatLabelKeepsOneNameForOneMission(t *testing.T) {
 	if ca == cb {
 		t.Fatalf("two long slugs share the label %q", ca)
 	}
-	for _, l := range []string{ca, cb, seatLabel(subagentPrefix, a)} {
+	for _, l := range []string{ca, cb} {
 		if len(l) > labelRoom {
 			t.Fatalf("label %q is %d characters", l, len(l))
 		}
@@ -385,7 +383,7 @@ func TestSeatLabelKeepsOneNameForOneMission(t *testing.T) {
 	s, h, _ := piFixture(t)
 	p, e := s.plan(h, "rex", "")
 	must(t, e)
-	if p.CaptainWindow != seatLabel(captainPrefix, p.Slug) || p.SubagentSession != seatLabel(subagentPrefix, p.Slug) {
-		t.Fatalf("plan labels = %q %q", p.CaptainWindow, p.SubagentSession)
+	if p.CaptainWindow != seatLabel(captainPrefix, p.Slug) {
+		t.Fatalf("plan label = %q", p.CaptainWindow)
 	}
 }

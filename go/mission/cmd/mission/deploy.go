@@ -58,8 +58,6 @@ type Deployment struct {
 	Mux             string `json:"mux"`
 	Session         string `json:"session"`
 	SessionCreated  bool   `json:"session_created"`
-	SubagentSession string `json:"subagent_session"`
-	SubagentCreated bool   `json:"subagent_created"`
 	CaptainWindow   string `json:"captain_window"`
 	CaptainWindowID string `json:"captain_window_id,omitempty"`
 	// Pane is the block or pane the captain runs in, as the mux names it.
@@ -81,7 +79,9 @@ type Deployment struct {
 
 // deploy turns one plan into seats. It reads the plan, reserves the launch
 // intent, then creates only what is missing: the army session and its commander,
-// the mission's subagent session, and the captain window. The brief is rendered
+// and the captain window. A mission has no session of its own, because a
+// captain's troopers float in the captain's window, so the army session is the
+// whole of what a deployment creates. The brief is rendered
 // from the reserved intent, so the captain attaches with the id the record
 // holds. A live captain window is focused, never duplicated, so one key press
 // cannot seat two captains; a window whose captain is gone is not a seat, and
@@ -108,9 +108,9 @@ func (s *App) deploy(h, mux string) (Deployment, error) {
 		return Deployment{}, e
 	}
 	if launchID != "" {
-		p.CaptainBrief = captainPrompt(h, p.SubagentSession, launchID)
+		p.CaptainBrief = captainPrompt(h, launchID)
 	}
-	d := Deployment{Handle: h, Mux: mux, Session: p.Session, SubagentSession: p.SubagentSession, CaptainWindow: p.CaptainWindow, LaunchID: launchID, Ack: p.Ack}
+	d := Deployment{Handle: h, Mux: mux, Session: p.Session, CaptainWindow: p.CaptainWindow, LaunchID: launchID, Ack: p.Ack}
 	ids, e := ad.sessions()
 	if e != nil {
 		return d, e
@@ -137,15 +137,6 @@ func (s *App) deploy(h, mux string) (Deployment, error) {
 		}
 	}
 	if !d.Focused {
-		// A mux with no session object of its own (Herdr) answers "": nothing to
-		// create, and the label travels in the seat it is about to open.
-		if _, ok := ids[p.SubagentSession]; !ok {
-			id, e := ad.ensureSession(p.SubagentSession, "", p.Cwd)
-			if e != nil {
-				return d, e
-			}
-			d.SubagentCreated = id != ""
-		}
 		seat, e := ad.place(p, army)
 		if e != nil {
 			return d, e
