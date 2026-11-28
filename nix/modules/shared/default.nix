@@ -103,6 +103,14 @@ in
         delta
         # herdr comes from the flake pin like any other profile tool.
         herdr
+        # The two vendor coding-agent CLIs. They are profile tools for the same
+        # reason herdr is: the flake lock names the version, every host resolves
+        # the same binary, and no host carries a second copy from Homebrew or
+        # npm. Both are subscription clients — pi-claude-code and the pi Codex
+        # provider drive them as a model transport — so the CLI version matters
+        # as much as the model list behind it.
+        claude-code
+        codex
         just
         mermaid-cli
         openssh
