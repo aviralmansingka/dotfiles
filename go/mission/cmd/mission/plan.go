@@ -14,14 +14,15 @@ import (
 )
 
 // The rank vocabulary of a deployment, in one place. One mux session, "army",
-// holds the seats: the commander, and one captain window per mission. Every
-// mission owns a subagent session, "mission-<slug>", where its troopers work.
-// Adapters read these names from a plan; they never spell them themselves.
+// holds the seats: the commander, and one captain window per mission. A mission
+// owns no session of its own: its captain runs in army, and the troopers it
+// deploys float in the captain's own window, so a child is always beside the
+// rank that sent it. Adapters read these names from a plan; they never spell
+// them themselves.
 const (
 	armySession     = "army"
 	commanderWindow = "commander"
 	captainPrefix   = "captain-"
-	subagentPrefix  = "mission-"
 )
 
 // labelRoom is the longest seat label this tool writes. Herdr agent names, and
@@ -74,26 +75,26 @@ func seatLabel(prefix, slug string) string {
 // captainBrief is the captain contract, and the only copy of the launch prompt
 // text: the captain profiles hold no second version of it, so the duties are
 // edited here or nowhere. The first sentence is the token the captain attaches
-// with: the plan's ack token by default, or the launch intent deploy reserved, so
-// the id a captain reads is the id the record holds. The three duties are the rank's whole division of
-// work: the captain keeps the claim and its hands off the files, a trooper does
-// each step and another judges it, and the captain answers the commander. The
-// session clause names where troopers work, because the captain is the only
-// thing that deploys them: the plan's subagent session is the label it passes on
-// every call, and the army session is never a place for a rank tab. The same
-// string states the authority split the rank depends on: the captain runs its
-// mandate without asking permission, sends its whole briefing with one ask when
-// a block needs the human, and writes no mission definition except a step and
-// its checks. The commander answers in a few bullets and may change the mission
+// with: the plan's ack token by default, or the launch intent deploy reserved,
+// so the id a captain reads is the id the record holds. The three duties are the
+// rank's whole division of work: the captain keeps the claim and its hands off
+// the files, a trooper does each step and another judges it, and the captain
+// answers the commander. The trooper clause names the shape of a dispatch,
+// because the captain is the only thing that deploys troopers: the shared
+// subagent launcher, no session override, so the child floats in the captain's
+// own window in army, with the mission worktree as its cwd. The same string
+// states the authority split the rank depends on: the captain runs its mandate
+// without asking permission, sends its whole briefing with one ask when a block
+// needs the human, and writes no mission definition except a step and its
+// checks. The commander answers in a few bullets and may change the mission
 // itself.
-const captainBrief = `You are the captain of mission %[1]s, seated in its worktree as cwd for the whole mission. Before reading repository files, call mission with action=attach, handle=%[1]s, launch_id=%[2]s. Three duties, and no others: hold the claim for this mission and never edit repository files yourself; deploy a trooper for every step and judge the result through a trooper, not with your own hands; answer the commander in the %[3]s session. You are autonomous: inside those duties, decide and proceed without asking permission for each move. Deploy every trooper in the %[4]s session: pass session=%[4]s on each subagent call, so no rank tab lands in the %[3]s session. When a block needs the human, send one mission ask %[1]s --text "<full briefing>" --step <step-id> --kind blocked|question|decision. The text is a briefing, not a one-line question: state the block, what you already tried and what it showed, the options with their trade-offs, and the decision you need. Write that ask before you ask anything else: it is the record, and it reaches the commander when you have no watcher. Then, when a human answers in this session, put the same question in front of them with ask_user_question, so they can choose instead of decoding a paragraph. The menu is the fast path and the mission ask is the durable one; never treat an unanswered menu as sent. The commander answers with a few bullets that unblock you, and may also update the mission, its brief, its steps, or its checks from outside; then stop and keep this session for the answer. Your one write to the mission definition is a step or its checks through mission step edit; never rewrite the mission brief, and never reset a step to weaken a check. Stop at checkpoints; keep this session and worktree for later steps.`
+const captainBrief = `You are the captain of mission %[1]s, seated in its worktree as cwd for the whole mission. Before reading repository files, call mission with action=attach, handle=%[1]s, launch_id=%[2]s. Three duties, and no others: hold the claim for this mission and never edit repository files yourself; deploy a trooper for every step and judge the result through a trooper, not with your own hands; answer the commander in the %[3]s session. You are autonomous: inside those duties, decide and proceed without asking permission for each move. Deploy every trooper with the shared subagent tool and pass no session: the child floats in your own window in the %[3]s session, in this mission's worktree, and its result comes back to you. When a block needs the human, send one mission ask %[1]s --text "<full briefing>" --step <step-id> --kind blocked|question|decision. The text is a briefing, not a one-line question: state the block, what you already tried and what it showed, the options with their trade-offs, and the decision you need. Write that ask before you ask anything else: it is the record, and it reaches the commander when you have no watcher. Then, when a human answers in this session, put the same question in front of them with ask_user_question, so they can choose instead of decoding a paragraph. The menu is the fast path and the mission ask is the durable one; never treat an unanswered menu as sent. The commander answers with a few bullets that unblock you, and may also update the mission, its brief, its steps, or its checks from outside; then stop and keep this session for the answer. Your one write to the mission definition is a step or its checks through mission step edit; never rewrite the mission brief, and never reset a step to weaken a check. Stop at checkpoints; keep this session and worktree for later steps.`
 
 // captainPrompt renders the brief for one launch id. Plan renders it with the id
 // a caller passes, and deploy renders it again with the intent it reserved, so
-// the id a captain reads is the id the record holds. The session is the plan's
-// subagent session, so the brief names the one label the captain must pass on.
-func captainPrompt(h, subagentSession, launchID string) string {
-	return fmt.Sprintf(captainBrief, h, launchID, armySession, subagentSession)
+// the id a captain reads is the id the record holds.
+func captainPrompt(h, launchID string) string {
+	return fmt.Sprintf(captainBrief, h, launchID, armySession)
 }
 
 // captainLoadout is the captain's reach at launch: the same six tools the
@@ -151,12 +152,11 @@ type Plan struct {
 	Slug   string `json:"slug"`
 	Mux    string `json:"mux"`
 	Step   string `json:"step,omitempty"`
-	// Rank vocabulary: the session that holds the seats, its two windows, and
-	// the session the mission's troopers work in.
+	// Rank vocabulary: the session that holds the seats, and its two windows. A
+	// mission has no session of its own, so there is no third seat label here.
 	Session         string `json:"session"`
 	CommanderWindow string `json:"commander_window"`
 	CaptainWindow   string `json:"captain_window"`
-	SubagentSession string `json:"subagent_session"`
 	// The worktree the captain and its troopers own.
 	Cwd    string `json:"cwd"`
 	Branch string `json:"branch"`
@@ -216,11 +216,10 @@ func (s *App) plan(h, mux, launchID string) (Plan, error) {
 		Session:         armySession,
 		CommanderWindow: commanderWindow,
 		CaptainWindow:   seatLabel(captainPrefix, r.Mission.Slug),
-		SubagentSession: seatLabel(subagentPrefix, r.Mission.Slug),
 		Cwd:             b.Cwd,
 		Branch:          b.Branch,
 		CaptainArgv:     captainArgv(),
-		CaptainBrief:    captainPrompt(h, seatLabel(subagentPrefix, r.Mission.Slug), launchID),
+		CaptainBrief:    captainPrompt(h, launchID),
 		Ack:             ack,
 	}, nil
 }

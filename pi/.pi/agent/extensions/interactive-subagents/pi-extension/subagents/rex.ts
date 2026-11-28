@@ -173,11 +173,6 @@ function sessionArgs(): string[] {
   return session ? ["-s", session] : [];
 }
 
-/** True for a value that is a file path, not a session label or id. */
-function looksLikePath(value: string): boolean {
-  return value.includes("/") || value.endsWith(".jsonl");
-}
-
 /** Resolve one routing candidate (an id or a label) to a session id. */
 function resolveRoutedSession(want: string): string | null {
   if (want.startsWith("session:")) return want;
@@ -185,16 +180,14 @@ function resolveRoutedSession(want: string): string | null {
 }
 
 /**
- * The value the routing variables name, or null when neither names one.
- * `PI_SUBAGENT_REX_SESSION` wins; `PI_SUBAGENT_SESSION` routes only while it
- * holds a plain label, never the child's session file.
+ * The session a routing variable names, or null when none does.
+ * `PI_SUBAGENT_REX_SESSION` is the only routing variable: it holds a Rex label
+ * or id. `PI_SUBAGENT_SESSION` never routes, because it carries the child's own
+ * pi session file, and a label in it once sent troopers to a session nobody was
+ * looking at.
  */
 function routingWant(): string | null {
-  const rex = process.env.PI_SUBAGENT_REX_SESSION?.trim();
-  if (rex) return rex;
-  const legacy = process.env.PI_SUBAGENT_SESSION?.trim();
-  if (legacy && !looksLikePath(legacy)) return legacy;
-  return null;
+  return process.env.PI_SUBAGENT_REX_SESSION?.trim() || null;
 }
 
 /** Every session label the server has, for an error a caller can act on. */
@@ -213,22 +206,20 @@ function requireSession(want: string): string {
 }
 
 /**
- * The session a child runs in. `PI_SUBAGENT_REX_SESSION` names a Rex label or
- * id, so a mission captain fans work out into the mission session instead of
- * its own.
+ * The session a child runs in. Without `PI_SUBAGENT_REX_SESSION` a child follows
+ * the caller, which is what a mission captain wants: its troopers float in its
+ * own window, in the army session it already runs in. The routing variable names
+ * a Rex label or id for a caller that wants children elsewhere.
  *
  * `PI_SUBAGENT_SESSION` is the child's pi session *file* (`/…/2026-…_abc.jsonl`),
- * read by subagent-done.ts and the resume path. It routes only while it holds a
- * plain label, which is how mission deploy seats its troops today; a path is
- * never a session target. Without either variable a child follows the caller.
+ * read by subagent-done.ts and the resume path. It is never a session target.
  */
 let childSession: string | null = null;
 
 function childSessionId(explicit?: string): string | null {
   if (explicit) return requireSession(explicit.trim());
   const want = routingWant();
-  // No routing variable (or only the child's session file, which is not a
-  // session target): a child follows the caller, as before.
+  // No routing variable: a child follows the caller, as before.
   if (!want) return process.env.REX_SESSION?.trim() || null;
   // Cache only a session a routing variable resolved to: a lookup that found
   // nothing must retry on the next call, because the session can appear later.
@@ -244,7 +235,7 @@ function childSessionArgs(explicit?: string): string[] {
 }
 
 /**
- * The cwd a child starts in. A rank tab belongs to the mission worktree, so a
+ * The cwd a child starts in. A rank belongs to the mission worktree, so a
  * captain sets `PI_SUBAGENT_CWD`; otherwise the child inherits the caller.
  */
 function childCwd(explicit?: string): string | null {
@@ -511,10 +502,10 @@ function floatingWindowFor(session: string, anchor: string | null): string | nul
       if (windowId) return windowId;
     }
   }
-  // A child in another session (a mission trooper) cannot float in the
-  // caller's tab. Take that session's first window, never `active_window_id`:
-  // the active window follows whatever tab the human is looking at, which is
-  // exactly how a child ends up in the wrong tab after a tab switch.
+  // A child in another session cannot float in the caller's tab. Take that
+  // session's first window, never `active_window_id`: the active window follows
+  // whatever tab the human is looking at, which is exactly how a child ends up in
+  // the wrong tab after a tab switch.
   const first = (viewOf(session)?.windows ?? [])[0];
   const id = first?.window_id;
   return typeof id === "string" && id !== "" ? id : null;

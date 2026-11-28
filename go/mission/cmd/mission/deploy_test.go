@@ -298,9 +298,10 @@ func fakeRex(t *testing.T) *rexFake {
 	return f
 }
 
-// The first press seats everything: the army session with its commander, the
-// mission's subagent session, and the captain window running the plan's argv and
-// brief in the mission worktree. Then it acks with the plan's own token.
+// The first press seats everything: the army session with its commander, and the
+// captain window running the plan's argv and brief in the mission worktree. A
+// mission gets no session of its own, because its troopers float in its captain's
+// window. Then it acks with the plan's own token.
 func TestDeploySeatsTheArmy(t *testing.T) {
 	s, h, _ := piFixture(t)
 	f := fakeRex(t)
@@ -309,19 +310,23 @@ func TestDeploySeatsTheArmy(t *testing.T) {
 
 	d, e := s.deploy(h, "rex")
 	must(t, e)
-	if !d.SessionCreated || !d.SubagentCreated || d.Focused {
+	if !d.SessionCreated || d.Focused {
 		t.Fatalf("deployment = %+v", d)
 	}
-	if d.Session != "army" || d.SubagentSession != "mission-test-mission" || d.CaptainWindow != "captain-test-mission" {
-		t.Fatalf("labels = %s %s %s", d.Session, d.SubagentSession, d.CaptainWindow)
+	if d.Session != "army" || d.CaptainWindow != "captain-test-mission" {
+		t.Fatalf("labels = %s %s", d.Session, d.CaptainWindow)
 	}
-	// The army comes first, with the commander seated; then the mission's own
-	// session; then the captain window, last, so it takes the human's focus. The
-	// captain window is created with the captain as its own command, and the seat
-	// verifies the block's foreground: nothing is ever typed into a shell.
-	want := []string{"session.list", "session.create", "session.create", "session.new_window", "process"}
+	// The army comes first, with the commander seated; then the captain window,
+	// last, so it takes the human's focus. The captain window is created with the
+	// captain as its own command, and the seat verifies the block's foreground:
+	// nothing is ever typed into a shell. One session is created, never a second
+	// one for troopers.
+	want := []string{"session.list", "session.create", "session.new_window", "process"}
 	if got := f.steps(); strings.Join(got, ", ") != strings.Join(want, ", ") {
 		t.Fatalf("calls = %v", got)
+	}
+	if len(f.argsFor("session.create")) != 1 {
+		t.Fatalf("deploy created %d sessions, want only army", len(f.argsFor("session.create")))
 	}
 	army := f.argsFor("session.create")[0]
 	if army["label"] != "army" {
@@ -419,7 +424,6 @@ func TestDeployStartsTheCaptainAsTheWindowCommand(t *testing.T) {
 	line := f.execLine()
 	for _, want := range []string{
 		"'REX_SESSION=army'",
-		"'PI_SUBAGENT_SESSION=" + p.SubagentSession + "'",
 		"'PI_SUBAGENT_CWD=" + p.Cwd + "'",
 		shellQuote(p.CaptainArgv[0]),
 		"'--tools'",
@@ -427,6 +431,13 @@ func TestDeployStartsTheCaptainAsTheWindowCommand(t *testing.T) {
 		if !strings.Contains(line, want) {
 			t.Fatalf("the exec line does not carry %q:\n%s", want, line)
 		}
+	}
+	// The seat carries no PI_SUBAGENT_SESSION: that variable names a child's own
+	// pi session file, and a captain that inherited a label in it was treated as
+	// a trooper by the editor extension and by Rex routing alike. Troopers need no
+	// label now, because they float in the captain's own window.
+	if strings.Contains(line, "PI_SUBAGENT_SESSION") {
+		t.Fatalf("the exec line routes troopers into a session of their own:\n%s", line)
 	}
 	// REX_BLOCK is Rex's own answer, not the seat's guess: the mux sets it in the
 	// block's environment, so naming it here would mean naming an id the seat
@@ -494,7 +505,6 @@ func TestDeploySeatsTheCaptainUnderTheLoginShell(t *testing.T) {
 	line := f.execLine()
 	for _, want := range []string{
 		"'REX_SESSION=army'",
-		"'PI_SUBAGENT_SESSION=" + p.SubagentSession + "'",
 		"'PI_SUBAGENT_CWD=" + p.Cwd + "'",
 		shellQuote(p.CaptainArgv[0]),
 	} {

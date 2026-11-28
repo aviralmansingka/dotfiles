@@ -131,7 +131,10 @@ The deploy cases pin the seat seam. A recording Rex server and a recording Herdr
 server each satisfy one adapter, and every deploy case installs both: a `--mux
 rex` deployment makes no Herdr call and a `--mux herdr` one makes no Rex call, and
 an unknown mux is refused before either is asked. Both muxes answer the same plan
-decisions (army session, `captain-<slug>`, `mission-<slug>`), and both seats are
+decisions (army session, `captain-<slug>`), and a mission creates no session of
+its own: the Rex cases count one `session.create` and the exec line carries
+`PI_SUBAGENT_CWD` but no `PI_SUBAGENT_SESSION`, so no trooper is routed away from
+its captain. Both seats are
 built by the one `seatExecLine` — Rex adds only `REX_SESSION`, because it sets
 `REX_BLOCK` in the block's own environment. The Herdr cases pin the mapping (a
 workspace labeled `army` with a renamed `commander` root tab, the captain's tab in

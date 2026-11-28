@@ -22,6 +22,10 @@ multiplexer.
 - Liveness fallback: the pi process seen once, then gone, means completed; a startup shell never counts.
 - Surface dispatch: `HERDR_ENV=1`+`HERDR_PANE_ID` → herdr; `TMUX` → tmux;
   neither → a hint naming both; tmux calls map to the four pane commands.
+- Rex placement: a captain's trooper floats in the captain's own window, in the
+  army session, with `PI_SUBAGENT_CWD` as its cwd; `PI_SUBAGENT_SESSION` carries
+  a session file and never routes a child, while `PI_SUBAGENT_REX_SESSION` still
+  routes one to its session's first window; a refused layer falls back to a tab.
 - Session core: fork and lineage-only seeds; ids resolve exact then prefix; last assistant message with error fallback.
 - Agent profiles: bundled resolve, project overrides win; every frontmatter key
   parses; unknown agent → null; zero stale tool references; a profile naming a
