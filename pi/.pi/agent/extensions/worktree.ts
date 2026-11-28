@@ -405,7 +405,9 @@ const DESCRIPTION =
 	"Open a Pi tab in a linked Git worktree based on local main. Use this when the user needs to " +
 	"review, steer, or resume work in its own tab and the work benefits from Git isolation. Honor " +
 	"explicit worktree requests and repository checkout rules. For other bounded work, use the " +
-	"current checkout or a subagent. Pass a concrete `task` and check `details.dispatched`. If false, " +
+	"current checkout or a subagent. On `main`, prefer this tool: it opens the owning tab. " +
+	"In a linked worktree, open no other tab; dispatch an interactive subagent with `cwd` set to " +
+	"that checkout. Pass a concrete `task` and check `details.dispatched`. If false, " +
 	"steer a running Pi with the returned line or continue at `details.cwd`, never in the parent " +
 	"checkout. Tear down with /cleanup after the work ships.";
 
