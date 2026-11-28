@@ -2,11 +2,11 @@
 description: Start isolated work in a Pi tab for human follow-up
 argument-hint: "[branch or theme]"
 ---
-An explicit `/worktree` request opts in to a separate tab. Otherwise, start a
-worktree session only when the user will need to review, steer, or resume the
-work there and the work benefits from Git isolation. For bounded work with
-no human follow-up in its own tab, stay in the current checkout or use a
-subagent. Follow the repository's checkout rules.
+Choose the dispatch surface from the current checkout. When the current
+checkout is `main`, prefer the `worktree` tool: it opens the owning tab. When
+the current checkout is already a linked worktree, do not open another tab.
+Dispatch an interactive subagent with `cwd` set to that checkout. Follow the
+repository's checkout rules.
 
 The text after the command is: ${@:-the changes discussed in this conversation}
 

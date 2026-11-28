@@ -66,9 +66,11 @@ next decisions. Skip the section only for trivial acknowledgements (e.g. a bare
 - **Run ready tasks in parallel.** Give each subagent its goal, inputs,
   `cwd`, scope, and expected result with evidence. Keep write scopes
   disjoint. Start dependent tasks when their inputs arrive.
-- **Keep synthesis, integration, and user decisions in the parent.** Use
-  the existing checkout when it fits. Do not create a worktree just to
-  delegate.
+- **Keep synthesis, integration, and user decisions in the parent.** Choose
+  the dispatch surface from the current checkout: on `main`, prefer the
+  `worktree` tool, which opens the owning tab; in a linked worktree, open no
+  other tab and dispatch an interactive subagent with `cwd` set to that
+  checkout.
 
 ## Diagrams
 
